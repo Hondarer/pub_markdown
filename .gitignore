@@ -1,0 +1,5 @@
+bin/license/jgm-pandoc
+bin/modules/LibDeflate/*
+!bin/modules/LibDeflate/put_LibDeflate_here
+bin/pandoc.exe
+target
