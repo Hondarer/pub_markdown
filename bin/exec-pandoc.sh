@@ -8,6 +8,11 @@ cd $HOME_DIR
 mkdir -p target
 rm -rf target/*
 
+mkdir -p "target/ja/html"
+mkdir -p "target/en/html"
+cp -p "bin/styles/html-style.css" "target/ja/html"
+cp -p "bin/styles/html-style.css" "target/en/html"
+
 # get file list
 files=`find "src" -type f`
 
@@ -26,11 +31,19 @@ for file in $files; do
     if [[ "$file" == *.md ]]; then
         # .md ファイルの処理
         echo "Processing Markdown file for html: $file"
-        #html
+        # html
+
+        # path to css
+        nest_count=$(echo "$file" | grep -o '/' | wc -l)
+        up_dir=""
+        for ((i=2; i<=nest_count; i++)); do
+            up_dir+="../"
+        done
+
         # ja
-        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/ja/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/ja/${target_file%.*}.html"
+        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/ja/${target_file%.*}.html"
         # en
-        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/en/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/en/${target_file%.*}.html"
+        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/en/${target_file%.*}.html"
     else
         # その他の拡張子の処理
         echo "Processing Other file: $file"
@@ -43,7 +56,7 @@ for file in $files; do
     if [[ "$file" == *.md ]]; then
         # .md ファイルの処理
         echo "Processing Markdown file for docx: $file"
-        #docx
+        # docx
         target_dir=$(dirname ${file})
         if [[ "$target_dir" != "src" ]]; then
             resource_dir=html/${target_dir#src/}
