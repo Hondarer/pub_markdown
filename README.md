@@ -1,4 +1,5 @@
 # pub_markdown
+
 markdown to html and docx with pandoc
 
 # 前提環境
@@ -11,6 +12,11 @@ markdown to html and docx with pandoc
 + [PlantUML](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml)
 + [pandoc](https://github.com/jgm/pandoc)
 
+## オプション
+
++ [gitbucket](https://github.com/gitbucket/gitbucket)
++ [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene?pli=1)
+
 # 利用方法
 
 ## セットアップ
@@ -21,6 +27,7 @@ markdown to html and docx with pandoc
 ## Markdown のビルド方法
 
 + Visual Studio Code で、タスク "exec pandoc" を実行する。
+  (Ctrl + Shift + B)
 
 あるいは
 
