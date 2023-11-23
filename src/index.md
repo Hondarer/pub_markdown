@@ -1,29 +1,69 @@
-# README
+# index
 
-これはトップレベルの README です。
+これはトップレベルの index である。
 
-## C# テスト
+## 言語切替
 
-```csharp
-Debug.WriteLIne("Test");
-```
+本フレームワークでは、日本語と英語を同一の Markdown に記載できる。
+ビルドする際に、それぞれの言語別タグを切り替えて処理を行うことから、成果物は単一言語向けとすることができる。
 
-## 言語切替テスト
+### 記載方法
 
-<!--ja:
-    日本語(ニュートラル md で非表示状態)
-:ja-->
+#### ニュートラル言語
+
+特殊タグで囲わない限り、 Markdown はニュートラル言語として扱われ、日英双方の成果物に含まれる。
+
+#### 日本語・英語
+
+以下のタグで囲うことにより、それぞれの言語別の成果物にのみ表示される。
+
+![ローカライズ用のタグ](images/localization_tags.png)
+
+#### 編集時の表示
+
+編集時の表示・非表示は、ビルド後の表示状態に影響しない。
+
 <!--ja:-->
-    日本語(ニュートラル md で表示状態)
+### 記載例
 <!--:ja-->
 <!--en:
-    English Hidden in markdown
+### Sample
 :en-->
+
+<!--ja:
+日本語(編集プレビューで非表示状態)
+:ja-->
+
+<!--ja:-->
+日本語(編集プレビューで表示状態)
+<!--:ja-->
+
+<!--en:
+English Hidden in Markdown
+:en-->
+
 <!--en:-->
-    English Visible in markdown
+English Visible in Markdown
 <!--:en-->
 
-## Plantuml テスト
+## Plantuml
+
+Plantuml は各プラグインとの親和性を考慮し、以下の通り Markdown に記載すること。
+
+### 言語名
+
+plantuml とする。
+
+### Plantuml タグ
+
+@startuml @enduml は必ず記載する。
+
+### タイトル
+
+@startunl に続いてタイトルを記載すること。
+また、続いて title にてタイトルを記載すること。
+
+### 記載例
 
 ```plantuml
 @startuml テスト
@@ -34,22 +74,68 @@ Debug.WriteLIne("Test");
 
 ## draw.io テスト
 
+draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載すること。
+
+### 形式
+
+drawio.svg とすること。
+
+### Markdown への引用
+
+原則、drawio.svg ファイルは、Markdown から参照すること。
+単一ファイルの drawio.svg ファイルは、docx フォーマットには含まれない。
+
+### タイトル
+
+[] による図のタイトルを Markdown に記載すること。
+
+### 記載例
+
 ![draw.io のテスト](images/テスト.drawio.svg)
 
-### draw.io でテキストを入れると上手く変換できない
+### ノウハウ
 
-文字を入れると Not supporrted by viewer や改行等の文字コードが入ってしまう。
-draw.io のヘルプに解決策が載っている。
+#### draw.io でテキストを含む図形が正しく変換できない場合
 
-- プロパティの text の Formatted Text option のチェックを外す
-- プロパティの text の Word Wrap option のチェックを外す
+テキストを含む図形にて docx 変換後に Not supporrted by viewer と表示されるケースがある。
+この問題を回避するため、テキスト記入時は以下とすること。
 
-## リンクテスト
+- 「テキスト」の 「ワードラップ」 のチェックを外す
+- 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す
 
-[サブフォルダ](subfolder/index.md)
+## リンク
 
-## 参考
+文章同士のリンクを定義することができる。
+ビルドする際に .html や .docx へのリンクに読み替えるため、Markdown 作成時は特に制限なく .md 同士でリンクを行えばよい。
 
-https://kiririmode.hatenablog.jp/entry/20220227/1645935125
-https://dev.classmethod.jp/articles/pandoc-markdown2html/
+[サブフォルダの index へ](subfolder/index.md)
 
+## コードスニペット
+
+### Bash
+
+```bash
+echo "Hello"
+```
+
+### C#
+
+```csharp
+Debug.WriteLIne("Test");
+```
+
+## Markdown のビルド方法
+
++ Visual Studio Code で、タスク "exec pandoc" を実行する。
+  (Ctrl + Shift + B)
+
+あるいは
+
++ Git Bash で、exec-pandoc.sh を実行する。
+
+成果物は、/target 配下に、言語別、フォーマット別に生成される。
+
+## 参考にしたサイト
+
++ [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
++ [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)

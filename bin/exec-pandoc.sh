@@ -28,9 +28,9 @@ for file in $files; do
         echo "Processing Markdown file for html: $file"
         #html
         # ja
-        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/ja/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/ja/${target_file%.*}.html"
+        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/ja/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/ja/${target_file%.*}.html"
         # en
-        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/en/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/en/${target_file%.*}.html"
+        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --resource-path="target/en/$target_dir" --wrap=none -t html --metadata title="${file%.*}" -o "target/en/${target_file%.*}.html"
     else
         # その他の拡張子の処理
         echo "Processing Other file: $file"
@@ -56,8 +56,8 @@ for file in $files; do
         mkdir -p "target/en/$target_dir"
         target_file=docx/${file#src/}
         # ja
-        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx-style.dotx" -o "target/ja/${target_file%.*}.docx"
+        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx-style.dotx" -o "target/ja/${target_file%.*}.docx"
         # en
-        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx-style.dotx" -o "target/en/${target_file%.*}.docx"
+        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | pandoc.exe -s -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx-style.dotx" -o "target/en/${target_file%.*}.docx"
     fi
 done

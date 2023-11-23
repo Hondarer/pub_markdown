@@ -1,6 +1,6 @@
-# README
+# index
 
-これはサブフォルダの README です。
+これはサブフォルダの index である。
 
 ## Plantuml テスト
 
