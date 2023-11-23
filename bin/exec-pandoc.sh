@@ -17,7 +17,6 @@ cp -p "bin/styles/html-style.css" "target/en/html"
 files=`find "src" -type f`
 
 for file in $files; do
-
     target_dir=$(dirname ${file})
     if [[ "$target_dir" != "src" ]]; then
         target_dir=html/${target_dir#src/}
@@ -28,10 +27,27 @@ for file in $files; do
     mkdir -p "target/en/$target_dir"
     target_file=html/${file#src/}
 
+    if [[ "$file" != *.md ]]; then
+        # .md ファイル以外の処理
+        echo "Processing Other file: $file"
+        cp -p "$file" "target/ja/$target_file"
+        cp -p "$file" "target/en/$target_file"
+    fi
+done
+
+for file in $files; do
     if [[ "$file" == *.md ]]; then
         # .md ファイルの処理
         echo "Processing Markdown file for html: $file"
         # html
+
+        target_dir=$(dirname ${file})
+        if [[ "$target_dir" != "src" ]]; then
+            target_dir=html/${target_dir#src/}
+        else
+            target_dir=html
+        fi
+        target_file=html/${file#src/}
 
         # path to css
         nest_count=$(echo "$file" | grep -o '/' | wc -l)
@@ -40,20 +56,29 @@ for file in $files; do
             up_dir+="../"
         done
 
-        # TODO: --self-contained を指定しているので、すべての処理が終わったら html ファイル以外は削除してもよい。
-        #       正確には、--self-contained は別の成果物として扱う必要があろう。
-
         # ja
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --self-contained -o "target/ja/${target_file%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html -o "target/ja/${target_file%.*}.html"
         # en
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --self-contained -o "target/en/${target_file%.*}.html"
-    else
-        # その他の拡張子の処理
-        echo "Processing Other file: $file"
-        cp -p "$file" "target/ja/$target_file"
-        cp -p "$file" "target/en/$target_file"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html -o "target/en/${target_file%.*}.html"
+
+        target_dir_self_contain=$(dirname ${file})
+        if [[ "$target_dir_self_contain" != "src" ]]; then
+            target_dir_self_contain=html-self-contain/${target_dir_self_contain#src/}
+        else
+            target_dir_self_contain=html-self-contain
+        fi
+        mkdir -p "target/ja/$target_dir_self_contain"
+        mkdir -p "target/en/$target_dir_self_contain"
+        target_file_self_contain=html-self-contain/${file#src/}
+
+        # ja (self_contain)
+        sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --self-contained -o "target/ja/${target_file_self_contain%.*}.html"
+        # en (self_contain)
+        sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --self-contained -o "target/en/${target_file_self_contain%.*}.html"
     fi
 done
 
