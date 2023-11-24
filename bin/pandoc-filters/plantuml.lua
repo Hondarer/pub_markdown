@@ -7,11 +7,15 @@ local root_dir = paths.directory(paths.directory(PANDOC_SCRIPT_FILE))
 local search_paths = {
     package.path,
     paths.join({ root_dir, "modules", "LibDeflate", "?.lua" }),
+    paths.join({ root_dir, "modules", "UTF8toSJIS", "?.lua" }),
     paths.join({ root_dir, "config", "?.lua" })
 }
 package.path = table.concat(search_paths, ";")
 
 local libDeflate = require("LibDeflate")
+
+local UTF8toSJIS = require("UTF8toSJIS")
+local UTF8SJIS_table = root_dir .. "/modules/UTF8toSJIS/UTF8toSJIS.tbl"
 
 -- load plantuml server configurations
 local config_loaded, pu_config = pcall(function() return (require "config-plantuml").config() end)
@@ -117,7 +121,13 @@ return {
                 -- TODO: error checking...
 
                 -- write to file
-                local fs, errorDisc, errorCode = io.open(image_file_path, "wb")
+
+                -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
+                -- この処理が 他の言語の場合に正しく動作するかは未検証(動かない可能性が非常に高い)。
+                local fht = io.open(UTF8SJIS_table, "r")
+                local image_file_path_sjis, image_file_path_sjis_length = UTF8toSJIS:UTF8_to_SJIS_str_cnv(fht, image_file_path)
+                fht:close()
+                local fs, errorDisc, errorCode = io.open(image_file_path_sjis, "wb")
 
                 if errorCode == 2 then
                     -- Use platform-specific commands to create the directory
