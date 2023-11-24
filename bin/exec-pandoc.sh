@@ -27,8 +27,9 @@ for file in $files; do
     mkdir -p "target/en/$target_dir"
     target_file=html/${file#src/}
 
-    if [[ "$file" != *.md ]]; then
-        # .md ファイル以外の処理
+    # MEMO: コピー不要なファイルがあれば、ここに追記していく
+    if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
+        # コンテンツのコピー
         echo "Processing Other file: $file"
         cp -p "$file" "target/ja/$target_file"
         cp -p "$file" "target/en/$target_file"
@@ -75,10 +76,10 @@ for file in $files; do
 
         # ja (self_contain)
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --self-contained -o "target/ja/${target_file_self_contain%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --embed-resources --standalone -o "target/ja/${target_file_self_contain%.*}.html"
         # en (self_contain)
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --self-contained -o "target/en/${target_file_self_contain%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --embed-resources --standalone -o "target/en/${target_file_self_contain%.*}.html"
     fi
 done
 
