@@ -79,6 +79,9 @@ draw.io は各プラグインとの親和性を考慮し、以下の通り Markd
 ### 形式
 
 drawio.svg とすること。
+代表シートのみ表示されるため、1 つの drawio.svg ファイルには、複数シートを定義しないこと。
+Visual Studio Code による編集時は、ライトテーマに設定してから行うこと。
+Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでテーマの変更が可能。
 
 ### Markdown への引用
 
@@ -97,7 +100,7 @@ drawio.svg とすること。
 
 #### draw.io でテキストを含む図形が正しく変換できない場合
 
-テキストを含む図形にて docx 変換後に Not supporrted by viewer と表示されるケースがある。
+日本語テキストを含む図形にて docx 変換後に Not supporrted by viewer と表示されるケースがある。
 この問題を回避するため、テキスト記入時は以下とすること。
 
 - 「テキスト」の 「ワードラップ」 のチェックを外す
@@ -118,7 +121,7 @@ drawio.svg とすること。
 echo "Hello"
 ```
 
-### C#
+### CSharp
 
 ```csharp
 Debug.WriteLIne("Test");
@@ -126,16 +129,17 @@ Debug.WriteLIne("Test");
 
 ## Markdown のビルド方法
 
-+ Visual Studio Code で、タスク "exec pandoc" を実行する。
+- Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)
 
 あるいは
 
-+ Git Bash で、exec-pandoc.sh を実行する。
+- Git Bash で、exec-pandoc.sh を実行する。
 
 成果物は、/target 配下に、言語別、フォーマット別に生成される。
 
 ## 参考にしたサイト
 
-+ [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
-+ [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
+- [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
+- [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
+- [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
