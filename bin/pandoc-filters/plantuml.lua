@@ -160,7 +160,12 @@ return {
             --io.stderr:write(image_src .. "\n")
             local img_el = pandoc.Image({}, image_src, "")
 
-            return pandoc.Para { img_el }
+            --return pandoc.Para { img_el }
+            return pandoc.Plain(
+                {pandoc.RawInline('html', '<figure>')} ..
+                pandoc.Para { img_el }.content ..
+                {pandoc.RawInline('html', '</figure>')}
+            )
         end
     }
 }
