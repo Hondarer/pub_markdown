@@ -6,7 +6,7 @@
         {
             "label": "exec pandoc",
             "type": "shell",
-            "command": "C:\\WINDOWS\\system32\\cmd.exe /c bash.exe -c bin/exec-pandoc.sh",
+            "command": "bash.exe -c bin/exec-pandoc.sh",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
