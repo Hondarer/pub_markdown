@@ -46,9 +46,9 @@ English Hidden in Markdown
 English Visible in Markdown
 <!--:en-->
 
-## Plantuml
+## PlantUML
 
-Plantuml は各プラグインとの親和性を考慮し、以下の通り Markdown に記載すること。
+PlantUML は各プラグインとの親和性を考慮し、以下の通り Markdown に記載する。
 
 ### 言語名
 
@@ -56,12 +56,16 @@ plantuml とする。
 
 ### Plantuml タグ
 
-@startuml @enduml は必ず記載する。
+`@startuml` `@enduml` は必ず記載する。
+
+> PlantUML プラグインにて、ドキュメント内の PlantUML を出力する際の識別に使いるため。
 
 ### タイトル
 
-@startunl に続いてタイトルを記載すること。
-また、続いて title にてタイトルを記載すること。
+@startuml に続いてタイトルを記載する。
+また、続いて `title` にてタイトルを記載する。
+
+> PlantUML プラグインにて、エクスポートする際のファイル名に使いるため。
 
 ### 記載例
 
@@ -74,23 +78,25 @@ plantuml とする。
 
 ## draw.io テスト
 
-draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載すること。
+draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載する。
 
 ### 形式
 
-drawio.svg とすること。
-代表シートのみ表示されるため、1 つの drawio.svg ファイルには、複数シートを定義しないこと。
-Visual Studio Code による編集時は、ライトテーマに設定してから行うこと。
+Markdown から引用して用いるため、drawio.svg とする。
+Markdown から引用して表示した場合には代表シートのみ表示されるため、1 つの drawio.svg ファイルには複数シートを定義しない。
+Visual Studio Code による編集時は、ライトテーマに設定してから行う。
 Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでテーマの変更が可能。
 
 ### Markdown への引用
 
-原則、drawio.svg ファイルは、Markdown から参照すること。
-単一ファイルの drawio.svg ファイルは、docx フォーマットには含まれない。
+原則、drawio.svg ファイルは、Markdown から参照する。
+単一ファイルとしての drawio.svg ファイルは、docx フォーマットや html-self-contained な出力結果には含まれない。
 
 ### タイトル
 
-[] による図のタイトルを Markdown に記載すること。
+[] による図のタイトルを Markdown に記載する。
+
+> Pandoc にて、タイトルが定義されていない図を正しく解釈できないため。
 
 ### 記載例
 
@@ -101,15 +107,14 @@ Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をク�
 #### draw.io でテキストを含む図形が正しく変換できない場合
 
 日本語テキストを含む図形にて docx 変換後に Not supporrted by viewer と表示されるケースがある。
-この問題を回避するため、テキスト記入時は以下とすること。
+この問題を回避するため、テキスト記入時は以下とする。
 
 - 「テキスト」の 「ワードラップ」 のチェックを外す。
 - 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
 
 ## リンク
 
-文章同士のリンクを定義することができる。
-ビルドする際に .html や .docx へのリンクに読み替えるため、Markdown 作成時は特に制限なく .md 同士でリンクを行えばよい。
+Markdown 内のリンクは、.html や .docx への変換時も維持される。
 
 [サブフォルダの index へ](subfolder/index.md)
 
@@ -125,6 +130,7 @@ echo "Hello"
 
 ```csharp
 Debug.WriteLIne("Test");
+Debug.WriteLIne("日本");
 ```
 
 ## Markdown のビルド方法
