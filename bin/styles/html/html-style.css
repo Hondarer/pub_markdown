@@ -26,6 +26,9 @@ a.anchor {
   left: 0;
   bottom: 0; }
 
+a.dcjq-parent {
+  font-size: 14px; }
+
 h1, h2, h3, h4, h5, h6 {
   margin: 20px 0 10px;
   padding: 0;
@@ -56,11 +59,11 @@ h6 tt, h6 code {
   font-size: inherit; }
 
 h1 {
-  font-size: 28px;
+  font-size: 24px;
   color: black; }
 
 h2 {
-  font-size: 24px;
+  font-size: 22px;
   border-bottom: 1px solid #cccccc;
   color: black; }
 
@@ -78,7 +81,7 @@ h6 {
   font-size: 14px; }
 
 p, blockquote, ul, ol, dl, li, table, pre {
-  margin: 15px 0; }
+  margin: 3px 0; }
 
 hr {
   border: 0 none;
@@ -244,6 +247,8 @@ code, tt {
   white-space: nowrap;
   border: 1px solid #eaeaea;
   background-color: #f8f8f8;
+  color: black;
+  font-size: 16px;
   border-radius: 3px; }
 
 pre code {
@@ -265,11 +270,13 @@ pre code {
 pre {
   background-color: #f8f8f8;
   border: 1px solid #cccccc;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 19px;
   overflow: auto;
   padding: 6px 10px;
   border-radius: 3px; }
-  pre code, pre tt {
-    background-color: transparent;
-    border: none; }
+
+pre code, pre tt {
+  background-color: transparent;
+  font-size: 16px;
+  border: none; }
