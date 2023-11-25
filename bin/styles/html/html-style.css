@@ -37,9 +37,6 @@ a.anchor {
   left: 0;
   bottom: 0; }
 
-a.dcjq-parent {
-  font-size: 14px; }
-
 h1, h2, h3, h4, h5, h6 {
   margin: 20px 0 10px;
   padding: 0;
@@ -92,7 +89,8 @@ h6 {
   font-size: 14px; }
 
 .toc {
-  margin-right: 8px; }
+  margin-right: 8px;
+  font-size: 14px; }
 
 .toc ul, .toc ol, .toc dl, .toc li {
   margin: 3px 0; }
