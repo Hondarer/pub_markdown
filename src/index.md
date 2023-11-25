@@ -1,6 +1,11 @@
-# index
+---
+author:
+ - Tetsuo Honda
+subject: "subject"
+description: "description"
+---
 
-これはトップレベルの index である。
+# トップレベルの index
 
 ## 言語切替
 
@@ -46,6 +51,12 @@ English Hidden in Markdown
 English Visible in Markdown
 <!--:en-->
 
+## 画像の挿入
+
+画像を図として挿入する場合、`[` `]` による図のタイトルを Markdown に記載する。
+
+> Pandoc にて、タイトルが定義されていない画像は図として扱われず、書式が設定されないため。
+
 ## PlantUML
 
 PlantUML は各プラグインとの親和性を考慮し、以下の通り Markdown に記載する。
@@ -76,7 +87,7 @@ plantuml とする。
 @enduml
 ```
 
-## draw.io テスト
+## draw.io
 
 draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載する。
 
@@ -93,12 +104,6 @@ Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をク�
 
 原則、drawio.svg ファイルは、Markdown から参照する。
 単一ファイルとしての drawio.svg ファイルは、docx フォーマットや html-self-contained な出力結果には含まれない。
-
-### タイトル
-
-`[` `]` による図のタイトルを Markdown に記載する。
-
-> Pandoc にて、タイトルが定義されていない図を正しく解釈できないため。
 
 ### 記載例
 
@@ -143,7 +148,25 @@ Debug.WriteLIne("日本");
 |  2|テスト   |
 |  3|Test     |
 
-## Markdown のビルド方法
+## メタデータ
+
+Markdown の先頭に以下のように定義可能。
+
+第 1 レベルのタイトルが、自動的に文書のタイトルになる。
+
+発行時の時刻が、文章の作成日時となる。
+
+```text
+---
+author:
+ - author <- 「作成者」プロパティ
+ - author2 <- 複数人定義可能
+subject: "subject" <- 「件名」プロパティ
+description: "description" <- 「コメント」プロパティ
+---
+```
+
+## 発行方法
 
 - Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)

@@ -95,6 +95,9 @@ h6 {
 .toc ul, .toc ol, .toc dl, .toc li {
   margin: 3px 0; }
 
+.nav p, .nav ul, .nav ol, .nav dl, .nav li {
+  margin: 0; }
+  
 p, ul, ol, dl, li {
   margin: 8px 0; }
   
@@ -132,12 +135,6 @@ li p.first {
 
 ul, ol {
   padding-left: 30px; }
-
-ul :first-child, ol :first-child {
-  margin-top: 0; }
-
-ul :last-child, ol :last-child {
-  margin-bottom: 0; }
 
 dl {
   padding: 0; }

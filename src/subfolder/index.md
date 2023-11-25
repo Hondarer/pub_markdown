@@ -1,6 +1,11 @@
-# index
+---
+author:
+ - Tetsuo Honda
+subject: "subject"
+description: "description"
+---
 
-これはサブフォルダの index である。
+# サブフォルダの index
 
 ## Plantuml テスト
 
