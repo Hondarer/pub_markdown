@@ -5,34 +5,34 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$PATH:$SCRIPT_DIR
 cd $HOME_DIR
 
-mkdir -p target
-rm -rf target/*
+mkdir -p publish
+rm -rf publish/*
 
-mkdir -p "target/ja/html"
-mkdir -p "target/en/html"
-cp -p "bin/styles/html/html-style.css" "target/ja/html"
-cp -p "bin/styles/html/html-style.css" "target/en/html"
+mkdir -p "publish/ja/html"
+mkdir -p "publish/en/html"
+cp -p "bin/styles/html/html-style.css" "publish/ja/html"
+cp -p "bin/styles/html/html-style.css" "publish/en/html"
 
 # get file list
 files=`find "src" -type f`
 
 for file in $files; do
-    target_dir=$(dirname ${file})
-    if [[ "$target_dir" != "src" ]]; then
-        target_dir=html/${target_dir#src/}
+    publish_dir=$(dirname ${file})
+    if [[ "$publish_dir" != "src" ]]; then
+        publish_dir=html/${publish_dir#src/}
     else
-        target_dir=html
+        publish_dir=html
     fi
-    mkdir -p "target/ja/$target_dir"
-    mkdir -p "target/en/$target_dir"
-    target_file=html/${file#src/}
+    mkdir -p "publish/ja/$publish_dir"
+    mkdir -p "publish/en/$publish_dir"
+    publish_file=html/${file#src/}
 
     # MEMO: コピー不要なファイルがあれば、ここに追記していく
     if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
         # コンテンツのコピー
         echo "Processing Other file: $file"
-        cp -p "$file" "target/ja/$target_file"
-        cp -p "$file" "target/en/$target_file"
+        cp -p "$file" "publish/ja/$publish_file"
+        cp -p "$file" "publish/en/$publish_file"
     fi
 done
 
@@ -42,13 +42,13 @@ for file in $files; do
         echo "Processing Markdown file for html: $file"
         # html
 
-        target_dir=$(dirname ${file})
-        if [[ "$target_dir" != "src" ]]; then
-            target_dir=html/${target_dir#src/}
+        publish_dir=$(dirname ${file})
+        if [[ "$publish_dir" != "src" ]]; then
+            publish_dir=html/${publish_dir#src/}
         else
-            target_dir=html
+            publish_dir=html
         fi
-        target_file=html/${file#src/}
+        publish_file=html/${file#src/}
 
         # path to css
         nest_count=$(echo "$file" | grep -o '/' | wc -l)
@@ -59,27 +59,27 @@ for file in $files; do
 
         # ja
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html -o "target/ja/${target_file%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html -o "publish/ja/${publish_file%.*}.html"
         # en
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html -o "target/en/${target_file%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html -o "publish/en/${publish_file%.*}.html"
 
-        target_dir_self_contain=$(dirname ${file})
-        if [[ "$target_dir_self_contain" != "src" ]]; then
-            target_dir_self_contain=html-self-contain/${target_dir_self_contain#src/}
+        publish_dir_self_contain=$(dirname ${file})
+        if [[ "$publish_dir_self_contain" != "src" ]]; then
+            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#src/}
         else
-            target_dir_self_contain=html-self-contain
+            publish_dir_self_contain=html-self-contain
         fi
-        mkdir -p "target/ja/$target_dir_self_contain"
-        mkdir -p "target/en/$target_dir_self_contain"
-        target_file_self_contain=html-self-contain/${file#src/}
+        mkdir -p "publish/ja/$publish_dir_self_contain"
+        mkdir -p "publish/en/$publish_dir_self_contain"
+        publish_file_self_contain=html-self-contain/${file#src/}
 
         # ja (self_contain)
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/ja/$target_dir" --wrap=none -t html --embed-resources --standalone -o "target/ja/${target_file_self_contain%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "publish/ja/${publish_file_self_contain%.*}.html"
         # en (self_contain)
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
-            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="target/en/$target_dir" --wrap=none -t html --embed-resources --standalone -o "target/en/${target_file_self_contain%.*}.html"
+            pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "publish/en/${publish_file_self_contain%.*}.html"
     fi
 done
 
@@ -88,22 +88,22 @@ for file in $files; do
         # .md ファイルの処理B
         echo "Processing Markdown file for docx: $file"
         # docx
-        target_dir=$(dirname ${file})
-        if [[ "$target_dir" != "src" ]]; then
-            resource_dir=html/${target_dir#src/}
-            target_dir=docx/${target_dir#src/}
+        publish_dir=$(dirname ${file})
+        if [[ "$publish_dir" != "src" ]]; then
+            resource_dir=html/${publish_dir#src/}
+            publish_dir=docx/${publish_dir#src/}
         else
             resource_dir=html
-            target_dir=docx
+            publish_dir=docx
         fi
-        mkdir -p "target/ja/$target_dir"
-        mkdir -p "target/en/$target_dir"
-        target_file=docx/${file#src/}
+        mkdir -p "publish/ja/$publish_dir"
+        mkdir -p "publish/en/$publish_dir"
+        publish_file=docx/${file#src/}
         # ja
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
-            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "target/ja/${target_file%.*}.docx"
+            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/ja/${publish_file%.*}.docx"
         # en
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
-            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="target/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "target/en/${target_file%.*}.docx"
+            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/en/${publish_file%.*}.docx"
     fi
 done
