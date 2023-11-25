@@ -135,6 +135,14 @@ Debug.WriteLIne("Test");
 Debug.WriteLIne("日本");
 ```
 
+## 表
+
+|No.|内容     |
+|--:|---------|
+|  1|てすと   |
+|  2|テスト   |
+|  3|Test     |
+
 ## Markdown のビルド方法
 
 - Visual Studio Code で、タスク "exec pandoc" を実行する。
