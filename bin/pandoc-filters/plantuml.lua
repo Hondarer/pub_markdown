@@ -104,6 +104,8 @@ return {
                 return el
             end
 
+            -- TODO: el.text から title を抜き出し削除して、返却時に Figure オブジェクトの caption に title の内容を設定するのがより正しい。
+
             local encoded_text = encode(el.text)
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
