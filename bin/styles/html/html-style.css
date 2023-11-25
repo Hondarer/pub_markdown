@@ -80,10 +80,16 @@ h6 {
   color: #777777;
   font-size: 14px; }
 
+.toc {
+  margin-right: 8px; }
+
 .toc ul, .toc ol, .toc dl, .toc li {
   margin: 3px 0; }
 
-p, blockquote, ul, ol, dl, li, table, pre {
+p, ul, ol, dl, li {
+  margin: 8px 0; }
+  
+blockquote, table, pre {
   margin: 15px 0; }
 
 hr {

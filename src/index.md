@@ -83,7 +83,9 @@ draw.io は各プラグインとの親和性を考慮し、以下の通り Markd
 ### 形式
 
 Markdown から引用して用いるため、drawio.svg とする。
+
 Markdown から引用して表示した場合には代表シートのみ表示されるため、1 つの drawio.svg ファイルには複数シートを定義しない。
+
 Visual Studio Code による編集時は、ライトテーマに設定してから行う。
 Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでテーマの変更が可能。
 
