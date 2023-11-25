@@ -1,6 +1,6 @@
 # pub_markdown
 
-markdown to html and docx with pandoc
+markdown to html and docx with pandoc.
 
 # 前提環境
 
@@ -21,7 +21,9 @@ markdown to html and docx with pandoc
 
 ## セットアップ
 
-+ PATH の通ったところに、pandoc.exe を配置する。
++ Git Bash の bash.exe に PATH を通す。
++ pandoc.exe に PATH を通す。
+  bin フォルダ直下に pandoc.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
 
 ## Markdown のビルド方法

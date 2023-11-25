@@ -167,8 +167,14 @@ blockquote {
   blockquote > :last-child {
     margin-bottom: 0; }
 
+.table {
+  width: auto; }
+
 table {
-  padding: 0; }
+  padding: 0;
+  border-spacing: 0;
+  border-collapse: collapse;
+  min-width: auto; }
   table tr {
     border-top: 1px solid #cccccc;
     background-color: white;

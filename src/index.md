@@ -175,6 +175,18 @@ description: "description" <- 「コメント」プロパティ
 - 発行時の日時が、文章の日時になる。
   (date の指定は無視される)
 
+## Pandoc テンプレート
+
+bin/styles 以下にカスタマイズされた Pandoc テンプレートがある。
+
+### html
+
+`pandoc -D 'html'` コマンドで出力されたデフォルトテンプレートに置き換えることで、デフォルトの出力に変更できる。
+
+### docx
+
+`pandoc -o custom-reference.docx --print-default-data-file reference.docx` コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、デフォルトの出力に変更できる。
+
 ## 発行方法
 
 - Visual Studio Code で、タスク "exec pandoc" を実行する。
