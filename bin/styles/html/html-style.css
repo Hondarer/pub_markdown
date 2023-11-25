@@ -5,12 +5,23 @@ body {
   padding-top: 10px;
   padding-bottom: 10px;
   background-color: white;
-  padding: 30px; }
+  padding: 10px 30px; }
 
 body > *:first-child {
   margin-top: 0 !important; }
 body > *:last-child {
   margin-bottom: 0 !important; }
+
+.navbar-static-top {
+  margin-bottom: 4px; }
+
+.navbar-inner {
+  min-height: auto; }
+
+.doc-title, .doc-info, .navbar-text {
+  font-size: 14px;
+  line-height: normal;
+  padding: 2px 20px; }
 
 a {
   color: #4183C4; }
