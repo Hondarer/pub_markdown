@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_DIR=$(cd $(dirname $0); pwd)
+SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
 HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$PATH:$SCRIPT_DIR
 cd $HOME_DIR
@@ -44,7 +44,7 @@ for file in "${files[@]}"; do
         echo "Processing Markdown file for html: $file"
         # html
 
-        publish_dir=$(dirname ${file})
+        publish_dir=$(dirname "${file}")
         if [[ "$publish_dir" != "src" ]]; then
             publish_dir=html/${publish_dir#src/}
         else
@@ -66,7 +66,7 @@ for file in "${files[@]}"; do
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
             pandoc.exe -s --toc --toc-depth=2 --shift-heading-level-by=-1 -N --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html -o "publish/en/${publish_file%.*}.html"
 
-        publish_dir_self_contain=$(dirname ${file})
+        publish_dir_self_contain=$(dirname "${file}")
         if [[ "$publish_dir_self_contain" != "src" ]]; then
             publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#src/}
         else
@@ -90,7 +90,7 @@ for file in "${files[@]}"; do
         # .md ファイルの処理
         echo "Processing Markdown file for docx: $file"
         # docx
-        publish_dir=$(dirname ${file})
+        publish_dir=$(dirname "${file}")
         if [[ "$publish_dir" != "src" ]]; then
             resource_dir=html/${publish_dir#src/}
             publish_dir=docx/${publish_dir#src/}
