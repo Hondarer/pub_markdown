@@ -5,7 +5,12 @@ subject: "subject"
 description: "description"
 ---
 
+<!--ja:-->
 # トップレベルの index
+<!--:ja-->
+<!--en:
+# index of top level
+:en-->
 
 ## 概要
 

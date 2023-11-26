@@ -35,10 +35,12 @@ markdown to html and docx with pandoc.
 
 + Git Bash で、exec-pandoc.sh を実行する。
 
-## 既知の問題
+## 解決済の問題
+
+### 多言語対応時に title を得られない問題
 
 以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。
-pandoc に渡す前に、第 1 レベルの内容を取得して設定する必要がある。
+pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
 (lua フィルタの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
 
 ```
@@ -55,3 +57,19 @@ This document format requires a nonempty <title> element.
   Defaulting to '-' as the title.
   To specify a title, use 'title' in metadata or --metadata title="...".
 ```
+
+### docx 変換時に表示される警告
+
+docx 変換時に、以下の警告が表示される。
+動作に支障ないため、表示しないようにしている。
+
+```
+check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
+```
+
+## 既知の問題
+
+### PlantUML を docx に取り込んだ際のフォント名
+
+svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
+Meiryo を含むように svg にパッチを充てるのがよいだろう。
