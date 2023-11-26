@@ -97,10 +97,10 @@ local function file_exists(name)
     local f = io.open(name_sjis, "r")
     if f ~= nil then
         io.close(f)
-        io.stderr:write("[plantuml] skip " .. name_sjis .. "\n")
+        --io.stderr:write("[plantuml] skip " .. name_sjis .. "\n")
         return true
     else
-        io.stderr:write("[plantuml] make " .. name_sjis .. "\n")
+        --io.stderr:write("[plantuml] make " .. name_sjis .. "\n")
         return false
     end
 end
@@ -147,8 +147,6 @@ return {
 
             if not file_exists(image_file_path) then
 
-                --io.stderr:write("[plantuml] make " .. image_file_path .. "\n")
-
                 local url = string.format("%s://%s:%s/%s%s/%s", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format, encoded_text)
                 local mt, img = mediabags.fetch(url)
 
@@ -175,8 +173,6 @@ return {
 
                 fs:write(img)
                 fs:close()
-            else
-                --io.stderr:write("[plantuml] skip " .. image_file_path .. "\n")
             end
             
             local image_src = image_file_path

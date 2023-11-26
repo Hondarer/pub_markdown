@@ -115,10 +115,10 @@ for file in "${files[@]}"; do
         # ja
         sed -e "s/<!--en:-->/<!--en:/" -e "s/<!--:en-->/:en-->/" -e "s/<!--ja:[^-]/<!--ja:-->/" -e "s/[^-]:ja-->/<!--:ja-->/" -e "s/<!--ja:$/<!--ja:-->/" -e "s/^:ja-->/<!--:ja-->/" "$file" | \
             pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/ja/${publish_file%.*}.docx" 2>&1 | \
-            grep -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
+            grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
         # en
         sed -e "s/<!--ja:-->/<!--ja:/" -e "s/<!--:ja-->/:ja-->/" -e "s/<!--en:[^-]/<!--en:-->/" -e "s/[^-]:en-->/<!--:en-->/" -e "s/<!--en:$/<!--en:-->/" -e "s/^:en-->/<!--:en-->/" "$file" | \
             pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="`date -R`" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/en/${publish_file%.*}.docx" 2>&1 | \
-            grep -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
+            grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
     fi
 done
