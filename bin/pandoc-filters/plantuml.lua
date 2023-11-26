@@ -104,9 +104,33 @@ return {
                 return el
             end
 
-            -- TODO: el.text から title を抜き出し削除して、返却時に Figure オブジェクトの caption に title の内容を設定するのがより正しい。
+            ---------------------------------------------------------------------
 
-            local encoded_text = encode(el.text)
+            -- 改行ごとに分割
+            local lines = {}
+            for line in el.text:gmatch("[^\n]+") do
+                table.insert(lines, line)
+            end
+
+            -- "title タイトル" の行を削除
+            local filteredLines = {}
+            local titlePattern = "^%s*[Tt][Ii][Tt][Ll][Ee]%s*(.-)%s*$"
+            local title = nil
+            for _, line in ipairs(lines) do
+                if not line:match(titlePattern) then
+                    table.insert(filteredLines, line)
+                else
+                    -- タイトルの部分を得る
+                    title = line:match(titlePattern)
+                end
+            end
+
+            -- タイトルを取り除いた文字列を組み立て
+            local resultString = table.concat(filteredLines, "\n")
+
+            ---------------------------------------------------------------------
+
+            local encoded_text = encode(resultString)
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
 
@@ -159,7 +183,10 @@ return {
             end
 
             -- replace tag
-            return pandoc.Figure(pandoc.Image("test", image_src, ""))
+            if title == nil then
+                return pandoc.Figure(pandoc.Image("test", image_src, ""))
+            end
+            return pandoc.Figure(pandoc.Image("test", image_src, ""), {pandoc.Str(title)})
 
         end
     }
