@@ -13,11 +13,13 @@ mkdir -p "publish/en/html"
 cp -p "bin/styles/html/html-style.css" "publish/ja/html"
 cp -p "bin/styles/html/html-style.css" "publish/en/html"
 
-# get file list
-files=`find "src" -type f`
+# get file list (配列に格納)
+files_raw=`find "src" -type f`
+IFS=$'
+' read -r -d '' -a files <<< $files_raw
 
-for file in $files; do
-    publish_dir=$(dirname ${file})
+for file in "${files[@]}"; do
+    publish_dir=$(dirname "${file}")
     if [[ "$publish_dir" != "src" ]]; then
         publish_dir=html/${publish_dir#src/}
     else
@@ -36,7 +38,7 @@ for file in $files; do
     fi
 done
 
-for file in $files; do
+for file in "${files[@]}"; do
     if [[ "$file" == *.md ]]; then
         # .md ファイルの処理
         echo "Processing Markdown file for html: $file"
@@ -83,9 +85,9 @@ for file in $files; do
     fi
 done
 
-for file in $files; do
+for file in "${files[@]}"; do
     if [[ "$file" == *.md ]]; then
-        # .md ファイルの処理B
+        # .md ファイルの処理
         echo "Processing Markdown file for docx: $file"
         # docx
         publish_dir=$(dirname ${file})
