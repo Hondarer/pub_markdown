@@ -34,3 +34,24 @@ markdown to html and docx with pandoc.
 あるいは
 
 + Git Bash で、exec-pandoc.sh を実行する。
+
+## 既知の問題
+
+以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。
+pandoc に渡す前に、第 1 レベルの内容を取得して設定する必要がある。
+(lua フィルタの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
+
+```
+<!--ja:-->
+# トップレベルの index
+<!--:ja-->
+<!--en:
+# index of top level
+:en-->
+```
+
+```
+This document format requires a nonempty <title> element.
+  Defaulting to '-' as the title.
+  To specify a title, use 'title' in metadata or --metadata title="...".
+```
