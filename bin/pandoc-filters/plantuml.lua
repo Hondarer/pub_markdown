@@ -88,11 +88,19 @@ local function encode(text)
 end
 
 local function file_exists(name)
-    local f = io.open(name,"r")
+    -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
+    -- この処理が 他の言語の場合に正しく動作するかは未検証(動かない可能性が非常に高い)。
+    local fht = io.open(UTF8SJIS_table, "r")
+    local name_sjis, name_sjis_length = UTF8toSJIS:UTF8_to_SJIS_str_cnv(fht, name)
+    fht:close()
+
+    local f = io.open(name_sjis, "r")
     if f ~= nil then
         io.close(f)
+        io.stderr:write("[plantuml] skip " .. name_sjis .. "\n")
         return true
     else
+        io.stderr:write("[plantuml] make " .. name_sjis .. "\n")
         return false
     end
 end
@@ -139,7 +147,7 @@ return {
 
             if not file_exists(image_file_path) then
 
-                io.stderr:write("[plantuml] make " .. image_file_path .. "\n")
+                --io.stderr:write("[plantuml] make " .. image_file_path .. "\n")
 
                 local url = string.format("%s://%s:%s/%s%s/%s", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format, encoded_text)
                 local mt, img = mediabags.fetch(url)
@@ -168,7 +176,7 @@ return {
                 fs:write(img)
                 fs:close()
             else
-                io.stderr:write("[plantuml] skip " .. image_file_path .. "\n")
+                --io.stderr:write("[plantuml] skip " .. image_file_path .. "\n")
             end
             
             local image_src = image_file_path
