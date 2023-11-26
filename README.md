@@ -73,3 +73,7 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
 Meiryo を含むように svg にパッチを充てるのがよいだろう。
+
+## TODO
+
+date については、ビルド開始時に取得して全成果物で同じ日時としたい。
