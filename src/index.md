@@ -88,7 +88,7 @@ plantuml とする。
 
 > Visual Studio Code の PlantUML プラグインにて、エクスポートする際のファイル名に使いられる。
 
-また、上記とは別に `title` キーワードにてタイトルを記載する。
+また、上記とは別に `caption` キーワードにてタイトルを記載する。
 
 > PlantUML の図の見出しとして使いられる。
 > Pandoc での発行時には図のキャプションとなる。
@@ -97,8 +97,11 @@ plantuml とする。
 
 ```plantuml
 @startuml テスト
-    title テスト
+    caption 図の見出し
     Alice -> Bob
+    note right
+      日本語のコメント
+    end note
 @enduml
 ```
 

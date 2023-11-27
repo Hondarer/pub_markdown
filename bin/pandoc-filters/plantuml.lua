@@ -120,20 +120,20 @@ return {
                 table.insert(lines, line)
             end
 
-            -- "title タイトル" の行を削除
+            -- "caption キャプション" の行を削除
             local filteredLines = {}
-            local titlePattern = "^%s*[Tt][Ii][Tt][Ll][Ee]%s*(.-)%s*$"
-            local title = nil
+            local captionPattern = "^%s*[Cc][Aa][Pp][Tt][Ii][Oo][Nn]%s*(.-)%s*$"
+            local caption = nil
             for _, line in ipairs(lines) do
-                if not line:match(titlePattern) then
+                if not line:match(captionPattern) then
                     table.insert(filteredLines, line)
                 else
-                    -- タイトルの部分を得る
-                    title = line:match(titlePattern)
+                    -- キャプションの部分を得る
+                    caption = line:match(captionPattern)
                 end
             end
 
-            -- タイトルを取り除いた文字列を組み立て
+            -- キャプションを取り除いた文字列を組み立て
             local resultString = table.concat(filteredLines, "\n")
 
             ---------------------------------------------------------------------
@@ -150,8 +150,12 @@ return {
                 local url = string.format("%s://%s:%s/%s%s/%s", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format, encoded_text)
                 local mt, img = mediabags.fetch(url)
 
-                -- TODO: error checking...
-
+                if mt == nil or img == nil then
+                    -- TODO: error checking...
+                    print("Error fetching image from " .. url)
+                    return
+                end
+            
                 -- write to file
 
                 -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
@@ -171,6 +175,13 @@ return {
                     fs = io.open(image_file_path, "wb")
                 end
 
+                -- pu_config.format が "svg" の場合は、
+                -- font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換する。
+                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                if pu_config.format == "svg" then
+                    img = string.gsub(img, 'font%-family="sans%-serif"', 'font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif"')
+                end
+            
                 fs:write(img)
                 fs:close()
             end
@@ -187,10 +198,10 @@ return {
             end
 
             -- replace tag
-            if title == nil then
+            if caption == nil then
                 return pandoc.Figure(pandoc.Image("test", image_src, ""))
             end
-            return pandoc.Figure(pandoc.Image("test", image_src, ""), {pandoc.Str(title)})
+            return pandoc.Figure(pandoc.Image("test", image_src, ""), {pandoc.Str(caption)})
 
         end
     }
