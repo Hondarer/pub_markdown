@@ -74,6 +74,8 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
 Meiryo を含むように svg にパッチを充てるのがよいだろう。
 
-## TODO
+## TODO:
 
 - date については、ビルド開始時に取得して全成果物で同じ日時としたい。
+- メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
+- 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
