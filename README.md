@@ -67,15 +67,16 @@ docx 変換時に、以下の警告が表示される。
 check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
 ```
 
-## 既知の問題
-
 ### PlantUML を docx に取り込んだ際のフォント名
 
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
-Meiryo を含むように svg にパッチを充てるのがよいだろう。
+pu_config.format が svg の場合は、font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換するように改修。
+
+## 既知の問題
 
 ## TODO:
 
 - date については、ビルド開始時に取得して全成果物で同じ日時としたい。
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
+- "Source Code" スタイルの設定(段落と文字)
