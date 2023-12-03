@@ -79,4 +79,3 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 - date については、ビルド開始時に取得して全成果物で同じ日時としたい。
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
-- "Source Code" スタイルの設定(段落と文字)
