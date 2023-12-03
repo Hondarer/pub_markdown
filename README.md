@@ -78,3 +78,4 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
+- Captioned Figure, Image Caption の字下げ廃止
