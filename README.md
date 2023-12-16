@@ -26,7 +26,7 @@ markdown to html and docx with pandoc.
   bin フォルダ直下に pandoc.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
 
-## Markdown のビルド方法
+## Markdown の発行方法
 
 + Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)
@@ -34,6 +34,8 @@ markdown to html and docx with pandoc.
 あるいは
 
 + Git Bash で、exec-pandoc.sh を実行する。
+
+タスク "exec pandoc (current file)" を利用して、現在開いている Markdown のみを対象に発行を行える。
 
 ## 解決済の問題
 

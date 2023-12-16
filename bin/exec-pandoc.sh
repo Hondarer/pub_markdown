@@ -7,18 +7,41 @@ cd $HOME_DIR
 
 EXEC_DATE=`date -R`
 
-mkdir -p publish
-rm -rf publish/*
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --target=*)
+            target="${1#*=}"
+            shift
+        ;;
+        *)
+            shift
+        ;;
+    esac
+done
 
-mkdir -p "publish/ja/html"
-mkdir -p "publish/en/html"
-cp -p "bin/styles/html/html-style.css" "publish/ja/html"
-cp -p "bin/styles/html/html-style.css" "publish/en/html"
+if [[ -n $target && $target != src/* ]]; then
+    echo "Error: Target does not start with 'src/'. Exiting."
+    exit 1
+fi
+
+if [ -n "$target" ]; then
+    base_dir=$(dirname "$target")
+else
+    base_dir="src"
+    
+    # 出力フォルダの clean
+    mkdir -p publish
+    rm -rf publish/*
+    
+    mkdir -p "publish/ja/html"
+    mkdir -p "publish/en/html"
+    cp -p "bin/styles/html/html-style.css" "publish/ja/html"
+    cp -p "bin/styles/html/html-style.css" "publish/en/html"
+fi
 
 # get file list (配列に格納)
-files_raw=`find "src" -type f`
-IFS=$'
-' read -r -d '' -a files <<< $files_raw
+files_raw=$(find "${base_dir}" -type f)
+IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 for file in "${files[@]}"; do
     publish_dir=$(dirname "${file}")
@@ -39,6 +62,11 @@ for file in "${files[@]}"; do
         cp -p "$file" "publish/en/$publish_file"
     fi
 done
+
+# 個別 md が指定されていたら、ターゲットを個別設定
+if [ -n "$target" ]; then
+  files=("$target")
+fi
 
 for file in "${files[@]}"; do
     if [[ "$file" == *.md ]]; then
@@ -124,3 +152,5 @@ for file in "${files[@]}"; do
             grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
     fi
 done
+
+exit 0

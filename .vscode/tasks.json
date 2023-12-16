@@ -6,11 +6,21 @@
         {
             "label": "exec pandoc",
             "type": "shell",
-            "command": "bash.exe -c bin/exec-pandoc.sh",
+            "command": "bash.exe -i bin/exec-pandoc.sh",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            }
+        },
+        {
+            "label": "exec pandoc (current file)",
+            "type": "shell",
+            "command": "bin/exec-pandoc.cmd \"${relativeFile}\"",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
             }
         }
     ]
