@@ -189,6 +189,12 @@ Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をク�
 - 「テキスト」の 「ワードラップ」 のチェックを外す。
 - 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
 
+#### ダーク テーマの Visual Studio Code で画面が見づらい場合
+
+Draw.io Integration の拡張機能設定にて、テーマを kennedy に変更するとよい。
+
+参考: [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
+
 ## リンク
 
 Markdown 内のリンクは、.html や .docx への変換時も維持される。
