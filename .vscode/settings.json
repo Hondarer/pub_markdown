@@ -1,0 +1,8 @@
+{
+    "hediet.vscode-drawio.customLibraries": [
+        {
+            "libName": "ESB",
+            "file": "${workspaceFolder}/lib/drawio/ESB.xml"
+        }
+    ]
+}

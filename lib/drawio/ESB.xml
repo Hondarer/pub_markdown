@@ -1,0 +1,8 @@
+<mxlibrary>[
+  {
+    "xml": "&lt;mxGraphModel&gt;&lt;root&gt;&lt;mxCell id=\"0\"/&gt;&lt;mxCell id=\"1\" parent=\"0\"/&gt;&lt;mxCell id=\"2\" value=\"アダプタ\" style=\"sketch=0;pointerEvents=1;shadow=0;dashed=0;strokeColor=#E5C634;fillColor=#FBEF96;labelPosition=center;verticalLabelPosition=middle;verticalAlign=middle;outlineConnect=0;align=center;shape=stencil(zVTLDsIgEPwa7gjGx9FU/Q/aoiVFaABb/Xsp25rYhibWHky47AzMzBIWRBNbsIojgpmteOYQPSJCamYES6WHiWcKADcYygbKFe5qxW4coEPOKscNwNYZXfJG5K47L1TBjXAtS08IH/yedtEk00p5a6GVDdh5wKcsK69G31X+QfR0xVqHEdHTN1237T0gxA7CPaHqOhhafgpIoaICq+33CnhhhTX9tYvfFfq38Y3CnvyhxJyreE/CghpznsWglQUk+lDTEpnUlkd30cTjoxkNaGSwaXLRhk9M/EVICd/LhGuwjNPR8yHZKEBA4asMwAs=);fontColor=#000000;points=[[0,0.25,0,0,0],[0,0.5,0,0,0],[0,0.75,0,0,0],[0.25,0,0,0,0],[0.25,1,0,0,0],[0.5,0,0,0,0],[0.5,1,0,0,0],[0.75,0,0,0,0],[0.75,1,0,0,0],[1,0.25,0,0,0],[1,0.5,0,0,0],[1,0.75,0,0,0]];\" vertex=\"1\" parent=\"1\"&gt;&lt;mxGeometry width=\"80\" height=\"40\" as=\"geometry\"/&gt;&lt;/mxCell&gt;&lt;/root&gt;&lt;/mxGraphModel&gt;",
+    "w": 80,
+    "h": 40,
+    "aspect": "fixed"
+  }
+]</mxlibrary>
