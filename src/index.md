@@ -207,11 +207,12 @@ Markdown から引用して表示した場合には代表シートのみ表示�
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
-Draw.io Integration の拡張機能設定にて、テーマを kennedy に変更するとよい。
+Draw.io Integration のテーマを kennedy に変更するとよい。
 
-参考: [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
++ [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
++ [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
 
-Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでもテーマの変更ができる。
+Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることで、拡張機能の設定を経由せずにテーマの変更ができる。
 
 ## リンク
 
@@ -312,4 +313,3 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 - [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
 - [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
-- [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
