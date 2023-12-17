@@ -184,15 +184,11 @@ Markdown から引用して用いるため、drawio.svg とする。
 
 Markdown から引用して表示した場合には代表シートのみ表示されるため、1 つの drawio.svg ファイルには複数シートを定義しない。
 
-Visual Studio Code による編集時は、ライトテーマに設定してから行う。
-
-Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでテーマの変更ができる。
-
 ### Markdown への引用
 
 原則、drawio.svg ファイルは、Markdown から参照する。
 
-単一ファイルとしての drawio.svg ファイルは、docx フォーマットや html-self-contained な出力結果には含まれない。
+単一ファイルとしての drawio.svg ファイルは、docx フォーマットや html-self-contained フォーマットの出力結果には含まれない。
 
 ### 記載例
 
@@ -214,6 +210,8 @@ Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をク�
 Draw.io Integration の拡張機能設定にて、テーマを kennedy に変更するとよい。
 
 参考: [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
+
+Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることでもテーマの変更ができる。
 
 ## リンク
 
