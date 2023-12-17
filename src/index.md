@@ -77,6 +77,12 @@ English Hidden in Markdown
 English Visible in Markdown
 <!--:en-->
 
+### Visual Studio Code 拡張機能
+
+以下の Visual Studio Code 拡張機能により、編集時の言語切替作業の効率化が可能。
+
++ [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
+
 ## 詳細情報
 
 文章に詳細情報を記載する場合は以下のタグを利用する。
@@ -108,6 +114,12 @@ English Visible in Markdown
 <!--details:-->
 詳細(編集プレビューで表示状態)
 <!--:details-->
+
+### Visual Studio Code 拡張機能
+
+以下の Visual Studio Code 拡張機能により、編集時の詳細切替作業の効率化が可能。
+
++ [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
 
 ## 画像の挿入
 
@@ -153,6 +165,14 @@ plantuml とする。
     end note
 @enduml
 ```
+
+### Chrome 拡張機能
+
+以下の Chrome 拡張機能により、GitBucket での PlantUML 図形のレンダリングが可能。
+
+イントラネット環境等で利用する場合、PlantUML サーバの指定を必ず行うこと。
+
++ [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
 
 ## draw.io
 
@@ -277,12 +297,16 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 ## 発行方法
 
-- Visual Studio Code で、タスク "exec pandoc" を実行する。
++ Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)
 
 あるいは
 
-- Git Bash で、exec-pandoc.sh を実行する。
++ Git Bash で、exec-pandoc.sh を実行する。
+
+単一ファイルのみを発行したい場合は
+
++ Visual Studio Code で、タスク "exec pandoc (current file)" を実行する。
 
 成果物は、/target 配下に、言語別、フォーマット別に生成される。
 
