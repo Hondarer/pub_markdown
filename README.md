@@ -21,7 +21,7 @@ markdown to html and docx with pandoc.
 
 ## セットアップ
 
-+ Git Bash の bash.exe に PATH を通す。
++ Git Bash の bash.exe に PATH を通す。通常であれば、Git Bash の PATH は `C:\Program Files\Git\bin`。
 + pandoc.exe に PATH を通す。
   bin フォルダ直下に pandoc.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
@@ -81,3 +81,15 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
 - Word に出力した表を中央揃えにする方法が不明。
+
+### WSL が存在しない場合に bash.exe が起動しない
+
+より優先度が高い PATH の bash.exe が起動してしまうため。
+
+選択的に起動するランチャーを作成する必要がある。
+
+```
+>where bash.exe
+C:\Windows\System32\bash.exe
+C:\Program Files\Git\bin\bash.exe
+```
