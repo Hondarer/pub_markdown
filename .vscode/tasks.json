@@ -6,7 +6,7 @@
         {
             "label": "exec pandoc",
             "type": "shell",
-            "command": "bash.exe -i bin/exec-pandoc.sh",
+            "command": "bin/exec-pandoc.cmd",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
