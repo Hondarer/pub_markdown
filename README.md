@@ -97,3 +97,4 @@ C:\Program Files\Git\bin\bash.exe
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
 - Word に出力した表を中央揃えにする方法が不明。
+- widdershins のテンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。

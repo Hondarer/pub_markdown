@@ -214,6 +214,20 @@ Draw.io Integration のテーマを kennedy に変更するとよい。
 
 Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることで、拡張機能の設定を経由せずにテーマの変更ができる。
 
+## OpenAPI
+
+OpenAPI ファイルは、widdershins により Markdown に変換後、Pandoc に渡される。
+
+### 記載例
+
+[OpenAPI ファイルへ](books-swagger.yaml)
+
+## AsyncAPI
+
+現段階で、AsyncAPI の発行は未サポート。
+
+AsyncAPI 1.0 形式については、widdershins により変換できる可能性があるが未検証。
+
 ## リンク
 
 Markdown 内のリンクは、.html や .docx への変換時も維持される。
