@@ -54,9 +54,8 @@ for file in "${files[@]}"; do
     mkdir -p "publish/en/$publish_dir"
     publish_file=html/${file#src/}
 
-    if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。json形式にも未対応。
-        : # NOP
-    elif [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
+    # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
+    if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
         # コンテンツのコピー
         echo "Processing Other file: $file"
         cp -p "$file" "publish/ja/$publish_file"
@@ -91,8 +90,8 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
-        # NOTE: --language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
-        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --omitHeader --code true "$file")
+        # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
+        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
 
         ja_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
@@ -187,8 +186,8 @@ for file in "${files[@]}"; do
         mkdir -p "publish/en/$publish_dir"
         publish_file=docx/${file#src/}
 
-        # NOTE: --language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
-        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --omitHeader --code true "$file")
+        # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
+        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
 
         ja_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 

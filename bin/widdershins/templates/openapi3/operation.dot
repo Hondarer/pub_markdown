@@ -15,12 +15,6 @@
 {{ data.utils.mergePathParameters(data); }}
 {{ data.utils.getParameters(data); }}
 
-{{? data.options.codeSamples || data.operation["x-code-samples"] }}
-#### Code samples
-
-{{= data.utils.getCodeSamples(data) }}
-{{?}}
-
 `{{= data.methodUpper}} {{=data.method.path}}`
 
 {{? data.operation.summary && !data.options.tocSummary}}*{{= data.operation.summary }}*{{?}}
@@ -34,6 +28,12 @@
 {{#def.authentication_none}}
 {{?}}
 {{= data.tags.endSection }}
+
+{{? data.options.codeSamples || data.operation["x-code-samples"] }}
+#### Code samples
+
+{{= data.utils.getCodeSamples(data) }}
+{{?}}
 
 {{? data.operation.requestBody}}
 #### Body parameter
