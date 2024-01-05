@@ -39,7 +39,7 @@
 #### Body parameter
 
 {{? data.bodyParameter.exampleValues.description }}
-#### {{= data.bodyParameter.exampleValues.description }}
+##### {{= data.bodyParameter.exampleValues.description }}
 {{?}}
 
 {{= data.utils.getBodyParameterExamples(data) }}
