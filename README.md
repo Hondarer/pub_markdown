@@ -97,4 +97,10 @@ C:\Program Files\Git\bin\bash.exe
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
 - Word に出力した表を中央揃えにする方法が不明。
-- widdershins のテンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
+- 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
+
+### widdershins の問題
+
+- テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
+- Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされない(そもそも複数あることを想定していない)。
+- operationId が重複した場合に、処理が不正となる。
