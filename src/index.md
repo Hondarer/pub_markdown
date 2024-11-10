@@ -156,8 +156,11 @@ plantuml とする。
 
 ### 記載例
 
+TODO: `skinparam backgroundColor transparent` は、`plantuml.lua` にて自動付与させる。
+
 ```plantuml
 @startuml テスト
+    skinparam backgroundColor transparent
     caption 図の見出し
     Alice -> Bob
     note right
@@ -170,7 +173,7 @@ plantuml とする。
 
 以下の Chrome 拡張機能により、GitBucket での PlantUML 図形のレンダリングが可能。
 
-イントラネット環境等で利用する場合、PlantUML サーバの指定を必ず行うこと。
+企業内のイントラネット環境等で利用する場合、PlantUML サーバの指定を必ず行うこと。
 
 + [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
 
