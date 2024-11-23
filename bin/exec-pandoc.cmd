@@ -1,36 +1,39 @@
 @echo off
 setlocal
 
-REM Git bash にファイルパスを渡す際、区切り文字を変換してから処理しないと
-REM エスケープされてしまうため、Windows 側にて置換する処理
+rem Git bash にファイルパスを渡す際、区切り文字を変換してから処理しないと
+rem エスケープされてしまうため、Windows 側にて置換する処理
 
-REM 引数からファイル名を取得
+rem 引数からファイル名を取得
 set "filename=%~1"
 
-REM ファイル名のパス区切り文字を置換
+rem ファイル名のパス区切り文字を置換
 set "unescaped=%filename:\=/%"
 
-REM Git Bash がインストールされていて WSL がセットアップされていない環境における警告メッセージの回避
-REM
-REM Linux 用 Windows サブシステムには、ディストリビューションがインストールされていません。
+rem Git for windows がインストールされているものとして相対的に bash.exe が存在するディレクトリを得る
+rem TODO: WSL がインストールされている環境であれば、WSL の bash を利用できるはずだが、未実装。必要時はここでパスを得る。
 
-REM bash.exeのパスを検索
-for /f "delims=" %%a in ('where bash.exe') do set "bashpath=%%a"
-
-REM C:\Windows\System32\bash.exe が最初に見つかるかどうか確認
-if "%bashpath%"=="C:\Windows\System32\bash.exe" (
-    REM echo Found only C:\Windows\System32\bash.exe
-) else (
-    REM 他のパスが見つかった場合、そのパスを使用
-    REM echo Found another bash.exe: %bashpath%
+rem bash.exe のパスを検索
+for /f "delims=" %%A in ('where git.exe') do (
+    set "gitDir=%%~dpA"
+    goto :gotgitdir
 )
 
+echo Not found Git for Windows.
+exit
+
+:gotgitdir
+set "gitBin=%gitDir%..\bin"
+
+rem echo The directory of git-bin (in bash.exe) is: %gitBin%
+rem exit
+
 if "%filename%"=="" (
-    REM 引数が与えられていない場合
-    "%bashpath%" -i bin/exec-pandoc.sh
+    rem 引数が与えられていない場合
+    "%gitBin%\bash.exe" -i bin/exec-pandoc.sh
 ) else (
-    REM 引数が与えられている場合
-    "%bashpath%" -i bin/exec-pandoc.sh --target="%unescaped%"
+    rem 引数が与えられている場合
+    "%gitBin%\bash.exe" -i bin/exec-pandoc.sh --target="%unescaped%"
 )
 
 endlocal
