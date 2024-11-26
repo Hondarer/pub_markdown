@@ -78,6 +78,46 @@ else
     done
 fi
 
+#-------------------------------------------------------------------
+
+# ファイルをコピーする関数
+# 引数: $1=元ファイルパス, $2=コピー先ファイルパス
+copy_if_different_timestamp() {
+    local src_file="$1"
+    local dest_file="$2"
+
+    # 元ファイルが存在しない場合はエラー
+    if [[ ! -e "$src_file" ]]; then
+        echo "Error: Source file does not exist: $src_file"
+        return 1
+    fi
+
+    # コピー先ファイルが存在しない場合は直接コピー
+    if [[ ! -e "$dest_file" ]]; then
+        echo "Processing Other file: ${src_file#${workspaceFolder}/}"
+        cp -p "$src_file" "$dest_file"
+        return 0
+    fi
+
+    # タイムスタンプを取得 (秒単位のエポック時間)
+    local src_time=$(stat -c %Y "$src_file")
+    local dest_time=$(stat -c %Y "$dest_file")
+
+    # タイムスタンプの差を計算
+    local time_diff=$((src_time - dest_time))
+    if [[ ${time_diff#-} -le 2 ]]; then
+        #echo "File not copied: Timestamps are within 2 seconds."
+        return 0
+    fi
+
+    # タイムスタンプが異なる場合はコピー
+    echo "Processing Other file: ${src_file#${workspaceFolder}/}"
+    cp -p "$src_file" "$dest_file"
+    return 0
+}
+
+#-------------------------------------------------------------------
+
 # get file list (配列に格納)
 files_raw=$(find "${base_dir}" -type f)
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
@@ -90,7 +130,6 @@ for file in "${files[@]}"; do
         publish_dir=html
     fi
 
-
     for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/publish/${langElement}/$publish_dir"
     done
@@ -99,9 +138,8 @@ for file in "${files[@]}"; do
     # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
     if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
         # コンテンツのコピー
-        echo "Processing Other file: ${file#${workspaceFolder}/}"
         for langElement in ${lang}; do
-            cp -p "$file" "${workspaceFolder}/publish/${langElement}/$publish_file"
+            copy_if_different_timestamp "$file" "${workspaceFolder}/publish/${langElement}/$publish_file"
         done
     fi
 done
