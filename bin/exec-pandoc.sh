@@ -9,9 +9,14 @@ EXEC_DATE=`date -R`
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --workspaceFolder=*)
+            workspaceFolder="${1#*=}"
+            workspaceFolder="${workspaceFolder//\\/\/}"
+            shift
+        ;;
         --relativeFile=*)
-            target="${1#*=}"
-            target="${target//\\/\/}"
+            relativeFile="${1#*=}"
+            relativeFile="${relativeFile//\\/\/}"
             shift
         ;;
         *)
@@ -20,15 +25,48 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-if [[ -n $target && $target != doc/* ]]; then
-    echo "Error: relativeFile does not start with 'doc/'. Exiting."
+#-------------------------------------------------------------------
+
+# キーを指定して値を取得する関数
+parse_yaml() {
+  local yaml="$1"
+  local key="$2"
+  local value=$(echo "$yaml" | awk -v k="$key" 'BEGIN {FS=":"} $1 == k {sub(/[ \t]*#.*$/, "", $2); sub(/^[ \t]+/, "", $2); print $2}')
+  echo "$value"
+}
+
+# 定義ファイルのパス
+config_path="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
+
+if [ -f "$config_path" ]; then
+
+    # ファイルの内容を読み込む
+    config_content=$(cat "$config_path")
+
+    # キーを指定して値を取得する
+    mdRoot=$(parse_yaml "$config_content" "mdRoot")
+    details=$(parse_yaml "$config_content" "details")
+    lang=$(parse_yaml "$config_content" "lang")
+
+else
+
+    mdRoot="doc"
+    details="false"
+    lang="ja"
+
+fi
+
+#-------------------------------------------------------------------
+
+if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* ]]; then
+    echo "Error: relativeFile does not start with '${mdRoot}/'. Exiting."
     exit 1
 fi
 
-if [ -n "$target" ]; then
-    base_dir=$(dirname "$target")
+if [ -n "$relativeFile" ]; then
+    base_dir=$(dirname "$relativeFile")
 else
-    base_dir="doc"
+    base_dir="${mdRoot}"
     
     # 出力フォルダの clean
     mkdir -p publish
@@ -46,14 +84,14 @@ IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 for file in "${files[@]}"; do
     publish_dir=$(dirname "${file}")
-    if [[ "$publish_dir" != "doc" ]]; then
-        publish_dir=html/${publish_dir#doc/}
+    if [[ "$publish_dir" != "${mdRoot}" ]]; then
+        publish_dir=html/${publish_dir#${mdRoot}/}
     else
         publish_dir=html
     fi
     mkdir -p "publish/ja/$publish_dir"
     mkdir -p "publish/en/$publish_dir"
-    publish_file=html/${file#doc/}
+    publish_file=html/${file#${mdRoot}/}
 
     # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
     if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
@@ -65,8 +103,8 @@ for file in "${files[@]}"; do
 done
 
 # 個別 md が指定されていたら、ターゲットを個別設定
-if [ -n "$target" ]; then
-  files=("$target")
+if [ -n "$relativeFile" ]; then
+  files=("$relativeFile")
 fi
 
 for file in "${files[@]}"; do
@@ -77,12 +115,12 @@ for file in "${files[@]}"; do
         echo "Processing OpenAPI file for html: $file"
         # html
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "doc" ]]; then
-            publish_dir=html/${publish_dir#doc/}
+        if [[ "$publish_dir" != "${mdRoot}" ]]; then
+            publish_dir=html/${publish_dir#${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#doc/}
+        publish_file=html/${file#${mdRoot}/}
 
         # path to css
         nest_count=$(echo "$file" | grep -o '/' | wc -l)
@@ -103,14 +141,14 @@ for file in "${files[@]}"; do
         cp -p "publish/ja/${publish_file%.*}.html" "publish/en/${publish_file%.*}.html"
 
         publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "doc" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#doc/}
+        if [[ "$publish_dir_self_contain" != "${mdRoot}" ]]; then
+            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${mdRoot}/}
         else
             publish_dir_self_contain=html-self-contain
         fi
         mkdir -p "publish/ja/$publish_dir_self_contain"
         mkdir -p "publish/en/$publish_dir_self_contain"
-        publish_file_self_contain=html-self-contain/${file#doc/}
+        publish_file_self_contain=html-self-contain/${file#${mdRoot}/}
 
         # ja (self_contain)
         echo "${openapi_md}" | \
@@ -123,12 +161,12 @@ for file in "${files[@]}"; do
         echo "Processing Markdown file for html: $file"
         # html
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "doc" ]]; then
-            publish_dir=html/${publish_dir#doc/}
+        if [[ "$publish_dir" != "${mdRoot}" ]]; then
+            publish_dir=html/${publish_dir#${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#doc/}
+        publish_file=html/${file#${mdRoot}/}
 
         # path to css
         nest_count=$(echo "$file" | grep -o '/' | wc -l)
@@ -150,14 +188,14 @@ for file in "${files[@]}"; do
             pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html -o "publish/en/${publish_file%.*}.html"
 
         publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "doc" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#doc/}
+        if [[ "$publish_dir_self_contain" != "${mdRoot}" ]]; then
+            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${mdRoot}/}
         else
             publish_dir_self_contain=html-self-contain
         fi
         mkdir -p "publish/ja/$publish_dir_self_contain"
         mkdir -p "publish/en/$publish_dir_self_contain"
-        publish_file_self_contain=html-self-contain/${file#doc/}
+        publish_file_self_contain=html-self-contain/${file#${mdRoot}/}
 
         # ja (self_contain)
         cat "$file" | replace-tag.sh --lang=ja | \
@@ -176,16 +214,16 @@ for file in "${files[@]}"; do
         echo "Processing OpenAPI file for docx: $file"
         # docx
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "doc" ]]; then
-            resource_dir=html/${publish_dir#doc/}
-            publish_dir=docx/${publish_dir#doc/}
+        if [[ "$publish_dir" != "${mdRoot}" ]]; then
+            resource_dir=html/${publish_dir#${mdRoot}/}
+            publish_dir=docx/${publish_dir#${mdRoot}/}
         else
             resource_dir=html
             publish_dir=docx
         fi
         mkdir -p "publish/ja/$publish_dir"
         mkdir -p "publish/en/$publish_dir"
-        publish_file=docx/${file#doc/}
+        publish_file=docx/${file#${mdRoot}/}
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
@@ -204,16 +242,16 @@ for file in "${files[@]}"; do
         echo "Processing Markdown file for docx: $file"
         # docx
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "doc" ]]; then
-            resource_dir=html/${publish_dir#doc/}
-            publish_dir=docx/${publish_dir#doc/}
+        if [[ "$publish_dir" != "${mdRoot}" ]]; then
+            resource_dir=html/${publish_dir#${mdRoot}/}
+            publish_dir=docx/${publish_dir#${mdRoot}/}
         else
             resource_dir=html
             publish_dir=docx
         fi
         mkdir -p "publish/ja/$publish_dir"
         mkdir -p "publish/en/$publish_dir"
-        publish_file=docx/${file#doc/}
+        publish_file=docx/${file#${mdRoot}/}
 
         # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
         # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
