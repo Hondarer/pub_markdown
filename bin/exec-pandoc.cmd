@@ -1,19 +1,55 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
-rem Git bash ã«ãƒ•ã‚¡ã‚¤ãƒ«ãƒ‘ã‚¹ã‚’æ¸¡ã™éš›ã€åŒºåˆ‡ã‚Šæ–‡å­—ã‚’å¤‰æ›ã—ã¦ã‹ã‚‰å‡¦ç†ã—ãªã„ã¨
-rem ã‚¨ã‚¹ã‚±ãƒ¼ãƒ—ã•ã‚Œã¦ã—ã¾ã†ãŸã‚ã€Windows å´ã«ã¦ç½®æ›ã™ã‚‹å‡¦ç†
+:: Às’†‚Ìƒoƒbƒ`ƒtƒ@ƒCƒ‹‚ª‚ ‚éƒfƒBƒŒƒNƒgƒŠ‚ğæ“¾
+set "binFolder=%~dp0"
 
-rem å¼•æ•°ã‹ã‚‰ãƒ•ã‚¡ã‚¤ãƒ«åã‚’å–å¾—
-set "filename=%~1"
+:: ‰Šú‰»
+set "workspaceFolder="
+set "relativeFile="
 
-rem ãƒ•ã‚¡ã‚¤ãƒ«åã®ãƒ‘ã‚¹åŒºåˆ‡ã‚Šæ–‡å­—ã‚’ç½®æ›
-set "unescaped=%filename:\=/%"
+:: ˆø”‰ğÍ
+:parse_args
+if "%~1"=="" goto :end_parse
+set "arg=%~1"
 
-rem Git for windows ãŒã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã•ã‚Œã¦ã„ã‚‹ã‚‚ã®ã¨ã—ã¦ç›¸å¯¾çš„ã« bash.exe ãŒå­˜åœ¨ã™ã‚‹ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’å¾—ã‚‹
-rem TODO: WSL ãŒã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã•ã‚Œã¦ã„ã‚‹ç’°å¢ƒã§ã‚ã‚Œã°ã€WSL ã® bash ã‚’åˆ©ç”¨ã§ãã‚‹ã¯ãšã ãŒã€æœªå®Ÿè£…ã€‚å¿…è¦æ™‚ã¯ã“ã“ã§ãƒ‘ã‚¹ã‚’å¾—ã‚‹ã€‚
+:: /workspaceFolder: ‚Ìê‡
+echo !arg! | findstr /b /c:"/workspaceFolder:" >nul && (
+    set "workspaceFolder=!arg:/workspaceFolder:=!"
+)
 
-rem bash.exe ã®ãƒ‘ã‚¹ã‚’æ¤œç´¢
+:: /relativeFile: ‚Ìê‡
+echo !arg! | findstr /b /c:"/relativeFile:" >nul && (
+    set "relativeFile=!arg:/relativeFile:=!"
+)
+
+:: Ÿ‚Ìˆø”‚Ö
+shift
+goto :parse_args
+
+:end_parse
+
+:: ˆø”‚ªw’è‚³‚ê‚Ä‚¢‚È‚¢ê‡‚ÌƒGƒ‰[ƒƒbƒZ[ƒW
+if "%workspaceFolder%"=="" (
+    echo "/workspaceFolder" ‚ªw’è‚³‚ê‚Ä‚¢‚Ü‚¹‚ñB
+    exit /b 1
+)
+
+:: ƒtƒHƒ‹ƒ_‹æØ‚è‹L†‚ğƒGƒXƒP[ƒv
+:: Git bash ‚Éƒtƒ@ƒCƒ‹ƒpƒX‚ğ“n‚·ÛA‹æØ‚è•¶š‚ğ•ÏŠ·‚µ‚Ä‚©‚çˆ—‚µ‚È‚¢‚Æ
+:: ƒGƒXƒP[ƒv‚³‚ê‚Ä‚µ‚Ü‚¤‚½‚ßAWindows ‘¤‚É‚Ä’uŠ·‚·‚é
+set "escapedBinFolder=%binFolder:\=\\%"
+set "escapedWorkspaceFolder=%workspaceFolder:\=\\%"
+if not "%relativeFile%"=="" (
+    set "escapedRelativeFile=%relativeFile:\=\\%"
+)
+
+:: ƒfƒoƒbƒO—po—Í
+rem echo Escaped Bin Folder: !escapedBinFolder!
+rem echo Escaped Workspace Folder: !escapedWorkspaceFolder!
+rem echo Escaped Relative File: !escapedRelativeFile!
+
+:: bash.exe ‚ÌƒpƒX‚ğŒŸõ
 for /f "delims=" %%A in ('where git.exe') do (
     set "gitDir=%%~dpA"
     goto :gotgitdir
@@ -25,15 +61,15 @@ exit
 :gotgitdir
 set "gitBin=%gitDir%..\bin"
 
-rem echo The directory of git-bin (in bash.exe) is: %gitBin%
-rem exit
-
-if "%filename%"=="" (
-    rem å¼•æ•°ãŒä¸ãˆã‚‰ã‚Œã¦ã„ãªã„å ´åˆ
-    "%gitBin%\bash.exe" -i bin/exec-pandoc.sh
+:: bash.exe ‚É“n‚·
+if "!escapedRelativeFile!"=="" (
+    rem relativeFile ‚ª—^‚¦‚ç‚ê‚Ä‚¢‚È‚¢ê‡
+    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!"
+    "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!"
 ) else (
-    rem å¼•æ•°ãŒä¸ãˆã‚‰ã‚Œã¦ã„ã‚‹å ´åˆ
-    "%gitBin%\bash.exe" -i bin/exec-pandoc.sh --target="%unescaped%"
+    rem relativeFile ‚ª—^‚¦‚ç‚ê‚Ä‚¢‚éê‡
+    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
+    "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
 )
 
 endlocal
