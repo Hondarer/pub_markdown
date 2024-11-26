@@ -55,21 +55,23 @@ for /f "delims=" %%A in ('where git.exe') do (
     goto :gotgitdir
 )
 
-echo Not found Git for Windows.
+echo Git for Windows (Git Bash) がインストールされていません。
 exit
 
 :gotgitdir
 set "gitBin=%gitDir%..\bin"
 
 :: bash.exe に渡す
+set command="%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
+
 if "!escapedRelativeFile!"=="" (
     rem relativeFile が与えられていない場合
-    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
-    "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
 ) else (
     rem relativeFile が与えられている場合
-    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
-    "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
+    set command=!command! --relativeFile="!escapedRelativeFile!"
 )
+
+echo !command!
+!command!
 
 endlocal
