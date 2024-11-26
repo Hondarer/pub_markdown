@@ -152,13 +152,15 @@ plantuml とする。
 > PlantUML の図の見出しとして使いられる。
 > Pandoc での発行時には図のキャプションとなる。
 
-### 記載例
+背景色は、pandoc 側で透明にしている。
 
-**TODO: `skinparam backgroundColor transparent` は、`plantuml.lua` にて自動付与させる予定。**
+> skinparam backgroundColor transparent を自動付与している。
+> すでに skinparam backgroundColor が定義されている場合は、置換する。
+
+### 記載例
 
 ```plantuml
 @startuml テスト
-    skinparam backgroundColor transparent
     caption 図の見出し
     Alice -> Bob
     note right
