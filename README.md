@@ -21,7 +21,6 @@ markdown to html and docx with pandoc.
 
 ## セットアップ
 
-+ Git Bash の bash.exe に PATH を通す。通常であれば、Git Bash の PATH は `C:\Program Files\Git\bin`。
 + pandoc.exe に PATH を通す。
   bin フォルダ直下に pandoc.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
@@ -74,28 +73,13 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
 pu_config.format が svg の場合は、font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換するように改修。
 
-### WSL に有効なディストリビューションが存在しない場合に Git Bash に PATH を通してあっても bash.exe が起動しない
-
-C:\Windows\System32 の bash.exe が優先的に起動してしまうため。
-
-選択的に起動するランチャーを作成して対処済み。
-
-```
->bash.exe
-Linux 用 Windows サブシステムには、ディストリビューションがインストールされていません。
-ディストリビューションは Microsoft Store にアクセスしてインストールすることができます:
-https://aka.ms/wslstore
->where bash.exe
-C:\Windows\System32\bash.exe
-C:\Program Files\Git\bin\bash.exe
-```
-
 ## 既知の問題
 
 ## TODO:
 
 - メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
 - 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
+  と思ったが、ソースを /doc にすべきなので、この案は却下。
 - Word に出力した表を中央揃えにする方法が不明。
 - 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 
