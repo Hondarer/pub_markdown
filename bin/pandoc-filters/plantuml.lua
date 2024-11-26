@@ -142,7 +142,7 @@ return {
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
 
-            local filename = string.format("%s.%s", utils.sha1(encoded_text), pu_config.format)
+            local filename = string.format("puml_%s.%s", utils.sha1(encoded_text), pu_config.format)
             local image_file_path = paths.join({resource_dir, filename})
 
             if not file_exists(image_file_path) then
