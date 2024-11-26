@@ -2,7 +2,7 @@
 
 markdown to html and docx with pandoc.
 
-# 前提環境
+## 前提環境
 
 + Visual Studio Code on Windows
 + Microsoft Word
@@ -12,20 +12,20 @@ markdown to html and docx with pandoc.
 + [PlantUML](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml)
 + [pandoc](https://github.com/jgm/pandoc)
 
-## オプション
+### オプション
 
 + [gitbucket](https://github.com/gitbucket/gitbucket)
 + [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene?pli=1)
 
-# 利用方法
+## 利用方法
 
-## セットアップ
+### セットアップ
 
 + pandoc.exe に PATH を通す。
   bin フォルダ直下に pandoc.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
 
-## Markdown の発行方法
+### Markdown の発行方法
 
 + Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)
@@ -44,7 +44,7 @@ markdown to html and docx with pandoc.
 pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
 (lua フィルタの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
 
-```
+```html
 <!--ja:-->
 # トップレベルの index
 <!--:ja-->
@@ -53,7 +53,7 @@ pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
 :en-->
 ```
 
-```
+```text
 This document format requires a nonempty <title> element.
   Defaulting to '-' as the title.
   To specify a title, use 'title' in metadata or --metadata title="...".
@@ -64,7 +64,7 @@ This document format requires a nonempty <title> element.
 docx 変換時に、以下の警告が表示される。
 動作に支障ないため、表示しないようにしている。
 
-```
+```text
 check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
 ```
 
@@ -77,14 +77,14 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 
 ## TODO:
 
-- メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
-- 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
++ メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
++ 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
   と思ったが、ソースを /doc にすべきなので、この案は却下。
-- Word に出力した表を中央揃えにする方法が不明。
-- 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
++ Word に出力した表を中央揃えにする方法が不明。
++ 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 
 ### widdershins の問題
 
-- テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
-- Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされない(そもそも複数あることを想定していない)。
-- operationId が重複した場合に、処理が不正となる。
++ テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
++ Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされない(そもそも複数あることを想定していない)。
++ operationId が重複した場合に、処理が不正となる。

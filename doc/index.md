@@ -205,8 +205,8 @@ Markdown から引用して表示した場合には代表シートのみ表示�
 
 この問題を回避するため、テキスト記入時は以下とする。
 
-- 「テキスト」の 「ワードラップ」 のチェックを外す。
-- 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
++ 「テキスト」の 「ワードラップ」 のチェックを外す。
++ 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
@@ -294,9 +294,9 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 利便性向上のため exec-pandoc.sh にて以下の処理を行っているため、標準の Pandoc と挙動が異なる。
 
-- 第 1 レベルのタイトルが、文書のタイトルになる。
++ 第 1 レベルのタイトルが、文書のタイトルになる。
   (title の指定は無視される)
-- 発行時の日時が、文章の日時になる。
++ 発行時の日時が、文章の日時になる。
   (date の指定は無視される)
 
 ## Pandoc テンプレート
@@ -328,5 +328,5 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 ## 参考にしたサイト
 
-- [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
-- [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
++ [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
++ [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
