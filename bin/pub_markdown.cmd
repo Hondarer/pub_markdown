@@ -64,12 +64,12 @@ set "gitBin=%gitDir%..\bin"
 :: bash.exe Ç…ìnÇ∑
 if "!escapedRelativeFile!"=="" (
     rem relativeFile Ç™ó^Ç¶ÇÁÇÍÇƒÇ¢Ç»Ç¢èÍçá
-    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!"
-    "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!"
+    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
+    "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
 ) else (
     rem relativeFile Ç™ó^Ç¶ÇÁÇÍÇƒÇ¢ÇÈèÍçá
-    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
-    "%gitBin%\bash.exe" -i "%escapedBinFolder%exec-pandoc.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
+    echo "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
+    "%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!" --relativeFile="!escapedRelativeFile!"
 )
 
 endlocal
