@@ -64,18 +64,17 @@ if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* ]]; then
 fi
 
 if [ -n "$relativeFile" ]; then
-    base_dir=$(dirname "$relativeFile")
+    base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
 else
-    base_dir="${mdRoot}"
-    
+    base_dir="${workspaceFolder}/${mdRoot}"
     # 出力フォルダの clean
-    mkdir -p publish
-    rm -rf publish/*
-    
-    mkdir -p "publish/ja/html"
-    mkdir -p "publish/en/html"
-    cp -p "bin/styles/html/html-style.css" "publish/ja/html"
-    cp -p "bin/styles/html/html-style.css" "publish/en/html"
+    mkdir -p "${workspaceFolder}/publish"
+    # workspaceFolder に空白文字が含まれている可能性を考慮して、配下のファイルを clean する
+    find "${workspaceFolder}/publish" -mindepth 1 -exec rm -rf {} +
+    mkdir -p "${workspaceFolder}/publish/ja/html"
+    mkdir -p "${workspaceFolder}/publish/en/html"
+    cp -p "${SCRIPT_DIR}/styles/html/html-style.css" "${workspaceFolder}/publish/ja/html"
+    cp -p "${SCRIPT_DIR}/styles/html/html-style.css" "${workspaceFolder}/publish/en/html"
 fi
 
 # get file list (配列に格納)
@@ -84,27 +83,28 @@ IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 for file in "${files[@]}"; do
     publish_dir=$(dirname "${file}")
-    if [[ "$publish_dir" != "${mdRoot}" ]]; then
-        publish_dir=html/${publish_dir#${mdRoot}/}
+    if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+        publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
     else
         publish_dir=html
     fi
-    mkdir -p "publish/ja/$publish_dir"
-    mkdir -p "publish/en/$publish_dir"
-    publish_file=html/${file#${mdRoot}/}
+
+    mkdir -p "${workspaceFolder}/publish/ja/$publish_dir"
+    mkdir -p "${workspaceFolder}/publish/en/$publish_dir"
+    publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
 
     # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
     if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
         # コンテンツのコピー
-        echo "Processing Other file: $file"
-        cp -p "$file" "publish/ja/$publish_file"
-        cp -p "$file" "publish/en/$publish_file"
+        echo "Processing Other file: ${file#${workspaceFolder}/}"
+        cp -p "$file" "${workspaceFolder}/publish/ja/$publish_file"
+        cp -p "$file" "${workspaceFolder}/publish/en/$publish_file"
     fi
 done
 
 # 個別 md が指定されていたら、ターゲットを個別設定
 if [ -n "$relativeFile" ]; then
-  files=("$relativeFile")
+  files=("${workspaceFolder}/${relativeFile}")
 fi
 
 for file in "${files[@]}"; do
@@ -112,18 +112,18 @@ for file in "${files[@]}"; do
         
         # FIXME: markdown ファイルとの重複処理は統合すべき。
 
-        echo "Processing OpenAPI file for html: $file"
+        echo "Processing OpenAPI file for html: ${file#${workspaceFolder}/}"
         # html
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${mdRoot}" ]]; then
-            publish_dir=html/${publish_dir#${mdRoot}/}
+        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#${mdRoot}/}
+        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
 
         # path to css
-        nest_count=$(echo "$file" | grep -o '/' | wc -l)
+        nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
         up_dir=""
         for ((i=2; i<=nest_count; i++)); do
             up_dir+="../"
@@ -136,40 +136,39 @@ for file in "${files[@]}"; do
 
         # ja
         echo "${openapi_md}" | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html -o "publish/ja/${publish_file%.*}.html"
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/publish/ja/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/publish/ja/${publish_file%.*}.html"
         # en
-        cp -p "publish/ja/${publish_file%.*}.html" "publish/en/${publish_file%.*}.html"
+        cp -p "${workspaceFolder}/publish/ja/${publish_file%.*}.html" "${workspaceFolder}/publish/en/${publish_file%.*}.html"
 
         publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "${mdRoot}" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${mdRoot}/}
+        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir_self_contain=html-self-contain
         fi
-        mkdir -p "publish/ja/$publish_dir_self_contain"
-        mkdir -p "publish/en/$publish_dir_self_contain"
-        publish_file_self_contain=html-self-contain/${file#${mdRoot}/}
+        mkdir -p "${workspaceFolder}/publish/ja/$publish_dir_self_contain"
+        mkdir -p "${workspaceFolder}/publish/en/$publish_dir_self_contain"
+        publish_file_self_contain=html-self-contain/${file#${workspaceFolder}/${mdRoot}/}
 
         # ja (self_contain)
         echo "${openapi_md}" | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "publish/ja/${publish_file_self_contain%.*}.html"
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/publish/ja/html/html-style.css" --resource-path="${workspaceFolder}/publish/ja/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/publish/ja/${publish_file_self_contain%.*}.html"
         # en (self_contain)
-        cp -p "publish/ja/${publish_file_self_contain%.*}.html" "publish/en/${publish_file_self_contain%.*}.html"
-
+        cp -p "${workspaceFolder}/publish/ja/${publish_file_self_contain%.*}.html" "${workspaceFolder}/publish/en/${publish_file_self_contain%.*}.html"
     elif [[ "$file" == *.md ]]; then
         # .md ファイルの処理
-        echo "Processing Markdown file for html: $file"
+        echo "Processing Markdown file for html: ${file#${workspaceFolder}/}"
         # html
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${mdRoot}" ]]; then
-            publish_dir=html/${publish_dir#${mdRoot}/}
+        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#${mdRoot}/}
+        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
 
         # path to css
-        nest_count=$(echo "$file" | grep -o '/' | wc -l)
+        nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
         up_dir=""
         for ((i=2; i<=nest_count; i++)); do
             up_dir+="../"
@@ -177,32 +176,32 @@ for file in "${files[@]}"; do
 
         # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
         # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-        ja_title=$(cat "$file" | replace-tag.sh --lang=ja | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
-        en_title=$(cat "$file" | replace-tag.sh --lang=ja | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+        ja_title=$(cat "$file" | replace-tag.sh --lang=ja --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+        en_title=$(cat "$file" | replace-tag.sh --lang=ja --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
         # ja
-        cat "$file" | replace-tag.sh --lang=ja | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html -o "publish/ja/${publish_file%.*}.html"
+        cat "$file" | replace-tag.sh --lang=ja --details=${details} | \
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/publish/ja/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/publish/ja/${publish_file%.*}.html"
         # en
-        cat "$file" | replace-tag.sh --lang=en | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html -o "publish/en/${publish_file%.*}.html"
+        cat "$file" | replace-tag.sh --lang=en --details=${details} | \
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/publish/en/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/publish/en/${publish_file%.*}.html"
 
         publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "${mdRoot}" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${mdRoot}/}
+        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir_self_contain=html-self-contain
         fi
-        mkdir -p "publish/ja/$publish_dir_self_contain"
-        mkdir -p "publish/en/$publish_dir_self_contain"
-        publish_file_self_contain=html-self-contain/${file#${mdRoot}/}
+        mkdir -p "${workspaceFolder}/publish/ja/$publish_dir_self_contain"
+        mkdir -p "${workspaceFolder}/publish/en/$publish_dir_self_contain"
+        publish_file_self_contain=html-self-contain/${file#${workspaceFolder}/${mdRoot}/}
 
         # ja (self_contain)
-        cat "$file" | replace-tag.sh --lang=ja | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/ja/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "publish/ja/${publish_file_self_contain%.*}.html"
+        cat "$file" | replace-tag.sh --lang=ja --details=${details} | \
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/publish/ja/html/html-style.css" --resource-path="${workspaceFolder}/publish/ja/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/publish/ja/${publish_file_self_contain%.*}.html"
         # en (self_contain)
-        cat "$file" | replace-tag.sh --lang=en | \
-            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-html.lua" --template="bin/styles/html-self-contain/html-template.html" -c "${up_dir}html-style.css" --resource-path="publish/en/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "publish/en/${publish_file_self_contain%.*}.html"
+        cat "$file" | replace-tag.sh --lang=en --details=${details} | \
+            pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/publish/en/html/html-style.css" --resource-path="${workspaceFolder}/publish/en/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/publish/en/${publish_file_self_contain%.*}.html"
     fi
 done
 
@@ -211,19 +210,19 @@ for file in "${files[@]}"; do
         
         # FIXME: markdown ファイルとの重複処理は統合すべき。
 
-        echo "Processing OpenAPI file for docx: $file"
+        echo "Processing OpenAPI file for docx: ${file#${workspaceFolder}/}"
         # docx
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${mdRoot}" ]]; then
-            resource_dir=html/${publish_dir#${mdRoot}/}
-            publish_dir=docx/${publish_dir#${mdRoot}/}
+        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            resource_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
+            publish_dir=docx/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             resource_dir=html
             publish_dir=docx
         fi
-        mkdir -p "publish/ja/$publish_dir"
-        mkdir -p "publish/en/$publish_dir"
-        publish_file=docx/${file#${mdRoot}/}
+        mkdir -p "${workspaceFolder}/publish/ja/$publish_dir"
+        mkdir -p "${workspaceFolder}/publish/en/$publish_dir"
+        publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
@@ -232,39 +231,39 @@ for file in "${files[@]}"; do
 
         # ja
         echo "${openapi_md}" | \
-            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/ja/${publish_file%.*}.docx" 2>&1 | \
+            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/ja/${publish_file%.*}.docx" 2>&1 | \
             grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
         # en
-        cp -p "publish/ja/${publish_file%.*}.docx" "publish/en/${publish_file%.*}.docx"
+        cp -p "${workspaceFolder}/publish/ja/${publish_file%.*}.docx" "${workspaceFolder}/publish/en/${publish_file%.*}.docx"
 
    elif [[ "$file" == *.md ]]; then
         # .md ファイルの処理
-        echo "Processing Markdown file for docx: $file"
+        echo "Processing Markdown file for docx: ${file#${workspaceFolder}/}"
         # docx
         publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${mdRoot}" ]]; then
-            resource_dir=html/${publish_dir#${mdRoot}/}
-            publish_dir=docx/${publish_dir#${mdRoot}/}
+        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            resource_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
+            publish_dir=docx/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             resource_dir=html
             publish_dir=docx
         fi
-        mkdir -p "publish/ja/$publish_dir"
-        mkdir -p "publish/en/$publish_dir"
-        publish_file=docx/${file#${mdRoot}/}
+        mkdir -p "${workspaceFolder}/publish/ja/$publish_dir"
+        mkdir -p "${workspaceFolder}/publish/en/$publish_dir"
+        publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
         # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-        ja_title=$(cat "$file" | replace-tag.sh --lang=ja | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
-        en_title=$(cat "$file" | replace-tag.sh --lang=ja | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+        ja_title=$(cat "$file" | replace-tag.sh --lang=ja --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+        en_title=$(cat "$file" | replace-tag.sh --lang=ja --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
         # ja
-        cat "$file" | replace-tag.sh --lang=ja | \
-            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/ja/${publish_file%.*}.docx" 2>&1 | \
+        cat "$file" | replace-tag.sh --lang=ja --details=${details} | \
+            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$ja_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/ja/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/ja/${publish_file%.*}.docx" 2>&1 | \
             grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
         # en
-        cat "$file" | replace-tag.sh --lang=en | \
-            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="bin/pandoc-filters/fix-line-break.lua" --lua-filter="bin/pandoc-filters/plantuml.lua" --lua-filter="bin/pandoc-filters/pagebreak.lua" --lua-filter="bin/pandoc-filters/link-to-docx.lua" --resource-path="publish/en/$resource_dir" --wrap=none -t docx --reference-doc="bin/styles/docx/docx-style.dotx" -o "publish/en/${publish_file%.*}.docx" 2>&1 | \
+        cat "$file" | replace-tag.sh --lang=en --details=${details} | \
+            pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$en_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/en/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/en/${publish_file%.*}.docx" 2>&1 | \
             grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
     fi
 done

@@ -87,8 +87,6 @@ English Visible in Markdown
 
 文章に詳細情報を記載する場合は以下のタグを利用する。
 
-**TODO: 本タグは現状、常に出力時は非表示となる。切替機能を実装予定。**
-
 ### 記載方法
 
 ```markdown
@@ -156,7 +154,7 @@ plantuml とする。
 
 ### 記載例
 
-TODO: `skinparam backgroundColor transparent` は、`plantuml.lua` にて自動付与させる。
+**TODO: `skinparam backgroundColor transparent` は、`plantuml.lua` にて自動付与させる予定。**
 
 ```plantuml
 @startuml テスト
@@ -248,8 +246,8 @@ echo "Hello"
 ### CSharp
 
 ```csharp
-Debug.WriteLIne("Test");
-Debug.WriteLIne("日本");
+Debug.WriteLine("Test");
+Debug.WriteLine("日本");
 ```
 
 ## 表

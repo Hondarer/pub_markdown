@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# パラメーターから言語名 (--lang=ja または --lang=en) と詳細出力フラグ (--details) を受け取る
+details=false
+
+# パラメーターから言語名 (--lang=ja または --lang=en) と詳細出力フラグ (--details=true または --details=false) を受け取る
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --lang=*)
@@ -8,7 +10,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --details)
-      details=true
+      details="${1#*=}"
       shift
       ;;
     *)
@@ -48,7 +50,7 @@ markdown_text=$(awk -v lang="$lang" -v details="$details" '
             gsub(/^:en-->/, "<!--:en-->")
         }
 
-        if (details) {
+        if (details == "true") {
             $0 = gensub(/<!--details:([^-])/, "<!--details:-->\\1", "g")
             $0 = gensub(/([^-]):details-->/, "\\1<!--:details-->", "g")
             gsub(/<!--details:$/, "<!--details:-->")
