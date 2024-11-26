@@ -11,7 +11,7 @@ description: "description"
 
 ```plantuml
 @startuml テスト
-    title テスト
+    caption 図の見出し
     Alice <- Bob
 @enduml
 ```
