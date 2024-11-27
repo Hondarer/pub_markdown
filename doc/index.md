@@ -210,7 +210,7 @@ Markdown から引用して表示した場合には代表シートのみ表示�
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
-Draw.io Integration のテーマを kennedy に変更するとよい。
+Draw.io Integration のテーマを kennedy に変更する。
 
 + [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
 + [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
