@@ -233,8 +233,8 @@ for file in "${files[@]}"; do
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
             md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
-            # FIXME: Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができていない。ここで取り除く必要がある。
-            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | \
+            # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/publish/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.html"
         done
 
@@ -254,8 +254,8 @@ for file in "${files[@]}"; do
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
             md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
-            # FIXME: Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができていない。ここで取り除く必要がある。
-            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | \
+            # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/publish/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/publish/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/publish/${langElement}/${publish_file_self_contain%.*}.html"
         done
     fi
@@ -319,8 +319,8 @@ for file in "${files[@]}"; do
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
             md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
             
-            # FIXME: Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができていない。ここで取り除く必要がある。
-            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | \
+            # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" --metadata date="$EXEC_DATE" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx" 2>&1 | \
                 grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
         done
