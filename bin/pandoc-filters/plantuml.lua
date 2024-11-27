@@ -144,6 +144,7 @@ return {
             end
 
             if not hasBackgroundColor then
+                -- FIXME: @startuml, @startmindmap と記載されている場合はその行の直後、そうでない場合は1行目というふうに挿入位置の制御が必要
                 table.insert(removeCaptionLines, 2, "skinparam backgroundColor transparent") -- 挿入
             end
             
