@@ -121,20 +121,34 @@ return {
             end
 
             -- "caption キャプション" の行を削除
-            local filteredLines = {}
+            local removeCaptionLines = {}
             local captionPattern = "^%s*[Cc][Aa][Pp][Tt][Ii][Oo][Nn]%s*(.-)%s*$"
             local caption = nil
             for _, line in ipairs(lines) do
                 if not line:match(captionPattern) then
-                    table.insert(filteredLines, line)
+                    table.insert(removeCaptionLines, line)
                 else
                     -- キャプションの部分を得る
                     caption = line:match(captionPattern)
                 end
             end
 
-            -- キャプションを取り除いた文字列を組み立て
-            local resultString = table.concat(filteredLines, "\n")
+            -- "skinparam backgroundColor " の処理
+            local hasBackgroundColor = false
+
+            for i, line in ipairs(removeCaptionLines) do
+                if line:match("^skinparam backgroundColor ") then
+                    hasBackgroundColor = true
+                    removeCaptionLines[i] = "skinparam backgroundColor transparent" -- 置換
+                end
+            end
+
+            if not hasBackgroundColor then
+                table.insert(removeCaptionLines, 2, "skinparam backgroundColor transparent") -- 挿入
+            end
+            
+            -- 文字列を再度組み立て
+            local resultString = table.concat(removeCaptionLines, "\n")
 
             ---------------------------------------------------------------------
 
@@ -142,7 +156,7 @@ return {
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
 
-            local filename = string.format("%s.%s", utils.sha1(encoded_text), pu_config.format)
+            local filename = string.format("puml_%s.%s", utils.sha1(encoded_text), pu_config.format)
             local image_file_path = paths.join({resource_dir, filename})
 
             if not file_exists(image_file_path) then

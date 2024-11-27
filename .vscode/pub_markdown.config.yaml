@@ -1,0 +1,6 @@
+# markdown が格納されているフォルダ名
+mdRoot: doc
+# 詳細出力指定 (false / true)
+details: false
+# 言語の指定 (スペース区切りで複数言語の指定可)
+lang: ja en
