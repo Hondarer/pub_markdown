@@ -3,6 +3,7 @@ author:
     - Tetsuo Honda
 subject: "subject"
 description: "description"
+date: "Thu, 28 Nov 2024 15:04:32 +0900"
 ---
 
 <!--ja:-->
@@ -305,8 +306,7 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 + 第 1 レベルのタイトルが、文書のタイトルになる。
   (title の指定は無視される)
-+ 発行時の日時が、文章の日時になる。
-  (date の指定は無視される)
++ date が指定されていない場合、発行時の日時が文章の日時になる。
 
 ## Pandoc テンプレート
 
