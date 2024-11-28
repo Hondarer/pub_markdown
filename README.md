@@ -28,8 +28,7 @@ Markdown to html and docx with Pandoc.
 
 ### Markdown の発行方法
 
-+ Visual Studio Code で、タスク "exec pandoc" を実行する。
-  (Ctrl + Shift + B)
++ Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
 + 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
 ## 解決済の問題

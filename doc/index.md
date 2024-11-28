@@ -322,18 +322,10 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 ## 発行方法
 
-+ Visual Studio Code で、タスク "exec pandoc" を実行する。
-  (Ctrl + Shift + B)
++ Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
++ 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
-あるいは
-
-+ Git Bash で、exec-pandoc.sh を実行する。
-
-単一ファイルのみを発行したい場合は
-
-+ Visual Studio Code で、タスク "exec pandoc (current file)" を実行する。
-
-成果物は、/target 配下に、言語別、フォーマット別に生成される。
+成果物は、/publish 配下に、言語別、フォーマット別に生成される。
 
 ## 参考にしたサイト
 
