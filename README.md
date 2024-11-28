@@ -1,6 +1,6 @@
 # pub_markdown
 
-markdown to html and docx with pandoc.
+Markdown to html and docx with Pandoc.
 
 ## 前提環境
 
@@ -16,6 +16,7 @@ markdown to html and docx with pandoc.
 
 + [gitbucket](https://github.com/gitbucket/gitbucket)
 + [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene?pli=1)
++ [fix-jpdotx-for-pandoc](https://github.com/Hondarer/fix-jpdotx-for-pandoc)
 
 ## 利用方法
 
@@ -29,19 +30,14 @@ markdown to html and docx with pandoc.
 
 + Visual Studio Code で、タスク "exec pandoc" を実行する。
   (Ctrl + Shift + B)
-
-あるいは
-
-+ Git Bash で、exec-pandoc.sh を実行する。
-
-タスク "exec pandoc (current file)" を利用して、現在開いている Markdown のみを対象に発行を行える。
++ 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
 ## 解決済の問題
 
 ### 多言語対応時に title を得られない問題
 
 以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。
-pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
+Pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
 (lua フィルタの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
 
 ```html
@@ -77,10 +73,6 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 
 ## TODO:
 
-+ メタデータを本文と分離したい。コマンドライン上で Markdown ファイルと並列して与えるか、--metadata-file オプションで与える。
-+ 出力先を /doc にしたほうがいいか。(GitBucket Pages でのデフォルトパスは、/doc)
-  と思ったが、ソースを /doc にすべきなので、この案は却下。
-+ Word に出力した表を中央揃えにする方法が不明。
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 
 ### widdershins の問題
