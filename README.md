@@ -73,6 +73,10 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 ## TODO:
 
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
++ ワークスペース外の .md フォルダを開いて個別発行指定した際の振る舞いを確認する。
++ ユーザーレベル tasks への定義を試す。
+  (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json)
++ 設定ファイル、テンプレートなどのユーザーレベル対応をする。
 
 ### widdershins の問題
 
