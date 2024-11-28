@@ -1,6 +1,6 @@
 ---
 author:
- - Tetsuo Honda
+    - Tetsuo Honda
 subject: "subject"
 description: "description"
 ---
@@ -164,9 +164,18 @@ plantuml とする。
     caption 図の見出し
     Alice -> Bob
     note right
-      日本語のコメント
+        日本語のコメント
     end note
 @enduml
+```
+
+```plantuml
+@startmindmap テスト
+    caption マインドマップの見出し
+    * test
+        * test2
+        * test3
+@endmindmap
 ```
 
 ### Chrome 拡張機能
@@ -273,8 +282,8 @@ Markdown の先頭に以下のように記載する。
 ```text
 ---
 author:
- - author <- 「作成者」プロパティ
- - author2 <- 複数人定義可能
+    - author <- 「作成者」プロパティ
+    - author2 <- 複数人定義可能
 subject: "subject" <- 「件名」プロパティ
 description: "description" <- 「コメント」プロパティ
 ---
