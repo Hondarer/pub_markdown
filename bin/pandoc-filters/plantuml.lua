@@ -135,7 +135,6 @@ return {
 
             -- "skinparam backgroundColor " の処理
             local hasBackgroundColor = false
-
             for i, line in ipairs(removeCaptionLines) do
                 if line:match("^skinparam backgroundColor ") then
                     hasBackgroundColor = true
@@ -144,10 +143,17 @@ return {
             end
 
             if not hasBackgroundColor then
-                -- FIXME: @startuml, @startmindmap と記載されている場合はその行の直後、そうでない場合は1行目というふうに挿入位置の制御が必要
-                table.insert(removeCaptionLines, 2, "skinparam backgroundColor transparent") -- 挿入
+                -- @startuml, @startmindmap の後に "skinparam backgroundColor transparent" を挿入
+                local insertIndex = 1
+                for i, line in ipairs(removeCaptionLines) do
+                    if line:match("^@startuml") or line:match("^@startmindmap") then
+                        insertIndex = i + 1 -- 該当行の次の行に挿入する
+                        break
+                    end
+                end
+                table.insert(removeCaptionLines, insertIndex, "skinparam backgroundColor transparent")
             end
-            
+
             -- 文字列を再度組み立て
             local resultString = table.concat(removeCaptionLines, "\n")
 
