@@ -12,3 +12,5 @@ lang: ja en
 #htmlTemplate: styles/html/html-template.html
 # html (self-contain) テンプレートの指定
 #htmlSelfContainTemplate: styles/html/html-template.html
+# docx テンプレートの指定
+#docxTemplate: styles/docx/docx-style.dotx

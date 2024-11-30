@@ -51,6 +51,7 @@ if [ -f "$config_path" ]; then
     htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
     htmlSelfContainTemplate=$(parse_yaml "$config_content" "htmlSelfContainTemplate")
+    docxTemplate=$(parse_yaml "$config_content" "docxTemplate")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "doc" にする
@@ -123,6 +124,17 @@ else
 fi
 if [[ ! -e "$htmlSelfContainTemplate" ]]; then
     echo "Error: Html (self-contain) template file does not exist: $htmlSelfContainTemplate"
+    return 1
+fi
+
+# 設定ファイルに docxTemplate が指定されなかった場合の値を "$HOME_DIR/styles/docx/docx-template.dotx" にする
+if [[ "$docxTemplate" == "" ]]; then
+    docxTemplate="$HOME_DIR/styles/docx/docx-template.dotx"
+else
+    docxTemplate=$(resolve_path ${docxTemplate})
+fi
+if [[ ! -e "$docxTemplate" ]]; then
+    echo "Error: Docx template file does not exist: $docxTemplate"
     return 1
 fi
 
@@ -362,7 +374,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             if [ "$firstLang" == "" ]; then
                 echo "${openapi_md}" | \
-                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${HOME_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
+                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
@@ -394,7 +406,7 @@ for file in "${files[@]}"; do
             
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${HOME_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
+                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
         done
     fi
 done
