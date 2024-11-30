@@ -48,7 +48,8 @@ if [ -f "$config_path" ]; then
     pubRoot=$(parse_yaml "$config_content" "pubRoot")
     details=$(parse_yaml "$config_content" "details")
     lang=$(parse_yaml "$config_content" "lang")
-
+    htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
+    htmlSelfContainTemplate=$(parse_yaml "$config_content" "htmlSelfContainTemplate")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "doc" にする
@@ -73,6 +74,47 @@ fi
 
 #-------------------------------------------------------------------
 
+# パスを絶対パスに変換する関数
+resolve_path() {
+    local input_path="$1"
+    local resolved_path=""
+
+    # 絶対パスの判定（Linux/Unix および Windows Git Bash 対応）
+    if [[ "$input_path" == /* || "$input_path" =~ ^[a-zA-Z]:\\ ]]; then
+        # 絶対パスの場合はそのまま使用
+        resolved_path="$input_path"
+    else
+        # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
+        resolved_path="$(realpath "$workspaceFolder/$input_path")"
+    fi
+
+    echo "$resolved_path"
+}
+
+# 設定ファイルに htmlTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-template.html" にする
+if [[ "$htmlTemplate" == "" ]]; then
+    htmlTemplate="$HOME_DIR/styles/html/html-template.html"
+else
+    htmlTemplate=$(resolve_path ${htmlTemplate})
+fi
+if [[ ! -e "$htmlTemplate" ]]; then
+    echo "Error: Html template file does not exist: $htmlTemplate"
+    return 1
+fi
+
+# 設定ファイルに htmlSelfContainTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html-self-contain/html-self-contain-template.html" にする
+if [[ "$htmlSelfContainTemplate" == "" ]]; then
+    htmlSelfContainTemplate="$HOME_DIR/styles/html-self-contain/html-self-contain-template.html"
+else
+    htmlSelfContainTemplate=$(resolve_path ${htmlSelfContainTemplate})
+fi
+if [[ ! -e "$htmlSelfContainTemplate" ]]; then
+    echo "Error: Html (self-contain) template file does not exist: $htmlSelfContainTemplate"
+    return 1
+fi
+
+#-------------------------------------------------------------------
+
 if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* ]]; then
     # NOTE: ワークスペース外のファイルの場合、ここでチェックアウトされる
     echo "Error: relativeFile does not start with '${mdRoot}/'. Exiting."
@@ -90,7 +132,7 @@ else
 
     for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/html"
-        cp -p "${SCRIPT_DIR}/styles/html/html-style.css" "${workspaceFolder}/${pubRoot}/${langElement}/html"
+        cp -p "${HOME_DIR}/styles/html/html-style.css" "${workspaceFolder}/${pubRoot}/${langElement}/html"
     done
 fi
 
@@ -196,7 +238,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             if [ "$firstLang" == "" ]; then
                 echo "${openapi_md}" | \
-                    pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
+                    pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlTemplate}" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
                 firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
@@ -218,7 +260,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             if [ "$firstLang" == "" ]; then
                 echo "${openapi_md}" | \
-                    pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
+                    pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
@@ -252,7 +294,7 @@ for file in "${files[@]}"; do
 
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html/html-template.html" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
+                pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlTemplate}" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
         done
 
         publish_dir_self_contain=$(dirname "${file}")
@@ -273,7 +315,7 @@ for file in "${files[@]}"; do
 
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${SCRIPT_DIR}/styles/html-self-contain/html-template.html" -c "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
+                pandoc.exe -s --toc --toc-depth=3 --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
         done
     fi
 done
@@ -307,7 +349,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             if [ "$firstLang" == "" ]; then
                 echo "${openapi_md}" | \
-                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
+                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${HOME_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
@@ -339,7 +381,7 @@ for file in "${files[@]}"; do
             
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
+                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${HOME_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
         done
     fi
 done

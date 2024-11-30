@@ -6,3 +6,7 @@ pubRoot: docs
 details: false
 # 言語の指定 (スペース区切りで複数言語の指定可)
 lang: ja en
+# html テンプレートの指定
+#htmlTemplate: styles/html/html-template.html
+# html (self-contain) テンプレートの指定
+#htmlSelfContainTemplate: styles/html-self-contain/html-self-contain-template.html

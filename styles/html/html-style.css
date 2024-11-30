@@ -7,6 +7,12 @@ body {
   background-color: white;
   padding: 10px 30px; }
 
+header > hr {
+  border: 0 none; 
+  height: 2px; 
+  background-color: #cccccc;
+}
+  
 body > *:first-child {
   margin-top: 0 !important; }
 body > *:last-child {
