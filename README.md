@@ -70,7 +70,6 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 + html 出力の表を中央揃えにする。
 + styles フォルダを1階層上にする。
 + styles の各ファイルを config で指定可能にする。
-+ publish フォルダの名称を指定できるようにする。デフォルトを docs にする。その場合、markdown は docs-src がよいだろう。
 
 ### widdershins の問題
 

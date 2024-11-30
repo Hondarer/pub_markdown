@@ -1,5 +1,7 @@
-# markdown が格納されているフォルダ名
-mdRoot: doc
+# markdown が格納されているフォルダ名 (ワークスペースフォルダからの相対パス)
+mdRoot: docs-src
+# 発行先のフォルダ名 (ワークスペースフォルダからの相対パス)
+pubRoot: docs
 # 詳細出力指定 (false / true)
 details: false
 # 言語の指定 (スペース区切りで複数言語の指定可)
