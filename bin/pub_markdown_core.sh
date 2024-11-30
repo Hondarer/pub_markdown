@@ -48,6 +48,7 @@ if [ -f "$config_path" ]; then
     pubRoot=$(parse_yaml "$config_content" "pubRoot")
     details=$(parse_yaml "$config_content" "details")
     lang=$(parse_yaml "$config_content" "lang")
+    htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
     htmlSelfContainTemplate=$(parse_yaml "$config_content" "htmlSelfContainTemplate")
 fi
@@ -91,6 +92,17 @@ resolve_path() {
     echo "$resolved_path"
 }
 
+# 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-style.css" にする
+if [[ "$htmlStyleSheet" == "" ]]; then
+    htmlStyleSheet="$HOME_DIR/styles/html/html-style.css"
+else
+    htmlStyleSheet=$(resolve_path ${htmlStyleSheet})
+fi
+if [[ ! -e "$htmlStyleSheet" ]]; then
+    echo "Error: Html style sheets file does not exist: $htmlStyleSheet"
+    return 1
+fi
+
 # 設定ファイルに htmlTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-template.html" にする
 if [[ "$htmlTemplate" == "" ]]; then
     htmlTemplate="$HOME_DIR/styles/html/html-template.html"
@@ -102,9 +114,10 @@ if [[ ! -e "$htmlTemplate" ]]; then
     return 1
 fi
 
-# 設定ファイルに htmlSelfContainTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html-self-contain/html-self-contain-template.html" にする
+# 設定ファイルに htmlSelfContainTemplate が指定されなかった場合の値を htmlTemplate にする
 if [[ "$htmlSelfContainTemplate" == "" ]]; then
-    htmlSelfContainTemplate="$HOME_DIR/styles/html-self-contain/html-self-contain-template.html"
+    # 未指定であれば、htmlTemplate と同じでよいだろうという考え
+    htmlSelfContainTemplate="${htmlTemplate}"
 else
     htmlSelfContainTemplate=$(resolve_path ${htmlSelfContainTemplate})
 fi
@@ -132,7 +145,7 @@ else
 
     for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/html"
-        cp -p "${HOME_DIR}/styles/html/html-style.css" "${workspaceFolder}/${pubRoot}/${langElement}/html"
+        cp -p "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css"
     done
 fi
 
