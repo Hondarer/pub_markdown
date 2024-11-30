@@ -30,8 +30,9 @@ goto :parse_args
 :end_parse
 
 :: 引数が指定されていない場合のエラーメッセージ
+:: NOTE: 単一ファイルモードの場合、ここでチェックアウトされる。
 if "%workspaceFolder%"=="" (
-    echo "/workspaceFolder" が指定されていません。
+    echo "Error: workspaceFolder does not set. Exiting."
     exit /b 1
 )
 
@@ -49,19 +50,20 @@ rem echo Escaped Bin Folder: !escapedBinFolder!
 rem echo Escaped Workspace Folder: !escapedWorkspaceFolder!
 rem echo Escaped Relative File: !escapedRelativeFile!
 
-:: bash.exe のパスを検索
+:: git.exe のパスを検索
 for /f "delims=" %%A in ('where git.exe') do (
     set "gitDir=%%~dpA"
     goto :gotgitdir
 )
 
-echo Git for Windows (Git Bash) がインストールされていません。
-exit
+echo "Error: Git for Windows (Git Bash) does not found. Exiting."
+exit /b 1
 
 :gotgitdir
+:: git.exe のパスから、bash.exe のパスを組み立て
 set "gitBin=%gitDir%..\bin"
 
-:: bash.exe に渡す
+:: コマンドの組み立て
 set command="%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
 
 if "!escapedRelativeFile!"=="" (
@@ -71,7 +73,12 @@ if "!escapedRelativeFile!"=="" (
     set command=!command! --relativeFile="!escapedRelativeFile!"
 )
 
+:: 実行内容を出力
 echo !command!
-!command!
 
-endlocal
+:: コマンドを実行し戻り値を取得
+!command!
+set "returnCode=%ERRORLEVEL%"
+
+:: 戻り値を呼び出し元に返す
+endlocal & exit /b %returnCode%
