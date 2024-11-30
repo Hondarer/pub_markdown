@@ -11,6 +11,7 @@ Markdown to html and docx with Pandoc.
 + [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio)
 + [PlantUML](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml)
 + [pandoc](https://github.com/jgm/pandoc)
++ [console-rsvg-convert](https://github.com/miyako/console-rsvg-convert)
 
 ### オプション
 
@@ -22,8 +23,8 @@ Markdown to html and docx with Pandoc.
 
 ### セットアップ
 
-+ pandoc.exe に PATH を通す。
-  bin フォルダ直下に pandoc.exe を配置してもよい。
++ pandoc.exe に PATH を通す。bin フォルダ直下に pandoc.exe を配置してもよい。
++ rsvg-convert.exe に PATH を通す。bin フォルダ直下に rsvg-convert.exe を配置してもよい。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
 
 ### Markdown の発行方法
@@ -54,15 +55,6 @@ This document format requires a nonempty <title> element.
   To specify a title, use 'title' in metadata or --metadata title="...".
 ```
 
-### docx 変換時に表示される警告
-
-docx 変換時に、以下の警告が表示される。
-動作に支障ないため、表示しないようにしている。
-
-```text
-check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
-```
-
 ### PlantUML を docx に取り込んだ際のフォント名
 
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
@@ -73,13 +65,24 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 ## TODO:
 
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
-+ ワークスペース外の .md フォルダを開いて個別発行指定した際の振る舞いを確認する。
 + ユーザーレベル tasks への定義を試す。
   (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json)
-+ 設定ファイル、テンプレートなどのユーザーレベル対応をする。
++ html 出力の表を中央揃えにする。
++ styles フォルダを1階層上にする。
++ styles の各ファイルを config で指定可能にする。
++ publish フォルダの名称を指定できるようにする。デフォルトを docs にする。その場合、markdown は docs-src がよいだろう。
 
 ### widdershins の問題
 
 + テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
 + Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされない(そもそも複数あることを想定していない)。
 + operationId が重複した場合に、処理が不正となる。
+
+### docx 変換時に表示される警告
+
+docx 変換時に rsvg-convert.exe が存在しない場合、以下の警告が表示される。
+rsvg-convert.exe を配置すれば解消される。
+
+```text
+check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
+```

@@ -292,8 +292,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             if [ "$firstLang" == "" ]; then
                 echo "${openapi_md}" | \
-                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx" 2>&1 | \
-                    grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
+                    pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx"
                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/publish/${firstLang}/${publish_file%.*}.docx" "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx"
@@ -325,8 +324,7 @@ for file in "${files[@]}"; do
             
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx" 2>&1 | \
-                grep -a -v "rsvg-convert: createProcess: does not exist (No such file or directory)"
+                pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/publish/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${SCRIPT_DIR}/styles/docx/docx-style.dotx" -o "${workspaceFolder}/publish/${langElement}/${publish_file%.*}.docx"
         done
     fi
 done

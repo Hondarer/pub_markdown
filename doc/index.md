@@ -209,14 +209,20 @@ Markdown から引用して表示した場合には代表シートのみ表示�
 
 ### ノウハウ
 
-#### draw.io でテキストを含む図形が正しく変換できない場合
+#### draw.io でテキストを含む図形が正しく変換できない場合の対処
 
-日本語テキストを含む図形にて docx 変換後に Not supporrted by viewer と表示されるケースがある。
+docx 変換後に `Text is not SVG - cannot display` と表示されるケースがある。これは draw.io が .svg の高度な機能 (foreignObject) を利用しているためである。
+
+[Why text in exported SVG images may not display correctly](https://www.drawio.com/doc/faq/svg-export-text-problems)
 
 この問題を回避するため、テキスト記入時は以下とする。
 
 + 「テキスト」の 「ワードラップ」 のチェックを外す。
 + 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
+
+[Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio) プラグインを使用している場合は、`hediet.vscode-drawio.simpleLabels` の設定を行うことでデフォルトの動作を変更する。
+
+> この設定を行っても、.svg へのエクスポート時の挙動が変わるのみで .drawio.svg ファイルの挙動は変わらないため、上記テキストの属性設定を行う必要がある。
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
