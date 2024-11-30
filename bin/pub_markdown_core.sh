@@ -7,6 +7,30 @@ cd $HOME_DIR
 
 export EXEC_DATE=`date -R`
 
+#-------------------------------------------------------------------
+
+# パスを絶対パスに変換する関数
+resolve_path() {
+    local input_path="$1"
+    local resolved_path=""
+
+    # 絶対パスの判定（Linux/Unix および Windows Git Bash 対応）
+    if [[ "$input_path" == /* || "$input_path" =~ ^[a-zA-Z]:\\ ]]; then
+        # 絶対パスの場合はそのまま使用
+        resolved_path="$input_path"
+    else
+        # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
+        resolved_path="$(realpath "$workspaceFolder/$input_path")"
+    fi
+
+    echo "$resolved_path"
+}
+
+#-------------------------------------------------------------------
+
+# 定義ファイルのデフォルトパス
+configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspaceFolder=*)
@@ -17,6 +41,11 @@ while [[ $# -gt 0 ]]; do
         --relativeFile=*)
             relativeFile="${1#*=}"
             relativeFile="${relativeFile//\\/\/}"
+            shift
+        ;;
+        --configFile=*)
+            configFile="${1#*=}"
+            configFile=$(resolve_path "${configFile//\\/\/}")
             shift
         ;;
         *)
@@ -35,13 +64,10 @@ parse_yaml() {
   echo "$value"
 }
 
-# 定義ファイルのパス
-config_path="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
-
-if [ -f "$config_path" ]; then
+if [ -f "$configFile" ]; then
 
     # ファイルの内容を読み込む
-    config_content=$(cat "$config_path")
+    config_content=$(cat "$configFile")
 
     # キーを指定して値を取得する
     mdRoot=$(parse_yaml "$config_content" "mdRoot")
@@ -75,23 +101,6 @@ if [[ "$lang" == "" ]]; then
 fi
 
 #-------------------------------------------------------------------
-
-# パスを絶対パスに変換する関数
-resolve_path() {
-    local input_path="$1"
-    local resolved_path=""
-
-    # 絶対パスの判定（Linux/Unix および Windows Git Bash 対応）
-    if [[ "$input_path" == /* || "$input_path" =~ ^[a-zA-Z]:\\ ]]; then
-        # 絶対パスの場合はそのまま使用
-        resolved_path="$input_path"
-    else
-        # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
-        resolved_path="$(realpath "$workspaceFolder/$input_path")"
-    fi
-
-    echo "$resolved_path"
-}
 
 # 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-style.css" にする
 if [[ "$htmlStyleSheet" == "" ]]; then

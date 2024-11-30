@@ -7,6 +7,7 @@ set "binFolder=%~dp0"
 :: 初期化
 set "workspaceFolder="
 set "relativeFile="
+set "configFile="
 
 :: 引数解析
 :parse_args
@@ -21,6 +22,11 @@ echo !arg! | findstr /b /c:"/workspaceFolder:" >nul && (
 :: /relativeFile: の場合
 echo !arg! | findstr /b /c:"/relativeFile:" >nul && (
     set "relativeFile=!arg:/relativeFile:=!"
+)
+
+:: /configFile: の場合
+echo !arg! | findstr /b /c:"/configFile:" >nul && (
+    set "c=!arg:/configFile:=!"
 )
 
 :: 次の引数へ
@@ -44,11 +50,15 @@ set "escapedWorkspaceFolder=%workspaceFolder:\=\\%"
 if not "%relativeFile%"=="" (
     set "escapedRelativeFile=%relativeFile:\=\\%"
 )
+if not "%configFile%"=="" (
+    set "escapedConfigFile=%configFile:\=\\%"
+)
 
 :: デバッグ用出力
 rem echo Escaped Bin Folder: !escapedBinFolder!
 rem echo Escaped Workspace Folder: !escapedWorkspaceFolder!
 rem echo Escaped Relative File: !escapedRelativeFile!
+rem echo Escaped Config File: !escapedConfigFile!
 
 :: git.exe のパスを検索
 for /f "delims=" %%A in ('where git.exe') do (
@@ -71,6 +81,13 @@ if "!escapedRelativeFile!"=="" (
 ) else (
     rem relativeFile が与えられている場合
     set command=!command! --relativeFile="!escapedRelativeFile!"
+)
+
+if "!escapedConfigFile!"=="" (
+    rem configFile が与えられていない場合
+) else (
+    rem configFile が与えられている場合
+    set command=!command! --configFile="!escapedConfigFile!"
 )
 
 :: 実行内容を出力

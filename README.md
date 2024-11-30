@@ -68,7 +68,6 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 + ユーザーレベル tasks への定義を試す。
   (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json)
 + html 出力の表を中央揃えにする。
-+ styles の各ファイルを config で指定可能にする。
 
 ### widdershins の問題
 
