@@ -296,6 +296,9 @@ code, tt {
   font-size: 16px;
   border-radius: 3px; }
 
+pre {
+  background: transparent; }
+  
 pre code {
   margin: 0;
   padding: 0;
@@ -313,7 +316,6 @@ pre code {
   border-radius: 3px; }
 
 pre {
-  background-color: #f8f8f8;
   border: 1px solid #cccccc;
   font-size: 16px;
   line-height: 19px;
@@ -327,7 +329,6 @@ pre code, pre tt {
   border: none; }
 
 figure {
-  background-color: #f8f8f8;
   border: 1px solid #cccccc;
   border-radius: 3px;
   padding: 8px;
