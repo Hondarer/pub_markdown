@@ -65,10 +65,9 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 ## TODO:
 
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
-+ ユーザーレベル tasks への定義を試す。
-  (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json)
-+ html 出力の表を中央揃えにする。
-
++ ユーザーレベル tasks (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json) への定義を試す。
++ シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
+  
 ### widdershins の問題
 
 + テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
@@ -78,7 +77,7 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 ### docx 変換時に表示される警告
 
 docx 変換時に rsvg-convert.exe が存在しない場合、以下の警告が表示される。
-rsvg-convert.exe を配置すれば解消される。
+rsvg-convert.exe を配置することで解消される。
 
 ```text
 check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
