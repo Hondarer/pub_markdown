@@ -12,6 +12,8 @@ lang: ja en
 #htmlTemplate: styles/html/html-template.html
 # html (self-contain) テンプレートの指定
 #htmlSelfContainTemplate: styles/html/html-template.html
+# html における toc 出力要否 (false / true)
+#htmlTocEnable: true
 # html における toc の深さ
 #htmlTocDepth: 3
 # docx テンプレートの指定
