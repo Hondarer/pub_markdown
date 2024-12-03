@@ -203,7 +203,7 @@ copy_if_different_timestamp() {
 
     # コピー先ファイルが存在しない場合は直接コピー
     if [[ ! -e "$dest_file" ]]; then
-        echo "Processing Other file: ${src_file#${workspaceFolder}/}"
+        #echo "Processing Other file: ${src_file#${workspaceFolder}/}"
         cp -p "$src_file" "$dest_file"
         return 0
     fi
@@ -220,7 +220,7 @@ copy_if_different_timestamp() {
     fi
 
     # タイムスタンプが異なる場合はコピー
-    echo "Processing Other file: ${src_file#${workspaceFolder}/}"
+    #echo "Processing Other file: ${src_file#${workspaceFolder}/}"
     cp -p "$src_file" "$dest_file"
     return 0
 }
@@ -247,6 +247,7 @@ for file in "${files[@]}"; do
     # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
     if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
         # コンテンツのコピー
+        echo "Processing Other file: ${file#${workspaceFolder}/}"
         for langElement in ${lang}; do
             copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}/$publish_file"
         done

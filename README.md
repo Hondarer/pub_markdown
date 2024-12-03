@@ -67,7 +67,7 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 + ユーザーレベル tasks (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json) への定義を試す。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
-  
+
 ### widdershins の問題
 
 + テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある(一部作業中)。
