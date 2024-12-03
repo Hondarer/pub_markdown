@@ -227,30 +227,41 @@ copy_if_different_timestamp() {
 
 #-------------------------------------------------------------------
 
-# get file list (配列に格納)
-files_raw=$(find "${base_dir}" -type f)
+if [ -n "$relativeFile" ]; then
+    # 画像ファイルとリンクされたファイルを抽出 (.md と .yaml を除外)
+    files_raw=$(grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
+        sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
+        grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | uniq)
+else
+    files_raw=$(find "${base_dir}" -type f)
+fi
+# 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 for file in "${files[@]}"; do
-    publish_dir=$(dirname "${file}")
-    if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
-        publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
-    else
-        publish_dir=html
-    fi
+    # 単一 md の発行で、リンク先のファイルがない場合は処理しない
+    # → ファイルが存在する場合のみ処理を行う
+    if [[ -e "$file" ]]; then
+        publish_dir=$(dirname "${file}")
+        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
+        else
+            publish_dir=html
+        fi
 
-    for langElement in ${lang}; do
-        mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir"
-    done
-    publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
-
-    # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
-    if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
-        # コンテンツのコピー
-        echo "Processing Other file: ${file#${workspaceFolder}/}"
         for langElement in ${lang}; do
-            copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}/$publish_file"
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir"
         done
+        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
+
+        # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
+        if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
+            # コンテンツのコピー
+            echo "Processing Other file: ${file#${workspaceFolder}/}"
+            for langElement in ${lang}; do
+                copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}/$publish_file"
+            done
+        fi
     fi
 done
 
