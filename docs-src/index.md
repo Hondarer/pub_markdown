@@ -282,6 +282,46 @@ Debug.WriteLine("日本");
 
 Table: 表のキャプション
 
+セル内に改行を挿入する場合は、`<br />` を使用する。
+
+|No.|ヘッダ1行目<br />ヘッダ2行目|
+|--:|---------|
+|  1|内容1<br />内容2|
+|  2|テスト   |
+|  3|Test     |
+
+Table: セル内での改行を含む表
+
+以下の形式 (Markdown pipe tables) は Pandoc ではサポートされるが、[Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートとなっている。
+[Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
+
++------------------+-------------+
+| Distance         | Time        |
+| (km)             | (s)         |
++==================+=============+
+| 12               | 34          |
++------------------+-------------+
+| 56               | 78          |
++------------------+-------------+
+
+Table: Markdown pipe tables による表1
+
++-----+-----------+
+|     | L2 and L3 |
+| L1  +-----+-----+
+|     | L2  | L3  |
++=====+=====+=====+
+|     | BBB | CCC |
+| AAA +-----+-----+
+|     |   DDDDD   |
++-----+-----+-----+
+|           | FFF |
+|   EEEEE   +-----+
+|           | GGG |
++-----------+-----+
+
+Table: Markdown pipe tables による表2
+
 ## メタデータ
 
 Markdown の先頭に以下のように記載する。
