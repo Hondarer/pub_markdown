@@ -304,7 +304,7 @@ Table: セル内での改行を含む表
 | 56               | 78          |
 +------------------+-------------+
 
-Table: Markdown pipe tables による表1
+Table: Markdown pipe tables による表 1
 
 +-----+-----------+
 |     | L2 and L3 |
@@ -320,7 +320,7 @@ Table: Markdown pipe tables による表1
 |           | GGG |
 +-----------+-----+
 
-Table: Markdown pipe tables による表2
+Table: Markdown pipe tables による表 2
 
 ## メタデータ
 
