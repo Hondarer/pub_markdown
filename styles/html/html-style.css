@@ -43,6 +43,10 @@ a.anchor {
   left: 0;
   bottom: 0; }
 
+.title {
+  font-size: 24px;
+}
+
 h1, h2, h3, h4, h5, h6 {
   margin: 20px 0 10px;
   padding: 0;
@@ -190,6 +194,7 @@ blockquote p {
 table {
   padding: 0;
   border-spacing: 0;
+  font-size: 15px;
   border-collapse: collapse;
   min-width: auto;
   margin: 0 auto;
@@ -199,11 +204,10 @@ table {
     background-color: white;
     margin: 0;
     padding: 0; }
-    table tr:nth-child(2n) {
-      background-color: #f8f8f8; }
     table tr th {
       font-weight: bold;
       border: 1px solid #cccccc;
+      background-color: #eaeaea;
       text-align: left;
       margin: 0;
       padding: 8px; }
