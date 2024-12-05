@@ -91,7 +91,7 @@ if "!escapedConfigFile!"=="" (
 )
 
 :: 実行内容を出力
-echo !command!
+rem echo !command!
 
 :: コマンドを実行し戻り値を取得
 !command!

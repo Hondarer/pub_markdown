@@ -306,6 +306,7 @@ for file in "${files[@]}"; do
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
             fi
+            echo "  > ${pubRoot}/${langElement}/${publish_file%.*}.html"
         done
 
         publish_dir_self_contain=$(dirname "${file}")
@@ -328,6 +329,7 @@ for file in "${files[@]}"; do
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
             fi
+            echo "  > ${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
         done
 
     elif [[ "$file" == *.md ]]; then
@@ -358,6 +360,7 @@ for file in "${files[@]}"; do
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlTemplate}" -c "${up_dir}html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.html"
+            echo "  > ${pubRoot}/${langElement}/${publish_file%.*}.html"
         done
 
         publish_dir_self_contain=$(dirname "${file}")
@@ -379,6 +382,7 @@ for file in "${files[@]}"; do
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
+            echo "  > ${pubRoot}/${langElement}/${publish_file_self_contain%.*}.html"
         done
     fi
 done
@@ -417,6 +421,7 @@ for file in "${files[@]}"; do
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
             fi
+            echo "  > ${pubRoot}/${langElement}/${publish_file%.*}.docx"
         done
 
    elif [[ "$file" == *.md ]]; then
@@ -445,6 +450,7 @@ for file in "${files[@]}"; do
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 pandoc.exe -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" --resource-path="${workspaceFolder}/${pubRoot}/${langElement}/$resource_dir" --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}/${publish_file%.*}.docx"
+            echo "  > ${pubRoot}/${langElement}/${publish_file%.*}.docx"
         done
     fi
 done
