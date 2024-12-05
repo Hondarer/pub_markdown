@@ -4,6 +4,8 @@ author:
 subject: "subject"
 description: "description"
 date: "Thu, 28 Nov 2024 15:04:32 +0900"
+abstract-title: "Abstract"
+abstract: "概要"
 ---
 
 <!--ja:-->
@@ -329,10 +331,12 @@ Markdown の先頭に以下のように記載する。
 ```text
 ---
 author:
-    - author <- 「作成者」プロパティ
-    - author2 <- 複数人定義可能
-subject: "subject" <- 「件名」プロパティ
+    - author               <- 「作成者」プロパティ
+    - author2              <- 複数人定義可能
+subject: "subject"         <- 「件名」プロパティ
 description: "description" <- 「コメント」プロパティ
+abstract-title: "Abstract" <- 「概要タイトル」プロパティ
+abstract: "概要"           <- 「概要」プロパティ
 ---
 ```
 
