@@ -133,11 +133,12 @@ return {
                 end
             end
 
-            -- @startjson に caption が付与できなかったので、caption がなくても対応できるようにする
+            -- @startjson, @startyaml に caption が付与できなかったので、caption がなくても対応できるようにする
             if caption == nil then
                 local umlPattern = "^@startuml%s*(.+)%s*$"
                 local mindmapPattern = "^@startmindmap%s*(.+)%s*$"
                 local jsonPattern = "^@startjson%s*(.+)%s*$"
+                local yamlPattern = "^@startyaml%s*(.+)%s*$"
                 for _, line in ipairs(lines) do
                     if line:match(umlPattern) then
                         -- キャプションの部分を得る
@@ -154,6 +155,11 @@ return {
                         caption = line:match(jsonPattern)
                         break
                     end
+                    if line:match(yamlPattern) then
+                        -- キャプションの部分を得る
+                        caption = line:match(yamlPattern)
+                        break
+                    end
                 end
             end
 
@@ -167,10 +173,10 @@ return {
             end
 
             if not hasBackgroundColor then
-                -- @startuml, @startmindmap, @startjson の後に "skinparam backgroundColor transparent" を挿入
+                -- @startuml, @startmindmap, @startjson, @startyaml の後に "skinparam backgroundColor transparent" を挿入
                 local insertIndex = 1
                 for i, line in ipairs(removeCaptionLines) do
-                    if line:match("^@startuml") or line:match("^@startmindmap") or line:match("^@startjson") then
+                    if line:match("^@startuml") or line:match("^@startmindmap") or line:match("^@startjson") or line:match("^@startyaml") then
                         insertIndex = i + 1 -- 該当行の次の行に挿入する
                         break
                     end
