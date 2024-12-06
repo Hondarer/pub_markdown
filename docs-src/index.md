@@ -367,6 +367,8 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 `pandoc -o custom-reference.docx --print-default-data-file reference.docx` コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、デフォルトの出力に変更できる。
 
+図の幅はページサイズおよび余白に基づいて Pandoc で調整される。とじしろ (w:gutter) は考慮されないため、とじしろを定義した場合は図の横幅が期待通りとならない。テンプレート作成時は留意すること。
+
 ## 発行方法
 
 + Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
