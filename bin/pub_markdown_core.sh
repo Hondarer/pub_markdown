@@ -20,7 +20,13 @@ resolve_path() {
         resolved_path="$input_path"
     else
         # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
-        resolved_path="$(realpath "$workspaceFolder/$input_path")"
+        local workspace_resolved_path="$(realpath "$workspaceFolder/$input_path")"
+        if [[ -e "$workspace_resolved_path" ]]; then
+            resolved_path="$workspace_resolved_path"
+        else
+            # ワークスペースフォルダに存在しない場合は pub_markdown のホームディレクトリを使用
+            resolved_path="$(realpath "$HOME_DIR/$input_path")"
+        fi
     fi
 
     echo "$resolved_path"
@@ -133,7 +139,7 @@ else
 fi
 if [[ ! -e "$htmlStyleSheet" ]]; then
     echo "Error: Html style sheets file does not exist: $htmlStyleSheet"
-    return 1
+    exit 1
 fi
 
 # 設定ファイルに htmlTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-template.html" にする
@@ -144,7 +150,7 @@ else
 fi
 if [[ ! -e "$htmlTemplate" ]]; then
     echo "Error: Html template file does not exist: $htmlTemplate"
-    return 1
+    exit 1
 fi
 
 # 設定ファイルに htmlSelfContainTemplate が指定されなかった場合の値を htmlTemplate にする
@@ -156,7 +162,7 @@ else
 fi
 if [[ ! -e "$htmlSelfContainTemplate" ]]; then
     echo "Error: Html (self-contain) template file does not exist: $htmlSelfContainTemplate"
-    return 1
+    exit 1
 fi
 
 # 設定ファイルに docxTemplate が指定されなかった場合の値を "$HOME_DIR/styles/docx/docx-template.dotx" にする
@@ -167,7 +173,7 @@ else
 fi
 if [[ ! -e "$docxTemplate" ]]; then
     echo "Error: Docx template file does not exist: $docxTemplate"
-    return 1
+    exit 1
 fi
 
 #-------------------------------------------------------------------
