@@ -48,6 +48,10 @@ while [[ $# -gt 0 ]]; do
             configFile=$(resolve_path "${configFile//\\/\/}")
             shift
         ;;
+        --details=*)
+            details="${1#*=}"
+            shift
+        ;;
         *)
             shift
         ;;
@@ -72,7 +76,9 @@ if [ -f "$configFile" ]; then
     # キーを指定して値を取得する
     mdRoot=$(parse_yaml "$config_content" "mdRoot")
     pubRoot=$(parse_yaml "$config_content" "pubRoot")
-    details=$(parse_yaml "$config_content" "details")
+    if [[ "$details" == "" ]]; then
+        details=$(parse_yaml "$config_content" "details")
+    fi
     lang=$(parse_yaml "$config_content" "lang")
     htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")

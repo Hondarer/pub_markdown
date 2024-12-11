@@ -8,6 +8,7 @@ set "binFolder=%~dp0"
 set "workspaceFolder="
 set "relativeFile="
 set "configFile="
+set "options="
 
 :: 引数解析
 :parse_args
@@ -27,6 +28,11 @@ echo !arg! | findstr /b /c:"/relativeFile:" >nul && (
 :: /configFile: の場合
 echo !arg! | findstr /b /c:"/configFile:" >nul && (
     set "c=!arg:/configFile:=!"
+)
+
+:: /details: の場合
+echo !arg! | findstr /b /c:"/details:" >nul && (
+    set "options=%options%--details=!arg:/details:=! "
 )
 
 :: 次の引数へ
@@ -59,6 +65,7 @@ rem echo Escaped Bin Folder: !escapedBinFolder!
 rem echo Escaped Workspace Folder: !escapedWorkspaceFolder!
 rem echo Escaped Relative File: !escapedRelativeFile!
 rem echo Escaped Config File: !escapedConfigFile!
+rem echo Options: %options%
 
 :: git.exe のパスを検索
 for /f "delims=" %%A in ('where git.exe') do (
@@ -74,7 +81,7 @@ exit /b 1
 set "gitBin=%gitDir%..\bin"
 
 :: コマンドの組み立て
-set command="%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!"
+set command="%gitBin%\bash.exe" -i "%escapedBinFolder%pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!" %Options%
 
 if "!escapedRelativeFile!"=="" (
     rem relativeFile が与えられていない場合
