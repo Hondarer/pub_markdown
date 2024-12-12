@@ -20,7 +20,7 @@ resolve_path() {
         resolved_path="$input_path"
     else
         # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
-        local workspace_resolved_path="$(realpath "$workspaceFolder/$input_path")"
+        local workspace_resolved_path="$(realpath "$workspaceFolder/$input_path" 2>/dev/null)"
         if [[ -e "$workspace_resolved_path" ]]; then
             resolved_path="$workspace_resolved_path"
         else
