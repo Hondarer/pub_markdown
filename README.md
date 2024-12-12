@@ -80,5 +80,5 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 ## TODO:
 
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
-+ ユーザーレベル tasks (%USERPROFILE%\AppData\Roaming\Code\User\tasks.json) への定義を試す。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
++ [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
