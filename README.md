@@ -82,3 +82,4 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
++ [mermaid-filter](https://github.com/raghur/mermaid-filter) への対応。
