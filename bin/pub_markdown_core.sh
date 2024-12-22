@@ -5,8 +5,6 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$PATH:$SCRIPT_DIR
 cd $HOME_DIR
 
-export EXEC_DATE=`date -R`
-
 #-------------------------------------------------------------------
 
 # パスを絶対パスに変換する関数
@@ -92,6 +90,7 @@ if [ -f "$configFile" ]; then
     htmlTocEnable=$(parse_yaml "$config_content" "htmlTocEnable")
     htmlTocDepth=$(parse_yaml "$config_content" "htmlTocDepth")
     docxTemplate=$(parse_yaml "$config_content" "docxTemplate")
+    autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "doc" にする
@@ -127,6 +126,16 @@ fi
 # toc 関連オプションの組み立て
 if [[ "$htmlTocEnable" == "true" ]]; then
     htmlTocOption="--toc --toc-depth=${htmlTocDepth}"
+fi
+
+# 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
+if [[ "$autoSetDate" == "" ]]; then
+    autoSetDate="true"
+fi
+if [[ "$autoSetDate" == "true" ]]; then
+    export EXEC_DATE=`date -R`
+else
+    export -n EXEC_DATE
 fi
 
 #-------------------------------------------------------------------

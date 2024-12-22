@@ -6,10 +6,7 @@ function Meta(meta)
       if exec_date then
         meta.date = exec_date
       else
-        -- 環境変数が未設定の場合、警告メッセージを出力
-        io.stderr:write("Warning: EXEC_DATE environment variable is not set.\n")
-        -- 必要に応じてデフォルト値を設定
-        -- meta.date = "Unknown Date"
+        -- 環境変数が未設定の場合、何もしない
       end
     end
     return meta
