@@ -29,6 +29,7 @@ pu_config.host_name = pu_config.host_name or "localhost"
 pu_config.port = pu_config.port or "8080"
 pu_config.sub_url = pu_config.sub_url or ""
 pu_config.format = pu_config.format or "png"
+pu_config.style = pu_config.style or ""
 
 -- @type number -> string
 local function encode6(b)
@@ -173,7 +174,7 @@ return {
             end
 
             if not hasBackgroundColor then
-                -- @startuml, @startmindmap, @startjson, @startyaml の後に "skinparam backgroundColor transparent" を挿入
+                -- @startuml, @startmindmap, @startjson, @startyaml の後に スタイル設定と "skinparam backgroundColor transparent" を挿入
                 local insertIndex = 1
                 for i, line in ipairs(removeCaptionLines) do
                     if line:match("^@startuml") or line:match("^@startmindmap") or line:match("^@startjson") or line:match("^@startyaml") then
@@ -181,7 +182,12 @@ return {
                         break
                     end
                 end
-                table.insert(removeCaptionLines, insertIndex, "skinparam backgroundColor transparent")
+
+                if pu_config.style ~= "" then
+                    table.insert(removeCaptionLines, insertIndex, "\n" .. pu_config.style:gsub("\n$", ""))
+                end
+
+                table.insert(removeCaptionLines, insertIndex + 1, "skinparam backgroundColor transparent")
             end
 
             -- 文字列を再度組み立て
