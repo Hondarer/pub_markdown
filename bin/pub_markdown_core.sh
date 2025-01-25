@@ -201,11 +201,6 @@ else
     mkdir -p "${workspaceFolder}/${pubRoot}"
     # workspaceFolder に空白文字が含まれている可能性を考慮して、配下のファイルを clean する
     find "${workspaceFolder}/${pubRoot}" -mindepth 1 -exec rm -rf {} +
-
-    for langElement in ${lang}; do
-        mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/html"
-        cp -p "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css"
-    done
 fi
 
 #-------------------------------------------------------------------
@@ -259,6 +254,11 @@ fi
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
+# 個別 md が指定されていたら、ターゲットを個別設定
+if [ -n "$relativeFile" ]; then
+  files=("${workspaceFolder}/${relativeFile}")
+fi
+
 for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない
     # → ファイルが存在する場合のみ処理を行う
@@ -286,10 +286,10 @@ for file in "${files[@]}"; do
     fi
 done
 
-# 個別 md が指定されていたら、ターゲットを個別設定
-if [ -n "$relativeFile" ]; then
-  files=("${workspaceFolder}/${relativeFile}")
-fi
+# CSS の配置
+for langElement in ${lang}; do
+    copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}/html/html-style.css"
+done
 
 for file in "${files[@]}"; do
     if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。
