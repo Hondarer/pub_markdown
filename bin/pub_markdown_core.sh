@@ -194,7 +194,25 @@ if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* ]]; then
 fi
 
 if [ -n "$relativeFile" ]; then
-    base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
+    if [ -d "$relativeFile" ]; then
+        # $relativeFile がフォルダ名の場合は、そのフォルダを基準とする
+        base_dir="${workspaceFolder}/${relativeFile}"
+
+        # 当該フォルダ限定の clean
+        if [[ "$base_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir=html/${base_dir#${workspaceFolder}/${mdRoot}/}
+        else
+            publish_dir=html
+        fi
+
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir"
+            find "${workspaceFolder}/${pubRoot}/${langElement}/$publish_dir" -maxdepth 1 -type f -exec rm -f {} +
+        done
+    else
+        # 単一ファイルの場合は、そのファイルのあるフォルダを基準とする
+        base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
+    fi
 else
     base_dir="${workspaceFolder}/${mdRoot}"
     # 出力フォルダの clean
@@ -244,20 +262,28 @@ copy_if_different_timestamp() {
 #-------------------------------------------------------------------
 
 if [ -n "$relativeFile" ]; then
-    # 画像ファイルとリンクされたファイルを抽出 (.md と .yaml を除外)
-    files_raw=$(grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
-        sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
-        grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | uniq)
+    if [ -d "$relativeFile" ]; then
+        # ディレクトリ指定の場合は、そのディレクトリ内の全ファイルを処理
+        # .md ファイルの関連ファイルを抽出 (.md と .yaml を除外)
+        files_raw=$(find "${base_dir}" -maxdepth 1 -type f -name "*.md" | xargs cat | grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
+            sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
+            grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | sort |uniq)
+        files_raw="${files_raw}
+`find \"${base_dir}\" -maxdepth 1 -type f`"
+        files_raw=$(echo "$files_raw" | sort | uniq)
+    else
+        # 画像ファイルとリンクされたファイルを抽出 (.md と .yaml を除外)
+        files_raw=$(grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
+            sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
+            grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | sort |uniq)
+        files_raw="${files_raw}
+${workspaceFolder}/${relativeFile}"
+    fi
 else
     files_raw=$(find "${base_dir}" -type f)
 fi
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
-
-# 個別 md が指定されていたら、ターゲットを個別設定
-if [ -n "$relativeFile" ]; then
-  files=("${workspaceFolder}/${relativeFile}")
-fi
 
 for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない

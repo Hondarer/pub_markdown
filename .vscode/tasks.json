@@ -24,6 +24,16 @@
             }
         },
         {
+            "label": "exec pandoc (current folder)",
+            "type": "shell",
+            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\"",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },,
+        {
             "label": "exec pandoc (details)",
             "type": "shell",
             "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /details:true",
@@ -37,6 +47,16 @@
             "label": "exec pandoc (current file, details)",
             "type": "shell",
             "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFile}\" /details:true",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "exec pandoc (current folder, details)",
+            "type": "shell",
+            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\" /details:true",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
