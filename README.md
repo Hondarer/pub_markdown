@@ -83,3 +83,4 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
 + [mermaid-filter](https://github.com/raghur/mermaid-filter) への対応。
++ plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。
