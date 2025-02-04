@@ -258,7 +258,19 @@ return {
             if caption == nil then
                 return pandoc.Figure(pandoc.Image("test", image_src, ""))
             end
-            return pandoc.Figure(pandoc.Image("test", image_src, ""), {pandoc.Str(caption)})
+
+            -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
+            caption = caption:gsub("\\n", "\n")
+            local caption_elements = {}
+            for line in caption:gmatch("[^\n]+") do
+                --io.stderr:write("[plantuml] captionline: '" .. line .. "'\n")
+                table.insert(caption_elements, pandoc.Str(line))
+                table.insert(caption_elements, pandoc.LineBreak())
+            end
+            -- Remove the last LineBreak
+            table.remove(caption_elements)
+
+            return pandoc.Figure(pandoc.Image("test", image_src, ""), caption_elements)
 
         end
     }
