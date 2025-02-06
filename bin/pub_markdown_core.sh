@@ -187,7 +187,7 @@ fi
 
 #-------------------------------------------------------------------
 
-if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* ]]; then
+if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* && $relativeFile != ${mdRoot} ]]; then
     # NOTE: ワークスペース外のファイルの場合、ここでチェックアウトされる
     echo "Error: relativeFile does not start with '${mdRoot}/'. Exiting."
     exit 1
