@@ -1,4 +1,5 @@
 #!/bin/bash
+#set -x
 
 SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
 HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
@@ -194,7 +195,7 @@ if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* && $relativeFile != ${mdR
 fi
 
 if [ -n "$relativeFile" ]; then
-    if [ -d "$relativeFile" ]; then
+    if [ -d "${workspaceFolder}/$relativeFile" ]; then
         # $relativeFile がフォルダ名の場合は、そのフォルダを基準とする
         base_dir="${workspaceFolder}/${relativeFile}"
 
@@ -262,7 +263,7 @@ copy_if_different_timestamp() {
 #-------------------------------------------------------------------
 
 if [ -n "$relativeFile" ]; then
-    if [ -d "$relativeFile" ]; then
+    if [ -d "${workspaceFolder}/$relativeFile" ]; then
         # ディレクトリ指定の場合は、そのディレクトリ内の全ファイルを処理
         # .md ファイルの関連ファイルを抽出 (.md と .yaml を除外)
         files_raw=$(find "${base_dir}" -maxdepth 1 -type f -name "*.md" | xargs cat | grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
