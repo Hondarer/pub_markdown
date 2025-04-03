@@ -266,19 +266,35 @@ if [ -n "$relativeFile" ]; then
     if [ -d "${workspaceFolder}/$relativeFile" ]; then
         # ディレクトリ指定の場合は、そのディレクトリ内の全ファイルを処理
         # .md ファイルの関連ファイルを抽出 (.md と .yaml を除外)
-        files_raw=$(find "${base_dir}" -maxdepth 1 -type f -name "*.md" | xargs cat | grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
+        files_raw=$(
+            find "${base_dir}" -maxdepth 1 -type f -name "*.md" -print0 | \
+            xargs -0 cat | \
+            grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
             sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
-            grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | sort |uniq)
-        files_raw="${files_raw}
-`find \"${base_dir}\" -maxdepth 1 -type f`"
-        files_raw=$(echo "$files_raw" | sort | uniq)
+            grep -vE '\.(md|yaml)$' | \
+            while IFS= read -r line; do
+                printf '%s\n' "${base_dir}/$line"
+            done
+        )
+
+        # .md 以外のすべてのファイルを追加
+        additional_files=$(find "${base_dir}" -maxdepth 1 -type f -print)
+
+        # マージ＆ソート＆重複排除
+        files_raw=$(printf "%s\n%s\n" "$files_raw" "$additional_files" | sort -u)
     else
         # 画像ファイルとリンクされたファイルを抽出 (.md と .yaml を除外)
-        files_raw=$(grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
+        files_raw=$(
+            grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
             sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
-            grep -vE '\.(md|yaml)$' | sed -E "s|^|$(echo ${base_dir})/|" | sort |uniq)
-        files_raw="${files_raw}
-${workspaceFolder}/${relativeFile}"
+            grep -vE '\.(md|yaml)$' | \
+            while IFS= read -r path; do
+                printf '%s\n' "${base_dir}/${path}"
+            done
+        )
+
+        # マージ＆ソート＆重複排除
+        files_raw=$(printf "%s\n%s\n" "$files_raw" "${workspaceFolder}/${relativeFile}" | sort -u)
     fi
 else
     files_raw=$(find "${base_dir}" -type f)
