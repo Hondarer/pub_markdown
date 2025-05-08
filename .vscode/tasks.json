@@ -6,61 +6,91 @@
         {
             "label": "exec pandoc",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\"",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\""
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\""
             }
         },
         {
             "label": "exec pandoc (current file)",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFile}\"",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFile}\""
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\""
             }
         },
         {
             "label": "exec pandoc (current folder)",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\"",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\""
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\""
             }
         },
         {
             "label": "exec pandoc (details)",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /details:true",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /details:true"
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --details=true"
             }
         },
         {
             "label": "exec pandoc (current file, details)",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFile}\" /details:true",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFile}\" /details:true"
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\" --details=true"
             }
         },
         {
             "label": "exec pandoc (current folder, details)",
             "type": "shell",
-            "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\" /details:true",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": false
+            },
+            "windows": {
+                "command": "bin\\pub_markdown.cmd /workspaceFolder:\"${workspaceFolder}\" /relativeFile:\"${relativeFileDirname}\" /details:true"
+            },
+            "linux": {
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\" --details=true"
             }
         }
     ]
