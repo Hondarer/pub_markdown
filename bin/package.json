@@ -1,0 +1,11 @@
+{
+  "name": "pub_markdown_node_modules",
+  "version": "1.0.0",
+  "description": "Modules for pub_markdown",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^10.9.1",
+    "mermaid-filter": "^1.4.7",
+    "puppeteer": "^22.7.0",
+    "widdershins": "^4.0.1"
+  }
+}

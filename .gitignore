@@ -3,5 +3,9 @@ bin/modules/LibDeflate/*
 !bin/modules/LibDeflate/put_LibDeflate_here
 bin/pandoc.exe
 bin/pandoc
+bin/node.exe
+bin/node
 bin/rsvg-convert.exe
+bin/rsvg-convert
+bin/node_modules
 docs

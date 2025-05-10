@@ -18,8 +18,10 @@ fi
 if [ $LINUX -eq 1 ]; then
     chmod +x ${SCRIPT_DIR}/replace-tag.sh
     PANDOC="pandoc"
+    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
 else
     PANDOC="pandoc.exe"
+    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
 fi
 
 #-------------------------------------------------------------------
@@ -373,7 +375,8 @@ for file in "${files[@]}"; do
         done
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
-        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
+        # TODO: --user_templates の切替機構未実装
+        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${SCRIPT_DIR}/templates/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
 
         openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
@@ -488,7 +491,8 @@ for file in "${files[@]}"; do
         publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
-        openapi_md=$(${SCRIPT_DIR}/widdershins/widdershins.exe --code true --omitHeader "$file")
+        # TODO: --user_templates の切替機構未実装
+        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${SCRIPT_DIR}/templates/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
 
         openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
