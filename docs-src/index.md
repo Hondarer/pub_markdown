@@ -189,6 +189,19 @@ plantuml とする。
 
 + [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
 
+## mermaid
+
+mermaid 記法について、実験的にサポート。  
+Caption の設定等が未実装。
+
+### 記載例
+
+```mermaid
+sequenceDiagram
+    Alice->>John: Hello John, how are you?
+    John-->>Alice: Great!
+```
+
 ## draw.io
 
 draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載する。
