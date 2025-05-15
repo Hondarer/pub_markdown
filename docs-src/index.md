@@ -192,11 +192,10 @@ plantuml とする。
 ## mermaid
 
 mermaid 記法について、実験的にサポート。  
-Caption の設定等が未実装。
 
 ### 記載例
 
-```mermaid
+```mermaid:テストだよ.mmd
 sequenceDiagram
     Alice->>John: Hello John, how are you?
     John-->>Alice: Great!
