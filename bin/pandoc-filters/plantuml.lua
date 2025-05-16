@@ -109,8 +109,25 @@ end
 return {
     {
         CodeBlock = function(el) 
-            if el.classes[1] ~= "plantuml" then
+
+            ---------------------------------------------------------------------
+
+            -- コードブロックの種別とファイル名を取得
+            local code_class = el.classes[1] or ""
+            local lang, filename = code_class:match("^([^:]+):(.+)$")
+            if not lang then
+                lang = code_class
+            end
+            -- コード種別判定
+            if lang ~= "plantuml" then
                 return el
+            end
+            local caption = nil
+            if filename then
+                -- ファイル名の拡張子を除去
+                filename = filename:gsub("%.[pP][uU][mM][lL]$", "")
+                -- ファイル名を caption に
+                caption = filename
             end
 
             ---------------------------------------------------------------------
@@ -124,7 +141,6 @@ return {
             -- "caption キャプション" の行を削除
             local removeCaptionLines = {}
             local captionPattern = "^%s*[Cc][Aa][Pp][Tt][Ii][Oo][Nn]%s*(.-)%s*$"
-            local caption = nil
             for _, line in ipairs(lines) do
                 if not line:match(captionPattern) then
                     table.insert(removeCaptionLines, line)
@@ -256,7 +272,7 @@ return {
 
             -- replace tag
             if caption == nil then
-                return pandoc.Figure(pandoc.Image("test", image_src, ""))
+                return pandoc.Figure(pandoc.Image("plantuml", image_src, ""))
             end
 
             -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
@@ -270,7 +286,7 @@ return {
             -- Remove the last LineBreak
             table.remove(caption_elements)
 
-            return pandoc.Figure(pandoc.Image("test", image_src, ""), caption_elements)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
 
         end
     }

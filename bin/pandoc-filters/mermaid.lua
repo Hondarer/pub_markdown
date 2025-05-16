@@ -34,36 +34,37 @@ end
 return {
     {
         CodeBlock = function(el) 
+
+            ---------------------------------------------------------------------
+
+            -- コードブロックの種別とファイル名を取得
             local code_class = el.classes[1] or ""
-            --io.stderr:write("[mermaid] code_class: " .. code_class .. "\n")
             local lang, filename = code_class:match("^([^:]+):(.+)$")
             if not lang then
                 lang = code_class
             end
-            if not filename then
-                filename = ""
-            end
-            filename = filename:gsub("%.[mM][mM][dD]$", "")
-
-            --io.stderr:write("[mermaid] lang: " .. lang .. "\n")
-
+            -- コード種別判定
             if lang ~= "mermaid" then
                 return el
             end
+            local caption = nil
+            if filename then
+                -- ファイル名の拡張子を除去
+                filename = filename:gsub("%.[mM][mM][dD]$", "")
+                -- ファイル名を caption に
+                caption = filename
+            end
 
-            --io.stderr:write("[mermaid] filename: " .. filename .. "\n")
-
-            -- ファイル名を caption に
-            local caption = filename
+            ---------------------------------------------------------------------
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
 
-            local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(caption .. el.text))
-            local image_filename = string.format("mermaid_%s.svg", utils.sha1(caption .. el.text))
-            local mmd_file_path = paths.join({resource_dir, mmd_filename})
+            local image_filename = string.format("mermaid_%s.svg", utils.sha1(el.text))
             local image_file_path = paths.join({resource_dir, image_filename})
 
             if not file_exists(image_file_path) then
+                local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
+                local mmd_file_path = paths.join({resource_dir, mmd_filename})
 
                 -- el.text を一時ファイルに保存
                 local f = io.open(mmd_file_path, "w")
@@ -76,6 +77,13 @@ return {
 
                 -- 一時ファイル削除
                 os.remove(mmd_file_path)
+
+                -- TODO: svg にパッチが必要
+
+                -- ルートの svg 要素の viewBox="-50 -10 485 259" を解釈して幅と高さを得る
+                -- その内容で svg をパッチ
+                -- style="width:535px; height:269px; background-color: white;"
+                -- width="535px" height="269px"
             end
             
             local image_src = image_file_path
@@ -91,7 +99,7 @@ return {
 
             -- replace tag
             if caption == nil then
-                return pandoc.Figure(pandoc.Image("test", image_src, ""))
+                return pandoc.Figure(pandoc.Image("mermaid", image_src, ""))
             end
 
             -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
@@ -105,7 +113,7 @@ return {
             -- Remove the last LineBreak
             table.remove(caption_elements)
 
-            return pandoc.Figure(pandoc.Image("test", image_src, ""), caption_elements)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
 
         end
     }
