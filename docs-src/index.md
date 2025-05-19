@@ -189,16 +189,21 @@ plantuml とする。
 
 + [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
 
-## mermaid
+## Mermaid
 
-mermaid 記法について、実験的にサポート。  
+Mermaid 記法について、以下の通り Markdown に記載する。  
+Mermaid と PlantUML は実現できることが重複する。PlantUML を優先して採用すること。
+
+### タイトル
+
+コードブロックのファイル名として記載する。
 
 ### 記載例
 
 ```mermaid:テストだよ.mmd
 sequenceDiagram
     Alice->>John: Hello John, how are you?
-    John-->>Alice: Great!
+    John-->>Alice: いいね!
 ```
 
 ## draw.io
@@ -240,7 +245,7 @@ docx 変換後に `Text is not SVG - cannot display` と表示されるケース
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
-Draw.io Integration のテーマを kennedy に変更する。
+Draw.io Integration のテーマを loght テーマ (例: kennedy - light) に変更する。
 
 + [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
 + [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)

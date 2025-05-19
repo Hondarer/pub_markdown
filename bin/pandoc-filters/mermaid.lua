@@ -78,12 +78,62 @@ return {
                 -- 一時ファイル削除
                 os.remove(mmd_file_path)
 
-                -- TODO: svg にパッチが必要
+                -- svg にパッチをする
+                -- Mermaid からはサイズ指定が 100% で 出力されるので、svg の viewBox を取得して width / height を上書きする。
+                -- before sample
+                -- <svg aria-roledescription="sequence" role="graphics-document document" viewBox="-50 -10 485 259" style="max-width: 485px; background-color: white;" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="100%" id="my-svg">
+                -- after sample
+                -- <svg width="485px" height="259px" aria-roledescription="sequence" role="graphics-document document" viewBox="-50 -10 485 259" style="width:535px; height:269px; background-color: white;" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="100%" id="my-svg">
 
-                -- ルートの svg 要素の viewBox="-50 -10 485 259" を解釈して幅と高さを得る
-                -- その内容で svg をパッチ
-                -- style="width:535px; height:269px; background-color: white;"
-                -- width="535px" height="269px"
+                -- svg を読み込む
+                local svg_content = ""
+                do
+                    local f = io.open(image_file_path, "r")
+                    if f then
+                        svg_content = f:read("*a")
+                        f:close()
+                    end
+                end
+
+                -- viewBox から幅と高さを得る
+                local width, height
+                do
+                    local viewBox = svg_content:match('viewBox="([^"]+)"')
+                    if viewBox then
+                        local _, _, w, h = viewBox:match("([%-%d%.]+) ([%-%d%.]+) ([%d%.]+) ([%d%.]+)")
+                        width = w
+                        height = h
+                    end
+                end
+
+                -- style 属性から max-width を削除し、width / height を追加または上書き
+                local patched_svg = svg_content
+
+                if width and height then
+                    -- ルート svg 要素のみ対象に style 属性を書き換え
+                    patched_svg = patched_svg:gsub('(<svg[^>]-)style="([^"]*)"', function(svg_tag, style)
+                        -- max-width を削除
+                        style = style:gsub("max%-width:[^;]*;? ?", "")
+                        -- width / height を削除
+                        style = style:gsub("width:[^;]*;?", "")
+                        style = style:gsub("height:[^;]*;?", "")
+                        -- 末尾に width / height 追加
+                        return string.format('%sstyle="width:%spx; height:%spx; %s"', svg_tag, width, height, style)
+                    end, 1) -- 最初の svg タグのみ置換
+
+                    -- svg タグの width / height 属性を上書きまたは追加 (ルート svg 要素のみ対象)
+                    patched_svg = patched_svg
+                        :gsub('(<svg[^>]*)%swidth="[^"]*"', '%1', 1)
+                        :gsub('(<svg[^>]*)%sheight="[^"]*"', '%1', 1)
+                        :gsub('(<svg)', '%1 width="' .. width .. 'px" height="' .. height .. 'px"', 1)
+                end
+
+                -- 上書き保存
+                local f = io.open(image_file_path, "w")
+                if f then
+                    f:write(patched_svg)
+                    f:close()
+                end
             end
             
             local image_src = image_file_path
