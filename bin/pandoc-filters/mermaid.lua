@@ -57,6 +57,14 @@ return {
 
             ---------------------------------------------------------------------
 
+            local MMDC_CMD
+            -- Use platform-specific commands to create the directory
+            if package.config:sub(1,1) == '\\' then -- Windows
+                MMDC_CMD = "\\node_modules\\.bin\\mmdc.cmd"
+            else -- Unix-like systems (Linux, macOS, etc.)
+                MMDC_CMD = "/node_modules/.bin/mmdc"
+            end
+
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
 
             local image_filename = string.format("mermaid_%s.svg", utils.sha1(el.text))
@@ -73,7 +81,7 @@ return {
 
                 -- root_dir .. "/node_modules/.bin/mmdc" を呼び出して mermaid-cli を実行し、image_file_path に出力する。
                 -- NOTE: mmdc は -i や -o を クオートできないので、cd して実行
-                os.execute(string.format("cd %s && \"%s\" -i %s -o %s", resource_dir, root_dir .. "\\node_modules\\.bin\\mmdc.cmd", mmd_filename, image_filename))
+                os.execute(string.format("cd %s && \"%s\" -i %s -o %s", resource_dir, root_dir .. MMDC_CMD, mmd_filename, image_filename))
 
                 -- 一時ファイル削除
                 os.remove(mmd_file_path)
