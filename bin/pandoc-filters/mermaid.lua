@@ -97,10 +97,12 @@ return {
                 local svg_content = ""
                 do
                     local f = io.open(image_file_path, "r")
-                    if f then
-                        svg_content = f:read("*a")
-                        f:close()
+                    if not f then
+                        io.stderr:write("[mermaid] Error: SVG file was not generated: " .. image_file_path .. "\n")
+                        return el
                     end
+                    svg_content = f:read("*a")
+                    f:close()
                 end
 
                 -- viewBox から幅と高さを得る
