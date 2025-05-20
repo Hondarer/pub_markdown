@@ -28,6 +28,7 @@ Markdown to html and docx with Pandoc.
 + rsvg-convert.exe に PATH を通す。bin フォルダ直下に rsvg-convert.exe を配置してもよい。Linux では rsvg2-tools パッケージに含まれる。
 + node.exe に PATH を通す。bin フォルダ直下に node.exe を配置してもよい。Linux では nodejs モジュールパッケージに含まれる。
 + bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
++ bin 配下で、`npm install` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
 
 ### Markdown の発行方法
 
@@ -84,6 +85,4 @@ check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
-+ [mermaid-filter](https://github.com/raghur/mermaid-filter) への対応。
-  → 一旦組み込んだが、フィルタ自身を node.js 上で動作させると性能が出ず、また、図の段落書式適用や Caption 対応等 PlantUML 同様の対処が必要なため、mermaid-filter を使わず自前の filter を作成する方針。
 + plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。

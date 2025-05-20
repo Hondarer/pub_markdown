@@ -19,12 +19,23 @@ if [ $LINUX -eq 1 ]; then
     chmod +x ${SCRIPT_DIR}/replace-tag.sh
     PANDOC="pandoc"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
-    PANDOC_MERMAID_FILTER="${SCRIPT_DIR}/node_modules/.bin/mermaid-filter"
 else
     PANDOC="pandoc.exe"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
-    PANDOC_MERMAID_FILTER="${SCRIPT_DIR}/node_modules/.bin/mermaid-filter.cmd"
+    EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
+    if [ -f "$EDGE_PATH" ]; then
+        export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
+    fi
 fi
+
+# ${SCRIPT_DIR}/node_modules/.bin が存在しない場合はエラーを表示して終了
+if [ ! -d "${SCRIPT_DIR}/node_modules/.bin" ]; then
+    echo "Error: ${SCRIPT_DIR}/node_modules/.bin not found. Please 'npm install' in the ${SCRIPT_DIR} directory."
+    exit 1
+fi
+
+# node.js の警告を非表示にする
+export NODE_NO_WARNINGS=1
 
 #-------------------------------------------------------------------
 
