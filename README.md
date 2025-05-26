@@ -80,12 +80,14 @@ rsvg-convert.exe を配置することで解消される。
 check that rsvg-convert is in path.\nrsvg-convert: createProcess: does not exist (No such file or directory)
 ```
 
+→ 現在は、svg-no-rsvg.lua により rsvg-convert.exe を呼び出さない。Word 2013 以前の環境や Web 表示では、フォールバック png を用意しないのことにより、図が表示されない点に注意が必要。
+
 ### Linux 環境における rsvg-convert
 
 PlantUML の svg など、解釈できない旨のエラーを rsvg-convert が出力することがある。  
 rsvg-convert が生成する png イメージは docx においてフォールバック画像として扱われるため、この処理が正しく動作しないと svg が docx に正しく埋め込まれない。
 
-→ Linux 環境では、完全に動作しない。
+→ 現在は、svg-no-rsvg.lua により rsvg-convert.exe を呼び出さない。Word 2013 以前の環境や Web 表示では、フォールバック png を用意しないのことにより、図が表示されない点に注意が必要。
 
 ## TODO:
 

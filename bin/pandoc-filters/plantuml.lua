@@ -261,12 +261,13 @@ return {
             
             local image_src = image_file_path
 
+            -- output relative
             if PANDOC_STATE.output_file ~= nil then
                 if string.match(FORMAT, "html") then 
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
-
-                    -- output relative
                     image_src = paths.make_relative(image_file_path, output_dir)
+                else
+                    image_src = paths.make_relative(image_file_path, resource_dir)
                 end
             end
 
