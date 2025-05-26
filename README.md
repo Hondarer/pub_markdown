@@ -89,9 +89,13 @@ rsvg-convert が生成する png イメージは docx においてフォール�
 
 → 現在は、svg-no-rsvg.lua により rsvg-convert.exe を呼び出さない。Word 2013 以前の環境や Web 表示では、フォールバック png を用意しないのことにより、図が表示されない点に注意が必要。
 
+### caption に改行を含む場合
+
+plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。
+
 ## TODO:
 
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
-+ plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。
++ /docs に、index.html を配置する。
