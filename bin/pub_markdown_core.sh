@@ -3,7 +3,7 @@
 
 SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
 HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
-PATH=$PATH:$SCRIPT_DIR
+PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダを選択させる
 cd $HOME_DIR
 
 #-------------------------------------------------------------------
