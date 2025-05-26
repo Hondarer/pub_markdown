@@ -5,6 +5,7 @@
   "dependencies": {
     "@mermaid-js/mermaid-cli": "^10.9.1",
     "puppeteer": "^22.7.0",
-    "widdershins": "^4.0.1"
+    "widdershins": "^4.0.1",
+    "minimist": "^1.2.8"
   }
 }
