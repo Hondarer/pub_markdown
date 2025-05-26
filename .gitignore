@@ -11,4 +11,4 @@ bin/modules/LibDeflate/*
 bin/pandoc.exe
 bin/pandoc
 bin/rsvg-convert.exe
-bin/rsvg-convert
+#bin/rsvg-convert # ラッパーを設けたため、bin/rsvg-convert 自身は登録する

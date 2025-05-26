@@ -1,0 +1,4 @@
+#!/bin/bash
+
+# Mermaid の svg が吐き出す rsvg-convert のエラーを捨てる
+/usr/bin/rsvg-convert "$@" 2>/dev/null
