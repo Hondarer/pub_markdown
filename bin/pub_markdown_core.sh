@@ -17,6 +17,8 @@ fi
 
 if [ $LINUX -eq 1 ]; then
     chmod +x ${SCRIPT_DIR}/replace-tag.sh
+    chmod +x ${SCRIPT_DIR}/mmdc-wrapper.sh
+    chmod +x ${SCRIPT_DIR}/chrome-wrapper.sh
     PANDOC="pandoc"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
 else

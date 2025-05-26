@@ -14,6 +14,7 @@
 #
 # 利用方法:
 #   chmod +x chrome-wrapper.sh
+#   export ORG_PUPPETEER_EXECUTABLE_PATH="{IF_YOU_WANT_SPECIFY_IT}"
 #   export PUPPETEER_EXECUTABLE_PATH="./chrome-wrapper.sh"
 #   node your-script.js
 #
@@ -21,10 +22,16 @@
 
 echo "Chrome wrapper script started." >&2
 
-# Puppeteer に組み込まれた Chromium のパスを取得する
 # このシェル自身が PUPPETEER_EXECUTABLE_PATH に設定されているため、
-# 再帰防止として一時的に PUPPETEER_EXECUTABLE_PATH を無効化する
-CHROME=$(unset PUPPETEER_EXECUTABLE_PATH && node -e "console.log(require('puppeteer').executablePath())")
+# もともとの PUPPETEER_EXECUTABLE_PATH を復元する
+if [[ ! -z "${ORG_PUPPETEER_EXECUTABLE_PATH}" ]]; then
+  export PUPPETEER_EXECUTABLE_PATH="$ORG_PUPPETEER_EXECUTABLE_PATH"
+else
+  unset PUPPETEER_EXECUTABLE_PATH
+fi
+
+# Puppeteer に組み込まれた Chromium のパスを取得する
+CHROME=$(cd $(dirname "$0") && node -e "console.log(require('puppeteer').executablePath())")
 if [ ! -x "$CHROME" ]; then
   echo "Chromium not found: $CHROME" >&2
   exit 1

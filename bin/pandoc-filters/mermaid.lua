@@ -62,7 +62,7 @@ return {
             if package.config:sub(1,1) == '\\' then -- Windows
                 MMDC_CMD = "\\node_modules\\.bin\\mmdc.cmd"
             else -- Unix-like systems (Linux, macOS, etc.)
-                MMDC_CMD = "/node_modules/.bin/mmdc"
+                MMDC_CMD = "/mmdc-wrapper.sh"
             end
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
