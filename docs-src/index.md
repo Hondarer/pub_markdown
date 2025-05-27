@@ -291,7 +291,7 @@ Debug.WriteLine("日本");
 
 [列幅の指定方法](https://github.com/jgm/pandoc/issues/2486) により、ページ幅に収まらなかった場合の列幅を指定できる。
 
-表に続いて、`Table:` を記載して表のキャプションを指定する。
+表に続いて、`Table: ` または `: ` を記載して表のキャプションを指定する。
 
 |No.|内容     |
 |--:|---------|
@@ -299,7 +299,15 @@ Debug.WriteLine("日本");
 |  2|テスト   |
 |  3|Test     |
 
-Table: 表のキャプション
+Table: 表のキャプション (`Table: 表のキャプション`)
+
+|No.|内容     |
+|--:|---------|
+|  1|てすと   |
+|  2|テスト   |
+|  3|Test     |
+
+: 表のキャプション (`: 表のキャプション`)
 
 セル内に改行を挿入する場合は、`<br />` を使用する。
 
@@ -311,7 +319,8 @@ Table: 表のキャプション
 
 Table: セル内での改行を含む表
 
-以下の形式 (Markdown pipe tables) は Pandoc ではサポートされるが、[Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートとなっている。
+以下の形式 (Markdown pipe tables) も Pandoc ではサポートされる。  
+ただし、[Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、編集時の使い勝手を判断して使用すること。
 [Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
 
 +------------------+-------------+
