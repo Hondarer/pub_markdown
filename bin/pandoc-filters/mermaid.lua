@@ -86,7 +86,7 @@ return {
                 -- Generating single mermaid chart
                 -- -ms-high-contrast-adjust is in the process of being deprecated. Please see https://blogs.windows.com/msedgedev/2024/04/29/deprecating-ms-high-contrast/ for tips on updating to the new Forced Colors Mode standard.
                 -- [@zenuml/core] Store is a function and is not initiated in 1 second.
-                os.execute(string.format("cd %s && \"%s\" -i %s -o %s | grep -v -E \"Generating|deprecated|Store is a function\"", resource_dir, root_dir .. MMDC_CMD, mmd_filename, image_filename))
+                os.execute(string.format("cd %s && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", resource_dir, root_dir .. MMDC_CMD, mmd_filename, image_filename))
 
                 -- 一時ファイル削除
                 os.remove(mmd_file_path)
