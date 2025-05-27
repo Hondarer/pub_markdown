@@ -391,7 +391,7 @@ for file in "${files[@]}"; do
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
-        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${SCRIPT_DIR}/templates/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
+        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
 
         openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
@@ -507,7 +507,7 @@ for file in "${files[@]}"; do
 
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
-        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${SCRIPT_DIR}/templates/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
+        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
 
         openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
