@@ -220,15 +220,14 @@ return {
 
             if not file_exists(image_file_path) then
 
-                local url = string.format("%s://%s:%s/%s%s/%s", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format, encoded_text)
-                local mt, img = mediabags.fetch(url)
+                local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
+                local mt, img = mediabags.fetch(url .. encoded_text)
 
-                if mt == nil or img == nil then
-                    -- TODO: error checking...
-                    print("Error fetching image from " .. url)
-                    return
+                if mt == nil or img == nil or (not img:match("^<svg")) then
+                    io.stderr:write("Error: fetching image from " .. url .. "\n")
+                    return el
                 end
-            
+
                 -- write to file
 
                 -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
@@ -254,7 +253,7 @@ return {
                 if pu_config.format == "svg" then
                     img = string.gsub(img, 'font%-family="sans%-serif"', 'font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif"')
                 end
-            
+
                 fs:write(img)
                 fs:close()
             end
