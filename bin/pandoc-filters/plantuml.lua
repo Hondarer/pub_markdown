@@ -223,7 +223,7 @@ return {
                 local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
                 local mt, img = mediabags.fetch(url .. encoded_text)
 
-                if mt == nil or img == nil or (not img:match("^<svg")) then
+                if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
                     io.stderr:write("Error: fetching image from " .. url .. "\n")
                     return el
                 end
