@@ -308,45 +308,100 @@ copy_if_different_timestamp() {
 
 #-------------------------------------------------------------------
 
+# ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──
 if [ -n "$relativeFile" ]; then
     if [ -d "${workspaceFolder}/$relativeFile" ]; then
-        # ディレクトリ指定の場合は、そのディレクトリ内の全ファイルを処理
-        # .md ファイルの関連ファイルを抽出 (.md と .yaml を除外)
-        files_raw=$(
+        # relativeFile がディレクトリの場合: そのディレクトリ内のリンク先も含めて収集
+        base_dir="${workspaceFolder}/${relativeFile}"
+
+        # 1) Markdown や YAML に埋め込まれたリンク資産を抽出
+        mapfile -d '' -t files_linked < <(
             find "${base_dir}" -maxdepth 1 -type f -name "*.md" -print0 | \
             xargs -0 cat | \
             grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
             sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
             grep -vE '\.(md|yaml)$' | \
             while IFS= read -r line; do
-                printf '%s\n' "${base_dir}/$line"
+                printf '%s\0' "${base_dir}/$line"
             done
         )
 
-        # .md 以外のすべてのファイルを追加
-        additional_files=$(find "${base_dir}" -maxdepth 1 -type f -print)
+        # 2) ディレクトリ直下のすべてのファイルを追加
+        mapfile -d '' -t additional_files < <(
+            find "${base_dir}" -maxdepth 1 -type f -print0
+        )
 
-        # マージ＆ソート＆重複排除
-        files_raw=$(printf "%s\n%s\n" "$files_raw" "$additional_files" | sort -u)
+        # 3) マージ＆ソート＆重複排除
+        mapfile -d '' -t files_raw_initial < <(
+            printf '%s\0' "${files_linked[@]}" "${additional_files[@]}" | sort -z -u
+        )
+
     else
-        # 画像ファイルとリンクされたファイルを抽出 (.md と .yaml を除外)
-        files_raw=$(
+        # relativeFile が単一ファイルの場合: そのファイル＋リンク先ファイルを抽出
+        mapfile -d '' -t files_linked < <(
             grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
             sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
             grep -vE '\.(md|yaml)$' | \
             while IFS= read -r path; do
-                printf '%s\n' "${base_dir}/${path}"
+                printf '%s\0' "${base_dir}/${path}"
             done
         )
 
-        # マージ＆ソート＆重複排除
-        files_raw=$(printf "%s\n%s\n" "$files_raw" "${workspaceFolder}/${relativeFile}" | sort -u)
+        # マージ＆ソート＆重複排除 (単一ファイル自身も含める)
+        mapfile -d '' -t files_raw_initial < <(
+            printf '%s\0' "${files_linked[@]}" "$target_file" | sort -z -u
+        )
     fi
 else
-    files_raw=$(find "${base_dir}" -type f)
+    # relativeFile が指定されていない場合: mdRoot 以下の全ファイルを対象
+    mapfile -d '' -t files_raw_initial < <(
+        find "${base_dir}" -type f -print0 | sort -z -u
+    )
 fi
+
+# ── Git 管理下なら NUL 区切りでフィルタ ──
+if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り)
+    mapfile -d '' -t files_rel_zero_array < <(
+        printf '%s\0' "${files_raw_initial[@]}" | \
+        sed -z "s|^${workspaceFolder}/||g"
+    )
+
+    # 2) Git check-ignore に NUL 区切りで渡し、結果も NUL 区切りで受け取る
+    mapfile -d '' -t filtered_rel_array < <(
+        printf '%s\0' "${files_rel_zero_array[@]}" | \
+        git -C "$workspaceFolder" \
+            check-ignore --verbose --non-matching --stdin -z 2>/dev/null | \
+        perl -0777 -ne '
+        # レコード全体を一度に読み込んで、
+        # "\x00\x00\x00<パス>\x00" にマッチする箇所だけを取り出す
+        while (/\x00\x00\x00([^\x00]+)\x00/g) {
+            print "$1\0";
+        }
+        '
+    )
+
+    # 3) 絶対パスに戻して改行区切りで files_raw 変数に格納
+    files_raw=""
+    for relpath in "${filtered_rel_array[@]}"; do
+        [ -z "$relpath" ] && continue
+        files_raw+="${workspaceFolder}/${relpath}"$'\n'
+    done
+
+else
+    # Git 管理外ならファイル名を NUL→改行区切りに変えてそのまま使う
+    files_raw=$(printf "%s" "${files_raw_initial[@]}" | tr '\0' '\n')
+fi
+
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
+
+#echo "***"
+#for file in "${files[@]}"; do
+#    echo ${file}
+#done
+#echo "***"
+#exit
 
 for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない
