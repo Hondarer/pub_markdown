@@ -308,6 +308,8 @@ copy_if_different_timestamp() {
 
 #-------------------------------------------------------------------
 
+echo -n "Correcting target files..."
+
 # ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──
 if [ -n "$relativeFile" ]; then
     if [ -d "${workspaceFolder}/$relativeFile" ]; then
@@ -359,7 +361,26 @@ else
     )
 fi
 
-# ── Git 管理下なら NUL 区切りでフィルタ ──
+# ── (B) files_raw_initial から .gitignore と .gitkeep を除外 ──
+{
+    # 一時配列を作って、除外後に元の配列へ上書き
+    mapfile -d '' -t _tmp_filtered < <(
+    for _f in "${files_raw_initial[@]}"; do
+        # basename が .gitignore でも .gitkeep でもなければ、残す
+        case "${_f##*/}" in
+        .gitignore|.gitkeep) 
+            ;;
+        *) 
+            printf '%s\0' "$_f"
+            ;;
+        esac
+    done
+    )
+    files_raw_initial=( "${_tmp_filtered[@]}" )
+    unset _tmp_filtered
+}
+
+# ── (C) Git 管理下なら NUL 区切りでフィルタ ──
 if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り)
     mapfile -d '' -t files_rel_zero_array < <(
@@ -403,6 +424,10 @@ IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 #echo "***"
 #exit
 
+echo " done."
+
+#-------------------------------------------------------------------
+
 for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない
     # → ファイルが存在する場合のみ処理を行う
@@ -420,7 +445,7 @@ for file in "${files[@]}"; do
         publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
 
         # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
-        if [[ "$file" != *.md ]] && [[ "${file##*/}" != .gitignore ]] && [[ "${file##*/}" != .gitkeep ]]; then
+        if [[ "$file" != *.md ]] ; then
             # コンテンツのコピー
             echo "Processing Other file: ${file#${workspaceFolder}/}"
             for langElement in ${lang}; do
