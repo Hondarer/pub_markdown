@@ -163,9 +163,9 @@ if [[ "$htmlTocEnable" == "true" ]]; then
     htmlTocOption="--toc --toc-depth=${htmlTocDepth}"
 fi
 
-# 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
+# 設定ファイルに autoSetDate が指定されなかった場合の値を false にする
 if [[ "$autoSetDate" == "" ]]; then
-    autoSetDate="true"
+    autoSetDate="false"
 fi
 if [[ "$autoSetDate" == "true" ]]; then
     export EXEC_DATE=`date -R`

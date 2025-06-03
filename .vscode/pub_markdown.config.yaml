@@ -2,8 +2,6 @@
 mdRoot: docs-src
 # 発行先のフォルダ名 (ワークスペースフォルダからの相対パス)
 pubRoot: docs
-# 詳細出力指定 (false / true)
-details: false
 # 言語の指定 (スペース区切りで複数言語の指定可)
 lang: ja en
 # html スタイルシートの指定
@@ -19,4 +17,4 @@ lang: ja en
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
 # 日付自動設定の有無 (false / true)
-#autoSetDate: true
+#autoSetDate: false
