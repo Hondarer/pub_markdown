@@ -351,7 +351,7 @@ if [ -n "$relativeFile" ]; then
 
         # マージ＆ソート＆重複排除 (単一ファイル自身も含める)
         mapfile -d '' -t files_raw_initial < <(
-            printf '%s\0' "${files_linked[@]}" "$target_file" | sort -z -u
+            printf '%s\0' "${files_linked[@]}" "${workspaceFolder}/${relativeFile}" | sort -z -u
         )
     fi
 else
