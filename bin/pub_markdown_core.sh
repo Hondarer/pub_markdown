@@ -261,10 +261,14 @@ else
     # 出力フォルダの clean
     if [[ "$details" == "true" ]]; then
         # "-details" で終わっているディレクトリを削除
-        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -exec rm -rf {} +
+        #echo find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -print
+        #find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -print
+        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -exec rm -rf {} +
     else
         # "-details" で終わっていないディレクトリを削除
-        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -exec rm -rf {} +
+        #echo find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -print
+        #find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -print
+        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -exec rm -rf {} +
     fi
 fi
 
