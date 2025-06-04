@@ -356,6 +356,11 @@ figcaption {
   line-height: 1.1;
 }
 
+div[data-custom-style="Source Code Caption"] {
+  text-align: center;
+  line-height: 1.1;
+}
+
 .dcjq-count {
   display: none;
 }
