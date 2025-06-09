@@ -6,6 +6,15 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダを選択させる
 cd $HOME_DIR
 
+#── Ctrl+C（SIGINT）や SIGTERM を捕まえて実行するクリーンアップ処理 ──
+cleanup() {
+    #echo >&2 "スクリプトが中断されました。"
+    printf "\e[0m" # 文字色を通常に設定
+    exit 1
+}
+# SIGINT (Ctrl+C) と SIGTERM (kill コマンドなど) を捕捉
+trap 'cleanup' INT TERM
+
 #-------------------------------------------------------------------
 # マルチプラットフォーム対応
 #-------------------------------------------------------------------
@@ -496,6 +505,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             if [ "$firstLang" == "" ]; then
+                printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -508,6 +518,7 @@ for file in "${files[@]}"; do
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                printf "\e[0m" # 文字色を通常に設定
                 firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
@@ -529,6 +540,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             if [ "$firstLang" == "" ]; then
+                printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -541,7 +553,8 @@ for file in "${files[@]}"; do
                         --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-               firstLang=${langElement}
+                printf "\e[0m" # 文字色を通常に設定
+                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             fi
@@ -574,6 +587,7 @@ for file in "${files[@]}"; do
 
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -586,6 +600,7 @@ for file in "${files[@]}"; do
                     --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+            printf "\e[0m" # 文字色を通常に設定
         done
 
         publish_dir_self_contain=$(dirname "${file}")
@@ -606,6 +621,7 @@ for file in "${files[@]}"; do
 
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -618,6 +634,7 @@ for file in "${files[@]}"; do
                     --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+            printf "\e[0m" # 文字色を通常に設定
         done
     fi
 done
@@ -652,6 +669,7 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             if [ "$firstLang" == "" ]; then
+                printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -664,7 +682,8 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                         --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
-               firstLang=${langElement}
+                printf "\e[0m" # 文字色を通常に設定
+                firstLang=${langElement}
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             fi
@@ -695,6 +714,7 @@ for file in "${files[@]}"; do
             
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+            printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
@@ -708,6 +728,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                     --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
+            printf "\e[0m" # 文字色を通常に設定
         done
     fi
 done
