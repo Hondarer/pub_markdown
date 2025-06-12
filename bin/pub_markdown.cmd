@@ -18,16 +18,19 @@ set "arg=%~1"
 :: /workspaceFolder: �̏ꍇ
 echo !arg! | findstr /b /c:"/workspaceFolder:" >nul && (
     set "workspaceFolder=!arg:/workspaceFolder:=!"
+    set "workspaceFolder=!workspaceFolder:"=!"
 )
 
 :: /relativeFile: �̏ꍇ
 echo !arg! | findstr /b /c:"/relativeFile:" >nul && (
     set "relativeFile=!arg:/relativeFile:=!"
+    set "relativeFile=!relativeFile:"=!"
 )
 
 :: /configFile: �̏ꍇ
 echo !arg! | findstr /b /c:"/configFile:" >nul && (
-    set "c=!arg:/configFile:=!"
+    set "configFile=!arg:/configFile:=!"
+    set "configFile=!configFile:"=!"
 )
 
 :: /details: �̏ꍇ
