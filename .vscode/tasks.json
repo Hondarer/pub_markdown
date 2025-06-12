@@ -21,7 +21,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\""
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\""
             }
         },
         {
@@ -42,7 +42,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\""
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\""
             }
         },
         {
@@ -63,7 +63,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\""
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\""
             }
         },
         {
@@ -84,7 +84,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --details=true"
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --details=true"
             }
         },
         {
@@ -105,7 +105,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\" --details=true"
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFile}\" --details=true"
             }
         },
         {
@@ -126,7 +126,7 @@
                 }
             },
             "linux": {
-                "command": "bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\" --details=true"
+                "command": "bash -i bin/pub_markdown_core.sh --workspaceFolder=\"${workspaceFolder}\" --relativeFile=\"${relativeFileDirname}\" --details=true"
             }
         }
     ]
