@@ -200,7 +200,7 @@ Mermaid と PlantUML は実現できることが重複する。PlantUML を優�
 
 ### 記載例
 
-```mermaid:テストだよ.mmd
+```{.mermaid caption="Mermaid のキャプション"}
 sequenceDiagram
     Alice->>John: Hello John, how are you?
     John-->>Alice: いいね!

@@ -122,10 +122,18 @@ return {
             if lang ~= "plantuml" then
                 return el
             end
-            local caption = nil
-            if filename then
+
+            ---------------------------------------------------------------------
+
+            -- caption 属性があれば優先してキャプションに
+            local caption = el.attributes["caption"]
+            if caption then
+                -- 属性を消す
+                el.attributes["caption"] = nil
+            elseif filename then
+                -- 属性がない場合は従来どおりファイル名をキャプションに
                 -- ファイル名の拡張子を除去
-                filename = filename:gsub("%.[pP][uU][mM][lL]$", "")
+                filename = filename:gsub("%.[mM][mM][dD]$", "")
                 -- ファイル名を caption に
                 caption = filename
             end

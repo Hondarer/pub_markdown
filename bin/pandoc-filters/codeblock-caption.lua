@@ -1,23 +1,36 @@
+-- caption-filter.lua
+local pandoc = require("pandoc")
+
 function CodeBlock(elem)
-  -- info-string が "言語:ファイル名" 形式かどうかチェック
+  -- (1) caption 属性があればそれをキャプションに
+  local cap = elem.attributes["caption"]
+  if cap then
+    -- 属性を消す
+    elem.attributes["caption"] = nil
+    -- キャプション段落を作成
+    local caption_para = pandoc.Div(
+      { pandoc.Str(cap) },
+      pandoc.Attr("", {}, { ["custom-style"] = "Source Code Caption" })
+    )
+    return { elem, caption_para }
+  end
+
+  -- (2) 続いて info-string (.lang:filename) フォーマットをチェック
   if #elem.classes >= 1 then
     local info = elem.classes[1]
     local lang, fname = info:match("^([^:]+):(.+)$")
     if lang and fname then
-      -- (1) 元のクラス（"text:sample.txt" など）を言語部分だけに置き換え
+      -- 言語クラスだけ残す
       elem.classes[1] = lang
-
-      -- (2) ファイル名を表示する「段落」を、属性付きで直接作成する
+      -- ファイル名をキャプション段落に
       local caption_para = pandoc.Div(
         { pandoc.Str(fname) },
-        pandoc.Attr("", {}, {["custom-style"]="Source Code Caption"})
+        pandoc.Attr("", {}, { ["custom-style"] = "Source Code Caption" })
       )
-
-      -- (3) コード本体(elem) → キャプション段落(caption_para) の順で返す
       return { elem, caption_para }
     end
   end
 
-  -- info-string が "言語:ファイル名" 形式でない場合は何もしない
+  -- (3) どちらにも該当しなければ何もしない
   return nil
 end
