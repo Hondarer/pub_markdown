@@ -725,7 +725,7 @@ for file in "${files[@]}"; do
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                     --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             printf "\e[0m" # 文字色を通常に設定
