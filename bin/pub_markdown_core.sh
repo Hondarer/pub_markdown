@@ -671,7 +671,7 @@ for file in "${files[@]}"; do
             if [ "$firstLang" == "" ]; then
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
-                    ${PANDOC} -s --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                    ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -716,7 +716,7 @@ for file in "${files[@]}"; do
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
-                ${PANDOC} -s --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
+                ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$md_title" -f markdown+hard_line_breaks \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
