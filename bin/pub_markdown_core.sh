@@ -37,6 +37,7 @@ else
     EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
+        #echo "PUPPETEER_EXECUTABLE_PATH = ${PUPPETEER_EXECUTABLE_PATH}"
     fi
 fi
 
