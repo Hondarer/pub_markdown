@@ -29,7 +29,16 @@ function Meta(meta)
             
             -- authorsが空でない場合のみ設定
             if #authors > 0 then
-                meta.author = authors
+                -- 出力形式を判定 (docx 以外かどうか)
+                local output_format = FORMAT or ""
+                
+                if output_format ~= "docx" and #authors >= 2 then
+                    -- docx 以外で著者が 2 人以上の場合、最初の著者 + "et al."
+                    meta.author = authors[1] .. " et al."
+                else
+                    -- docx 形式または著者が 1 人の場合、元の著者を維持
+                    meta.author = authors
+                end
             end
         else
             -- 環境変数が未設定、または空白の場合、何もしない
