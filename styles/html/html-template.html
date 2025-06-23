@@ -85,9 +85,15 @@ $endfor$
       $endif$
       <div class="span$if(toc)$9$else$12$endif$">
 
+      $if(title)$
+          <H1>$title$</H1>
+      $endif$
+
       $if(abstract)$
-          <H1>$abstract-title$</H1>
+          <div class="abstract">
+          <div class="abstract-title">$abstract-title$</div>
           $abstract$
+          </div>
       $endif$
 
       $for(include-before)$

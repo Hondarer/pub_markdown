@@ -1,6 +1,4 @@
 ---
-author:
-    - Tetsuo Honda
 subject: "subject"
 description: "description"
 ---

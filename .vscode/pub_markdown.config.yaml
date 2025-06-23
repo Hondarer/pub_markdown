@@ -16,5 +16,7 @@ lang: ja en
 #htmlTocDepth: 3
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
-# 日付自動設定の有無 (false / true)
-#autoSetDate: false
+# date 自動設定の有無 (false / true)
+autoSetDate: true
+# author 自動設定の有無 (false / true)
+autoSetAuthor: true

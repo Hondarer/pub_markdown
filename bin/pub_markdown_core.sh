@@ -136,6 +136,7 @@ if [ -f "$configFile" ]; then
     htmlTocDepth=$(parse_yaml "$config_content" "htmlTocDepth")
     docxTemplate=$(parse_yaml "$config_content" "docxTemplate")
     autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
+    autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "doc" にする
@@ -177,10 +178,10 @@ fi
 if [[ "$autoSetDate" == "" ]]; then
     autoSetDate="false"
 fi
-if [[ "$autoSetDate" == "true" ]]; then
-    export EXEC_DATE=`date -R`
-else
-    export -n EXEC_DATE
+
+# 設定ファイルに autoSetAuthor が指定されなかった場合の値を false にする
+if [[ "$autoSetAuthor" == "" ]]; then
+    autoSetAuthor="false"
 fi
 
 #-------------------------------------------------------------------
@@ -509,7 +510,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
@@ -544,7 +545,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
@@ -581,6 +582,20 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
+        if [[ "$autoSetDate" == "true" ]]; then
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+        else
+            export -n DOCUMENT_DATE
+        fi
+
+        if [[ "$autoSetAuthor" == "true" ]]; then
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+        else
+            export -n DOCUMENT_AUTHOR
+        fi
+
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
@@ -591,7 +606,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
@@ -625,7 +640,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
@@ -673,7 +688,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
@@ -690,7 +705,7 @@ for file in "${files[@]}"; do
             fi
         done
 
-   elif [[ "$file" == *.md ]]; then
+    elif [[ "$file" == *.md ]]; then
         # .md ファイルの処理
         echo "Processing Markdown file for docx: ${file#${workspaceFolder}/}"
 
@@ -708,6 +723,20 @@ for file in "${files[@]}"; do
         done
         publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
 
+        if [[ "$autoSetDate" == "true" ]]; then
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+        else
+            export -n DOCUMENT_DATE
+        fi
+
+        if [[ "$autoSetAuthor" == "true" ]]; then
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+        else
+            export -n DOCUMENT_AUTHOR
+        fi
+
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
@@ -718,7 +747,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$md_title" -f markdown+hard_line_breaks \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-date.lua" \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
