@@ -6,7 +6,10 @@ docs
 
 # oss
 bin/license/jgm-pandoc
+bin/license/pandoc-crossref
 bin/modules/LibDeflate/*
 !bin/modules/LibDeflate/put_LibDeflate_here
 bin/pandoc.exe
 bin/pandoc
+bin/pandoc-crossref.exe
+bin/pandoc-crossref

@@ -29,16 +29,37 @@ if [ $LINUX -eq 1 ]; then
     chmod +x ${SCRIPT_DIR}/mmdc-wrapper.sh
     chmod +x ${SCRIPT_DIR}/chrome-wrapper.sh
     chmod +x ${SCRIPT_DIR}/pandoc
-    PANDOC="pandoc"
+    chmod +x ${SCRIPT_DIR}/pandoc-crossref
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
 else
-    PANDOC="pandoc.exe"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
     EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
         #echo "PUPPETEER_EXECUTABLE_PATH = ${PUPPETEER_EXECUTABLE_PATH}"
     fi
+fi
+
+# pandoc が ${SCRIPT_DIR} にある または PATH が通っていれば
+# PANDOC に pandoc のパスを設定
+if [ -x "${SCRIPT_DIR}/pandoc" ] || [ -x "${SCRIPT_DIR}/pandoc.exe" ]; then
+    PANDOC="${SCRIPT_DIR}/pandoc"
+elif command -v pandoc >/dev/null 2>&1 || command -v pandoc.exe >/dev/null 2>&1; then
+    PANDOC="pandoc"
+else
+    echo "Error: pandoc not found."
+    exit 1
+fi
+
+# pandoc-crossref が ${SCRIPT_DIR} にある または PATH が通っていれば
+# PANDOC-CROSSREF に "-F {pandoc-crossref のパス}" を設定
+# それ以外の場合は、PANDOC-CROSSREF は設定しない
+if [ -x "${SCRIPT_DIR}/pandoc-crossref" ] || [ -x "${SCRIPT_DIR}/pandoc-crossref.exe" ]; then
+    PANDOC_CROSSREF="-F ${SCRIPT_DIR}/pandoc-crossref"
+elif command -v pandoc-crossref >/dev/null 2>&1 || command -v pandoc-crossref.exe >/dev/null 2>&1; then
+    PANDOC_CROSSREF="-F pandoc-crossref"
+else
+    PANDOC_CROSSREF=""
 fi
 
 # ${SCRIPT_DIR}/node_modules/.bin が存在しない場合はエラーを表示して終了
@@ -524,6 +545,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
+                        ${PANDOC_CROSSREF} \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
@@ -558,6 +580,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                        ${PANDOC_CROSSREF} \
                         --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
@@ -619,6 +642,7 @@ for file in "${files[@]}"; do
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                    ${PANDOC_CROSSREF} \
                     --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
@@ -653,6 +677,7 @@ for file in "${files[@]}"; do
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                    ${PANDOC_CROSSREF} \
                     --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
@@ -702,6 +727,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                        ${PANDOC_CROSSREF} \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                         --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
                 printf "\e[0m" # 文字色を通常に設定
@@ -762,6 +788,7 @@ for file in "${files[@]}"; do
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                    ${PANDOC_CROSSREF} \
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                     --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             printf "\e[0m" # 文字色を通常に設定
