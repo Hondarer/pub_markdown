@@ -78,14 +78,10 @@ get_file_date() {
 
   # ─── 5) 未コミット差分の有無チェック ─────────────────────────────
   if ! git -C "$repo" diff --quiet HEAD -- "$rel"; then
-    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " (uncommitted)"
-    # GNU date の場合: -R で RFC2822, -r で参照ファイルの時刻
+    # 差分あり → ファイルの最終更新時刻 + " (uncommitted)"
     if date -R -r "$abs_file" &>/dev/null; then
-      # GNU date
-      echo "$(date -R -r "$abs_file") (uncommitted)"
-    else
-      # BSD date (macOS等)
-      echo "$(date -j -f "%s" "$(stat -f "%m" "$abs_file")" "+%a, %d %b %Y %H:%M:%S %z") (uncommitted)"
+      # あらかじめ親で取得している実行時間を採用する
+      echo "${EXEC_DATE} (uncommitted)"
     fi
   else
     # 差分なし → 最終コミットのコミッター日時 (RFC2822)
