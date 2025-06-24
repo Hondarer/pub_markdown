@@ -29,6 +29,10 @@ body > *:last-child {
   line-height: normal;
   padding: 2px 20px; }
 
+.navbar .nav.pull-right {
+    margin-right: -35px;
+}
+
 a {
   color: #4183C4; }
 a.absent {
