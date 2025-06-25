@@ -1,21 +1,16 @@
 local utils = require 'pandoc.utils'
 local paths = require 'pandoc.path'
 local mediabags = require 'pandoc.mediabag'
-
 local root_dir = paths.directory(paths.directory(PANDOC_SCRIPT_FILE))
 
 local search_paths = {
     package.path,
     paths.join({ root_dir, "modules", "LibDeflate", "?.lua" }),
-    paths.join({ root_dir, "modules", "UTF8toSJIS", "?.lua" }),
     paths.join({ root_dir, "config", "?.lua" })
 }
 package.path = table.concat(search_paths, ";")
 
 local libDeflate = require("LibDeflate")
-
-local UTF8toSJIS = require("UTF8toSJIS")
-local UTF8SJIS_table = root_dir .. "/modules/UTF8toSJIS/UTF8toSJIS.tbl"
 
 -- load plantuml server configurations
 local config_loaded, pu_config = pcall(function() return (require "config-plantuml").config() end)
@@ -88,20 +83,112 @@ local function encode(text)
     return table.concat(buf)
 end
 
-local function file_exists(name)
-    -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
-    -- この処理が 他の言語の場合に正しく動作するかは未検証(動かない可能性が非常に高い)。
-    local fht = io.open(UTF8SJIS_table, "r")
-    local name_sjis, name_sjis_length = UTF8toSJIS:UTF8_to_SJIS_str_cnv(fht, name)
-    fht:close()
+-- Windows 環境とコードページの判定
+function is_windows_cp(codepage)
+    -- OS 判定 (Windows環境かチェック)
+    local os_name = os.getenv("OS")
+    if not os_name or not string.match(os_name:lower(), "windows") then
+        return false
+    end
 
-    local f = io.open(name_sjis, "r")
+    -- コードページ取得 (chcp コマンドを使用)
+    handle = io.popen('powershell -Command "[System.Console]::OutputEncoding.CodePage"')
+    local cp_num
+    if handle then
+        local ps_output = handle:read("*a") or ""
+        handle:close()
+        
+        -- PowerShell の出力から数値を抽出
+        cp_num = string.match(ps_output, "(%d+)")
+    end
+
+    return cp_num == codepage
+end
+
+-- 一時ディレクトリを取得
+function create_temp_file()
+    -- OS 判定
+    local os_name = os.getenv("OS")
+    if not os_name or not string.match(os_name:lower(), "windows") then
+        -- Linux
+        return os.tmpname()
+    end
+
+    -- Windows
+    local temp_dir = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("USERPROFILE") or "."
+    
+    -- 一意なファイル名を生成
+    local timestamp = os.time()
+    local random_num = math.random(1000, 9999)
+    local temp_file = temp_dir .. "\\pandoc_temp_" .. timestamp .. "_" .. random_num .. ".txt"
+    
+    --io.stderr:write("DBG_TEMP_FILE: " .. temp_file .. "\n")
+    return temp_file
+end
+
+-- コードページ変換
+function utf8_to_active_cp(text)
+    -- cp932 (SJIS) かどうかの判定
+    if not is_windows_cp("932") then
+        return text
+    end
+
+    if not text or text == "" then
+        return text
+    end
+    
+    -- 一時ファイル名を得る
+    local temp_file = create_temp_file()
+    
+    -- ファイルに書き込み
+    local f = io.open(temp_file, "w")
+    if not f then
+        return text
+    end
+    f:write(text)
+    f:close()
+
+    -- PowerShell でファイル内容を SJIS で読み直し
+    local ps_cmd = string.format([[
+        powershell -Command "
+        try {
+            $content = Get-Content -Path '%s' -Encoding UTF8 -Raw
+            $sjisBytes = [System.Text.Encoding]::GetEncoding(932).GetBytes($content)
+            [System.Text.Encoding]::GetEncoding(932).GetString($sjisBytes)
+        } catch {
+            exit 1
+        }" 2>nul
+    ]], temp_file)
+    
+    local handle = io.popen(ps_cmd)
+    local result = ""
+    if handle then
+        result = handle:read("*a")
+        handle:close()
+    end
+    
+    -- 一時ファイル削除
+    os.remove(temp_file)
+    
+    if result == "" then
+        return text
+    end
+    
+    return result:gsub("\r?\n$", "")
+end
+
+local _root_dir = utf8_to_active_cp(root_dir)
+
+local function file_exists(name)
+    local _name = utf8_to_active_cp(name)
+
+    local f = io.open(_name, "r")
     if f ~= nil then
         io.close(f)
-        --io.stderr:write("[plantuml] skip " .. name_sjis .. "\n")
+        --io.stderr:write("[mermaid] skip " .. _name .. "\n")
         return true
     else
-        --io.stderr:write("[plantuml] make " .. name_sjis .. "\n")
+        --io.stderr:write("[mermaid] make " .. _name .. "\n")
         return false
     end
 end
@@ -222,9 +309,11 @@ return {
             local encoded_text = encode(resultString)
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
+            local _resource_dir = utf8_to_active_cp(resource_dir)
 
             local filename = string.format("puml_%s.%s", utils.sha1(encoded_text), pu_config.format)
             local image_file_path = paths.join({resource_dir, filename})
+            local _image_file_path = utf8_to_active_cp(image_file_path)
 
             if not file_exists(image_file_path) then
 
@@ -237,22 +326,16 @@ return {
                 end
 
                 -- write to file
-
-                -- io.open は OS のデフォルトコードページ依存のため、日本語 OS では日本語のファイル名を渡す際に UTF-8 のファイル名を SJIS にする必要がある。
-                -- この処理が 他の言語の場合に正しく動作するかは未検証(動かない可能性が非常に高い)。
-                local fht = io.open(UTF8SJIS_table, "r")
-                local image_file_path_sjis, image_file_path_sjis_length = UTF8toSJIS:UTF8_to_SJIS_str_cnv(fht, image_file_path)
-                fht:close()
-                local fs, errorDisc, errorCode = io.open(image_file_path_sjis, "wb")
+                local fs, errorDisc, errorCode = io.open(_image_file_path, "wb")
 
                 if errorCode == 2 then
                     -- Use platform-specific commands to create the directory
                     if package.config:sub(1,1) == '\\' then -- Windows
-                        os.execute("mkdir " .. string.gsub(resource_dir, "/", "\\"))
+                        os.execute("mkdir " .. string.gsub(_resource_dir, "/", "\\"))
                     else -- Unix-like systems (Linux, macOS, etc.)
                         os.execute("mkdir " .. resource_dir)
                     end
-                    fs = io.open(image_file_path, "wb")
+                    fs = io.open(_image_file_path, "wb")
                 end
 
                 -- pu_config.format が "svg" の場合は、
@@ -295,7 +378,6 @@ return {
             table.remove(caption_elements)
 
             return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
-
         end
     }
 }
