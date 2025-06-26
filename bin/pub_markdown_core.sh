@@ -25,11 +25,11 @@ if [[ "$(uname -s)" == "Linux" ]]; then
 fi
 
 if [ $LINUX -eq 1 ]; then
-    chmod +x ${SCRIPT_DIR}/replace-tag.sh
-    chmod +x ${SCRIPT_DIR}/mmdc-wrapper.sh
-    chmod +x ${SCRIPT_DIR}/chrome-wrapper.sh
-    chmod +x ${SCRIPT_DIR}/pandoc
-    chmod +x ${SCRIPT_DIR}/pandoc-crossref
+    chmod +x "${SCRIPT_DIR}/replace-tag.sh"
+    chmod +x "${SCRIPT_DIR}/mmdc-wrapper.sh"
+    chmod +x "${SCRIPT_DIR}/chrome-wrapper.sh"
+    chmod +x "${SCRIPT_DIR}/pandoc"
+    chmod +x "${SCRIPT_DIR}/pandoc-crossref"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
 else
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
@@ -106,20 +106,24 @@ while [[ $# -gt 0 ]]; do
         --workspaceFolder=*)
             workspaceFolder="${1#*=}"
             workspaceFolder="${workspaceFolder//\\/\/}"
+            #echo workspaceFolder=${workspaceFolder}
             shift
         ;;
         --relativeFile=*)
             relativeFile="${1#*=}"
             relativeFile="${relativeFile//\\/\/}"
+            #echo relativeFile=${relativeFile}
             shift
         ;;
         --configFile=*)
             configFile="${1#*=}"
             configFile=$(resolve_path "${configFile//\\/\/}")
+            #echo configFile=${configFile}
             shift
         ;;
         --details=*)
             details="${1#*=}"
+            #echo details=${details}
             shift
         ;;
         *)
@@ -127,6 +131,7 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
+#echo ""
 
 #-------------------------------------------------------------------
 
@@ -476,15 +481,15 @@ for file in "${files[@]}"; do
     if [[ -e "$file" ]]; then
         publish_dir=$(dirname "${file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
+            publish_dir="html/${publish_dir#${workspaceFolder}/${mdRoot}/}"
         else
-            publish_dir=html
+            publish_dir="html"
         fi
 
         for langElement in ${lang}; do
             mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
         done
-        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file="html/${file#${workspaceFolder}/${mdRoot}/}"
 
         # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
         if [[ "$file" != *.md ]] ; then
@@ -549,7 +554,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-                firstLang=${langElement}
+                firstLang="${langElement}"
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             fi
@@ -557,14 +562,14 @@ for file in "${files[@]}"; do
 
         publish_dir_self_contain=$(dirname "${file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}
+            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
         else
-            publish_dir_self_contain=html-self-contain
+            publish_dir_self_contain="html-self-contain"
         fi
         for langElement in ${lang}; do
             mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
         done
-        publish_file_self_contain=html-self-contain/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
 
         firstLang=""
         for langElement in ${lang}; do
@@ -585,7 +590,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-                firstLang=${langElement}
+                firstLang="${langElement}"
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             fi
@@ -651,14 +656,14 @@ for file in "${files[@]}"; do
 
         publish_dir_self_contain=$(dirname "${file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_self_contain=html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}
+            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
         else
-            publish_dir_self_contain=html-self-contain
+            publish_dir_self_contain="html-self-contain"
         fi
         for langElement in ${lang}; do
             mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
         done
-        publish_file_self_contain=html-self-contain/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
 
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
@@ -731,7 +736,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
                         --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
                 printf "\e[0m" # 文字色を通常に設定
-                firstLang=${langElement}
+                firstLang="${langElement}"
             else
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
             fi
