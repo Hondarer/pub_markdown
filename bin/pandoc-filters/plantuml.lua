@@ -83,28 +83,6 @@ local function encode(text)
     return table.concat(buf)
 end
 
--- Windows 環境とコードページの判定
-function is_windows_cp(codepage)
-    -- OS 判定 (Windows環境かチェック)
-    local os_name = os.getenv("OS")
-    if not os_name or not string.match(os_name:lower(), "windows") then
-        return false
-    end
-
-    -- コードページ取得 (chcp コマンドを使用)
-    handle = io.popen('powershell -Command "[System.Console]::OutputEncoding.CodePage"')
-    local cp_num
-    if handle then
-        local ps_output = handle:read("*a") or ""
-        handle:close()
-        
-        -- PowerShell の出力から数値を抽出
-        cp_num = string.match(ps_output, "(%d+)")
-    end
-
-    return cp_num == codepage
-end
-
 -- 一時ディレクトリを取得
 function create_temp_file()
     -- OS 判定
@@ -126,10 +104,12 @@ function create_temp_file()
     return temp_file
 end
 
--- コードページ変換
+-- コードページ変換 (for Windows)
 function utf8_to_active_cp(text)
-    -- cp932 (SJIS) かどうかの判定
-    if not is_windows_cp("932") then
+    -- OS 判定
+    local os_name = os.getenv("OS")
+    if not os_name or not string.match(os_name:lower(), "windows") then
+        -- Linux
         return text
     end
 
@@ -148,32 +128,22 @@ function utf8_to_active_cp(text)
     f:write(text)
     f:close()
 
-    -- PowerShell でファイル内容を SJIS で読み直し
-    local ps_cmd = string.format([[
-        powershell -Command "
-        try {
-            $content = Get-Content -Path '%s' -Encoding UTF8 -Raw
-            $sjisBytes = [System.Text.Encoding]::GetEncoding(932).GetBytes($content)
-            [System.Text.Encoding]::GetEncoding(932).GetString($sjisBytes)
-        } catch {
-            exit 1
-        }" 2>nul
-    ]], temp_file)
-    
-    local handle = io.popen(ps_cmd)
+    -- PowerShell でファイル内容を現在のコードページに変換
+    local handle = io.popen('powershell -Command "Write-Output(Get-Content -Path \'' .. temp_file .. '\' -Encoding UTF8 -Raw)"')
+
     local result = ""
     if handle then
         result = handle:read("*a")
         handle:close()
     end
-    
+
     -- 一時ファイル削除
     os.remove(temp_file)
     
     if result == "" then
         return text
     end
-    
+
     return result:gsub("\r?\n$", "")
 end
 
@@ -331,7 +301,7 @@ return {
                 if errorCode == 2 then
                     -- Use platform-specific commands to create the directory
                     if package.config:sub(1,1) == '\\' then -- Windows
-                        os.execute("mkdir " .. string.gsub(_resource_dir, "/", "\\"))
+                        os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
                     else -- Unix-like systems (Linux, macOS, etc.)
                         os.execute("mkdir " .. resource_dir)
                     end
