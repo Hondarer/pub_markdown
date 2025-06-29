@@ -1,4 +1,4 @@
-# Mermaid Pandoc フィルタの動作説明
+# Mermaid Pandoc フィルタ (mermaid.lua) について
 
 ## 概要
 
