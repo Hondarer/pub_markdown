@@ -44,6 +44,19 @@ function Meta(meta)
             -- 環境変数が未設定、または空白の場合、何もしない
         end
     end
-    
+
+    -- 目次に対する処理
+    if FORMAT == "docx" then
+        -- docx 出力の場合
+        if meta.toc and meta.toc == true then
+            -- meta.toc が true の場合、目次の見出しを "目次" に設定
+            meta["toc-title"] = pandoc.MetaString("目次")
+        end
+    else
+        -- docx 以外の場合、meta.toc を取り除く
+        -- (html の場合、この属性が存在すると目次出力が不正になってしまう)
+        meta.toc = nil
+    end
+
     return meta
 end
