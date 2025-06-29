@@ -72,7 +72,11 @@ get_file_date() {
 
   # ─── 4) 管理下にあるかチェック ─────────────────────────────────
   if ! git -C "$repo" ls-files --error-unmatch -- "$rel" &>/dev/null; then
-    #echo ""
+    # ファイルの最終更新時刻 + " (uncommitted)"
+    if date -R -r "$abs_file" &>/dev/null; then
+      # あらかじめ親で取得している実行時間を採用する
+      echo "${EXEC_DATE} (uncommitted)"
+    fi
     return
   fi
 

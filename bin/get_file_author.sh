@@ -72,7 +72,7 @@ get_file_author() {
 
   # ─── 4) 管理下にあるかチェック ─────────────────────────────────
   if ! git -C "$repo" ls-files --error-unmatch -- "$rel" &>/dev/null; then
-    #echo ""
+    echo $(git -C "$repo" config user.name 2>/dev/null)
     return
   fi
 
