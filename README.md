@@ -24,11 +24,10 @@ Markdown to html and docx with Pandoc.
 
 ### セットアップ
 
-+ pandoc に PATH を通す。bin フォルダ直下に pandoc を配置してもよい。
-+ pandoc-crossref に PATH を通す。bin フォルダ直下に pandoc-crossref を配置してもよい。
++ pandoc に PATH を通す。
++ pandoc-crossref に PATH を通す。
   + pandoc-crossref はオプション。存在しなくても動作する。
-+ node.exe に PATH を通す。bin フォルダ直下に node.exe を配置してもよい。Linux では nodejs モジュールパッケージに含まれる。
-+ bin/modules/LibDeflate に、[SafeteeWoW/LibDeflate](https://github.com/SafeteeWoW/LibDeflate) を配置する。
++ node.exe に PATH を通す。Linux では nodejs モジュールパッケージに含まれる。
 + bin 配下で、`npm install` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
 
 ### Markdown の発行方法
@@ -81,6 +80,12 @@ pu_config.format が svg の場合は、font-family="sans-serif" (デフォル�
 ### caption に改行を含む場合
 
 plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。
+
+### 実行時に `Error: Failed to launch the browser process!` のエラーが発生する場合
+
+Edge を更新後、`Error: Failed to launch the browser process!` が発生する場合がある。
+
+この問題は、Windows を再起動することで解消する。
 
 ## TODO:
 
