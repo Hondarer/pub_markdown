@@ -36,6 +36,12 @@ Markdown to html and docx with Pandoc.
 + Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
 + 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
+## Third-Party Libraries
+
+This project uses the following third-party libraries:
+
++ [LibDeflate](https://github.com/SafeteeWoW/LibDeflate) (zlib License) - Copyright (C) 2018-2021 Haoqian He
+
 ## 解決済の問題
 
 ### 多言語対応時に title を得られない問題
