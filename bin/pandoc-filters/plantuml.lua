@@ -163,6 +163,60 @@ local function file_exists(name)
     end
 end
 
+-- PATH に plantuml コマンドがあるかチェック
+local function check_local_plantuml()
+    local os_name = os.getenv("OS")
+    local cmd
+    if os_name and string.match(os_name:lower(), "windows") then
+        cmd = "where plantuml >nul 2>&1"
+    else
+        cmd = "which plantuml >/dev/null 2>&1"
+    end
+    
+    local result = os.execute(cmd)
+    return result == true
+end
+
+-- ローカルの plantuml コマンドを使用して変換
+local function convert_with_local_plantuml(puml_text, output_path, format)
+    local temp_puml = create_temp_file()
+    local _output_path = utf8_to_active_cp(output_path)
+    
+    -- PlantUML ソースを一時ファイルに書き出し
+    local f = io.open(temp_puml, "w")
+    if not f then
+        return false, "Cannot create temporary file"
+    end
+    f:write(puml_text)
+    f:close()
+    
+    -- plantuml コマンドを実行
+    local cmd
+    local os_name = os.getenv("OS")
+    
+    if os_name and string.match(os_name:lower(), "windows") then
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, _output_path)
+    else
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, output_path)
+    end
+    
+    local result = os.execute(cmd)
+    
+    -- 一時ファイルを削除
+    os.remove(temp_puml)
+    
+    if result ~= true then
+        return false, "plantuml command failed"
+    end
+    
+    -- 出力ファイルが生成されたかチェック
+    if not file_exists(output_path) then
+        return false, "Output file not generated"
+    end
+    
+    return true, nil
+end
+
 return {
     {
         CodeBlock = function(el) 
@@ -286,37 +340,72 @@ return {
             local _image_file_path = utf8_to_active_cp(image_file_path)
 
             if not file_exists(image_file_path) then
-
-                local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
-                local mt, img = mediabags.fetch(url .. encoded_text)
-
-                if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
-                    io.stderr:write("Error: fetching image from " .. url .. "\n")
-                    return el
+                local local_success=false
+                -- plantuml コマンドに PATH が通っているかチェック
+                if check_local_plantuml() then
+                    -- ローカルの plantuml コマンドで変換
+                    --io.stderr:write("[plantuml] Using local plantuml command\n")
+                    
+                    -- 出力ディレクトリが存在しない場合は作成
+                    if not file_exists(resource_dir) then
+                        if package.config:sub(1,1) == '\\' then -- Windows
+                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
+                        else -- Unix-like systems (Linux, macOS, etc.)
+                            os.execute("mkdir -p " .. resource_dir)
+                        end
+                    end
+                    
+                    local_success, error_msg = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
+                    if not local_success then
+                        io.stderr:write("[plantuml] Local conversion failed: " .. (error_msg or "unknown error") .. ", falling back to server\n")
+                        -- ローカル変換に失敗した場合はサーバー変換にフォールバック
+                    end
                 end
 
-                -- write to file
-                local fs, errorDisc, errorCode = io.open(_image_file_path, "wb")
+                if not local_success then
+                    -- サーバーを使用した変換
+                    --io.stderr:write("[plantuml] Using server conversion\n")
+                    local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
+                    local mt, img = mediabags.fetch(url .. encoded_text)
 
-                if errorCode == 2 then
-                    -- Use platform-specific commands to create the directory
-                    if package.config:sub(1,1) == '\\' then -- Windows
-                        os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
-                    else -- Unix-like systems (Linux, macOS, etc.)
-                        os.execute("mkdir " .. resource_dir)
+                    if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
+                        io.stderr:write("Error: fetching image from " .. url .. "\n")
+                        return el
                     end
-                    fs = io.open(_image_file_path, "wb")
+
+                    -- write to file
+                    local fs, errorDisc, errorCode = io.open(_image_file_path, "wb")
+
+                    if errorCode == 2 then
+                        -- Use platform-specific commands to create the directory
+                        if package.config:sub(1,1) == '\\' then -- Windows
+                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
+                        else -- Unix-like systems (Linux, macOS, etc.)
+                            os.execute("mkdir -p " .. resource_dir)
+                        end
+                        fs = io.open(_image_file_path, "wb")
+                    end
+
+                    fs:write(img)
+                    fs:close()
                 end
 
                 -- pu_config.format が "svg" の場合は、
                 -- font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
                 if pu_config.format == "svg" then
-                    img = string.gsub(img, 'font%-family="sans%-serif"', 'font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif"')
+                    local f = io.open(_image_file_path, "r")
+                    if f then
+                        local content = f:read("*a")
+                        f:close()
+                        content = string.gsub(content, 'font%-family="sans%-serif"', 'font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif"')
+                        f = io.open(_image_file_path, "w")
+                        if f then
+                            f:write(content)
+                            f:close()
+                        end
+                    end
                 end
-
-                fs:write(img)
-                fs:close()
             end
             
             local image_src = image_file_path
