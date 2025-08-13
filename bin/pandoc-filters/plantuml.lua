@@ -155,10 +155,10 @@ local function file_exists(name)
     local f = io.open(_name, "r")
     if f ~= nil then
         io.close(f)
-        --io.stderr:write("[mermaid] skip " .. _name .. "\n")
+        --io.stderr:write("exists " .. _name .. "\n")
         return true
     else
-        --io.stderr:write("[mermaid] make " .. _name .. "\n")
+        --io.stderr:write("not exists " .. _name .. "\n")
         return false
     end
 end
@@ -347,9 +347,10 @@ return {
                     --io.stderr:write("[plantuml] Using local plantuml command\n")
                     
                     -- 出力ディレクトリが存在しない場合は作成
+                    -- ※ Windows の場合は、file_exists では既存ディレクトリの不存在チェックができないので、nul にリダイレクト
                     if not file_exists(resource_dir) then
                         if package.config:sub(1,1) == '\\' then -- Windows
-                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
+                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\" >nul 2>&1")
                         else -- Unix-like systems (Linux, macOS, etc.)
                             os.execute("mkdir -p " .. resource_dir)
                         end

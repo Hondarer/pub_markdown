@@ -75,10 +75,10 @@ local function file_exists(name)
     local f = io.open(_name, "r")
     if f ~= nil then
         io.close(f)
-        --io.stderr:write("[mermaid] skip " .. _name .. "\n")
+        --io.stderr:write("exists " .. _name .. "\n")
         return true
     else
-        --io.stderr:write("[mermaid] make " .. _name .. "\n")
+        --io.stderr:write("not exists " .. _name .. "\n")
         return false
     end
 end
