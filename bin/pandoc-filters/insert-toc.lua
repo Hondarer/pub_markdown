@@ -9,106 +9,56 @@ local function is_windows()
     return os_name and string.match(os_name:lower(), "windows")
 end
 
--- 一時ファイルを作成
-local function create_temp_file()
-    -- OS 判定
-    local os_name = os.getenv("OS")
-    if not os_name or not string.match(os_name:lower(), "windows") then
-        -- Linux
-        return os.tmpname()
-    end
-
-    -- Windows
-    local temp_dir = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("USERPROFILE") or "."
-    
-    -- 一意なファイル名を生成
-    local timestamp = os.time()
-    local random_num = math.random(1000, 9999)
-    local temp_file = temp_dir .. "\\pandoc_temp_" .. timestamp .. "_" .. random_num .. ".txt"
-    
-    return temp_file
+-- コードページ変換のスキップ判定
+local function needs_conversion(text)
+  -- 空や ASCII のみならそのまま返す
+  return text and text ~= "" and text:match("[\128-\255]") ~= nil
 end
 
--- UTF-8からマルチバイトに変換 (for Windows)
+-- UTF-8 -> 現在のアクティブコードページ (Windows)
 local function utf8_to_active_cp(text)
-    -- Windows ではない または マルチバイト文字が含まれない
-    if not is_windows() or text:match("[\128-\255]") == nil then
+    if (not is_windows()) or (not needs_conversion(text)) then
         return text
     end
-
-    if not text or text == "" then
-        return text
+    local ps = table.concat({
+        "$ErrorActionPreference='Stop'",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::UTF8",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default",
+        "$in = [Console]::In.ReadToEnd()",
+        "[Console]::Out.Write($in)"
+    }, "; ")
+    local ok, out = pcall(pandoc.pipe, "powershell", {
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-Command", ps
+    }, text)
+    if ok and out and out ~= "" then
+        -- 末尾の改行を削る
+        return (out:gsub("[\r\n]+$", ""))
     end
-    
-    -- 一時ファイル名を得る
-    local temp_file = create_temp_file()
-    
-    -- ファイルに書き込み
-    local f = io.open(temp_file, "w")
-    if not f then
-        return text
-    end
-    f:write(text)
-    f:close()
-
-    -- PowerShell でファイル内容を現在のコードページに変換
-    local handle = io.popen('powershell -Command "Write-Output(Get-Content -Path \'' .. temp_file .. '\' -Encoding UTF8 -Raw)"')
-
-    local result = ""
-    if handle then
-        result = handle:read("*a")
-        handle:close()
-    end
-
-    -- 一時ファイル削除
-    os.remove(temp_file)
-    
-    if result == "" then
-        return text
-    end
-
-    return result:gsub("[\r\n]+$", "")
+    return text
 end
 
--- マルチバイトからUTF-8に変換 (for Windows)
+-- 現在のアクティブコードページ -> UTF-8 (Windows)
 local function active_cp_to_utf8(text)
-    -- Windows ではない または マルチバイト文字が含まれない
-    if not is_windows() or text:match("[\128-\255]") == nil then
+    if (not is_windows()) or (not needs_conversion(text)) then
         return text
     end
-
-    if not text or text == "" then
-        return text
+    local ps = table.concat({
+        "$ErrorActionPreference='Stop'",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+        "$in = [Console]::In.ReadToEnd()",
+        "[Console]::Out.Write($in)"
+    }, "; ")
+    local ok, out = pcall(pandoc.pipe, "powershell", {
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-Command", ps
+    }, text)
+    if ok and out and out ~= "" then
+        -- 末尾の改行を削る
+        return (out:gsub("[\r\n]+$", ""))
     end
-    
-    -- 一時ファイル名を得る
-    local temp_file = create_temp_file()
-    
-    -- ファイルに書き込み (マルチバイト)
-    local f = io.open(temp_file, "w")
-    if not f then
-        return text
-    end
-    f:write(text)
-    f:close()
-
-    -- PowerShell でファイル内容をUTF-8に変換
-    local handle = io.popen('powershell -Command "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Content -Path \'' .. temp_file .. '\' -Encoding Default -Raw; powershell -Command "[Console]::OutputEncoding = [System.Text.Encoding]::Default"')
-
-    local result = ""
-    if handle then
-        result = handle:read("*a")
-        handle:close()
-    end
-
-    -- 一時ファイル削除
-    os.remove(temp_file)
-    
-    if result == "" then
-        return text
-    end
-
-    return result:gsub("[\r\n]+$", "")
+    return text
 end
 
 -- デバッグ出力関数

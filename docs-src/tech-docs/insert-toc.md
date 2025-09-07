@@ -1,8 +1,8 @@
-# Pandoc Markdown インデックス挿入 Lua フィルタ
+# Pandoc Markdown インデックス挿入 Lua フィルタ (insert-toc.lua)
 
 ## 概要
 
-指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的にインデックス (目次) リストを生成し、対象ファイルに挿入する Pandoc Lua フィルタです。
+この Lua フィルタは、指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的にインデックス (目次) リストを生成し、対象ファイルに挿入します。
 
 ## インデックス挿入の書式
 

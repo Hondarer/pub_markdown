@@ -3,11 +3,15 @@ local paths = require 'pandoc.path'
 local mediabags = require 'pandoc.mediabag'
 local root_dir = paths.directory(paths.directory(PANDOC_SCRIPT_FILE))
 
+-- OS 判定関数
+local function is_windows()
+    local os_name = os.getenv("OS")
+    return os_name and string.match(os_name:lower(), "windows")
+end
+
 -- 一時ディレクトリを取得
 function create_temp_file()
-    -- OS 判定
-    local os_name = os.getenv("OS")
-    if not os_name or not string.match(os_name:lower(), "windows") then
+    if not is_windows() then
         -- Linux
         return os.tmpname()
     end
@@ -24,47 +28,56 @@ function create_temp_file()
     return temp_file
 end
 
--- コードページ変換 (for Windows)
-function utf8_to_active_cp(text)
-    -- OS 判定
-    local os_name = os.getenv("OS")
-    if not os_name or not string.match(os_name:lower(), "windows") then
-        -- Linux
+-- コードページ変換のスキップ判定
+local function needs_conversion(text)
+  -- 空や ASCII のみならそのまま返す
+  return text and text ~= "" and text:match("[\128-\255]") ~= nil
+end
+
+-- UTF-8 -> 現在のアクティブコードページ (Windows)
+local function utf8_to_active_cp(text)
+    if (not is_windows()) or (not needs_conversion(text)) then
         return text
     end
+    local ps = table.concat({
+        "$ErrorActionPreference='Stop'",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::UTF8",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default",
+        "$in = [Console]::In.ReadToEnd()",
+        "[Console]::Out.Write($in)"
+    }, "; ")
+    local ok, out = pcall(pandoc.pipe, "powershell", {
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-Command", ps
+    }, text)
+    if ok and out and out ~= "" then
+        -- 末尾の改行を削る
+        return (out:gsub("[\r\n]+$", ""))
+    end
+    return text
+end
 
-    if not text or text == "" then
+-- 現在のアクティブコードページ -> UTF-8 (Windows)
+local function active_cp_to_utf8(text)
+    if (not is_windows()) or (not needs_conversion(text)) then
         return text
     end
-    
-    -- 一時ファイル名を得る
-    local temp_file = create_temp_file()
-    
-    -- ファイルに書き込み
-    local f = io.open(temp_file, "w")
-    if not f then
-        return text
+    local ps = table.concat({
+        "$ErrorActionPreference='Stop'",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+        "$in = [Console]::In.ReadToEnd()",
+        "[Console]::Out.Write($in)"
+    }, "; ")
+    local ok, out = pcall(pandoc.pipe, "powershell", {
+        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+        "-Command", ps
+    }, text)
+    if ok and out and out ~= "" then
+        -- 末尾の改行を削る
+        return (out:gsub("[\r\n]+$", ""))
     end
-    f:write(text)
-    f:close()
-
-    -- PowerShell でファイル内容を現在のコードページに変換
-    local handle = io.popen('powershell -Command "Write-Output(Get-Content -Path \'' .. temp_file .. '\' -Encoding UTF8 -Raw)"')
-
-    local result = ""
-    if handle then
-        result = handle:read("*a")
-        handle:close()
-    end
-
-    -- 一時ファイル削除
-    os.remove(temp_file)
-    
-    if result == "" then
-        return text
-    end
-
-    return result:gsub("\r?\n$", "")
+    return text
 end
 
 local _root_dir = utf8_to_active_cp(root_dir)
