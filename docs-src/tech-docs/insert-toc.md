@@ -1,10 +1,10 @@
-# Pandoc Markdown インデックス挿入 Lua フィルタ (insert-toc.lua)
+# Pandoc 目次挿入 Lua フィルタ (insert-toc.lua)
 
 ## 概要
 
-この Lua フィルタは、指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的にインデックス (目次) リストを生成し、対象ファイルに挿入します。
+この Lua フィルタは、指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的に目次リストを生成し、対象ファイルに挿入します。
 
-## インデックス挿入の書式
+## 目次挿入の書式
 
 ### 基本書式
 
@@ -22,9 +22,9 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 
 ### 書式の特徴
 
-- `\newpage`, `\pagebreak` 等の既存 Pandoc コマンドと一貫性
-- インライン記述で設定が完結
-- 同一文書内で異なる設定のインデックスを複数配置可能
+- `\newpage`, `\pagebreak` 等の既存 Pandoc コマンドと一貫性を持ちます。
+- インライン記述で設定が完結します。
+- 同一文書内で異なる設定の目次を複数配置可能です。
 
 ## パラメータ仕様
 
@@ -32,7 +32,7 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 
 ```text
 現在のディレクトリ/
-├── index.md           # 階層0 (自身、インデックス挿入対象)
+├── index.md           # 階層0 (自身、目次挿入対象)
 ├── file1.md           # 階層0 (現在のディレクトリ)
 ├── subfolder1/        # 階層1 (1階層下)
 │   ├── file2.md       # 階層1
@@ -82,7 +82,7 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 
 ### デフォルト値
 
-Lua フィルタ内で定義される値を示す。
+Lua フィルタ内で定義されるデフォルト値は以下の通りです。
 
 ```lua
 local defaults = {
@@ -100,32 +100,20 @@ local defaults = {
 #### 最小構成
 
 ```markdown
-# プロジェクト概要
-
 \toc
-
-## 詳細
 ```
 
 実行結果 (現在のディレクトリのみ)。
 
 ```markdown
-# プロジェクト概要
-
 - [Chapter1](chapter1.md)
 - [Chapter2](chapter2.md)
-
-## 詳細
 ```
 
 #### 1 階層下まで指定
 
 ```markdown
-# プロジェクト概要
-
 \toc depth=1
-
-## 詳細
 ```
 
 実行結果。
@@ -161,32 +149,22 @@ index.md または index.markdown が存在する場合は、階層名に index.
 #### 複合設定例
 
 ```markdown
-# プロジェクト概要
-
 \toc depth=2 exclude="draft/*" exclude="temp.md" sort=title format=ol
-
-## 詳細
 ```
 
 実行結果 (番号付きリスト、タイトル順、除外あり)。
 
 ```markdown
-# プロジェクト概要
-
 1. [API リファレンス](reference/api.md)
 2. [イントロダクション](intro.md)
 3. [チュートリアル](tutorial/index.md)
    1. [応用](tutorial/advanced.md)
    2. [基本操作](tutorial/basics.md)
-
-## 詳細
 ```
 
-### 複数インデックスの例
+### 複数の目次の例
 
 ```markdown
-# プロジェクト概要
-
 ## 現在のディレクトリ
 \toc depth=0
 
@@ -213,4 +191,4 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ## TODO
 
-- 言語を意識したタイトルの抽出ができていない。
+- 言語を意識したタイトルの抽出は現段階で未サポートです。有効な第一見出しを使って目次が生成されます。

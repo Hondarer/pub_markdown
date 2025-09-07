@@ -92,4 +92,4 @@ Edge を更新後、`Error: Failed to launch the browser process!` が発生す�
 + 多言語ブロック内に `:` があると、Pandoc が正しく解釈しない。
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
-+ /docs に、index.html を配置する。
++ 見出しの削除処理において、コードブロック内の `#` 行を誤って削除している。
