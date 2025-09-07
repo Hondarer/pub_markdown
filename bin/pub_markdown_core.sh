@@ -60,10 +60,12 @@ else
     PANDOC_CROSSREF=""
 fi
 
-# ${SCRIPT_DIR}/node_modules/.bin が存在しない場合はエラーを表示して終了
+# ${SCRIPT_DIR}/node_modules/.bin が存在しない場合はセットアップを試みる
 if [ ! -d "${SCRIPT_DIR}/node_modules/.bin" ]; then
-    echo "Error: ${SCRIPT_DIR}/node_modules/.bin not found. Please 'npm install' in the ${SCRIPT_DIR} directory."
-    exit 1
+    echo "Installing node.js modules..."
+    (cd "${SCRIPT_DIR}" && npm install)
+    #echo "Error: ${SCRIPT_DIR}/node_modules/.bin not found. Please 'npm install' in the ${SCRIPT_DIR} directory."
+    #exit 1
 fi
 
 # node.js の警告を非表示にする
