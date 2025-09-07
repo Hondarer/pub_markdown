@@ -84,7 +84,7 @@ English Visible in Markdown
 
 以下の Visual Studio Code 拡張機能により、編集時の言語切替作業の効率化が可能。
 
-+ [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
+- [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
 
 ## 詳細情報
 
@@ -120,7 +120,81 @@ English Visible in Markdown
 
 以下の Visual Studio Code 拡張機能により、編集時の詳細切替作業の効率化が可能。
 
-+ [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
+- [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
+
+## インデックス (目次) の自動生成
+
+`\toc` コマンドを使用して、指定された階層以下の Markdown ファイルから自動的にインデックス (目次) を生成できる。
+
+### 基本的な使用方法
+
+```markdown
+\toc
+```
+
+現在のディレクトリにある Markdown ファイルのインデックスを生成する。
+
+### パラメータ付きの使用方法
+
+```markdown
+\toc depth=1 exclude="temp.md" exclude="draft/*" sort=title format=ol
+```
+
+### パラメータ詳細
+
+#### 階層数指定 (depth)
+
+- `depth=0`: 現在のディレクトリのみ (デフォルト)
+- `depth=1`: 現在のディレクトリ + 1階層下まで
+- `depth=2`: 現在のディレクトリ + 2階層下まで
+- `depth=-1`: 制限なし (全階層を掘り下げ)
+
+#### 除外パターン (exclude)
+
+```markdown
+\toc exclude="temp.md"                    # 単一ファイル除外
+\toc exclude="draft/*"                    # パターン除外
+\toc exclude="temp.md" exclude="draft/*"  # 複数除外
+```
+
+- `"README.md"`: 特定ファイル
+- `"draft/*"`: ディレクトリ配下全て
+- `"*.tmp"`: 拡張子による除外
+
+#### ソート方法 (sort)
+
+- `sort=name`: ファイル名順 (デフォルト)
+- `sort=title`: タイトル順
+
+#### 出力形式 (format)
+
+- `format=ul`: 番号なしリスト (デフォルト)
+- `format=ol`: 番号付きリスト
+
+### 記載例
+
+#### 基本例
+
+```markdown
+\toc
+```
+
+#### 複合設定例
+
+```markdown
+\toc depth=2 exclude="draft/*" exclude="temp.md" sort=title format=ol
+```
+
+### 注意事項
+
+- index.md または index.markdown が存在する場合、フォルダ名はそのファイルへのリンクになる
+- index ファイル内の最初の `# タイトル` がフォルダの表示名として使用される
+
+### 実際の例
+
+`\toc depth=-1` による実際の出力例を以下に示す。
+
+\toc depth=-1
 
 ## 画像の挿入
 
@@ -187,7 +261,7 @@ plantuml とする。
 
 企業内のイントラネット環境等で利用する場合、PlantUML サーバの指定を必ず行うこと。
 
-+ [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
+- [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
 
 ## Mermaid
 
@@ -236,8 +310,8 @@ docx 変換後に `Text is not SVG - cannot display` と表示されるケース
 
 この問題を回避するため、テキスト記入時は以下とする。
 
-+ 「テキスト」の 「ワードラップ」 のチェックを外す。
-+ 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
+- 「テキスト」の 「ワードラップ」 のチェックを外す。
+- 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
 
 [Draw.io Integration](https://marketplace.visualstudio.com/items?itemName=hediet.vscode-drawio) プラグインを使用している場合は、`hediet.vscode-drawio.simpleLabels` の設定を行うことでデフォルトの動作を変更する。
 
@@ -247,8 +321,8 @@ docx 変換後に `Text is not SVG - cannot display` と表示されるケース
 
 Draw.io Integration のテーマを loght テーマ (例: kennedy - light) に変更する。
 
-+ [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
-+ [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
+- [VSCodeでDraw.ioを編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
+- [VScodeの拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
 
 Visual Studio Code ステータスエリア (右下) の `Theme:` 部分をクリックすることで、拡張機能の設定を経由せずにテーマの変更ができる。
 
@@ -378,8 +452,8 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 ### メタデータの扱い
 
-+ 第 1 レベルのタイトルが、文書のタイトルになる (title の指定は無視される)。
-+ date が指定されていない場合、発行時の日時が文章の日時になる。
+- 第 1 レベルのタイトルが、文書のタイトルになる (title の指定は無視される)。
+- date が指定されていない場合、発行時の日時が文章の日時になる。
   公開する場合に不要な差分発生を防ぐため、pub_markdown.config に autoSetDate: false を指定することで本処理は抑止可能。
 
 ## Pandoc テンプレート
@@ -398,12 +472,12 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 ## 発行方法
 
-+ Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
-+ 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
+- Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
+- 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
 成果物は、/docs 配下に、言語別、フォーマット別に生成される。
 
 ## 参考にしたサイト
 
-+ [MarkdownをpandocでHTML化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
-+ [44種類のフォーマットに対応したPandocでMarkdownをHTML形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)
+- [Markdown を pandoc で HTML 化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
+- [44 種類のフォーマットに対応した Pandoc で Markdown を HTML 形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)

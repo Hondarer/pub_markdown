@@ -18,6 +18,7 @@ function CodeBlock(elem)
   -- (2) 続いて info-string (.lang:filename) フォーマットをチェック
   if #elem.classes >= 1 then
     local info = elem.classes[1]
+    --io.stderr:write("INFO: " .. info .. "\n")
     local lang, fname = info:match("^([^:]+):(.+)$")
     if lang and fname then
       -- 言語クラスだけ残す

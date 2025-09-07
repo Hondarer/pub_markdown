@@ -527,6 +527,23 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
+        if [[ "$autoSetDate" == "true" ]]; then
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+        else
+            export -n DOCUMENT_DATE
+        fi
+
+        if [[ "$autoSetAuthor" == "true" ]]; then
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+        else
+            export -n DOCUMENT_AUTHOR
+        fi
+
+        # オリジナルのソースファイル名を環境変数に保持
+        export SOURCE_FILE="$file"
+
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
         openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
@@ -540,6 +557,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -576,6 +594,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -628,6 +647,9 @@ for file in "${files[@]}"; do
             export -n DOCUMENT_AUTHOR
         fi
 
+        # オリジナルのソースファイル名を環境変数に保持
+        export SOURCE_FILE="$file"
+
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
@@ -638,6 +660,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -673,6 +696,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -709,6 +733,23 @@ for file in "${files[@]}"; do
         done
         publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
 
+        if [[ "$autoSetDate" == "true" ]]; then
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+        else
+            export -n DOCUMENT_DATE
+        fi
+
+        if [[ "$autoSetAuthor" == "true" ]]; then
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+        else
+            export -n DOCUMENT_AUTHOR
+        fi
+
+        # オリジナルのソースファイル名を環境変数に保持
+        export SOURCE_FILE="$file"
+
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
         openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
@@ -722,6 +763,7 @@ for file in "${files[@]}"; do
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
@@ -772,6 +814,9 @@ for file in "${files[@]}"; do
             export -n DOCUMENT_AUTHOR
         fi
 
+        # オリジナルのソースファイル名を環境変数に保持
+        export SOURCE_FILE="$file"
+
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
@@ -782,6 +827,7 @@ for file in "${files[@]}"; do
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
                 ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$md_title" -f markdown+hard_line_breaks \
+                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
