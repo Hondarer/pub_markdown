@@ -207,6 +207,10 @@ return {
                 -- style 属性から max-width を削除し、width / height を追加または上書き
                 local patched_svg = svg_content
 
+                -- PlantUML に対する mermaid svg の倍率
+                -- ※ mermaid svg のほうが、やや大きいため
+                local multiply_svg = 0.875
+
                 if width and height then
                     -- ルート svg 要素のみ対象に style 属性を書き換え
                     patched_svg = patched_svg:gsub('(<svg[^>]-)style="([^"]*)"', function(svg_tag, style)
@@ -216,15 +220,19 @@ return {
                         style = style:gsub("width:[^;]*;?", "")
                         style = style:gsub("height:[^;]*;?", "")
                         -- 末尾に width / height 追加
-                        return string.format('%sstyle="width:%spx; height:%spx; %s"', svg_tag, width, height, style)
+                        return string.format('%sstyle="width:%spx; height:%spx; %s"', svg_tag, width * multiply_svg, height * multiply_svg, style)
                     end, 1) -- 最初の svg タグのみ置換
 
                     -- svg タグの width / height 属性を上書きまたは追加 (ルート svg 要素のみ対象)
                     patched_svg = patched_svg
                         :gsub('(<svg[^>]*)%swidth="[^"]*"', '%1', 1)
                         :gsub('(<svg[^>]*)%sheight="[^"]*"', '%1', 1)
-                        :gsub('(<svg)', '%1 width="' .. width .. 'px" height="' .. height .. 'px"', 1)
+                        :gsub('(<svg)', '%1 width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"', 1)
                 end
+
+                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、font-family:メイリオ, "Helvetica Neue", Helvetica, Arial, sans-serif; に置換する。
+                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:メイリオ, "Helvetica Neue", Helvetica, Arial, sans-serif;')
 
                 -- 上書き保存
                 local f = io.open(_image_file_path, "w")
