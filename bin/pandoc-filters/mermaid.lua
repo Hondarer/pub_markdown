@@ -44,7 +44,9 @@ local function utf8_to_active_cp(text)
         "[Console]::InputEncoding  = [System.Text.Encoding]::UTF8",
         "[Console]::OutputEncoding = [System.Text.Encoding]::Default",
         "$in = [Console]::In.ReadToEnd()",
-        "[Console]::Out.Write($in)"
+        "[Console]::Out.Write($in)",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default"
     }, "; ")
     local ok, out = pcall(pandoc.pipe, "powershell", {
         "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -67,7 +69,9 @@ local function active_cp_to_utf8(text)
         "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
         "$in = [Console]::In.ReadToEnd()",
-        "[Console]::Out.Write($in)"
+        "[Console]::Out.Write($in)",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default"
     }, "; ")
     local ok, out = pcall(pandoc.pipe, "powershell", {
         "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",

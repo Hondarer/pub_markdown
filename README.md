@@ -93,3 +93,4 @@ Edge を更新後、`Error: Failed to launch the browser process!` が発生す�
 + シンプル版の html template で、toc と本文のそれぞれをスクロール可能にする。
 + [WeasyPrint](https://github.com/Kozea/WeasyPrint) の導入。
 + 見出しの削除処理において、コードブロック内の `#` 行を誤って削除している。
++ insert-toc をフィルタで作ったものの、これは Markdown を直接パッチしたほうが良いかもしれない。

@@ -25,7 +25,9 @@ local function utf8_to_active_cp(text)
         "[Console]::InputEncoding  = [System.Text.Encoding]::UTF8",
         "[Console]::OutputEncoding = [System.Text.Encoding]::Default",
         "$in = [Console]::In.ReadToEnd()",
-        "[Console]::Out.Write($in)"
+        "[Console]::Out.Write($in)",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default"
     }, "; ")
     local ok, out = pcall(pandoc.pipe, "powershell", {
         "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -48,7 +50,9 @@ local function active_cp_to_utf8(text)
         "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
         "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
         "$in = [Console]::In.ReadToEnd()",
-        "[Console]::Out.Write($in)"
+        "[Console]::Out.Write($in)",
+        "[Console]::InputEncoding  = [System.Text.Encoding]::Default",
+        "[Console]::OutputEncoding = [System.Text.Encoding]::Default"
     }, "; ")
     local ok, out = pcall(pandoc.pipe, "powershell", {
         "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -68,7 +72,8 @@ local function debug_print(...)
         if i > 1 then debug_msg = debug_msg .. " " end
         debug_msg = debug_msg .. tostring(v)
     end
-    debug_msg = debug_msg .. "\n"
+    -- ここまで UTF-8 ベースで処理しているので、出力直前で Windows ならコードページ変換する
+    debug_msg = utf8_to_active_cp(debug_msg) .. "\n"
     
     io.stderr:write(debug_msg)
     io.stderr:flush()
@@ -133,26 +138,13 @@ local function get_relative_path(base_path, target_path)
     return target_normalized
 end
 
--- ファイル操作ユーティリティ
-local function file_exists(path)
-    -- Windows環境ではファイルパスをマルチバイトに変換
-    local actual_path = utf8_to_active_cp(path)
-    
-    local file = io.open(actual_path, "r")
-    if file then
-        file:close()
-        return true
-    end
-    return false
-end
-
 local function is_markdown_file(filename)
     local ext = filename:match("%.([^.]+)$")
     return ext and (ext:lower() == "md" or ext:lower() == "markdown")
 end
 
 -- ディレクトリ内のファイルとフォルダを取得 (OS コマンド経由)
--- Windows の場合、与える dir_path は呼び出し側でマルチバイトにすること。
+-- dir_path は UTF-8
 local function get_files_in_directory(dir_path)
     --debug_print("get_files_in_directory:", dir_path)
     local files = {}
@@ -162,26 +154,30 @@ local function get_files_in_directory(dir_path)
     --debug_print("Normalized dir:", normalized_dir)
     --debug_print("Is Windows:", is_windows())
     
-    -- Windows 環境でのパス変換
-    local cmd_dir = normalized_dir:gsub("/", "\\")
-    
     -- Markdown ファイルを取得
     local md_command
     if is_windows() then
+        local cmd_dir = utf8_to_active_cp(normalized_dir:gsub("/", "\\"))
         md_command = string.format('dir /b "%s\\*.md" "%s\\*.markdown" 2>nul', cmd_dir, cmd_dir)
+        --debug_print("MD command:", active_cp_to_utf8(md_command))
     else
         md_command = string.format('find "%s" -maxdepth 1 -name "*.md" -o -name "*.markdown" 2>/dev/null', normalized_dir)
+        --debug_print("MD command:", md_command)
     end
-    --debug_print("MD command:", md_command)
     
     local handle = io.popen(md_command)
     if handle then
         --debug_print("Executing MD command...")
         for filename in handle:lines() do
+
+            -- Windows 環境では得られる文字列を UTF-8 に
+            filename = active_cp_to_utf8(filename)
             --debug_print("Found MD file:", filename)
-            -- Linux の find コマンドは full path を返すので、ファイル名のみを抽出
+
+            -- ファイル名のみを抽出
             local name = filename:match("[^/\\]+$") or filename
-           
+            --debug_print("name:", name)
+
             if is_markdown_file(name) then
                 local file_entry = {
                     name = name,
@@ -199,18 +195,24 @@ local function get_files_in_directory(dir_path)
     -- ディレクトリを取得
     local dir_command
     if is_windows() then
+        local cmd_dir = utf8_to_active_cp(normalized_dir:gsub("/", "\\"))
         dir_command = string.format('dir /b /ad "%s" 2>nul', cmd_dir)
+        --debug_print("Dir command:", active_cp_to_utf8(dir_command))
     else
         dir_command = string.format('find "%s" -maxdepth 1 -type d ! -name "." 2>/dev/null', normalized_dir)
+        --debug_print("Dir command:", dir_command)
     end
-    --debug_print("Dir command:", dir_command)
     
     local handle = io.popen(dir_command)
     if handle then
         --debug_print("Executing Dir command...")
         for dirname in handle:lines() do
+
+            -- Windows 環境では得られる文字列を UTF-8 に
+            dirname = active_cp_to_utf8(dirname)
             --debug_print("Found directory:", dirname)
-            -- Linux の find コマンドは full path を返すので、ディレクトリ名のみを抽出
+
+            -- ディレクトリ名のみを抽出
             local name = dirname:match("[^/\\]+$") or dirname
 
             if name ~= "." and name ~= ".." then
@@ -232,50 +234,10 @@ local function get_files_in_directory(dir_path)
     return files
 end
 
--- ディレクトリかどうかを判定 (OS コマンド経由)
-local function is_directory(path)
-    local normalized_path = normalize_path(path)
-    
-    local command
-    if is_windows() then
-        local cmd_path = utf8_to_active_cp(normalized_path:gsub("/", "\\"))
-        command = string.format('if exist "%s\\." echo directory 2>nul', cmd_path)
-    else
-        command = string.format('test -d "%s" && echo directory 2>/dev/null', normalized_path)
-    end
-    
-    local handle = io.popen(command)
-    if handle then
-        local result = handle:read("*a")
-        handle:close()
-        return result:match("directory") ~= nil
-    end
-    
-    return false
-end
-
--- 階層制御
-local function get_relative_depth(base_path, target_path)
-    local base_parts = split_path(normalize_path(base_path))
-    local target_parts = split_path(normalize_path(target_path))
-    
-    -- 相対的な深さを計算（0から開始）
-    return #target_parts - #base_parts
-end
-
-local function should_include_path(path, base_path, max_depth)
-    if max_depth == -1 then
-        return true  -- 無制限
-    end
-    
-    local target_path = is_directory(path) and path or path:match("(.+)/[^/]+$")
-    local relative_depth = get_relative_depth(base_path, target_path)
-    return relative_depth <= max_depth
-end
-
 -- ファイル内容からタイトルを抽出
 local function extract_title_from_file(file_path)
-    local file = io.open(file_path, "r")
+    -- Windows 環境ではファイルパスを現在のコードページに変換
+    local file = io.open(utf8_to_active_cp(file_path), "r")
     if not file then return nil end
     
     local in_frontmatter = false
@@ -296,6 +258,7 @@ local function extract_title_from_file(file_path)
             local title = line:match("^#%s+(.+)")
             if title then
                 file:close()
+                --debug_print("extract_title_from_file:", title)
                 return title
             elseif not line:match("^#") then
                 -- # でない行が見つかったら検索終了
@@ -310,8 +273,10 @@ end
 
 -- 大文字小文字を無視したファイル検索
 local function find_case_insensitive_file(dir_path, target_filename)
+    --debug_print("find_case_insensitive_file:", dir_path)
     local files = get_files_in_directory(dir_path)
     for _, file in ipairs(files) do
+        --debug_print("file:", file.path)
         if not file.is_directory and file.name:lower() == target_filename:lower() then
             return file.path
         end
@@ -328,7 +293,7 @@ local function get_folder_display_info(folder_path)
         if index_path then
             local title = extract_title_from_file(index_path)
             return {
-                display_name = title or active_cp_to_utf8(get_directory_name(folder_path)),
+                display_name = title or get_directory_name(folder_path),
                 link_target = index_path,
                 has_link = true
             }
@@ -336,7 +301,7 @@ local function get_folder_display_info(folder_path)
     end
     
     return {
-        display_name = active_cp_to_utf8(get_directory_name(folder_path)),
+        display_name = get_directory_name(folder_path),
         link_target = nil,
         has_link = false
     }
@@ -345,7 +310,7 @@ end
 -- 除外パターンマッチング
 local function glob_to_pattern(glob)
     -- Lua パターンで特別な意味を持つ文字をエスケープ
-    local pattern = glob
+    local pattern = globTotal
     pattern = pattern:gsub("%-", "%%-")  -- ハイフンをエスケープ
     pattern = pattern:gsub("%.", "%%.")  -- ドットをエスケープ
     pattern = pattern:gsub("%+", "%%+")  -- プラスをエスケープ
@@ -385,7 +350,12 @@ local function collect_markdown_files(base_path, max_depth, exclude_patterns)
     local all_files = {}
     local all_folders = {}
     
+    -- dir_path は UTF-8
     local function scan_directory(dir_path, current_depth)
+
+        io.stderr:write(".")
+        io.stderr:flush()
+
         --debug_print("scan_directory:", dir_path, "depth:", current_depth, "max_depth:", max_depth)
         if max_depth ~= -1 and current_depth > max_depth then
             --debug_print("Skipping directory - depth exceeded:", current_depth, ">", max_depth)
@@ -420,7 +390,7 @@ local function collect_markdown_files(base_path, max_depth, exclude_patterns)
                 if not excluded then
                     local title = extract_title_from_file(file.path)
                     if title == nil then
-                        title = active_cp_to_utf8(file.name:gsub("%.md$", ""):gsub("%.markdown$", ""))
+                        title = file.name:gsub("%.md$", ""):gsub("%.markdown$", "")
                         --title = active_cp_to_utf8(file.name)
                     end
                     --debug_print("Adding file:", file.path, "title:", title, "at depth:", current_depth)
@@ -437,7 +407,7 @@ local function collect_markdown_files(base_path, max_depth, exclude_patterns)
         end
     end
     
-    scan_directory(utf8_to_active_cp(base_path), 0)
+    scan_directory(base_path, 0)
     
     --debug_print("collect_markdown_files returning:", #all_files, "files,", #all_folders, "folders")
     return all_files, all_folders
@@ -570,7 +540,7 @@ local function build_tree_structure(files, folders, base_path)
             prune_empty_folders(node.children)
             
             -- フォルダで実質的なMarkdownファイルが含まれていない場合は削除対象
-            -- ただし、フォルダタイトルファイルしか含まれない場合は、そのフォルダは表示すべき
+            -- ただし、フォルダタイトルファイルしか含まれない場合は、そのフォルダは表示する
             if node.entry and node.entry.is_directory then
                 local has_title_file = false
                 local has_other_files = has_markdown_files_recursive(node)
@@ -604,6 +574,10 @@ local function generate_index_list(files, folders, base_path, format_type)
     
     -- ツリーを再帰的に処理してリストを生成
     local function process_node(node, name, depth, parent_path)
+
+        io.stderr:write(".")
+        io.stderr:flush()
+
         local indent = string.rep("  ", depth)
         local list_marker = format_type == "ol" and "1. " or "- "
         
@@ -615,14 +589,14 @@ local function generate_index_list(files, folders, base_path, format_type)
                 local folder_info = get_folder_display_info(node.entry.path)
                 if folder_info.has_link then
                     local relative_path = get_relative_path(base_path, folder_info.link_target)
-                    line = line .. "[" .. folder_info.display_name .. "](" .. active_cp_to_utf8(relative_path) .. ")"
+                    line = line .. "[" .. folder_info.display_name .. "](" .. relative_path .. ")"
                 else
                     line = line .. folder_info.display_name
                 end
             else
                 -- ファイルエントリの処理
                 local relative_path = get_relative_path(base_path, node.entry.path)
-                line = line .. "[" .. node.entry.title .. "](" .. active_cp_to_utf8(relative_path) .. ")"
+                line = line .. "[" .. node.entry.title .. "](" .. relative_path .. ")"
             end
             
             table.insert(lines, line)
@@ -729,7 +703,7 @@ local function process_toc_command(params_str, current_file)
     --debug_print("=== process_toc_command START ===")
     --debug_print("Raw params:", params_str or "(empty)")
     --debug_print("Current file:", current_file or "(none)")
-    
+
     local params = parse_toc_params(params_str or "")
     --debug_print("Parsed depth:", params.depth)
     --debug_print("Parsed sort:", params.sort)
@@ -758,21 +732,33 @@ local function process_toc_command(params_str, current_file)
         --debug_print("Exclude", i .. ":", pattern)
     end
     
+    io.stderr:write("    > process_toc (This may take several minutes.) collect")
+    io.stderr:flush()
+
     local files, folders = collect_markdown_files(base_path, params.depth, params.exclude)
     --debug_print("Found", #files, "files and", #folders, "folders")
+
+    io.stderr:write(" -> sort")
+    io.stderr:flush()
     
     sort_files(files, params.sort)
-    
+
     for _, folder in ipairs(folders) do
         table.sort(folder, function(a, b)
             return a.path < b.path
         end)
     end
     
+    io.stderr:write(" -> generate")
+    io.stderr:flush()
+
     local index_lines = generate_index_list(files, folders, base_path, params.format)
     --debug_print("Generated", #index_lines, "index lines")
     --debug_print("=== process_toc_command END ===")
-    
+
+    io.stderr:write(" -> done.\n")
+    io.stderr:flush()
+
     return index_lines
 end
 
