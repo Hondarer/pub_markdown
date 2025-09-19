@@ -511,7 +511,7 @@ for file in "${files[@]}"; do
     if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。
         
         # FIXME: markdown ファイルとの重複処理は統合すべき。
-        echo "Processing OpenAPI file for html: ${file#${workspaceFolder}/}"
+        echo "Processing OpenAPI file: ${file#${workspaceFolder}/}"
 
         # html
         publish_dir=$(dirname "${file}")
@@ -578,6 +578,7 @@ for file in "${files[@]}"; do
             fi
         done
 
+        # html-self-contain
         publish_dir_self_contain=$(dirname "${file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
@@ -615,9 +616,46 @@ for file in "${files[@]}"; do
             fi
         done
 
+        # docx
+        publish_dir_docx=$(dirname "${file}")
+        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
+        else
+            publish_dir_docx=docx
+        fi
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+        done
+        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
+
+        firstLang=""
+        for langElement in ${lang}; do
+            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+            if [ "$firstLang" == "" ]; then
+                printf "\e[33m" # 文字色を黄色に設定
+                echo "${openapi_md}" | \
+                    ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                        ${PANDOC_CROSSREF} \
+                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                        --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                printf "\e[0m" # 文字色を通常に設定
+                firstLang="${langElement}"
+            else
+                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+            fi
+        done
     elif [[ "$file" == *.md ]]; then
         # .md ファイルの処理
-        echo "Processing Markdown file for html: ${file#${workspaceFolder}/}"
+        echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
         # html
         publish_dir=$(dirname "${file}")
@@ -677,6 +715,7 @@ for file in "${files[@]}"; do
             printf "\e[0m" # 文字色を通常に設定
         done
 
+        # html-self-contain
         publish_dir_self_contain=$(dirname "${file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
@@ -712,119 +751,25 @@ for file in "${files[@]}"; do
                     --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             printf "\e[0m" # 文字色を通常に設定
         done
-    fi
-done
-
-for file in "${files[@]}"; do
-    if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。
-        
-        # FIXME: markdown ファイルとの重複処理は統合すべき。
-        echo "Processing OpenAPI file for docx: ${file#${workspaceFolder}/}"
 
         # docx
-        publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
-            resource_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
-            publish_dir=docx/${publish_dir#${workspaceFolder}/${mdRoot}/}
+        publish_dir_docx=$(dirname "${file}")
+        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
         else
-            resource_dir=html
-            publish_dir=docx
+            publish_dir_docx=docx
         fi
         for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
         done
-        publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
-
-        if [[ "$autoSetDate" == "true" ]]; then
-            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
-            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
-        else
-            export -n DOCUMENT_DATE
-        fi
-
-        if [[ "$autoSetAuthor" == "true" ]]; then
-            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
-            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
-        else
-            export -n DOCUMENT_AUTHOR
-        fi
-
-        # オリジナルのソースファイル名を環境変数に保持
-        export SOURCE_FILE="$file"
-
-        # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
-        # TODO: --user_templates の切替機構未実装
-        openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
-
-        openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
-
-        firstLang=""
-        for langElement in ${lang}; do
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
-            if [ "$firstLang" == "" ]; then
-                printf "\e[33m" # 文字色を黄色に設定
-                echo "${openapi_md}" | \
-                    ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                        ${PANDOC_CROSSREF} \
-                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
-                        --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
-                printf "\e[0m" # 文字色を通常に設定
-                firstLang="${langElement}"
-            else
-                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
-            fi
-        done
-
-    elif [[ "$file" == *.md ]]; then
-        # .md ファイルの処理
-        echo "Processing Markdown file for docx: ${file#${workspaceFolder}/}"
-
-        # docx
-        publish_dir=$(dirname "${file}")
-        if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
-            resource_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
-            publish_dir=docx/${publish_dir#${workspaceFolder}/${mdRoot}/}
-        else
-            resource_dir=html
-            publish_dir=docx
-        fi
-        for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
-        done
-        publish_file=docx/${file#${workspaceFolder}/${mdRoot}/}
-
-        if [[ "$autoSetDate" == "true" ]]; then
-            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
-            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
-        else
-            export -n DOCUMENT_DATE
-        fi
-
-        if [[ "$autoSetAuthor" == "true" ]]; then
-            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
-            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
-        else
-            export -n DOCUMENT_AUTHOR
-        fi
-
-        # オリジナルのソースファイル名を環境変数に保持
-        export SOURCE_FILE="$file"
+        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
             md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
             
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
+            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             printf "\e[33m" # 文字色を黄色に設定
             cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
@@ -840,8 +785,8 @@ for file in "${files[@]}"; do
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                     ${PANDOC_CROSSREF} \
-                    --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$resource_dir" \
-                    --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.docx"
+                    --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                    --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
             printf "\e[0m" # 文字色を通常に設定
         done
     fi
