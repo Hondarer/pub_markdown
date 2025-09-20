@@ -1,0 +1,620 @@
+#!/bin/bash
+
+# insert-toc.sh - Markdown インデックス生成スクリプト
+# 引数解釈と処理
+
+# キャッシュファイルパス
+CACHE_FILE="/tmp/insert-toc-cache.tsv"
+
+# メモリ内キャッシュ（連想配列）
+# キー: 絶対パス, 値: "ファイル名\t種別\tベースタイトル\t言語別タイトル"
+declare -A memory_cache
+
+# ソート前キーリスト（順序付き配列）
+declare -a unsorted_keys
+
+# ソート済みキーリスト（順序付き配列）
+declare -a sorted_keys
+
+# キャッシュ変更フラグ
+cache_modified=false
+
+# 引数の取得
+DEPTH="$1"
+CURRENT_FILE="$2"
+EXCLUDE="$3"
+
+# デバッグ用: 引数をエコー
+#echo "# Debug: Received arguments" >&2
+#echo "DEPTH: $DEPTH" >&2
+#echo "CURRENT_FILE: $CURRENT_FILE" >&2
+#echo "EXCLUDE: $EXCLUDE" >&2
+
+# ========================================
+# メモリベースキャッシュ関数
+# ========================================
+
+# 永続化ファイルからメモリキャッシュに読み込み
+load_cache() {
+    #echo "# キャッシュ読み込み開始: $CACHE_FILE" >&2
+
+    # ファイルが存在しない場合は空のキャッシュで開始
+    if [[ ! -f "$CACHE_FILE" ]]; then
+        #echo "# キャッシュファイルなし、空キャッシュで開始" >&2
+        return 0
+    fi
+
+    # TSVファイルを連想配列に読み込み
+    local count=0
+    while IFS=$'\t' read -r abs_path filename type base_title lang_titles; do
+        # 空行やコメント行はスキップ
+        [[ -z "$abs_path" || "$abs_path" =~ ^# ]] && continue
+
+        # メモリキャッシュに追加
+        memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+        #echo "# キャッシュ読み込み: $abs_path ($type)" >&2
+        ((count++))
+    done < "$CACHE_FILE"
+
+    #echo "# キャッシュ読み込み完了: $count エントリ" >&2
+}
+
+# メモリキャッシュを永続化ファイルに保存
+save_cache() {
+    # 変更がない場合はスキップ
+    if [[ "$cache_modified" != "true" ]]; then
+        #echo "# キャッシュ保存スキップ: 変更なし" >&2
+        return 0
+    fi
+
+    #echo "# キャッシュ保存開始: $CACHE_FILE" >&2
+
+    # 一時ファイルに書き出し
+    local temp_file
+    temp_file=$(mktemp)
+
+    local count=0
+    for abs_path in "${!memory_cache[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        printf '%s\t%s\n' "$abs_path" "$entry" >> "$temp_file"
+        ((count++))
+    done
+
+    # 一時ファイルを本ファイルに移動
+    mv "$temp_file" "$CACHE_FILE"
+
+    #echo "# キャッシュ保存完了: $count エントリ" >&2
+}
+
+# メモリキャッシュにエントリを追加
+# 引数: 絶対パス ファイル名 種別 ベースタイトル [言語別タイトル]
+add_to_memory_cache() {
+    local abs_path="$1"
+    local filename="$2"
+    local type="$3"
+    local base_title="$4"
+    local lang_titles="${5:-}"
+
+    # キーが既に存在する場合はスキップ
+    if [[ -n "${memory_cache[$abs_path]:-}" ]]; then
+        #echo "# メモリキャッシュスキップ (既存): $abs_path ($type)" >&2
+        return 0
+    fi
+
+    # メモリキャッシュに追加
+    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+    cache_modified=true
+    #echo "# メモリキャッシュに追加: $abs_path ($type)" >&2
+}
+
+# メモリキャッシュから絶対パスでエントリを取得
+# 引数: 絶対パス
+get_from_memory_cache() {
+    local abs_path="$1"
+    echo "${memory_cache[$abs_path]:-}"
+}
+
+# メモリキャッシュエントリに指定言語のタイトルが存在するかチェック
+# 引数: 絶対パス 言語コード
+# 戻り値: 0=存在する, 1=存在しない
+has_lang_title_in_memory_cache() {
+    local abs_path="$1"
+    local lang_code="$2"
+
+    local cache_entry="${memory_cache[$abs_path]:-}"
+
+    if [[ -z "$cache_entry" ]]; then
+        return 1  # エントリ自体が存在しない
+    fi
+
+    # TSVの4番目のフィールド（言語別タイトル）を取得
+    local lang_titles
+    lang_titles=$(echo "$cache_entry" | cut -f4)
+
+    if [[ -z "$lang_titles" ]]; then
+        return 1  # 言語別タイトルフィールドが空
+    fi
+
+    # 指定言語のタイトルが存在するかチェック
+    if [[ "$lang_titles" =~ ${lang_code}: ]]; then
+        return 0  # 存在する
+    else
+        return 1  # 存在しない
+    fi
+}
+
+# メモリキャッシュエントリに言語別タイトルを追加
+# 引数: 絶対パス 言語コード タイトル
+update_memory_cache_title() {
+    local abs_path="$1"
+    local lang_code="$2"
+    local title="$3"
+    local new_lang_title="${lang_code}:${title}"
+
+    local cache_entry="${memory_cache[$abs_path]:-}"
+    if [[ -z "$cache_entry" ]]; then
+        echo "# メモリキャッシュタイトル更新失敗: エントリなし $abs_path" >&2
+        return 1
+    fi
+
+    # エントリを分解
+    local filename type base_title lang_titles
+    filename=$(echo "$cache_entry" | cut -f1)
+    type=$(echo "$cache_entry" | cut -f2)
+    base_title=$(echo "$cache_entry" | cut -f3)
+    lang_titles=$(echo "$cache_entry" | cut -f4)
+
+    # 言語別タイトルを更新
+    if [[ -z "$lang_titles" ]]; then
+        lang_titles="$new_lang_title"
+    else
+        # 同じ言語コードが既に存在するかチェック
+        if [[ "$lang_titles" =~ $lang_code: ]]; then
+            # 既存の言語タイトルを置換
+            lang_titles=$(echo "$lang_titles" | sed "s/${lang_code}:[^|]*/${new_lang_title}/")
+        else
+            # 新しい言語タイトルを追加
+            lang_titles="${lang_titles}|${new_lang_title}"
+        fi
+    fi
+
+    # メモリキャッシュを更新
+    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+    cache_modified=true
+    #echo "# メモリキャッシュタイトル更新: $abs_path -> $new_lang_title" >&2
+}
+
+# ========================================
+# Markdownタイトル抽出関数
+# ========================================
+
+# Markdownファイルから最初のレベル1見出しを抽出
+# 引数: ファイルパス 言語コード
+extract_markdown_title() {
+    local file_path="$1"
+    local lang_code="${2:-ja}"
+
+    if [[ ! -f "$file_path" ]]; then
+        return 1
+    fi
+
+    # 最初の # 見出しを検索
+    local title
+    title=$(head -50 "$file_path" | grep -m1 '^#[[:space:]]' | sed 's/^#[[:space:]]*//' | sed 's/[[:space:]]*$//')
+
+    if [[ -n "$title" ]]; then
+        printf '%s:%s' "$lang_code" "$title"
+        return 0
+    fi
+
+    return 1
+}
+
+# ========================================
+# 目次生成関数
+# ========================================
+
+# パスの階層数を計算
+# 引数: 基準パス 対象パス
+get_depth_level() {
+    local base_path="$1"
+    local target_path="$2"
+
+    # 基準パスで正規化
+    local relative_path="${target_path#$base_path}"
+    relative_path="${relative_path#/}"  # 先頭スラッシュ除去
+
+    # 階層数をカウント（スラッシュの数）
+    if [[ -z "$relative_path" || "$relative_path" == "$target_path" ]]; then
+        echo 0  # 同じディレクトリ
+    else
+        echo "$relative_path" | tr -cd '/' | wc -c
+    fi
+}
+
+# 除外パターンマッチング
+# 引数: ファイルパス 除外パターン配列
+is_excluded() {
+    local file_path="$1"
+    local exclude_patterns="$2"
+
+    # 除外パターンが空の場合は除外しない
+    [[ -z "$exclude_patterns" ]] && return 1
+
+    # カンマ区切りの除外パターンを処理
+    IFS=',' read -ra patterns <<< "$exclude_patterns"
+    for pattern in "${patterns[@]}"; do
+        pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # トリム
+        [[ -z "$pattern" ]] && continue
+
+        # パターンマッチング
+        case "$file_path" in
+            *"$pattern"*) return 0 ;;  # マッチした場合は除外
+        esac
+    done
+
+    return 1  # 除外しない
+}
+
+# メイン目次生成関数
+# 引数: 基準ディレクトリ 最大深度 除外パターン 言語コード
+generate_toc() {
+    local base_dir="$1"
+    local max_depth="$2"
+    local exclude_patterns="$3"
+    local lang_code="$4"
+
+    #echo "# 目次生成開始" >&2
+
+    # sorted_keys をフィルタリングして目次生成対象を絞り込み
+    local filtered_keys=()
+
+    #echo "# フィルタリング開始 (基準ディレクトリ: $base_dir, 最大深度: $max_depth)" >&2
+
+    # PROGRESS
+    printf '%s' " -> filter" >&2
+
+    # 第1段階: 基本的なフィルタリング
+    for abs_path in "${sorted_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        [[ -z "$entry" ]] && continue
+
+        local type
+        type=$(echo "$entry" | cut -f2)
+
+        # 1. 基準ディレクトリより上位のエントリを除外
+        if [[ "$abs_path" != "$base_dir"/* && "$abs_path" != "$base_dir" ]]; then
+            #echo "# 除外 (上位 / 他ツリーディレクトリ): $abs_path" >&2
+            continue
+        fi
+
+        # 2. 基準ディレクトリ自体を除外（配下のファイル/ディレクトリは保持）
+        #if [[ "$abs_path" == "$base_dir" ]]; then
+        #    echo "# 除外 (基準ディレクトリ): $abs_path" >&2
+        #    continue
+        #fi
+
+        # 3. 深度制限チェック
+        if [[ "$max_depth" -ge 0 ]]; then
+            local depth
+            if [[ "$type" == "file" ]]; then
+                # ファイルの場合は親ディレクトリの深度をチェック
+                depth=$(get_depth_level "$base_dir" "$(dirname "$abs_path")")
+            else
+                # ディレクトリの場合はそのディレクトリの深度をチェック
+                depth=$(get_depth_level "$base_dir" "$abs_path")
+            fi
+
+            if [[ $depth -gt $max_depth ]]; then
+                #echo "# 除外 (深度超過 $depth > $max_depth): $abs_path" >&2
+                continue
+            fi
+        fi
+
+        # 4. 除外パターンチェック
+        if is_excluded "$abs_path" "$exclude_patterns"; then
+            #echo "# 除外 (パターンマッチ): $abs_path" >&2
+            continue
+        fi
+
+        # フィルタを通過
+        filtered_keys+=("$abs_path")
+    done
+
+    #echo "# 第1段階フィルタリング完了: ${#filtered_keys[@]} エントリ" >&2
+
+    # PROGRESS
+    printf '%s' "." >&2
+
+    # 第2段階: 空ディレクトリの除去
+    local final_keys=()
+
+    for abs_path in "${filtered_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        local type
+        type=$(echo "$entry" | cut -f2)
+        #echo "entry, type: ${entry}, ${type}" >&2
+
+        if [[ "$type" == "directory" ]]; then
+            # ディレクトリの場合、配下に有効なファイルがあるかチェック
+            local has_files=false
+
+            # 効率的なアルゴリズム: filtered_keys をループして前方一致チェック
+            for check_path in "${filtered_keys[@]}"; do
+                # チェックするディレクトリ配下のパスかどうかを前方一致で確認
+                if [[ "$check_path" == "$abs_path"/* ]]; then
+                    # ディレクトリ名部分を削除して残りの文字列を取得
+                    local remaining_path="${check_path#$abs_path/}"
+
+                    # 残った文字列にピリオドが含まれていればファイルと判断
+                    if [[ "$remaining_path" == *.* ]]; then
+                        has_files=true
+                        break
+                    fi
+                fi
+            done
+
+            if [[ "$has_files" == "true" ]]; then
+                final_keys+=("$abs_path")
+                #echo "# 保持 (配下にファイルあり): $abs_path" >&2
+            #else
+                #echo "# 除外 (空ディレクトリ): $abs_path" >&2
+            fi
+        else
+            # ファイルの場合はそのまま保持
+            final_keys+=("$abs_path")
+            #echo "# 保持 (ファイル): $abs_path" >&2
+        fi
+    done
+
+    #echo "# 第2段階フィルタリング完了: ${#final_keys[@]} エントリ" >&2
+
+    # フィルタリング結果を sorted_keys に反映
+    sorted_keys=("${final_keys[@]}")
+
+    # フィルター後のエントリを表示
+    #echo "# フィルター後のエントリ" >&2
+    #echo "" >&2
+    #echo '```' >&2
+    #for abs_path in "${sorted_keys[@]}"; do
+    #    entry="${memory_cache[$abs_path]}"
+    #    printf '%s\t%s\n' "$abs_path" "$entry" >&2
+    #done
+    #echo '```' >&2
+
+    # Markdown リスト形式で目次を出力
+    #echo "# Markdown リスト形式で目次出力開始" >&2
+
+    # PROGRESS
+    printf '%s' " -> list" >&2
+
+    local depth=0
+    local indent=""
+    local previous_type=""
+    for abs_path in "${sorted_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        local filename type base_title lang_titles
+
+        IFS=$'\t' read -r filename type base_title lang_titles <<< "$entry"
+
+        # type が directory または type が前回と今回で違う場合、
+        # 基準ディレクトリからの相対パスと深度を計算
+        if [[ "$type" == "directory" ]] || [[ "$type" != "$previous_type" ]]; then
+            # ディレクトリの場合: $abs_path から $base_dir を削除して / の数で depth を計算
+            local relative_path="${abs_path#$base_dir}"
+            relative_path="${relative_path#/}"  # 先頭のスラッシュを削除
+
+            if [[ -z "$relative_path" || "$relative_path" == "$abs_path" ]]; then
+                depth=0  # 基準ディレクトリ自体
+            else
+                depth=$(echo "/$relative_path" | tr -cd '/' | wc -c)
+            fi
+
+            # インデント文字列を更新
+            indent=""
+            for ((i=0; i<depth; i++)); do
+                indent="  $indent"
+            done
+        fi
+        previous_type=$type
+
+        if [[ "$type" == "file" ]]; then
+            # base_title が index (大文字小文字無視) の場合はスキップ
+            if [[ "$base_title" =~ ^[Ii][Nn][Dd][Ee][Xx]$ ]]; then
+                continue
+            fi
+
+            # Markdownファイルの場合：タイトルとリンクを出力
+            local display_title="$base_title"
+
+            # 指定言語のタイトルがあれば使用
+            if [[ -n "$lang_titles" && "$lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                display_title="${BASH_REMATCH[1]}"
+            fi
+
+            # 基準ディレクトリからの相対パスを計算
+            local file_relative_path="${abs_path#$base_dir/}"
+
+            # Markdownリンク形式で出力
+            # ファイルの場合は、ディレクトリに属することから、ここで 1 つ分字下げ
+            echo "${indent}  - 📄 [$display_title]($file_relative_path)"
+
+        elif [[ "$type" == "directory" ]]; then
+            # ディレクトリの場合
+
+            # PROGRESS
+            printf '%s' "." >&2
+
+            # sorted_keys の中に、abs_path/index.md, index.markdown (ケース揺らぎ許容) が存在した場合は
+            # そのエントリの display_title と file_relative_path をディレクトリのリスト項目とする。
+
+            local index_file_found=""
+            local index_display_title=""
+            local index_relative_path=""
+
+            # ディレクトリ配下の index 系ファイルを検索 (ケース揺らぎ許容)
+            local dir_prefix="$abs_path/"
+            for check_path in "${sorted_keys[@]}"; do
+                # 前方一致チェック: abs_path 配下でない場合は即座にスキップ
+                [[ "$check_path" != "$dir_prefix"* ]] && continue
+
+                # check_path から abs_path を取り除いてファイル名部分を取得
+                local remaining_path="${check_path#$dir_prefix}"
+
+                # スラッシュが含まれていれば直下のファイルではない
+                [[ "$remaining_path" == */* ]] && continue
+
+                # type チェック
+                local check_entry="${memory_cache[$check_path]}"
+                [[ -z "$check_entry" ]] && continue
+                [[ "$check_entry" != *$'\t'file$'\t'* ]] && continue
+
+                # index 系ファイルかチェック (ケース揺らぎ許容)
+                if [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Dd]$ ]] || \
+                   [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Aa][Rr][Kk][Dd][Oo][Ww][Nn]$ ]]; then
+                    index_file_found="$check_path"
+
+                    # ファイルの情報を取得
+                    local index_base_title index_lang_titles
+                    index_base_title=$(echo "$check_entry" | cut -f3)
+                    index_lang_titles=$(echo "$check_entry" | cut -f4)
+
+                    # 表示タイトルを決定
+                    index_display_title="$index_base_title"
+                    if [[ -n "$index_lang_titles" && "$index_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                        index_display_title="${BASH_REMATCH[1]}"
+                    fi
+
+                    # 基準ディレクトリからの相対パスを計算
+                    index_relative_path="${check_path#$base_dir/}"
+
+                    break  # 最初に見つかった index 系ファイルを使用
+                fi
+            done
+
+            # index 系ファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
+            if [[ -n "$index_file_found" ]]; then
+                echo "${indent}- 📁 [$index_display_title]($index_relative_path)"
+            else
+                echo "${indent}- 📁 $base_title"
+            fi
+        fi
+    done
+
+    #echo "# 目次生成完了" >&2
+}
+
+# ========================================
+# ファイル探索関数
+# ========================================
+
+# ディレクトリを再帰的に探索してキャッシュに追加
+# 引数: 開始ディレクトリ 最大深度
+scan_directory() {
+    local start_dir="$1"
+    local max_depth="$2"
+
+    #echo "# ディレクトリ探索開始: $start_dir (depth=$max_depth)" >&2
+
+    # PROGRESS
+    printf '%s' " scan" >&2
+
+    # find コマンドで探索
+    local find_args=("$start_dir")
+    if [[ "$max_depth" -ge 0 ]]; then
+        find_args+=(-maxdepth $((max_depth + 1)))
+    fi
+
+    while read -r path; do
+        # 絶対パス取得
+        local abs_path
+        abs_path=$(readlink -f "$path" 2>/dev/null || realpath "$path" 2>/dev/null || echo "$path")
+
+        # ファイル名取得
+        local filename
+        filename=$(basename "$path")
+
+        #echo "# find結果: $path (abs: $abs_path)" >&2
+
+        if [[ -d "$path" ]]; then
+            # ディレクトリの場合
+            #echo "# ディレクトリとして処理: $abs_path" >&2
+            
+            # PROGRESS
+            printf '%s' "." >&2
+
+            add_to_memory_cache "$abs_path" "$filename" "directory" "$filename" ""
+            unsorted_keys+=("$abs_path")
+        elif [[ -f "$path" ]]; then
+            # ファイルの場合
+            #echo "# ファイルとして処理: $abs_path" >&2
+            local base_title
+            base_title=$(basename "$filename" .md)
+            base_title=$(basename "$base_title" .markdown)
+
+            add_to_memory_cache "$abs_path" "$filename" "file" "$base_title" ""
+            unsorted_keys+=("$abs_path")
+
+            # Markdownタイトル抽出（キャッシュに指定言語のタイトルがない場合のみ）
+            if ! has_lang_title_in_memory_cache "$abs_path" "ja"; then
+                #echo "# Markdownタイトル抽出実行: $abs_path" >&2
+                local lang_title
+                if lang_title=$(extract_markdown_title "$abs_path" "ja"); then
+                    local title
+                    title=$(echo "$lang_title" | cut -d: -f2-)
+                    update_memory_cache_title "$abs_path" "ja" "$title"
+                fi
+            #else
+                #echo "# Markdownタイトル抽出スキップ (キャッシュ済): $abs_path" >&2
+            fi
+        else
+            echo "# 不明なタイプ: $abs_path (ディレクトリでもファイルでもない)" >&2
+        fi
+    done < <(find "${find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
+
+    #echo "# ディレクトリ探索完了: $start_dir" >&2
+}
+
+# ========================================
+# メイン処理
+# ========================================
+
+# キャッシュをメモリに読み込み
+load_cache
+
+# CURRENT_FILE のディレクトリを基準に探索
+if [[ -n "$CURRENT_FILE" && "$CURRENT_FILE" != "-" ]]; then
+    # CURRENT_FILE からディレクトリパスを取得
+    current_dir=$(dirname "$CURRENT_FILE")
+    # 絶対パスに変換
+    current_dir=$(readlink -f "$current_dir" 2>/dev/null || realpath "$current_dir" 2>/dev/null || echo "$current_dir")
+else
+    # CURRENT_FILE が指定されていない場合は現在のディレクトリを使用
+    current_dir=$(pwd)
+fi
+#echo "# 探索基準ディレクトリ: $current_dir" >&2
+
+# ディレクトリ探索実行
+scan_directory "$current_dir" "$DEPTH"
+
+# キャッシュを永続化ファイルに保存
+save_cache
+
+# unsorted_keys をソートして sorted_keys に設定
+mapfile -t sorted_keys < <(printf '%s\n' "${unsorted_keys[@]}" | sort)
+
+# メモリキャッシュ内容を表示
+#echo "# キャッシュ内容" >&2
+#echo "" >&2
+#echo '```' >&2
+#for abs_path in "${sorted_keys[@]}"; do
+#    entry="${memory_cache[$abs_path]}"
+#    printf '%s\t%s\n' "$abs_path" "$entry" >&2
+#done
+#echo '```' >&2
+
+# 実際の目次生成
+generate_toc "$current_dir" "$DEPTH" "$EXCLUDE" "ja"
+
+# PROGRESS
+printf '%s\n' " -> done" >&2

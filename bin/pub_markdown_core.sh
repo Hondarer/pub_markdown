@@ -355,6 +355,11 @@ copy_if_different_timestamp() {
 
 #-------------------------------------------------------------------
 
+# insert-toc.lua のキャッシュをクリア
+rm -f /tmp/insert-toc-cache.tsv > /dev/null
+
+#-------------------------------------------------------------------
+
 echo -n "Correcting target files..."
 
 # ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──

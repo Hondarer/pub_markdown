@@ -137,7 +137,7 @@ English Visible in Markdown
 ### パラメータ付きの使用方法
 
 ```markdown
-\toc depth=1 exclude="temp.md" exclude="draft/*" sort=title format=ol
+\toc depth=1 exclude="temp.md" exclude="draft/*"
 ```
 
 ### パラメータ詳細
@@ -160,30 +160,6 @@ English Visible in Markdown
 - `"README.md"`: 特定ファイル
 - `"draft/*"`: ディレクトリ配下全て
 - `"*.tmp"`: 拡張子による除外
-
-#### ソート方法 (sort)
-
-- `sort=name`: ファイル名順 (デフォルト)
-- `sort=title`: タイトル順
-
-#### 出力形式 (format)
-
-- `format=ul`: 番号なしリスト (デフォルト)
-- `format=ol`: 番号付きリスト
-
-### 記載例
-
-#### 基本例
-
-```markdown
-\toc
-```
-
-#### 複合設定例
-
-```markdown
-\toc depth=2 exclude="draft/*" exclude="temp.md" sort=title format=ol
-```
 
 ### 注意事項
 

@@ -17,7 +17,7 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 ### パラメータ付き書式
 
 ```markdown
-\toc depth=1 exclude="temp.md" exclude="draft/*" sort=name format=ul
+\toc depth=1 exclude="temp.md" exclude="draft/*"
 ```
 
 ### 書式の特徴
@@ -35,9 +35,9 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 ├── index.md           # 階層0 (自身、目次挿入対象)
 ├── file1.md           # 階層0 (現在のディレクトリ)
 ├── subfolder1/        # 階層1 (1階層下)
-│   ├── file2.md       # 階層1
-│   └── subsubfolder/  # 階層2 (2階層下)
-│       └── file3.md   # 階層2
+│  ├── file2.md       # 階層1
+│  └── subsubfolder/  # 階層2 (2階層下)
+│      └── file3.md   # 階層2
 └── subfolder2/        # 階層1 (1階層下)
     └── file4.md       # 階層1
 ```
@@ -66,20 +66,6 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 - `"*.tmp"`: 拡張子による除外
 - `"temp.md"`: 特定ファイル名
 
-### ソート方法 (sort)
-
-指定方法を次に示す。
-
-- `sort=name`: ファイル名順 (デフォルト)
-- `sort=title`: タイトル順
-
-### 出力形式 (format)
-
-指定方法を次に示す。
-
-- `format=ul`: 番号なしリスト (デフォルト)
-- `format=ol`: 番号付きリスト
-
 ### デフォルト値
 
 Lua フィルタ内で定義されるデフォルト値は以下の通りです。
@@ -87,8 +73,6 @@ Lua フィルタ内で定義されるデフォルト値は以下の通りです�
 ```lua
 local defaults = {
     depth = 0,        -- 現在のディレクトリのみ
-    sort = "name",    -- ファイル名順
-    format = "ul",    -- 番号なしリスト
     exclude = {}      -- 除外なし
 }
 ```
@@ -146,22 +130,6 @@ index.md または index.markdown が存在する場合は、階層名に index.
 ## 詳細
 ```
 
-#### 複合設定例
-
-```markdown
-\toc depth=2 exclude="draft/*" exclude="temp.md" sort=title format=ol
-```
-
-実行結果 (番号付きリスト、タイトル順、除外あり)。
-
-```markdown
-1. [API リファレンス](reference/api.md)
-2. [イントロダクション](intro.md)
-3. [チュートリアル](tutorial/index.md)
-   1. [応用](tutorial/advanced.md)
-   2. [基本操作](tutorial/basics.md)
-```
-
 ### 複数の目次の例
 
 ```markdown
@@ -169,7 +137,7 @@ index.md または index.markdown が存在する場合は、階層名に index.
 \toc depth=0
 
 ## 全体構造
-\toc depth=-1 format=ol
+\toc depth=-1
 
 ## チュートリアルのみ
 \toc depth=1 exclude="reference/*" exclude="intro.md"
@@ -189,6 +157,64 @@ pandoc -L index-filter.lua index.md -o output.html
 pandoc -L index-filter.lua --verbose index.md -o output.html
 ```
 
+## キャッシュストレージ仕様
+
+### 概要
+
+`insert-toc.sh` は性能向上のため、ファイル情報と Markdown タイトルをキャッシュファイルに永続化します。
+
+### キャッシュファイル
+
+- **ファイルパス**: `/tmp/insert-toc-cache.tsv`
+- **フォーマット**: TSV（タブ区切り）形式
+- **文字エンコーディング**: UTF-8
+
+### データ構造
+
+各行は以下の 5 つのフィールドをタブで区切った構造です。
+
+```text
+絶対パス	ファイル名	種別	ベースタイトル	言語別タイトル
+```
+
+#### フィールド定義
+
+1. **絶対パス**: ファイルまたはディレクトリの絶対パス
+2. **ファイル名**: パスの最後の要素（ファイル名またはディレクトリ名）
+3. **種別**: `file` または `directory`
+4. **ベースタイトル**: ファイル名（拡張子除く）またはディレクトリ名
+5. **言語別タイトル**: `言語コード:タイトル` の形式、複数言語は `|` で区切り
+
+#### キャッシュ例
+
+```text
+/home/user/docs/intro.md	intro.md	file	intro	ja:イントロダクション
+/home/user/docs/tutorial	tutorial	directory	tutorial
+/home/user/docs/tutorial/basics.md	basics.md	file	basics	ja:基本操作
+/home/user/docs/tutorial/index.md	index.md	file	index	ja:チュートリアル
+```
+
+### キャッシュ管理
+
+- **リセット**: 外部でキャッシュファイルを削除してリセット
+- **更新**: 一度作成されたエントリは無効化されず、言語別タイトルの追加のみ実行
+- **スコープ**: パラメータに依存しない汎用的なキャッシュ
+
+### Markdown タイトル抽出
+
+- **対象**: Markdownファイル（`.md`, `.markdown`）のみ
+- **抽出ルール**: 最初にヒットしたレベル 1 見出し（`# タイトル`）を採用
+- **言語**: 現在は `ja`（日本語）固定
+
+### ディレクトリタイトル解決
+
+ディレクトリのタイトルは以下の優先順位で解決されます。
+
+1. `index.md` > `index.markdown` の順で検索
+2. 大文字小文字を正規化（`INDEX.md` → `index.md`）
+3. 見つかった場合、そのファイルの言語別タイトルを使用
+4. 見つからない場合、ディレクトリ名を使用
+
 ## TODO
 
-- 言語を意識したタイトルの抽出は現段階で未サポートです。有効な第一見出しを使って目次が生成されます。
+- 言語を意識したタイトルの抽出は現段階で未サポートです。
