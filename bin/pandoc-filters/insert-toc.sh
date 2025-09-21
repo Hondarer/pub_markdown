@@ -129,7 +129,7 @@ has_lang_title_in_memory_cache() {
 
     # TSVの4番目のフィールド（言語別タイトル）を取得
     local lang_titles
-    lang_titles=$(echo "$cache_entry" | cut -f4)
+    IFS=$'\t' read -r _ _ _ lang_titles <<< "$cache_entry"
 
     if [[ -z "$lang_titles" ]]; then
         return 1  # 言語別タイトルフィールドが空
@@ -159,10 +159,7 @@ update_memory_cache_title() {
 
     # エントリを分解
     local filename type base_title lang_titles
-    filename=$(echo "$cache_entry" | cut -f1)
-    type=$(echo "$cache_entry" | cut -f2)
-    base_title=$(echo "$cache_entry" | cut -f3)
-    lang_titles=$(echo "$cache_entry" | cut -f4)
+    IFS=$'\t' read -r filename type base_title lang_titles <<< "$cache_entry"
 
     # 言語別タイトルを更新
     if [[ -z "$lang_titles" ]]; then
@@ -170,8 +167,10 @@ update_memory_cache_title() {
     else
         # 同じ言語コードが既に存在するかチェック
         if [[ "$lang_titles" =~ $lang_code: ]]; then
-            # 既存の言語タイトルを置換
-            lang_titles=$(echo "$lang_titles" | sed "s/${lang_code}:[^|]*/${new_lang_title}/")
+            # 既存の言語タイトルを置換（bash parameter expansion使用）
+            if [[ "$lang_titles" =~ (.*)(${lang_code}:[^|]*)(.*) ]]; then
+                lang_titles="${BASH_REMATCH[1]}${new_lang_title}${BASH_REMATCH[3]}"
+            fi
         else
             # 新しい言語タイトルを追加
             lang_titles="${lang_titles}|${new_lang_title}"
@@ -198,9 +197,19 @@ extract_markdown_title() {
         return 1
     fi
 
-    # 最初の # 見出しを検索
-    local title
-    title=$(head -50 "$file_path" | grep -m1 '^#[[:space:]]' | sed 's/^#[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    # 最初の # 見出しを検索（bash 内蔵機能使用）
+    local title=""
+    local line_count=0
+    while IFS= read -r line && ((line_count < 50)); do
+        if [[ "$line" =~ ^#[[:space:]](.*)$ ]]; then
+            title="${BASH_REMATCH[1]}"
+            # bash parameter expansion でトリム処理
+            title="${title#"${title%%[![:space:]]*}"}"  # 先頭空白除去
+            title="${title%"${title##*[![:space:]]}"}"  # 末尾空白除去
+            break
+        fi
+        ((line_count++))
+    done < "$file_path"
 
     if [[ -n "$title" ]]; then
         printf '%s:%s' "$lang_code" "$title"
@@ -244,7 +253,9 @@ is_excluded() {
     # カンマ区切りの除外パターンを処理
     IFS=',' read -ra patterns <<< "$exclude_patterns"
     for pattern in "${patterns[@]}"; do
-        pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')  # トリム
+        # bash parameter expansion でトリム処理
+        pattern="${pattern#"${pattern%%[![:space:]]*}"}"  # 先頭空白除去
+        pattern="${pattern%"${pattern##*[![:space:]]}"}"  # 末尾空白除去
         [[ -z "$pattern" ]] && continue
 
         # パターンマッチング
@@ -280,7 +291,7 @@ generate_toc() {
         [[ -z "$entry" ]] && continue
 
         local type
-        type=$(echo "$entry" | cut -f2)
+        IFS=$'\t' read -r _ type _ _ <<< "$entry"
 
         # 1. 基準ディレクトリより上位のエントリを除外
         if [[ "$abs_path" != "$base_dir"/* && "$abs_path" != "$base_dir" ]]; then
@@ -332,7 +343,7 @@ generate_toc() {
     for abs_path in "${filtered_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
         local type
-        type=$(echo "$entry" | cut -f2)
+        IFS=$'\t' read -r _ type _ _ <<< "$entry"
         #echo "entry, type: ${entry}, ${type}" >&2
 
         if [[ "$type" == "directory" ]]; then
@@ -407,7 +418,10 @@ generate_toc() {
             if [[ -z "$relative_path" || "$relative_path" == "$abs_path" ]]; then
                 depth=0  # 基準ディレクトリ自体
             else
-                depth=$(echo "/$relative_path" | tr -cd '/' | wc -c)
+                # bash parameter expansion でスラッシュの数をカウント
+                temp="/$relative_path"
+                temp_no_slash="${temp//\//}"
+                depth=$((${#temp} - ${#temp_no_slash}))
             fi
 
             # インデント文字列を更新
@@ -476,8 +490,7 @@ generate_toc() {
 
                     # ファイルの情報を取得
                     local index_base_title index_lang_titles
-                    index_base_title=$(echo "$check_entry" | cut -f3)
-                    index_lang_titles=$(echo "$check_entry" | cut -f4)
+                    IFS=$'\t' read -r _ _ index_base_title index_lang_titles <<< "$check_entry"
 
                     # 表示タイトルを決定
                     index_display_title="$index_base_title"
@@ -528,11 +541,11 @@ scan_directory() {
     while read -r path; do
         # 絶対パス取得
         local abs_path
-        abs_path=$(readlink -f "$path" 2>/dev/null || realpath "$path" 2>/dev/null || echo "$path")
+        abs_path="$path"
 
         # ファイル名取得
         local filename
-        filename=$(basename "$path")
+        filename="${path##*/}"
 
         #echo "# find結果: $path (abs: $abs_path)" >&2
 
@@ -548,9 +561,13 @@ scan_directory() {
         elif [[ -f "$path" ]]; then
             # ファイルの場合
             #echo "# ファイルとして処理: $abs_path" >&2
-            local base_title
-            base_title=$(basename "$filename" .md)
-            base_title=$(basename "$base_title" .markdown)
+            local base_title="$filename"
+            # bash parameter expansion で拡張子除去
+            if [[ "$base_title" == *.md ]]; then
+                base_title="${base_title%.md}"
+            elif [[ "$base_title" == *.markdown ]]; then
+                base_title="${base_title%.markdown}"
+            fi
 
             add_to_memory_cache "$abs_path" "$filename" "file" "$base_title" ""
             unsorted_keys+=("$abs_path")
@@ -561,7 +578,7 @@ scan_directory() {
                 local lang_title
                 if lang_title=$(extract_markdown_title "$abs_path" "ja"); then
                     local title
-                    title=$(echo "$lang_title" | cut -d: -f2-)
+                    title="${lang_title#*:}"
                     update_memory_cache_title "$abs_path" "ja" "$title"
                 fi
             #else
