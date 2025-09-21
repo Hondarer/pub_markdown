@@ -10,7 +10,8 @@ sequenceDiagram
 
 ## 非推奨
 
-Pandoc としては扱えるが、Markdown Preview Enhanced でのプレビューが正しく行われない。(Markdown Preview Enhanced 0.8.18 にて現象を確認)
+Pandoc としては扱えるが、Markdown Preview Enhanced でのプレビューが正しく行われない。  
+(Markdown Preview Enhanced 0.8.18 にて現象を確認)
 
 ```mermaid:テストだよ.mmd
 sequenceDiagram
