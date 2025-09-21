@@ -283,7 +283,7 @@ generate_toc() {
     #echo "# フィルタリング開始 (基準ディレクトリ: $base_dir, 最大深度: $max_depth)" >&2
 
     # PROGRESS
-    printf '%s' " -> filter" >&2
+    #printf '%s' " -> filter" >&2
 
     # 第1段階: 基本的なフィルタリング
     for abs_path in "${sorted_keys[@]}"; do
@@ -335,7 +335,7 @@ generate_toc() {
     #echo "# 第1段階フィルタリング完了: ${#filtered_keys[@]} エントリ" >&2
 
     # PROGRESS
-    printf '%s' "." >&2
+    #printf '%s' "." >&2
 
     # 第2段階: 空ディレクトリの除去
     local final_keys=()
@@ -397,7 +397,7 @@ generate_toc() {
     #echo "# Markdown リスト形式で目次出力開始" >&2
 
     # PROGRESS
-    printf '%s' " -> list" >&2
+    #printf '%s' " -> list" >&2
 
     local depth=0
     local indent=""
@@ -457,7 +457,7 @@ generate_toc() {
             # ディレクトリの場合
 
             # PROGRESS
-            printf '%s' "." >&2
+            #printf '%s' "." >&2
 
             # sorted_keys の中に、abs_path/index.md, index.markdown (ケース揺らぎ許容) が存在した場合は
             # そのエントリの display_title と file_relative_path をディレクトリのリスト項目とする。
@@ -530,7 +530,7 @@ scan_directory() {
     #echo "# ディレクトリ探索開始: $start_dir (depth=$max_depth)" >&2
 
     # PROGRESS
-    printf '%s' " scan" >&2
+    #printf '%s' " scan" >&2
 
     # find コマンドで探索
     local find_args=("$start_dir")
@@ -554,7 +554,7 @@ scan_directory() {
             #echo "# ディレクトリとして処理: $abs_path" >&2
             
             # PROGRESS
-            printf '%s' "." >&2
+            #printf '%s' "." >&2
 
             add_to_memory_cache "$abs_path" "$filename" "directory" "$filename" ""
             unsorted_keys+=("$abs_path")
@@ -634,4 +634,4 @@ mapfile -t sorted_keys < <(printf '%s\n' "${unsorted_keys[@]}" | sort)
 generate_toc "$current_dir" "$DEPTH" "$EXCLUDE" "ja"
 
 # PROGRESS
-printf '%s\n' " -> done" >&2
+#printf '%s\n' " -> done" >&2

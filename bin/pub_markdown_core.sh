@@ -29,6 +29,7 @@ if [ $LINUX -eq 1 ]; then
     chmod +x "${SCRIPT_DIR}/mmdc-wrapper.sh"
     chmod +x "${SCRIPT_DIR}/chrome-wrapper.sh"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
+    chmod +x "${SCRIPT_DIR}/pandoc-filters/insert-toc.sh"
 else
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
     EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"

@@ -230,8 +230,8 @@ local function process_toc_command(params_str, current_file)
         --debug_print("Exclude", i .. ":", pattern)
     end
     
-    io.stderr:write("    > process_toc (This may take several minutes.)")
-    io.stderr:flush()
+    --io.stderr:write("    > process_toc (This may take several minutes.)")
+    --io.stderr:flush()
 
     -- bash パスを探索
     local bash_path = find_bash_path()
