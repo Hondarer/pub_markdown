@@ -532,6 +532,30 @@ for file in "${files[@]}"; do
         fi
         publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
 
+        # html-self-contain
+        publish_dir_self_contain=$(dirname "${file}")
+        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
+        else
+            publish_dir_self_contain="html-self-contain"
+        fi
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+        done
+        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
+
+        # docx
+        publish_dir_docx=$(dirname "${file}")
+        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
+        else
+            publish_dir_docx=docx
+        fi
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+        done
+        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
+
         # path to css
         nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
         up_dir=""
@@ -564,8 +588,8 @@ for file in "${files[@]}"; do
 
         firstLang=""
         for langElement in ${lang}; do
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             if [ "$firstLang" == "" ]; then
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
@@ -582,28 +606,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-                firstLang="${langElement}"
-            else
-                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-            fi
-        done
-
-        # html-self-contain
-        publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
-        else
-            publish_dir_self_contain="html-self-contain"
-        fi
-        for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
-        done
-        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
-
-        firstLang=""
-        for langElement in ${lang}; do
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-            if [ "$firstLang" == "" ]; then
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
@@ -620,28 +623,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-                firstLang="${langElement}"
-            else
-                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-            fi
-        done
-
-        # docx
-        publish_dir_docx=$(dirname "${file}")
-        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
-        else
-            publish_dir_docx=docx
-        fi
-        for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
-        done
-        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
-
-        firstLang=""
-        for langElement in ${lang}; do
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-            if [ "$firstLang" == "" ]; then
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${openapi_md}" | \
                     ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
@@ -660,6 +642,11 @@ for file in "${files[@]}"; do
                 printf "\e[0m" # 文字色を通常に設定
                 firstLang="${langElement}"
             else
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                 cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
             fi
         done
@@ -675,6 +662,30 @@ for file in "${files[@]}"; do
             publish_dir=html
         fi
         publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
+
+        # html-self-contain
+        publish_dir_self_contain=$(dirname "${file}")
+        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
+        else
+            publish_dir_self_contain="html-self-contain"
+        fi
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+        done
+        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
+
+        # docx
+        publish_dir_docx=$(dirname "${file}")
+        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
+            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
+        else
+            publish_dir_docx=docx
+        fi
+        for langElement in ${lang}; do
+            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+        done
+        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         # path to css
         nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
@@ -723,24 +734,6 @@ for file in "${files[@]}"; do
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             printf "\e[0m" # 文字色を通常に設定
-        done
-
-        # html-self-contain
-        publish_dir_self_contain=$(dirname "${file}")
-        if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
-        else
-            publish_dir_self_contain="html-self-contain"
-        fi
-        for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
-        done
-        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
-
-        for langElement in ${lang}; do
-            # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
-            # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-            md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
 
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
@@ -760,24 +753,6 @@ for file in "${files[@]}"; do
                     --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                     --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
             printf "\e[0m" # 文字色を通常に設定
-        done
-
-        # docx
-        publish_dir_docx=$(dirname "${file}")
-        if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
-        else
-            publish_dir_docx=docx
-        fi
-        for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
-        done
-        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
-
-        for langElement in ${lang}; do
-            # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
-            # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-            md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
             
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
