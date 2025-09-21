@@ -165,7 +165,7 @@ if [ -f "$configFile" ]; then
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
 fi
 
-# 設定ファイルに mdRoot が指定されなかった場合の値を "doc" にする
+# 設定ファイルに mdRoot が指定されなかった場合の値を "docs-src" にする
 if [[ "$mdRoot" == "" ]]; then
     mdRoot="docs-src"
 fi
@@ -352,6 +352,10 @@ copy_if_different_timestamp() {
     cp -p "$src_file" "$dest_file"
     return 0
 }
+
+#-------------------------------------------------------------------
+
+echo "*** pub_markdown_core start $(date -Is)"
 
 #-------------------------------------------------------------------
 
@@ -796,5 +800,11 @@ for file in "${files[@]}"; do
         done
     fi
 done
+
+#-------------------------------------------------------------------
+
+echo "*** pub_markdown_core end   $(date -Is)"
+
+#-------------------------------------------------------------------
 
 exit 0
