@@ -164,15 +164,15 @@ local function find_bash_path()
             -- git.exe のパスから bash.exe のパスを生成
             local bash_path
 
-            if git_path:match("Git\\cmd\\git%.exe$") then
-                -- Git/cmd/git.exe → Git/bin/bash.exe
-                bash_path = git_path:gsub("Git\\cmd\\git%.exe$", "Git\\bin\\bash.exe")
-            elseif git_path:match("Git\\bin\\git%.exe$") then
-                -- Git/bin/git.exe → Git/bin/bash.exe
-                bash_path = git_path:gsub("Git\\bin\\git%.exe$", "Git\\bin\\bash.exe")
-            elseif git_path:match("Git\\mingw64\\bin\\git%.exe$") then
-                -- Git/mingw64/bin/git.exe → Git/usr/bin/bash.exe
-                bash_path = git_path:gsub("Git\\mingw64\\bin\\git%.exe$", "Git\\usr\\bin\\bash.exe")
+            if git_path:match("\\mingw64\\bin\\git%.exe$") then
+                -- /mingw64/bin/git.exe → /usr/bin/bash.exe
+                bash_path = git_path:gsub("\\mingw64\\bin\\git%.exe$", "\\bin\\bash.exe")
+            elseif git_path:match("\\cmd\\git%.exe$") then
+                -- /cmd/git.exe → /bin/bash.exe
+                bash_path = git_path:gsub("\\cmd\\git%.exe$", "\\bin\\bash.exe")
+            elseif git_path:match("\\bin\\git%.exe$") then
+                -- /bin/git.exe → /bin/bash.exe
+                bash_path = git_path:gsub("\\bin\\git%.exe$", "\\bin\\bash.exe")
             end
 
             if bash_path then
