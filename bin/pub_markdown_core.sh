@@ -73,6 +73,56 @@ export NODE_NO_WARNINGS=1
 
 #-------------------------------------------------------------------
 
+# Markdown ファイルからリンク先ファイルを抽出する関数
+# 引数: $1=Markdownファイルのパス, $2=ベースディレクトリのパス
+# 戻り値: グローバル配列 files_linked に抽出されたファイルパスを追加
+extract_links_from_markdown() {
+    local md_file="$1"
+    local base_dir="$2"
+
+    if [[ -f "$md_file" ]]; then
+        while IFS= read -r line; do
+            # bash の正規表現でリンクを抽出
+            img_pattern='!\[[^]]*\]\(([^)]+)\)'
+            link_pattern='\[[^]]*\]\(([^)]+)\)'
+
+            # パターン1: 画像リンク ![alt](path)
+            if [[ $line =~ $img_pattern ]]; then
+                link_path="${BASH_REMATCH[1]}"
+                # .md, .yaml ファイルを除外
+                if [[ ! $link_path =~ \.(md|yaml)$ ]]; then
+                    files_linked+=("${base_dir}/${link_path}")
+                fi
+            fi
+            # パターン2: 通常リンク [text](path)
+            if [[ $line =~ $link_pattern ]]; then
+                link_path="${BASH_REMATCH[1]}"
+                # .md, .yaml ファイルを除外
+                if [[ ! $link_path =~ \.(md|yaml)$ ]]; then
+                    files_linked+=("${base_dir}/${link_path}")
+                fi
+            fi
+        done < "$md_file"
+    fi
+}
+
+# ファイル配列をマージ・ソート・重複排除する関数
+# 引数: 複数のファイルパス
+# 戻り値: グローバル配列 files_raw_initial にソート済みの重複排除されたファイルパスを設定
+merge_and_deduplicate_files() {
+    declare -A unique_files
+    for file in "$@"; do
+        [[ -n "$file" ]] && unique_files["$file"]=1
+    done
+    files_raw_initial=()
+    for file in "${!unique_files[@]}"; do
+        files_raw_initial+=("$file")
+    done
+    # ソート
+    IFS=$'\n' files_raw_initial=($(sort <<< "${files_raw_initial[*]}"))
+    unset IFS
+}
+
 # パスを絶対パスに変換する関数
 resolve_path() {
     local input_path="$1"
@@ -401,14 +451,10 @@ copy_if_different_timestamp() {
         return 0
     fi
 
-    # タイムスタンプを取得 (秒単位のエポック時間)
-    local src_time=$(stat -c %Y "$src_file")
-    local dest_time=$(stat -c %Y "$dest_file")
-
-    # タイムスタンプの差を計算
-    local time_diff=$((src_time - dest_time))
-    if [[ ${time_diff#-} -le 2 ]]; then
-        #echo "File not copied: Timestamps are within 2 seconds."
+    # タイムスタンプを比較
+    if [[ ! "$src_file" -nt "$dest_file" && ! "$dest_file" -ot "$src_file" ]]; then
+        # ファイルのタイムスタンプがほぼ同じ場合はコピーしない
+        #echo "File not copied: Timestamps are approximately the same."
         return 0
     fi
 
@@ -438,16 +484,11 @@ if [ -n "$relativeFile" ]; then
         base_dir="${workspaceFolder}/${relativeFile}"
 
         # 1) Markdown や YAML に埋め込まれたリンク資産を抽出
-        mapfile -d '' -t files_linked < <(
-            find "${base_dir}" -maxdepth 1 -type f -name "*.md" -print0 | \
-            xargs -0 cat | \
-            grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' | \
-            sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
-            grep -vE '\.(md|yaml)$' | \
-            while IFS= read -r line; do
-                printf '%s\0' "${base_dir}/$line"
-            done
-        )
+        declare -a files_linked=()
+        while IFS= read -r -d '' md_file; do
+            extract_links_from_markdown "$md_file" "$base_dir"
+        done < <(find "${base_dir}" -maxdepth 1 -type f -name "*.md" -print0)
+        unset IFS
 
         # 2) ディレクトリ直下のすべてのファイルを追加
         mapfile -d '' -t additional_files < <(
@@ -455,25 +496,16 @@ if [ -n "$relativeFile" ]; then
         )
 
         # 3) マージ＆ソート＆重複排除
-        mapfile -d '' -t files_raw_initial < <(
-            printf '%s\0' "${files_linked[@]}" "${additional_files[@]}" | sort -z -u
-        )
-
+        merge_and_deduplicate_files "${files_linked[@]}" "${additional_files[@]}"
     else
         # relativeFile が単一ファイルの場合: そのファイル＋リンク先ファイルを抽出
-        mapfile -d '' -t files_linked < <(
-            grep -oE '\!\[.*?\]\((.*?)\)|\[[^\]]*\]\((.*?)\)' "${workspaceFolder}/${relativeFile}" | \
-            sed -E 's/\!\[.*?\]\((.*?)\)/\1/;s/\[[^\]]*\]\((.*?)\)/\1/' | \
-            grep -vE '\.(md|yaml)$' | \
-            while IFS= read -r path; do
-                printf '%s\0' "${base_dir}/${path}"
-            done
-        )
+        declare -a files_linked=()
+        if [[ -f "${workspaceFolder}/${relativeFile}" ]]; then
+            extract_links_from_markdown "${workspaceFolder}/${relativeFile}" "$base_dir"
+        fi
 
         # マージ＆ソート＆重複排除 (単一ファイル自身も含める)
-        mapfile -d '' -t files_raw_initial < <(
-            printf '%s\0' "${files_linked[@]}" "${workspaceFolder}/${relativeFile}" | sort -z -u
-        )
+        merge_and_deduplicate_files "${files_linked[@]}" "${workspaceFolder}/${relativeFile}"
     fi
 else
     # relativeFile が指定されていない場合: mdRoot 以下の全ファイルを対象
@@ -794,12 +826,14 @@ for file in "${files[@]}"; do
         for langElement in ${lang}; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-            md_title=$(cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+            replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${details})
+            md_title=$(echo "${replaced_md}" | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+            md_body=$(echo "${replaced_md}" | sed '/^# /d')
 
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
             printf "\e[33m" # 文字色を黄色に設定
-            cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
+            echo "${md_body}" | \
                 ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                     --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -818,7 +852,7 @@ for file in "${files[@]}"; do
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 printf "\e[33m" # 文字色を黄色に設定
-                cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
+                echo "${md_body}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --metadata title="$md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -838,7 +872,7 @@ for file in "${files[@]}"; do
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 printf "\e[33m" # 文字色を黄色に設定
-                cat "$file" | replace-tag.sh --lang=${langElement} --details=${details} | sed '/^# /d' | \
+                echo "${md_body}" | \
                     ${PANDOC} -s --shift-heading-level-by=-1 --metadata title="$md_title" -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
