@@ -401,36 +401,31 @@ generate_toc() {
 
     local depth=0
     local indent=""
-    local previous_type=""
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
         local filename type base_title lang_titles
 
         IFS=$'\t' read -r filename type base_title lang_titles <<< "$entry"
 
-        # type が directory または type が前回と今回で違う場合、
         # 基準ディレクトリからの相対パスと深度を計算
-        if [[ "$type" == "directory" ]] || [[ "$type" != "$previous_type" ]]; then
-            # ディレクトリの場合: $abs_path から $base_dir を削除して / の数で depth を計算
-            local relative_path="${abs_path#$base_dir}"
-            relative_path="${relative_path#/}"  # 先頭のスラッシュを削除
+        # $abs_path から $base_dir を削除して / の数で depth を計算
+        local relative_path="${abs_path#$base_dir}"
+        relative_path="${relative_path#/}"  # 先頭のスラッシュを削除
 
-            if [[ -z "$relative_path" || "$relative_path" == "$abs_path" ]]; then
-                depth=0  # 基準ディレクトリ自体
-            else
-                # bash parameter expansion でスラッシュの数をカウント
-                temp="/$relative_path"
-                temp_no_slash="${temp//\//}"
-                depth=$((${#temp} - ${#temp_no_slash}))
-            fi
-
-            # インデント文字列を更新
-            indent=""
-            for ((i=0; i<depth; i++)); do
-                indent="  $indent"
-            done
+        if [[ -z "$relative_path" || "$relative_path" == "$abs_path" ]]; then
+            depth=0  # 基準ディレクトリ自体
+        else
+            # bash parameter expansion でスラッシュの数をカウント
+            temp="/$relative_path"
+            temp_no_slash="${temp//\//}"
+            depth=$((${#temp} - ${#temp_no_slash}))
         fi
-        previous_type=$type
+
+        # インデント文字列を更新
+        indent=""
+        for ((i=0; i<depth; i++)); do
+            indent="  $indent"
+        done
 
         if [[ "$type" == "file" ]]; then
             # base_title が index (大文字小文字無視) の場合はスキップ
@@ -450,8 +445,7 @@ generate_toc() {
             local file_relative_path="${abs_path#$base_dir/}"
 
             # Markdownリンク形式で出力
-            # ファイルの場合は、ディレクトリに属することから、ここで 1 つ分字下げ
-            echo "${indent}  - 📄 [$display_title]($file_relative_path)"
+            echo "${indent}- 📄 [$display_title]($file_relative_path)"
 
         elif [[ "$type" == "directory" ]]; then
             # ディレクトリの場合
