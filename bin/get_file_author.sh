@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 # get_file_author FILEPATH
-#   ・git コマンドが使えない           → 空文字
-#   ・Git 管理下にない                 → 空文字
-#   ・コミット履歴あり                 → コミッターリスト (新しい順、重複排除)
+#   ・git コマンドが使えない             → 空文字
+#   ・Git 管理下にない                   → 空文字
+#   ・Git 管理下にあり、コミット履歴あり → コミッターリスト (新しい順、重複排除)
 get_file_author() {
   local file=$1
 

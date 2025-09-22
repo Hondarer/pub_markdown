@@ -1,0 +1,95 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <meta name="author" content="Tetsuo Honda" />
+  <title>コードブロックキャプションののサンプル</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">コードブロックキャプションののサンプル</span>
+        <ul class="nav pull-right doc-info">
+                    <li><p class="navbar-text">Tetsuo Honda</p></li>
+                              <li><p class="navbar-text">Sun, 7 Sep 2025 16:44:43 +0900 ad90617</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#推奨" id="toc-推奨"><span class="toc-section-number">1</span> 推奨</a></li>
+        <li><a href="#準推奨" id="toc-準推奨"><span class="toc-section-number">2</span> 準推奨</a></li>
+        <li><a href="#キャプションなし" id="toc-キャプションなし"><span class="toc-section-number">3</span> キャプションなし</a></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>コードブロックキャプションののサンプル</H1>
+      
+      
+      <h1 data-number="1" id="推奨"><span class="header-section-number">1</span> 推奨</h1>
+<p><strong>例 1</strong></p>
+<pre class="text"><code>1         2         3         4         5         6         7         8         9         10        1         2         3         4         5         6         7         8         9         10        
+12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</code></pre>
+<div data-custom-style="Source Code Caption">
+これは 空白を含む サンプルキャプション
+</div>
+<p><strong>例 2</strong></p>
+<pre class="text"><code>1         2         3         4         5         6         7         8         9         10        1         2         3         4         5         6         7         8         9         10        
+12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</code></pre>
+<div data-custom-style="Source Code Caption">
+Sample.txt
+</div>
+<h1 data-number="2" id="準推奨"><span class="header-section-number">2</span> 準推奨</h1>
+<p>キャプション部分の大文字が、小文字に自動変換されてしまう。</p>
+<pre class="text"><code>1         2         3         4         5         6         7         8         9         10        1         2         3         4         5         6         7         8         9         10        
+12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</code></pre>
+<div data-custom-style="Source Code Caption">
+sample.txt
+</div>
+<h1 data-number="3" id="キャプションなし"><span class="header-section-number">3</span> キャプションなし</h1>
+<pre class="text"><code>1         2         3         4         5         6         7         8         9         10        1         2         3         4         5         6         7         8         9         10        
+12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890</code></pre>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>

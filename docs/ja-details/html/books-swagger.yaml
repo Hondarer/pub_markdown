@@ -1,0 +1,157 @@
+swagger: "2.0"
+info:
+  version: 1.0.0
+  title: Books API
+  description: 本の登録を行うAPIです
+host: books.example.com
+basePath: /v1
+schemes:
+  - http
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /books:
+    get:
+      tags:
+        - books
+      summary: 本の一覧を取得します.
+      operationId: listBooks
+      parameters:
+        - name: name
+          description: 名前で抽出したい場合に指定
+          type: string
+          required: false
+          in: query
+      responses:
+        "200":
+          description: 本の一覧
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Books"
+        "500":
+          description: unexpected error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      tags:
+        - books
+      summary: 本を追加します
+      operationId: addBook
+      security:
+        - APIKeyQueryParam: []
+      parameters:
+        - name: name
+          type: string
+          required: true
+          in: path
+      responses:
+        "201":
+          description: Null response
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Book"
+        "401":
+          description: unauthorized error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+        "500":
+          description: unexpected error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+  /books/{book_id}:
+    delete:
+      tags:
+        - books
+      summary: 本を削除します
+      operationId: deleteBook
+      security:
+        - APIKeyQueryParam: []
+      parameters:
+        - name: book_id
+          in: path
+          required: true
+          description: 本のID
+          type: string
+      responses:
+        "204":
+          description: no content
+        "401":
+          description: unauthorized error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+        "404":
+          description: not found error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+        "500":
+          description: unexpected error
+          headers:
+            x-request-id:
+              type: string
+              description: リクエストID
+          schema:
+            $ref: "#/definitions/Error"
+securityDefinitions:
+  APIKeyQueryParam:
+    type: apiKey
+    name: api_key
+    in: query
+definitions:
+  Book:
+    type: "object"
+    required:
+      - id
+      - name
+    properties:
+      id:
+        type: integer
+        format: int64
+        example: 418243534748321
+        minimum: 1
+      name:
+        type: string
+        example: 入門Swagger
+  Books:
+    type: array
+    items:
+      $ref: "#/definitions/Book"
+  Error:
+    type: "object"
+    required:
+      - code
+      - message
+    properties:
+      code:
+        type: string
+        example: ErrorCode
+      message:
+        type: string
+        example: Error Message.

@@ -1,0 +1,255 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <meta name="author" content="Tetsuo Honda" />
+  <title>rsvg-convert の独自実装について</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">rsvg-convert の独自実装について</span>
+        <ul class="nav pull-right doc-info">
+                    <li><p class="navbar-text">Tetsuo Honda</p></li>
+                              <li><p class="navbar-text">Wed, 25 Jun 2025 06:30:20 +0900 2d48f6c</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#概要" id="toc-概要"><span class="toc-section-number">1</span> 概要</a></li>
+        <li><a href="#背景と目的" id="toc-背景と目的"><span class="toc-section-number">2</span> 背景と目的</a>
+        <ul>
+        <li><a href="#pandoc-の画像変換の仕組み" id="toc-pandoc-の画像変換の仕組み"><span class="toc-section-number">2.1</span> Pandoc の画像変換の仕組み</a></li>
+        <li><a href="#標準-rsvg-convert-の課題" id="toc-標準-rsvg-convert-の課題"><span class="toc-section-number">2.2</span> 標準 rsvg-convert の課題</a></li>
+        <li><a href="#本スクリプトの利点" id="toc-本スクリプトの利点"><span class="toc-section-number">2.3</span> 本スクリプトの利点</a></li>
+        </ul></li>
+        <li><a href="#アーキテクチャ" id="toc-アーキテクチャ"><span class="toc-section-number">3</span> アーキテクチャ</a>
+        <ul>
+        <li><a href="#ファイル構成" id="toc-ファイル構成"><span class="toc-section-number">3.1</span> ファイル構成</a></li>
+        <li><a href="#処理フロー" id="toc-処理フロー"><span class="toc-section-number">3.2</span> 処理フロー</a></li>
+        </ul></li>
+        <li><a href="#技術仕様" id="toc-技術仕様"><span class="toc-section-number">4</span> 技術仕様</a>
+        <ul>
+        <li><a href="#サポートされるオプション" id="toc-サポートされるオプション"><span class="toc-section-number">4.1</span> サポートされるオプション</a></li>
+        <li><a href="#高解像度レンダリング" id="toc-高解像度レンダリング"><span class="toc-section-number">4.2</span> 高解像度レンダリング</a></li>
+        <li><a href="#svg-サイズ決定アルゴリズム" id="toc-svg-サイズ決定アルゴリズム"><span class="toc-section-number">4.3</span> SVG サイズ決定アルゴリズム</a></li>
+        <li><a href="#単位変換対応" id="toc-単位変換対応"><span class="toc-section-number">4.4</span> 単位変換対応</a></li>
+        </ul></li>
+        <li><a href="#使用方法" id="toc-使用方法"><span class="toc-section-number">5</span> 使用方法</a>
+        <ul>
+        <li><a href="#pandoc-での利用" id="toc-pandoc-での利用"><span class="toc-section-number">5.1</span> Pandoc での利用</a></li>
+        <li><a href="#直接実行" id="toc-直接実行"><span class="toc-section-number">5.2</span> 直接実行</a></li>
+        <li><a href="#最適化ポイント" id="toc-最適化ポイント"><span class="toc-section-number">5.3</span> 最適化ポイント</a></li>
+        </ul></li>
+        <li><a href="#エラーハンドリング" id="toc-エラーハンドリング"><span class="toc-section-number">6</span> エラーハンドリング</a></li>
+        <li><a href="#前提事項制約事項" id="toc-前提事項制約事項"><span class="toc-section-number">7</span> 前提事項、制約事項</a></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>rsvg-convert の独自実装について</H1>
+      
+      
+      <h1 data-number="1" id="概要"><span class="header-section-number">1</span> 概要</h1>
+<p>pub_markdown では、rsvg-convert を独自実装している。<br />
+このスクリプトは、Pandoc で SVG ファイルを含む DOCX ファイルを生成する際に、標準の <code>rsvg-convert</code> の代替として動作する Puppeteer ベースの SVG→PNG 変換ツールである。</p>
+<h1 data-number="2" id="背景と目的"><span class="header-section-number">2</span> 背景と目的</h1>
+<h2 data-number="2.1" id="pandoc-の画像変換の仕組み"><span class="header-section-number">2.1</span> Pandoc の画像変換の仕組み</h2>
+<p>Pandoc が Markdown やその他の形式から DOCX ファイルを生成する際、SVG 画像は直接 DOCX に埋め込むことができない。そのため、以下の流れで処理される。</p>
+<ol type="1">
+<li><strong>SVG 検出</strong>: ドキュメント内の SVG 画像を識別する</li>
+<li><strong>PNG 変換</strong>: SVG を PNG 形式に変換 (<code>rsvg-convert</code> を使用)</li>
+<li><strong>DOCX 埋め込み</strong>: 変換した PNG を DOCX ファイルに埋め込む</li>
+</ol>
+<h2 data-number="2.2" id="標準-rsvg-convert-の課題"><span class="header-section-number">2.2</span> 標準 rsvg-convert の課題</h2>
+<p>従来の <code>rsvg-convert</code> には以下の制約がある。</p>
+<ul>
+<li><strong>フォント互換性</strong>: システムにインストールされていないフォントの処理が困難</li>
+<li><strong>Web フォント対応</strong>: オンラインフォントや CSS <span class="citation" data-cites="import">[@import]</span> の処理が限定的</li>
+<li><strong>レンダリング品質</strong>: 一部の複雑な SVG 要素で期待通りの出力が得られない場合</li>
+</ul>
+<h2 data-number="2.3" id="本スクリプトの利点"><span class="header-section-number">2.3</span> 本スクリプトの利点</h2>
+<p>Puppeteer を使用することで以下の改善を実現している。</p>
+<ol type="1">
+<li><strong>高いフォント互換性</strong>: Chromium エンジンによる豊富なフォント対応</li>
+<li><strong>高解像度出力</strong>: DPI 設定に基づく高精細 PNG 生成</li>
+<li><strong>完全な SVG 仕様対応</strong>: モダンブラウザと同等のレンダリング品質</li>
+</ol>
+<h1 data-number="3" id="アーキテクチャ"><span class="header-section-number">3</span> アーキテクチャ</h1>
+<h2 data-number="3.1" id="ファイル構成"><span class="header-section-number">3.1</span> ファイル構成</h2>
+<pre class="text"><code>rsvg-convert.exe    # Windows 用エントリーポイント
+rsvg-convert.cmd    # Windows 用バッチファイル (rsvg-convert.exe から起動)
+rsvg-convert        # Linux 用シェルファイル (エントリーポイント)
+rsvg-convert.js     # メインの Node.js スクリプト</code></pre>
+<h2 data-number="3.2" id="処理フロー"><span class="header-section-number">3.2</span> 処理フロー</h2>
+<figure>
+<img src="puml_c138c135cb2ef9c4bc71729acd86a2fa7fc00973.svg" alt="処理フロー" />
+<figcaption aria-hidden="true">処理フロー</figcaption>
+</figure>
+<h1 data-number="4" id="技術仕様"><span class="header-section-number">4</span> 技術仕様</h1>
+<h2 data-number="4.1" id="サポートされるオプション"><span class="header-section-number">4.1</span> サポートされるオプション</h2>
+<p>スクリプトは標準 <code>rsvg-convert</code> と互換性のある以下のオプションをサポートする。</p>
+<ul>
+<li><code>-f png</code>: 出力形式 (PNG 固定)</li>
+<li><code>--dpi-x N</code>: 水平解像度 (デフォルト: 96)</li>
+<li><code>--dpi-y N</code>: 垂直解像度 (デフォルト: 96)</li>
+</ul>
+<h2 data-number="4.2" id="高解像度レンダリング"><span class="header-section-number">4.2</span> 高解像度レンダリング</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> scale <span class="op">=</span> <span class="bu">Math</span><span class="op">.</span><span class="fu">max</span>(dpiX<span class="op">,</span> dpiY) <span class="op">*</span> <span class="dv">3</span> <span class="op">/</span> <span class="dv">96</span><span class="op">;</span></span></code></pre></div>
+<p>指定された DPI の 3 倍でレンダリングを行い、高精細な出力を実現している。</p>
+<h2 data-number="4.3" id="svg-サイズ決定アルゴリズム"><span class="header-section-number">4.3</span> SVG サイズ決定アルゴリズム</h2>
+<p>優先順位に従って SVG の実際のサイズを決定する。</p>
+<ol type="1">
+<li><strong>width/height 属性</strong>: <code>width="100px" height="50px"</code> など単位付き値</li>
+<li><strong>viewBox 属性</strong>: <code>viewBox="0 0 100 50"</code> の幅・高さ</li>
+<li><strong>実レンダリングサイズ</strong>: ブラウザでの実際の描画サイズ</li>
+</ol>
+<h2 data-number="4.4" id="単位変換対応"><span class="header-section-number">4.4</span> 単位変換対応</h2>
+<p>SVG で使用される各種単位を正確にピクセルに変換する。</p>
+<ul>
+<li><strong>px</strong>: そのまま (基準単位)</li>
+<li><strong>pt</strong>: 1pt = 1.25px</li>
+<li><strong>pc</strong>: 1pc = 15px<br />
+</li>
+<li><strong>mm</strong>: 1mm ≈ 3.78px</li>
+<li><strong>cm</strong>: 1cm = 37.8px</li>
+<li><strong>in</strong>: 1in = 96px</li>
+</ul>
+<h1 data-number="5" id="使用方法"><span class="header-section-number">5</span> 使用方法</h1>
+<h2 data-number="5.1" id="pandoc-での利用"><span class="header-section-number">5.1</span> Pandoc での利用</h2>
+<p>通常の Pandoc 使用時に、システムの <code>rsvg-convert</code> の代わりに本スクリプトが自動的に呼び出される。</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> input.md <span class="at">-o</span> output.docx</span></code></pre></div>
+<h2 data-number="5.2" id="直接実行"><span class="header-section-number">5.2</span> 直接実行</h2>
+<p>コマンドラインから直接 SVG 変換も可能である。</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;&lt;svg width=&#39;100&#39; height=&#39;100&#39;&gt;...&lt;/svg&gt;&quot;</span> <span class="kw">|</span> <span class="ex">node</span> rsvg-convert.js</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="bu">echo</span> <span class="st">&quot;&lt;svg&gt;...&lt;/svg&gt;&quot;</span> <span class="kw">|</span> <span class="ex">node</span> rsvg-convert.js <span class="at">--dpi-x</span> 300 <span class="at">--dpi-y</span> 300</span></code></pre></div>
+<h2 data-number="5.3" id="最適化ポイント"><span class="header-section-number">5.3</span> 最適化ポイント</h2>
+<ul>
+<li><code>--no-sandbox</code> フラグでセキュリティオーバーヘッドを削減</li>
+<li><code>waitUntil:'load'</code> で外部リソースの完全読み込みを保証</li>
+<li><code>omitBackground:true</code> で透明背景を維持</li>
+</ul>
+<h1 data-number="6" id="エラーハンドリング"><span class="header-section-number">6</span> エラーハンドリング</h1>
+<p>主要なエラーケースと対応を以下に示す。</p>
+<ul>
+<li><strong>空の STDIN</strong>: 終了コード 2 で異常終了</li>
+<li><strong>非 PNG 形式指定</strong>: 終了コード 1 で異常終了<br />
+</li>
+<li><strong>Puppeteer エラー</strong>: 終了コード 3 で詳細エラー出力</li>
+</ul>
+<h1 data-number="7" id="前提事項制約事項"><span class="header-section-number">7</span> 前提事項、制約事項</h1>
+<ul>
+<li>PNG 出力のみサポート (SVG、PDF 等は未対応)</li>
+<li>Node.js + Puppeteer 環境が必要</li>
+</ul>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>

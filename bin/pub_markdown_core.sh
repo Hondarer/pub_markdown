@@ -256,12 +256,6 @@ fi
 if [[ "$autoSetDate" == "" ]]; then
     autoSetDate="false"
 fi
-# autoSetDate が true の場合、各ドキュメント間でタイムスタンプに差異が発生しないように実行時間を記憶する
-if [[ "$autoSetDate" == "true" ]]; then
-    export EXEC_DATE=`date -R`
-else
-    export -n EXEC_DATE
-fi
 
 # 設定ファイルに autoSetAuthor が指定されなかった場合の値を false にする
 if [[ "$autoSetAuthor" == "" ]]; then

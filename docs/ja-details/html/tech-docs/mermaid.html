@@ -1,0 +1,294 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <meta name="author" content="Tetsuo Honda" />
+  <title>Pandoc Mermaid Lua フィルタ (mermaid.lua)</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">Pandoc Mermaid Lua フィルタ (mermaid.lua)</span>
+        <ul class="nav pull-right doc-info">
+                    <li><p class="navbar-text">Tetsuo Honda</p></li>
+                              <li><p class="navbar-text">Sun, 7 Sep 2025 19:15:26 +0900 ac03c35</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#概要" id="toc-概要"><span class="toc-section-number">1</span> 概要</a></li>
+        <li><a href="#基本的な動作フロー" id="toc-基本的な動作フロー"><span class="toc-section-number">2</span> 基本的な動作フロー</a>
+        <ul>
+        <li><a href="#コードブロックの検出と処理" id="toc-コードブロックの検出と処理"><span class="toc-section-number">2.1</span> コードブロックの検出と処理</a></li>
+        <li><a href="#キャプション処理" id="toc-キャプション処理"><span class="toc-section-number">2.2</span> キャプション処理</a></li>
+        <li><a href="#クロスプラットフォーム対応" id="toc-クロスプラットフォーム対応"><span class="toc-section-number">2.3</span> クロスプラットフォーム対応</a>
+        <ul>
+        <li><a href="#windows-環境での文字エンコーディング処理" id="toc-windows-環境での文字エンコーディング処理"><span class="toc-section-number">2.3.1</span> Windows 環境での文字エンコーディング処理</a></li>
+        <li><a href="#実行コマンドの選択" id="toc-実行コマンドの選択"><span class="toc-section-number">2.3.2</span> 実行コマンドの選択</a></li>
+        </ul></li>
+        <li><a href="#ファイル生成処理" id="toc-ファイル生成処理"><span class="toc-section-number">2.4</span> ファイル生成処理</a></li>
+        <li><a href="#mermaid-cli-実行" id="toc-mermaid-cli-実行"><span class="toc-section-number">2.5</span> Mermaid-CLI 実行</a></li>
+        </ul></li>
+        <li><a href="#svg-補正-パッチ-処理の詳細" id="toc-svg-補正-パッチ-処理の詳細"><span class="toc-section-number">3</span> SVG 補正 (パッチ) 処理の詳細</a>
+        <ul>
+        <li><a href="#問題の背景" id="toc-問題の背景"><span class="toc-section-number">3.1</span> 問題の背景</a></li>
+        <li><a href="#補正処理の実装" id="toc-補正処理の実装"><span class="toc-section-number">3.2</span> 補正処理の実装</a>
+        <ul>
+        <li><a href="#viewbox-からサイズ情報を抽出" id="toc-viewbox-からサイズ情報を抽出"><span class="toc-section-number">3.2.1</span> ViewBox からサイズ情報を抽出</a></li>
+        <li><a href="#スタイル属性の書き換え" id="toc-スタイル属性の書き換え"><span class="toc-section-number">3.2.2</span> スタイル属性の書き換え</a></li>
+        <li><a href="#svg-属性の書き換え" id="toc-svg-属性の書き換え"><span class="toc-section-number">3.2.3</span> SVG 属性の書き換え</a></li>
+        </ul></li>
+        <li><a href="#補正前後の比較" id="toc-補正前後の比較"><span class="toc-section-number">3.3</span> 補正前後の比較</a></li>
+        </ul></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>Pandoc Mermaid Lua フィルタ (mermaid.lua)</H1>
+      
+      
+      <h1 data-number="1" id="概要"><span class="header-section-number">1</span> 概要</h1>
+<p>この Lua フィルタは、Pandoc 文書内の Mermaid コードブロックを自動的に SVG 画像に変換するためのフィルタです。mermaid-cli (mmdc) を使用して Mermaid 記法をレンダリングし、生成された SVG ファイルを最適化して文書に埋め込みます。</p>
+<h1 data-number="2" id="基本的な動作フロー"><span class="header-section-number">2</span> 基本的な動作フロー</h1>
+<h2 data-number="2.1" id="コードブロックの検出と処理"><span class="header-section-number">2.1</span> コードブロックの検出と処理</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">CodeBlock</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">el</span><span class="op">)</span> </span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">local</span> <span class="va">code_class</span> <span class="op">=</span> <span class="va">el</span><span class="op">.</span><span class="va">classes</span><span class="op">[</span><span class="dv">1</span><span class="op">]</span> <span class="kw">or</span> <span class="st">&quot;&quot;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">local</span> <span class="va">lang</span><span class="op">,</span> <span class="va">filename</span> <span class="op">=</span> <span class="va">code_class</span><span class="op">:</span><span class="fu">match</span><span class="op">(</span><span class="st">&quot;^([^:]+):(.+)$&quot;</span><span class="op">)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="va">lang</span> <span class="cf">then</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="va">lang</span> <span class="op">=</span> <span class="va">code_class</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- コード種別判定</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="va">lang</span> <span class="op">~=</span> <span class="st">&quot;mermaid&quot;</span> <span class="cf">then</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">el</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span></code></pre></div>
+<ul>
+<li>コードブロックのクラス属性を解析</li>
+<li><code>mermaid</code> または <code>mermaid:filename</code> 形式をサポート</li>
+<li>mermaid 以外のコードブロックはそのまま通過</li>
+</ul>
+<h2 data-number="2.2" id="キャプション処理"><span class="header-section-number">2.2</span> キャプション処理</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">-- caption 属性があれば優先してキャプションに</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> <span class="va">caption</span> <span class="op">=</span> <span class="va">el</span><span class="op">.</span><span class="va">attributes</span><span class="op">[</span><span class="st">&quot;caption&quot;</span><span class="op">]</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">caption</span> <span class="cf">then</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">el</span><span class="op">.</span><span class="va">attributes</span><span class="op">[</span><span class="st">&quot;caption&quot;</span><span class="op">]</span> <span class="op">=</span> <span class="kw">nil</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="cf">elseif</span> <span class="va">filename</span> <span class="cf">then</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">filename</span> <span class="op">=</span> <span class="va">filename</span><span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&quot;%.[mM][mM][dD]$&quot;</span><span class="op">,</span> <span class="st">&quot;&quot;</span><span class="op">)</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="va">caption</span> <span class="op">=</span> <span class="va">filename</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span></code></pre></div>
+<ul>
+<li><code>caption</code> 属性が指定されていればそれを使用</li>
+<li>なければファイル名部分 (拡張子除く) をキャプションとして使用</li>
+</ul>
+<h2 data-number="2.3" id="クロスプラットフォーム対応"><span class="header-section-number">2.3</span> クロスプラットフォーム対応</h2>
+<h3 data-number="2.3.1" id="windows-環境での文字エンコーディング処理"><span class="header-section-number">2.3.1</span> Windows 環境での文字エンコーディング処理</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> utf8_to_active_cp<span class="op">(</span><span class="va">text</span><span class="op">)</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="kw">local</span> <span class="va">os_name</span> <span class="op">=</span> <span class="fu">os.getenv</span><span class="op">(</span><span class="st">&quot;OS&quot;</span><span class="op">)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="kw">not</span> <span class="va">os_name</span> <span class="kw">or</span> <span class="kw">not</span> <span class="fu">string.match</span><span class="op">(</span><span class="va">os_name</span><span class="op">:</span><span class="fu">lower</span><span class="op">(),</span> <span class="st">&quot;windows&quot;</span><span class="op">)</span> <span class="cf">then</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="va">text</span>  <span class="co">-- Linux環境ではそのまま</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- PowerShellを使用してUTF-8からアクティブコードページに変換</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="kw">local</span> <span class="va">temp_file</span> <span class="op">=</span> create_temp_file<span class="op">()</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- ... PowerShell経由でのエンコーディング変換処理</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code></pre></div>
+<ul>
+<li>Windows 環境でのファイルパス文字化け対策</li>
+<li>PowerShell を使用して UTF-8 文字列をシステムのアクティブコードページに変換</li>
+</ul>
+<h3 data-number="2.3.2" id="実行コマンドの選択"><span class="header-section-number">2.3.2</span> 実行コマンドの選択</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> <span class="cn">MMDC_CMD</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">package.config</span><span class="op">:</span><span class="fu">sub</span><span class="op">(</span><span class="dv">1</span><span class="op">,</span><span class="dv">1</span><span class="op">)</span> <span class="op">==</span> <span class="st">&#39;</span><span class="sc">\\</span><span class="st">&#39;</span> <span class="cf">then</span> <span class="co">-- Windows</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="cn">MMDC_CMD</span> <span class="op">=</span> <span class="st">&quot;</span><span class="sc">\\</span><span class="st">node_modules</span><span class="sc">\\</span><span class="st">.bin</span><span class="sc">\\</span><span class="st">mmdc.cmd&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="cf">else</span> <span class="co">-- Unix-like systems</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cn">MMDC_CMD</span> <span class="op">=</span> <span class="st">&quot;/mmdc-wrapper.sh&quot;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span></code></pre></div>
+<h2 data-number="2.4" id="ファイル生成処理"><span class="header-section-number">2.4</span> ファイル生成処理</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> <span class="va">image_filename</span> <span class="op">=</span> <span class="fu">string.format</span><span class="op">(</span><span class="st">&quot;mermaid_%s.svg&quot;</span><span class="op">,</span> <span class="va">utils</span><span class="op">.</span>sha1<span class="op">(</span><span class="va">el</span><span class="op">.</span><span class="va">text</span><span class="op">))</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> <span class="va">mmd_filename</span> <span class="op">=</span> <span class="fu">string.format</span><span class="op">(</span><span class="st">&quot;mermaid_%s.mmd&quot;</span><span class="op">,</span> <span class="va">utils</span><span class="op">.</span>sha1<span class="op">(</span><span class="va">el</span><span class="op">.</span><span class="va">text</span><span class="op">))</span></span></code></pre></div>
+<ul>
+<li>SHA1 ハッシュを使用してユニークなファイル名を生成</li>
+<li>同じ内容の Mermaid コードは同じファイル名になり、重複処理を回避</li>
+</ul>
+<h2 data-number="2.5" id="mermaid-cli-実行"><span class="header-section-number">2.5</span> Mermaid-CLI 実行</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">os.execute</span><span class="op">(</span><span class="fu">string.format</span><span class="op">(</span><span class="st">&quot;cd %s &amp;&amp; </span><span class="sc">\&quot;</span><span class="st">%s</span><span class="sc">\&quot;</span><span class="st"> -i %s -o %s -b transparent | grep -v -E </span><span class="sc">\&quot;</span><span class="st">Generating|deprecated|Store is a function</span><span class="sc">\&quot;</span><span class="st">&quot;</span><span class="op">,</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="va">_resource_dir</span><span class="op">,</span> <span class="va">_root_dir</span> <span class="op">..</span> <span class="cn">MMDC_CMD</span><span class="op">,</span> <span class="va">_mmd_filename</span><span class="op">,</span> <span class="va">_image_filename</span><span class="op">))</span></span></code></pre></div>
+<ul>
+<li>一時的な <code>.mmd</code> ファイルを作成</li>
+<li>mmdc (mermaid-cli) を実行してSVGを生成</li>
+<li>背景を透明に設定 (<code>-b transparent</code>)</li>
+<li>不要な出力メッセージをフィルタリング</li>
+</ul>
+<h1 data-number="3" id="svg-補正-パッチ-処理の詳細"><span class="header-section-number">3</span> SVG 補正 (パッチ) 処理の詳細</h1>
+<h2 data-number="3.1" id="問題の背景"><span class="header-section-number">3.1</span> 問題の背景</h2>
+<p>Mermaid-CLI で生成される SVG には以下の問題がある:</p>
+<ol type="1">
+<li><strong>サイズ指定が不適切</strong>: <code>width="100%"</code> で出力される</li>
+<li><strong>スタイル属性の問題</strong>: <code>max-width</code> が設定されているが、固定サイズが必要な場面で問題となる</li>
+</ol>
+<h2 data-number="3.2" id="補正処理の実装"><span class="header-section-number">3.2</span> 補正処理の実装</h2>
+<p><code>width="100%"</code> による予期しないスケーリングを防止する。</p>
+<h3 data-number="3.2.1" id="viewbox-からサイズ情報を抽出"><span class="header-section-number">3.2.1</span> ViewBox からサイズ情報を抽出</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="kw">local</span> <span class="va">viewBox</span> <span class="op">=</span> <span class="va">svg_content</span><span class="op">:</span><span class="fu">match</span><span class="op">(</span><span class="st">&#39;viewBox=&quot;([^&quot;]+)&quot;&#39;</span><span class="op">)</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> <span class="va">viewBox</span> <span class="cf">then</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="kw">local</span> <span class="cn">_</span><span class="op">,</span> <span class="cn">_</span><span class="op">,</span> <span class="va">w</span><span class="op">,</span> <span class="va">h</span> <span class="op">=</span> <span class="va">viewBox</span><span class="op">:</span><span class="fu">match</span><span class="op">(</span><span class="st">&quot;([%-%d%.]+) ([%-%d%.]+) ([%d%.]+) ([%d%.]+)&quot;</span><span class="op">)</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="va">width</span> <span class="op">=</span> <span class="va">w</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">height</span> <span class="op">=</span> <span class="va">h</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="cf">end</span></span></code></pre></div>
+<p><strong>処理内容:</strong></p>
+<ul>
+<li>SVG の <code>viewBox</code> 属性から実際の描画領域サイズを取得</li>
+<li><code>viewBox="-50 -10 485 259"</code> の場合、幅 485px、高さ 259px を抽出</li>
+</ul>
+<h3 data-number="3.2.2" id="スタイル属性の書き換え"><span class="header-section-number">3.2.2</span> スタイル属性の書き換え</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">patched_svg</span> <span class="op">=</span> <span class="va">patched_svg</span><span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&#39;(&lt;svg[^&gt;]-)style=&quot;([^&quot;]*)&quot;&#39;</span><span class="op">,</span> <span class="kw">function</span><span class="op">(</span><span class="va">svg_tag</span><span class="op">,</span> <span class="va">style</span><span class="op">)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- max-width を削除</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="va">style</span> <span class="op">=</span> <span class="va">style</span><span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&quot;max%-width:[^;]*;? ?&quot;</span><span class="op">,</span> <span class="st">&quot;&quot;</span><span class="op">)</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- width / height を削除</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="va">style</span> <span class="op">=</span> <span class="va">style</span><span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&quot;width:[^;]*;?&quot;</span><span class="op">,</span> <span class="st">&quot;&quot;</span><span class="op">)</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="va">style</span> <span class="op">=</span> <span class="va">style</span><span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&quot;height:[^;]*;?&quot;</span><span class="op">,</span> <span class="st">&quot;&quot;</span><span class="op">)</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="co">-- 末尾に width / height 追加</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">string.format</span><span class="op">(</span><span class="st">&#39;%sstyle=&quot;width:%spx; height:%spx; %s&quot;&#39;</span><span class="op">,</span> <span class="va">svg_tag</span><span class="op">,</span> <span class="va">width</span><span class="op">,</span> <span class="va">height</span><span class="op">,</span> <span class="va">style</span><span class="op">)</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span><span class="op">,</span> <span class="dv">1</span><span class="op">)</span></span></code></pre></div>
+<p><strong>処理内容:</strong></p>
+<ul>
+<li>ルート SVG 要素の <code>style</code> 属性のみを対象 (<code>end, 1</code> で最初の要素のみ)</li>
+<li><code>max-width</code>、既存の <code>width</code>、<code>height</code> プロパティを削除</li>
+<li>ViewBox から取得した固定サイズを設定</li>
+</ul>
+<h3 data-number="3.2.3" id="svg-属性の書き換え"><span class="header-section-number">3.2.3</span> SVG 属性の書き換え</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode lua"><code class="sourceCode lua"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="va">patched_svg</span> <span class="op">=</span> <span class="va">patched_svg</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&#39;(&lt;svg[^&gt;]*)%swidth=&quot;[^&quot;]*&quot;&#39;</span><span class="op">,</span> <span class="st">&#39;%1&#39;</span><span class="op">,</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&#39;(&lt;svg[^&gt;]*)%sheight=&quot;[^&quot;]*&quot;&#39;</span><span class="op">,</span> <span class="st">&#39;%1&#39;</span><span class="op">,</span> <span class="dv">1</span><span class="op">)</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">:</span><span class="fu">gsub</span><span class="op">(</span><span class="st">&#39;(&lt;svg)&#39;</span><span class="op">,</span> <span class="st">&#39;%1 width=&quot;&#39;</span> <span class="op">..</span> <span class="va">width</span> <span class="op">..</span> <span class="st">&#39;px&quot; height=&quot;&#39;</span> <span class="op">..</span> <span class="va">height</span> <span class="op">..</span> <span class="st">&#39;px&quot;&#39;</span><span class="op">,</span> <span class="dv">1</span><span class="op">)</span></span></code></pre></div>
+<p><strong>処理内容:</strong></p>
+<ul>
+<li>既存の <code>width</code>、<code>height</code> 属性を削除</li>
+<li>ViewBox から取得したサイズで新しい <code>width</code>、<code>height</code> 属性を追加</li>
+</ul>
+<h2 data-number="3.3" id="補正前後の比較"><span class="header-section-number">3.3</span> 補正前後の比較</h2>
+<p><strong>補正前:</strong></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">svg</span><span class="ot"> aria-roledescription=</span><span class="st">&quot;sequence&quot;</span><span class="ot"> role=</span><span class="st">&quot;graphics-document document&quot;</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ot">     viewBox=</span><span class="st">&quot;-50 -10 485 259&quot;</span> </span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="ot">     style=</span><span class="st">&quot;max-width: 485px; background-color: transparent;&quot;</span> </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="ot">     xmlns:xlink=</span><span class="st">&quot;http://www.w3.org/1999/xlink&quot;</span> </span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ot">     xmlns=</span><span class="st">&quot;http://www.w3.org/2000/svg&quot;</span> </span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="ot">     width=</span><span class="st">&quot;100%&quot;</span> </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="ot">     id=</span><span class="st">&quot;my-svg&quot;</span>&gt;</span></code></pre></div>
+<p><strong>補正後:</strong></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>&lt;<span class="kw">svg</span><span class="ot"> width=</span><span class="st">&quot;485px&quot;</span><span class="ot"> height=</span><span class="st">&quot;259px&quot;</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="ot">     aria-roledescription=</span><span class="st">&quot;sequence&quot;</span><span class="ot"> role=</span><span class="st">&quot;graphics-document document&quot;</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="ot">     viewBox=</span><span class="st">&quot;-50 -10 485 259&quot;</span> </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="ot">     style=</span><span class="st">&quot;width:485px; height:259px; background-color: transparent;&quot;</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="ot">     xmlns:xlink=</span><span class="st">&quot;http://www.w3.org/1999/xlink&quot;</span> </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="ot">     xmlns=</span><span class="st">&quot;http://www.w3.org/2000/svg&quot;</span> </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="ot">     id=</span><span class="st">&quot;my-svg&quot;</span>&gt;</span></code></pre></div>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>

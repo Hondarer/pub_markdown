@@ -1,20 +1,14 @@
 #!/usr/bin/env bash
 
 # get_file_date FILEPATH
-#   ・git コマンドが使えない           → 空文字
-#   ・Git 管理下にない                 → 空文字
-#   ・変更あり                         → ファイルの最終更新時刻 (RFC2822) + " (uncommitted)"
-#   ・変更なし                         → 最終コミット時刻 (RFC2822)
+#   ・git コマンドが使えない           → ファイルの最終更新時刻 (RFC2822)
+#   ・Git 管理下にない                 → ファイルの最終更新時刻 (RFC2822)
+#   ・Git 管理下にあり、変更あり       → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "*"
+#   ・Git 管理下にあり、変更なし       → 最終コミット時刻 (RFC2822) + " " + 最終コミットID
 get_file_date() {
   local file=$1
 
-  # ─── 0) git コマンドの存在チェック ─────────────────────────────
-  if ! command -v git &>/dev/null; then
-    #echo ""
-    return
-  fi
-
-  # ─── 1) ファイルの絶対パスを取得 ───────────────────────────────
+  # ─── 0) ファイルの絶対パスを取得 ───────────────────────────────
   local abs_file
   if [[ "$file" = /* ]]; then
     # 既に絶対パス
@@ -24,12 +18,26 @@ get_file_date() {
     abs_file="$(cd "$(dirname "$file")" && pwd)/$(basename "$file")"
   fi
 
+  # デバッグ用出力
+  #echo "abs_file=$abs_file" >&2
+
+  # ─── 1) git コマンドの存在チェック ─────────────────────────────
+  if ! command -v git &>/dev/null; then
+    # git コマンドがない → ファイルの最終更新時刻
+    echo "$(LC_TIME=C date -R -r "$abs_file")"
+    return
+  fi
+
   # ─── 2) Git リポジトリのルートを取得 ───────────────────────────
   local repo
   repo=$(git -C "$(dirname "$abs_file")" rev-parse --show-toplevel 2>/dev/null) || {
-    #echo ""
+    # ルートが取得できない → ファイルの最終更新時刻
+    echo "$(LC_TIME=C date -R -r "$abs_file")"
     return
   }
+
+  # デバッグ用出力
+  #echo "repo=$repo" >&2
 
   # ─── 3) リポジトリルートからの相対パスを計算 ─────────────────────
   local rel
@@ -66,30 +74,24 @@ get_file_date() {
   fi
 
   # デバッグ用出力
-  #echo "repo=$repo" >&2
-  #echo "abs_file=$abs_file" >&2
   #echo "rel=$rel" >&2
 
   # ─── 4) 管理下にあるかチェック ─────────────────────────────────
   if ! git -C "$repo" ls-files --error-unmatch -- "$rel" &>/dev/null; then
-    # ファイルの最終更新時刻 + " (uncommitted)"
-    #if date -R -r "$abs_file" &>/dev/null; then
-    #  # あらかじめ親で取得している実行時間を採用する
-    #  echo "${EXEC_DATE} (uncommitted)"
-    #fi
+    # 管理下にない → ファイルの最終更新時刻
+    echo "$(LC_TIME=C date -R -r "$abs_file")"
     return
   fi
 
   # ─── 5) 未コミット差分の有無チェック ─────────────────────────────
   if ! git -C "$repo" diff --quiet HEAD -- "$rel"; then
-    # 差分あり → ファイルの最終更新時刻 + " (uncommitted)"
-    if date -R -r "$abs_file" &>/dev/null; then
-      # あらかじめ親で取得している実行時間を採用する
-      echo "${EXEC_DATE} (uncommitted)"
-    fi
+    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "*"
+    local commit_id
+    commit_id=$(git -C "$repo" log -1 --format=%h -- "$rel")
+    echo "$(LC_TIME=C date -R -r "$abs_file") $commit_id*"
   else
-    # 差分なし → 最終コミットのコミッター日時 (RFC2822)
-    git -C "$repo" log -1 --format=%cD -- "$rel"
+    # 差分なし → 最終コミットのコミッター日時 (RFC2822) + " " + 最終コミットID
+    git -C "$repo" log -1 --format="%cD %h" -- "$rel"
   fi
 }
 

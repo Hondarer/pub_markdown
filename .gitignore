@@ -1,13 +1,13 @@
 # node_modules
-bin/node_modules
+/bin/node_modules
 
 # output
-docs
+#/docs
 
 # oss
-bin/license/jgm-pandoc
-bin/license/pandoc-crossref
-bin/pandoc.exe
-bin/pandoc
-bin/pandoc-crossref.exe
-bin/pandoc-crossref
+/bin/license/jgm-pandoc
+/bin/license/pandoc-crossref
+/bin/pandoc.exe
+/bin/pandoc
+/bin/pandoc-crossref.exe
+/bin/pandoc-crossref
