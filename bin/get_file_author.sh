@@ -82,19 +82,19 @@ get_file_author() {
     has_uncommitted=true
   fi
 
-  # ─── 6) コミッター名を取得 (新しい順、重複排除) ─────────────────
+  # ─── 6) コミッター名を取得 (古い順、重複排除) ─────────────────
   local authors
-  authors=$(git -C "$repo" log --format='%cn' -- "$rel" | \
+  authors=$(git -C "$repo" log --reverse --format='%cn' -- "$rel" | \
     awk '!seen[$0]++')
 
-  # ─── 7) 未コミットの場合、自身の名前を先頭に追加 ─────────────────
+  # ─── 7) 未コミットの場合、自身の名前を末尾に追加 ─────────────────
   if [[ "$has_uncommitted" == true ]]; then
     local current_user
     current_user=$(git -C "$repo" config user.name 2>/dev/null)
-    
+
     if [[ -n "$current_user" ]]; then
-      # 現在のユーザー名を先頭に追加し、重複を排除
-      authors=$(echo -e "$current_user\n$authors" | awk '!seen[$0]++')
+      # 現在のユーザー名を末尾に追加し、重複を排除
+      authors=$(echo -e "$authors\n$current_user" | awk '!seen[$0]++')
     fi
   fi
 

@@ -32,11 +32,20 @@ function Meta(meta)
                 -- 出力形式を判定 (docx 以外かどうか)
                 local output_format = FORMAT or ""
                 
-                if output_format ~= "docx" and #authors >= 2 then
-                    -- docx 以外で著者が 2 人以上の場合、最初の著者 + "et al."
-                    meta.author = authors[1] .. " et al."
+                if output_format ~= "docx" then
+                    -- docx 以外の場合、人数に応じて形式を変更
+                    if #authors == 1 then
+                        -- 1人の場合: {登録者}
+                        meta.author = authors[1]
+                    elseif #authors == 2 then
+                        -- 2人の場合: {登録者}, {編集者}
+                        meta.author = authors[1] .. ", " .. authors[2]
+                    else
+                        -- 3人以上の場合: {登録者}, {最終編集者} et al.
+                        meta.author = authors[1] .. ", " .. authors[#authors] .. " et al."
+                    end
                 else
-                    -- docx 形式または著者が 1 人の場合、元の著者を維持
+                    -- docx 形式の場合、元の著者リストを維持
                     meta.author = authors
                 end
             end
