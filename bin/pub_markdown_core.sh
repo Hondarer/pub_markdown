@@ -682,6 +682,9 @@ for file in "${files[@]}"; do
 
         firstLang=""
         for langElement in ${lang}; do
+
+            export DOCUMENT_LANG=$langElement
+
             if [ "$firstLang" == "" ]; then
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[33m" # 文字色を黄色に設定
@@ -823,6 +826,8 @@ for file in "${files[@]}"; do
             replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${details})
             md_title=$(echo "${replaced_md}" | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
             md_body=$(echo "${replaced_md}" | sed '/^# /d')
+
+            export DOCUMENT_LANG=$langElement
 
             echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
             # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。

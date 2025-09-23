@@ -3,6 +3,14 @@
 
 # output
 #/docs
+/docs/ja/html-self-contain
+/docs/en/dhtml-self-containocx
+/docs/ja-details/html-self-contain
+/docs/en-details/html-self-contain
+/docs/ja/docx
+/docs/en/docx
+/docs/ja-details/docx
+/docs/en-details/docx
 
 # oss
 /bin/license/jgm-pandoc

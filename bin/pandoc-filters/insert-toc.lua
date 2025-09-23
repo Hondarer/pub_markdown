@@ -248,7 +248,8 @@ local function process_toc_command(params_str, current_file)
     -- 引数を構築
     local args = {
         tostring(params.depth),
-        current_file or ""
+        current_file or "",
+        os.getenv("DOCUMENT_LANG") or "ja"
     }
 
     -- exclude パラメータは配列なので、カンマ区切りで結合

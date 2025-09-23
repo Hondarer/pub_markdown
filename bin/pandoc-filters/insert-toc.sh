@@ -22,12 +22,14 @@ cache_modified=false
 # 引数の取得
 DEPTH="$1"
 CURRENT_FILE="$2"
-EXCLUDE="$3"
+DOCUMENT_LANG="${3:-neutral}" # 指定がない場合はニュートラル言語
+EXCLUDE="$4"
 
 # デバッグ用: 引数をエコー
 #echo "# Debug: Received arguments" >&2
 #echo "DEPTH: $DEPTH" >&2
 #echo "CURRENT_FILE: $CURRENT_FILE" >&2
+#echo "DOCUMENT_LANG: $DOCUMENT_LANG" >&2
 #echo "EXCLUDE: $EXCLUDE" >&2
 
 # ========================================
@@ -191,15 +193,56 @@ update_memory_cache_title() {
 # 引数: ファイルパス 言語コード
 extract_markdown_title() {
     local file_path="$1"
-    local lang_code="${2:-ja}"
+    local lang_code="$2"
 
     if [[ ! -f "$file_path" ]]; then
         return 1
     fi
 
-    # 最初の # 見出しを検索（bash 内蔵機能使用）
+    # 言語コード対応のタイトル抽出
+    local in_target_lang_block=false
     local title=""
     local line_count=0
+
+    while IFS= read -r line && ((line_count < 100)); do
+        # 言語コードブロックの開始コメント: <!--ja: または <!--ja:--> 形式
+        if [[ "$line" =~ ^[[:space:]]*\<!--${lang_code}:([[:space:]]*--\>)?[[:space:]]*$ ]]; then
+            in_target_lang_block=true
+            ((line_count++))
+            continue
+        fi
+
+        # 言語コードブロックの終了コメント: :ja--> または <!--:ja--> 形式
+        if [[ "$line" =~ ^[[:space:]]*(\<!--[[:space:]]*)?:${lang_code}[[:space:]]*--\>[[:space:]]*$ ]]; then
+            in_target_lang_block=false
+            # 対象言語のタイトルが見つかった場合は処理終了
+            if [[ -n "$title" ]]; then
+                break
+            fi
+            ((line_count++))
+            continue
+        fi
+
+        # 対象言語ブロック内でレベル1見出しを検索
+        if [[ "$in_target_lang_block" == true && "$line" =~ ^#[[:space:]](.*)$ ]]; then
+            title="${BASH_REMATCH[1]}"
+            # bash parameter expansion でトリム処理
+            title="${title#"${title%%[![:space:]]*}"}"  # 先頭空白除去
+            title="${title%"${title##*[![:space:]]}"}"  # 末尾空白除去
+            break
+        fi
+
+        ((line_count++))
+    done < "$file_path"
+
+    # 対象言語のタイトルが見つかった場合
+    if [[ -n "$title" ]]; then
+        printf '%s:%s' "$lang_code" "$title"
+        return 0
+    fi
+
+    # 対象言語のタイトルが見つからない場合、従来の処理（最初の # 見出し）を実行
+    line_count=0
     while IFS= read -r line && ((line_count < 50)); do
         if [[ "$line" =~ ^#[[:space:]](.*)$ ]]; then
             title="${BASH_REMATCH[1]}"
@@ -272,8 +315,8 @@ is_excluded() {
 generate_toc() {
     local base_dir="$1"
     local max_depth="$2"
-    local exclude_patterns="$3"
-    local lang_code="$4"
+    local lang_code="$3"
+    local exclude_patterns="$4"
 
     #echo "# 目次生成開始" >&2
 
@@ -520,6 +563,7 @@ generate_toc() {
 scan_directory() {
     local start_dir="$1"
     local max_depth="$2"
+    local lang_code="$3"
 
     #echo "# ディレクトリ探索開始: $start_dir (depth=$max_depth)" >&2
 
@@ -567,13 +611,13 @@ scan_directory() {
             unsorted_keys+=("$abs_path")
 
             # Markdownタイトル抽出（キャッシュに指定言語のタイトルがない場合のみ）
-            if ! has_lang_title_in_memory_cache "$abs_path" "ja"; then
+            if ! has_lang_title_in_memory_cache "$abs_path" "$lang_code"; then
                 #echo "# Markdownタイトル抽出実行: $abs_path" >&2
                 local lang_title
-                if lang_title=$(extract_markdown_title "$abs_path" "ja"); then
+                if lang_title=$(extract_markdown_title "$abs_path" "$lang_code"); then
                     local title
                     title="${lang_title#*:}"
-                    update_memory_cache_title "$abs_path" "ja" "$title"
+                    update_memory_cache_title "$abs_path" "$lang_code" "$title"
                 fi
             #else
                 #echo "# Markdownタイトル抽出スキップ (キャッシュ済): $abs_path" >&2
@@ -606,7 +650,7 @@ fi
 #echo "# 探索基準ディレクトリ: $current_dir" >&2
 
 # ディレクトリ探索実行
-scan_directory "$current_dir" "$DEPTH"
+scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
 
 # キャッシュを永続化ファイルに保存
 save_cache
@@ -625,7 +669,7 @@ mapfile -t sorted_keys < <(printf '%s\n' "${unsorted_keys[@]}" | sort)
 #echo '```' >&2
 
 # 実際の目次生成
-generate_toc "$current_dir" "$DEPTH" "$EXCLUDE" "ja"
+generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE"
 
 # PROGRESS
 #printf '%s\n' " -> done" >&2
