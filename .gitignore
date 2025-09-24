@@ -4,18 +4,10 @@
 # output
 #/docs
 /docs/ja/html-self-contain
-/docs/en/dhtml-self-containocx
+/docs/en/dhtml-self-contain
 /docs/ja-details/html-self-contain
 /docs/en-details/html-self-contain
 /docs/ja/docx
 /docs/en/docx
 /docs/ja-details/docx
 /docs/en-details/docx
-
-# oss
-/bin/license/jgm-pandoc
-/bin/license/pandoc-crossref
-/bin/pandoc.exe
-/bin/pandoc
-/bin/pandoc-crossref.exe
-/bin/pandoc-crossref
