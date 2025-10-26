@@ -1,0 +1,98 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <title>drawio.svg 変換テスト</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <link rel="stylesheet" href="../../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">drawio.svg 変換テスト</span>
+        <ul class="nav pull-right doc-info">
+                              <li><p class="navbar-text">Mon, 27 Oct 2025 07:43:04 +0900</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#問題" id="toc-問題"><span class="toc-section-number">1</span> 問題</a></li>
+        <li><a href="#正常に動作するもの" id="toc-正常に動作するもの"><span class="toc-section-number">2</span> 正常に動作するもの</a></li>
+        <li><a href="#正しく動作しないもの" id="toc-正しく動作しないもの"><span class="toc-section-number">3</span> 正しく動作しないもの</a></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>drawio.svg 変換テスト</H1>
+      
+      
+      <p>draw.io の SVG と Pandoc による Word 変換の問題について、整理しますね。</p>
+<h1 data-number="1" id="問題"><span class="header-section-number">1</span> 問題</h1>
+<p>draw.io は図を SVG (Scalable Vector Graphics: 拡大縮小可能なベクター画像形式) としてエクスポートする際、テキスト部分を <code>foreignObject</code> という要素で表現することがあります。この <code>foreignObject</code> は、SVG の中に HTML を埋め込むための仕組みです。draw.io はこれを使って、テキストの改行や装飾を柔軟に表現しています。</p>
+<p>しかし、この <code>foreignObject</code> は比較的新しい SVG の機能で、すべてのソフトウェアが対応しているわけではありません。特に Microsoft Word は <code>foreignObject</code> を処理できないため、Pandoc で Markdown から Word へ変換する際に以下のような問題が起きます。</p>
+<ul>
+<li>Word 上で「Text is not SVG - cannot display」という警告が表示される</li>
+<li>図の中のテキストが表示されない</li>
+<li>図形だけが表示され、説明文や注釈が消える</li>
+</ul>
+<p>これらは、</p>
+<ul>
+<li>テキスト
+<ul>
+<li>ワードラップ</li>
+<li>フォーマットされたテキスト</li>
+</ul></li>
+</ul>
+<p>のチェックを外すことで Pandoc が正しく処理できるようになります。</p>
+<h1 data-number="2" id="正常に動作するもの"><span class="header-section-number">2</span> 正常に動作するもの</h1>
+<figure>
+<img src="images/ok.drawio.svg" alt="ok" />
+<figcaption aria-hidden="true">ok</figcaption>
+</figure>
+<h1 data-number="3" id="正しく動作しないもの"><span class="header-section-number">3</span> 正しく動作しないもの</h1>
+<figure>
+<img src="images/ng.drawio.svg" alt="ng" />
+<figcaption aria-hidden="true">ng</figcaption>
+</figure>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>
