@@ -330,12 +330,19 @@ English Visible in Markdown
 <li>📄 <a href="sample/mermaid-caption.html">Mermaid キャプションのサンプル</a></li>
 <li>📄 <a href="sample/plantuml.html">plantuml</a></li>
 </ul></li>
-<li>📁 <a href="subfolder/index.html">サブフォルダの index</a></li>
+<li>📁 <a href="subfolder/index.html">サブフォルダの index</a>
+<ul>
+<li>📁 svg-test
+<ul>
+<li>📄 <a href="subfolder/svg-test/README.html">drawio.svg 変換テスト</a></li>
+</ul></li>
+</ul></li>
 <li>📁 tech-docs
 <ul>
 <li>📄 <a href="tech-docs/chrome-wrapper.html">chrome-wrapper について</a></li>
 <li>📄 <a href="tech-docs/insert-toc.html">Pandoc 目次挿入 Lua フィルタ (insert-toc.lua)</a></li>
 <li>📄 <a href="tech-docs/mermaid.html">Pandoc Mermaid Lua フィルタ (mermaid.lua)</a></li>
+<li>📄 <a href="tech-docs/pandoc-linebreak.html">Pandoc の改行コード: Windows / Linux 差異の実装調査</a></li>
 <li>📄 <a href="tech-docs/pipeline.html">パイプラインに関する関連知見</a></li>
 <li>📄 <a href="tech-docs/rsvg-convert.html">rsvg-convert の独自実装について</a></li>
 </ul></li>
@@ -641,7 +648,8 @@ abstract: &quot;概要&quot;           &lt;- 「概要」プロパティ
 <p><code>pandoc -D 'html'</code> コマンドで出力されたデフォルトテンプレートに置き換えることで、デフォルトの出力に変更できる。</p>
 <h2 data-number="16.2" id="docx"><span class="header-section-number">16.2</span> docx</h2>
 <p><code>pandoc -o custom-reference.docx --print-default-data-file reference.docx</code> コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、デフォルトの出力に変更できる。</p>
-<p>図の幅はページサイズおよび余白に基づいて Pandoc で調整される。とじしろ (w:gutter) は考慮されないため、とじしろを定義した場合は図の横幅が期待通りとならない。テンプレート作成時は留意すること。</p>
+<p>図の幅はページサイズおよび余白に基づいて Pandoc で調整される。<del>とじしろ (w:gutter) は考慮されないため、とじしろを定義した場合は図の横幅が期待通りとならない。テンプレート作成時は留意すること。</del><br />
+→ Pandoc 3.1.6 より、ページ設定の余白のとじしろが反映されていないバグが修正された。<a href="https://github.com/jgm/pandoc/issues/8946">Gutters on margin specs not picked up from custom-reference.docx (HTML to .docx) #8946</a></p>
 <h1 data-number="17" id="発行方法"><span class="header-section-number">17</span> 発行方法</h1>
 <ul>
 <li>Visual Studio Code で、タスク “exec pandoc” (Ctrl + Shift + B) を実行する。</li>

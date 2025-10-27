@@ -1,0 +1,362 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <title>Pandoc の改行コード: Windows/Linux 差異の実装調査</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">Pandoc の改行コード: Windows/Linux 差異の実装調査</span>
+        <ul class="nav pull-right doc-info">
+                              <li><p class="navbar-text">Tue, 28 Oct 2025 05:56:11 +0900</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#実装アーキテクチャ-出力段階での変換" id="toc-実装アーキテクチャ-出力段階での変換"><span class="toc-section-number">1</span> 実装アーキテクチャ: 出力段階での変換</a></li>
+        <li><a href="#プラットフォーム検出と条件付きコンパイル" id="toc-プラットフォーム検出と条件付きコンパイル"><span class="toc-section-number">2</span> プラットフォーム検出と条件付きコンパイル</a></li>
+        <li><a href="#eol-オプションの実装背景と歴史" id="toc-eol-オプションの実装背景と歴史"><span class="toc-section-number">3</span> –eol オプションの実装背景と歴史</a>
+        <ul>
+        <li><a href="#年-4-月---issue-2097surprisingly-line-endings-vary-by-os.." id="toc-年-4-月---issue-2097surprisingly-line-endings-vary-by-os.."><span class="toc-section-number">3.1</span> 2015 年 4 月 - Issue #2097「Surprisingly, line endings vary by OS..」</a></li>
+        <li><a href="#年---issue-3663add-eol-writer-option" id="toc-年---issue-3663add-eol-writer-option"><span class="toc-section-number">3.2</span> 2017 年 - Issue #3663「Add EOL writer option」</a></li>
+        <li><a href="#年-11-月---pandoc-2.0-でリリース" id="toc-年-11-月---pandoc-2.0-でリリース"><span class="toc-section-number">3.3</span> 2017 年 11 月 - Pandoc 2.0 でリリース</a></li>
+        </ul></li>
+        <li><a href="#eol-オプションの使用方法" id="toc-eol-オプションの使用方法"><span class="toc-section-number">4</span> –eol オプションの使用方法</a>
+        <ul>
+        <li><a href="#コマンドライン使用" id="toc-コマンドライン使用"><span class="toc-section-number">4.1</span> コマンドライン使用</a></li>
+        <li><a href="#デフォルトファイルでの設定" id="toc-デフォルトファイルでの設定"><span class="toc-section-number">4.2</span> デフォルトファイルでの設定</a></li>
+        <li><a href="#rmarkdown-での使用" id="toc-rmarkdown-での使用"><span class="toc-section-number">4.3</span> RMarkdown での使用</a></li>
+        </ul></li>
+        <li><a href="#実際のユースケースと問題解決" id="toc-実際のユースケースと問題解決"><span class="toc-section-number">5</span> 実際のユースケースと問題解決</a>
+        <ul>
+        <li><a href="#クロスプラットフォーム開発での課題" id="toc-クロスプラットフォーム開発での課題"><span class="toc-section-number">5.1</span> クロスプラットフォーム開発での課題</a>
+        <ul>
+        <li><a href="#git-リポジトリのノイズ問題" id="toc-git-リポジトリのノイズ問題"><span class="toc-section-number">5.1.1</span> Git リポジトリのノイズ問題</a></li>
+        <li><a href="#cicd-パイプライン" id="toc-cicd-パイプライン"><span class="toc-section-number">5.1.2</span> CI/CD パイプライン</a></li>
+        <li><a href="#rmarkdown-との統合-issue-1657" id="toc-rmarkdown-との統合-issue-1657"><span class="toc-section-number">5.1.3</span> RMarkdown との統合 (Issue #1657)</a></li>
+        </ul></li>
+        </ul></li>
+        <li><a href="#技術的実装の詳細" id="toc-技術的実装の詳細"><span class="toc-section-number">6</span> 技術的実装の詳細</a>
+        <ul>
+        <li><a href="#処理フロー" id="toc-処理フロー"><span class="toc-section-number">6.1</span> 処理フロー</a></li>
+        <li><a href="#重要な設計原則" id="toc-重要な設計原則"><span class="toc-section-number">6.2</span> 重要な設計原則</a></li>
+        <li><a href="#影響を受ける出力フォーマット" id="toc-影響を受ける出力フォーマット"><span class="toc-section-number">6.3</span> 影響を受ける出力フォーマット</a></li>
+        </ul></li>
+        <li><a href="#開発者コミュニティの視点" id="toc-開発者コミュニティの視点"><span class="toc-section-number">7</span> 開発者コミュニティの視点</a>
+        <ul>
+        <li><a href="#メンテナー-john-macfarlane-の見解" id="toc-メンテナー-john-macfarlane-の見解"><span class="toc-section-number">7.1</span> メンテナー (John MacFarlane) の見解</a></li>
+        <li><a href="#ユーザーコミュニティのフィードバック" id="toc-ユーザーコミュニティのフィードバック"><span class="toc-section-number">7.2</span> ユーザーコミュニティのフィードバック</a></li>
+        </ul></li>
+        <li><a href="#実践的な推奨事項" id="toc-実践的な推奨事項"><span class="toc-section-number">8</span> 実践的な推奨事項</a>
+        <ul>
+        <li><a href="#クロスプラットフォームプロジェクト向け" id="toc-クロスプラットフォームプロジェクト向け"><span class="toc-section-number">8.1</span> クロスプラットフォームプロジェクト向け</a></li>
+        <li><a href="#git-統合での推奨" id="toc-git-統合での推奨"><span class="toc-section-number">8.2</span> Git 統合での推奨</a></li>
+        <li><a href="#単一プラットフォームプロジェクト向け" id="toc-単一プラットフォームプロジェクト向け"><span class="toc-section-number">8.3</span> 単一プラットフォームプロジェクト向け</a></li>
+        </ul></li>
+        <li><a href="#結論-設計思想と実装の妥当性" id="toc-結論-設計思想と実装の妥当性"><span class="toc-section-number">9</span> 結論: 設計思想と実装の妥当性</a>
+        <ul>
+        <li><a href="#ソースコードレベルの実装" id="toc-ソースコードレベルの実装"><span class="toc-section-number">9.1</span> ソースコードレベルの実装</a></li>
+        <li><a href="#設計の妥当性" id="toc-設計の妥当性"><span class="toc-section-number">9.2</span> 設計の妥当性</a></li>
+        <li><a href="#実用上の影響" id="toc-実用上の影響"><span class="toc-section-number">9.3</span> 実用上の影響</a></li>
+        </ul></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>Pandoc の改行コード: Windows/Linux 差異の実装調査</H1>
+      
+      
+      <p><strong>Pandoc の HTML 出力における改行コードは、デフォルトでプラットフォーム依存です。</strong> Windows では <code>\r\n</code> (CRLF)、Linux や macOS では <code>\n</code> (LF) が使用されます。ただし、この動作は <code>--eol</code> オプションで明示的に制御可能であり、HTML 出力特有の実装ではなく、全てのテキスト形式の出力に適用される<strong>ファイル出力レベルの機能</strong>として設計されています。重要なのは、HTML Writer モジュール自体には改行コード処理のロジックが含まれておらず、出力パイプラインの最終段階で変換が行われることです。この設計により、クロスプラットフォーム開発における一貫性の問題に対処しながら、多くのユーザーが期待する OS 標準の動作も維持しています。</p>
+<h1 data-number="1" id="実装アーキテクチャ-出力段階での変換"><span class="header-section-number">1</span> 実装アーキテクチャ: 出力段階での変換</h1>
+<p>Pandoc のソースコード調査により、改行コード処理が<strong>個別の Writer モジュールではなく、ファイル出力ハンドラで実装されている</strong>ことが判明しました。具体的な処理フローは以下の通りです。</p>
+<p>入力ドキュメントが Reader で Pandoc AST (抽象構文木) に変換され、フィルタや変換処理を経た後、HTML Writer (<code>src/Text/Pandoc/Writers/HTML.hs</code>) が AST 構造を HTML 文字列に変換します。この段階では、HTML Writer は標準的な <code>\n</code> (LF) を使用してコンテンツを生成します。その後、<strong>Output Handler が <code>--eol</code> 設定に基づいて改行コードを変換</strong>し、最終的にファイルに書き込まれます。</p>
+<p>ソースコードのディレクトリ構造では、以下のファイルが改行コード処理に関連しています。</p>
+<ul>
+<li><strong><code>src/Text/Pandoc/Options.hs</code></strong> - <code>WriterOptions</code> データ構造を定義 (EOL 設定を含む)</li>
+<li><strong><code>src/Text/Pandoc/App/CommandLineOptions.hs</code></strong> - <code>--eol</code> を含むコマンドライン引数を解析</li>
+<li><strong><code>src/Text/Pandoc/App/OutputSettings.hs</code></strong> - 出力設定と改行コード変換を処理</li>
+<li><strong><code>src/Text/Pandoc/Writers/HTML.hs</code></strong> - HTML Writer 実装 (改行コードは直接処理しない)</li>
+<li><strong><code>src/Text/Pandoc/Writers/Shared.hs</code></strong> - Writer 共通ユーティリティ</li>
+</ul>
+<p>この設計により、全ての出力フォーマット (HTML、Markdown、LaTeX、プレーンテキストなど) で統一的な改行コード処理が実現されています。</p>
+<h1 data-number="2" id="プラットフォーム検出と条件付きコンパイル"><span class="header-section-number">2</span> プラットフォーム検出と条件付きコンパイル</h1>
+<p>Pandoc は Haskell の条件付きコンパイルディレクティブを使用して Windows 環境を検出しています。ソースコード内には以下のようなパターンが見られます。</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode haskell"><code class="sourceCode haskell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="pp">#ifdef _WINDOWS</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="kw">import</span> <span class="dt">Data.List</span> (isPrefixOf)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="pp">#endif</span></span></code></pre></div>
+<p>この <code>#ifdef _WINDOWS</code> ディレクティブにより、コンパイル時に Windows 特有のコードが組み込まれます。デフォルトの「native」モードでは、このプラットフォーム検出により、<strong>Windows では自動的に CRLF、Unix 系システムでは LF が使用される</strong>仕組みとなっています。</p>
+<p>具体的な変換メカニズムは以下の通りです。</p>
+<ol type="1">
+<li><strong>Windows のデフォルト動作</strong> - システムのテキストモードファイル I/O が自動的に <code>\n</code> を <code>\r\n</code> に変換</li>
+<li><strong>Linux/Unix のデフォルト動作</strong> - <code>\n</code> がそのまま維持される</li>
+<li><strong>明示的な <code>--eol=lf</code> 指定</strong> - 全プラットフォームで変換を抑制し、Unix 改行コードを維持</li>
+<li><strong>明示的な <code>--eol=crlf</code> 指定</strong> - 全プラットフォームで Windows 改行コードを強制</li>
+</ol>
+<h1 data-number="3" id="eol-オプションの実装背景と歴史"><span class="header-section-number">3</span> –eol オプションの実装背景と歴史</h1>
+<p>この機能は段階的に開発されました。</p>
+<h2 data-number="3.1" id="年-4-月---issue-2097surprisingly-line-endings-vary-by-os.."><span class="header-section-number">3.1</span> 2015 年 4 月 - Issue #2097「Surprisingly, line endings vary by OS..」</h2>
+<p>ユーザーから、Linux と Windows 間で同じ入力ファイルから生成された HTML 出力の改行コードが異なることで、Git リポジトリ内で不要な差分が発生する問題が報告されました。ユーザーは以下を期待していました。</p>
+<ol type="1">
+<li>全ての OS で常に LF 出力</li>
+<li>コマンドラインオプションで改行コードを選択・強制できる機能</li>
+<li>入力ファイルの元の改行コードを保持する動作</li>
+</ol>
+<h2 data-number="3.2" id="年---issue-3663add-eol-writer-option"><span class="header-section-number">3.2</span> 2017 年 - Issue #3663「Add EOL writer option」</h2>
+<p>正式な機能リクエストが提出され、開発者コミュニティで議論されました。Issue 内の重要な引用は以下の通りです。</p>
+<blockquote>
+<p>“OS 標準の EOL を使用することは、通常の使用では多くのユーザーが期待することかもしれません。しかし、クロスプラットフォームプロジェクトでは、このオプションにより標準を強制できるようになります。”</p>
+</blockquote>
+<h2 data-number="3.3" id="年-11-月---pandoc-2.0-でリリース"><span class="header-section-number">3.3</span> 2017 年 11 月 - Pandoc 2.0 でリリース</h2>
+<p>Stefan Dresselhaus によって実装され、以下の機能が追加されました。</p>
+<ul>
+<li><code>--eol=crlf|lf|native</code> コマンドラインフラグ</li>
+<li>Writer オプションによる改行コード制御</li>
+<li>Issue #3663 および Issue #2097 への対応</li>
+</ul>
+<h1 data-number="4" id="eol-オプションの使用方法"><span class="header-section-number">4</span> –eol オプションの使用方法</h1>
+<p>現在の <code>--eol</code> オプションは以下の 3 つの値を受け付けます。</p>
+<h2 data-number="4.1" id="コマンドライン使用"><span class="header-section-number">4.1</span> コマンドライン使用</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> input.md <span class="at">-o</span> output.html <span class="at">--eol</span><span class="op">=</span>lf</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> input.md <span class="at">-o</span> output.html <span class="at">--eol</span><span class="op">=</span>crlf</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> input.md <span class="at">-o</span> output.html <span class="at">--eol</span><span class="op">=</span>native</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> input.md <span class="at">-o</span> output.html</span></code></pre></div>
+<h2 data-number="4.2" id="デフォルトファイルでの設定"><span class="header-section-number">4.2</span> デフォルトファイルでの設定</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">eol</span><span class="kw">:</span><span class="at"> lf</span><span class="co">  # または crlf、native</span></span></code></pre></div>
+<h2 data-number="4.3" id="rmarkdown-での使用"><span class="header-section-number">4.3</span> RMarkdown での使用</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">output</span><span class="kw">:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">html_document</span><span class="kw">:</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">pandoc_args</span><span class="kw">:</span><span class="at"> --eol=lf</span></span></code></pre></div>
+<h1 data-number="5" id="実際のユースケースと問題解決"><span class="header-section-number">5</span> 実際のユースケースと問題解決</h1>
+<h2 data-number="5.1" id="クロスプラットフォーム開発での課題"><span class="header-section-number">5.1</span> クロスプラットフォーム開発での課題</h2>
+<h3 data-number="5.1.1" id="git-リポジトリのノイズ問題"><span class="header-section-number">5.1.1</span> Git リポジトリのノイズ問題</h3>
+<ul>
+<li>Windows と Linux 間で Git リポジトリを共有する開発者が、改行コードの違いによる不要な差分を経験</li>
+<li>HTML ファイルが内容的には同一でも、異なる OS で再生成すると変更として検出される</li>
+<li>改行コードの違いが実際のコンテンツ変更を見えにくくする</li>
+</ul>
+<h4 data-number="5.1.1.1" id="解決策"><span class="header-section-number">5.1.1.1</span> 解決策</h4>
+<p>ビルドスクリプトで <code>--eol=lf</code> を明示的に指定し、全ての開発者の環境で一貫した出力を生成します。</p>
+<h3 data-number="5.1.2" id="cicd-パイプライン"><span class="header-section-number">5.1.2</span> CI/CD パイプライン</h3>
+<ul>
+<li>異なる OS のビルドサーバー間で一貫性のない出力</li>
+<li>デプロイされるドキュメントの改行コードが環境によって異なる</li>
+</ul>
+<h4 data-number="5.1.2.1" id="解決策-1"><span class="header-section-number">5.1.2.1</span> 解決策</h4>
+<p>CI 設定ファイルで <code>--eol=lf</code> (または組織の標準) を強制指定します。</p>
+<h3 data-number="5.1.3" id="rmarkdown-との統合-issue-1657"><span class="header-section-number">5.1.3</span> RMarkdown との統合 (Issue #1657)</h3>
+<ul>
+<li><code>self_contained: no</code> オプション使用時に <code>--eol=lf</code> の効果が失われる</li>
+<li>R による後処理がシステムデフォルトの改行コードに戻してしまう</li>
+</ul>
+<h4 data-number="5.1.3.1" id="解決策-2"><span class="header-section-number">5.1.3.1</span> 解決策</h4>
+<p>レンダリング後に手動で改行コード変換を実行、または Pandoc の後処理フックを使用します。</p>
+<h1 data-number="6" id="技術的実装の詳細"><span class="header-section-number">6</span> 技術的実装の詳細</h1>
+<h2 data-number="6.1" id="処理フロー"><span class="header-section-number">6.1</span> 処理フロー</h2>
+<pre class="text"><code>入力ドキュメント
+     ↓
+[Reader] AST に解析
+     ↓
+[Filters/Transforms] フィルタと変換処理
+     ↓
+[Writer] AST → テキスト変換 (\n 使用)
+     ↓
+[Output Handler] --eol 設定に基づいて改行コード変換
+     ↓
+ファイル出力 (プラットフォーム適切または指定された改行コード)</code></pre>
+<h2 data-number="6.2" id="重要な設計原則"><span class="header-section-number">6.2</span> 重要な設計原則</h2>
+<p>以下の設計原則に基づいて実装されています。</p>
+<ol type="1">
+<li><strong>HTML Writer 内でハードコードされていない</strong> - 改行コードは HTML Writer のソースコードにハードコードされていません</li>
+<li><strong>デフォルトでプラットフォーム依存</strong> - 指定がない限り OS 標準の改行コードを使用</li>
+<li><strong>設定可能</strong> - <code>--eol</code> コマンドラインオプションで制御可能</li>
+<li><strong>出力段階で適用</strong> - 変換は HTML 生成時ではなく、ファイル書き込み時に実行</li>
+<li><strong>フォーマット非依存</strong> - 同じメカニズムが全てのテキストベース出力フォーマットに適用</li>
+</ol>
+<h2 data-number="6.3" id="影響を受ける出力フォーマット"><span class="header-section-number">6.3</span> 影響を受ける出力フォーマット</h2>
+<p><code>--eol</code> オプションは以下のテキストベース出力フォーマットに影響します。</p>
+<ul>
+<li>HTML (html、html5)</li>
+<li>Markdown (全バリエーション)</li>
+<li>LaTeX</li>
+<li>プレーンテキスト</li>
+<li>RST (reStructuredText)</li>
+<li>その他のテキストベース形式</li>
+</ul>
+<h1 data-number="7" id="開発者コミュニティの視点"><span class="header-section-number">7</span> 開発者コミュニティの視点</h1>
+<h2 data-number="7.1" id="メンテナー-john-macfarlane-の見解"><span class="header-section-number">7.1</span> メンテナー (John MacFarlane) の見解</h2>
+<p>以下のように判断されています。</p>
+<ul>
+<li>元の「native」動作はほとんどのユースケースで妥当と判断</li>
+<li>機能リクエストはクロスプラットフォームワークフローにおいて正当なものとして受け入れられた</li>
+<li>実装は直接的で、Pandoc 2.0 で追加</li>
+<li>デフォルトを「native」から変更する計画はなし</li>
+</ul>
+<h2 data-number="7.2" id="ユーザーコミュニティのフィードバック"><span class="header-section-number">7.2</span> ユーザーコミュニティのフィードバック</h2>
+<p>以下のフィードバックが得られています。</p>
+<ul>
+<li>機能は公式マニュアルページで適切に文書化されている</li>
+<li>ユーザーは適切に使用した場合、機能が期待通りに動作することを確認</li>
+<li><code>--eol</code> オプション自体にプラットフォーム固有のバグや問題は報告されていない</li>
+<li>Stack Overflow やコミュニティディスカッションで広く認知されている</li>
+</ul>
+<h1 data-number="8" id="実践的な推奨事項"><span class="header-section-number">8</span> 実践的な推奨事項</h1>
+<h2 data-number="8.1" id="クロスプラットフォームプロジェクト向け"><span class="header-section-number">8.1</span> クロスプラットフォームプロジェクト向け</h2>
+<p>以下の対応を推奨します。</p>
+<ol type="1">
+<li><strong>ビルドスクリプトで明示的に設定</strong> - <code>--eol=lf</code> を指定して一貫性を保証</li>
+<li><strong>プロジェクト README で文書化</strong> - 改行コード規則をドキュメントに記載</li>
+<li><strong>Pandoc デフォルトファイルを使用</strong> - チーム全体での一貫性のために検討</li>
+<li><strong>Git 設定と併用</strong> - <code>.gitattributes</code> と組み合わせて多層防御</li>
+</ol>
+<p>推奨設定例 (<code>.gitattributes</code>) を以下に示します。</p>
+<pre class="text"><code>*.html text eol=lf
+*.md text eol=lf</code></pre>
+<h2 data-number="8.2" id="git-統合での推奨"><span class="header-section-number">8.2</span> Git 統合での推奨</h2>
+<p>以下の対応を推奨します。</p>
+<ol type="1">
+<li>Git にコミットするファイルには <code>--eol=lf</code> を使用 (Unix 規則が標準)</li>
+<li><code>.gitattributes</code> と組み合わせて使用</li>
+<li>Git の autocrlf 設定だけに依存しない</li>
+</ol>
+<h2 data-number="8.3" id="単一プラットフォームプロジェクト向け"><span class="header-section-number">8.3</span> 単一プラットフォームプロジェクト向け</h2>
+<p>以下の対応を推奨します。</p>
+<ul>
+<li>デフォルトの <code>--eol=native</code> が一般的に適切</li>
+<li>クロスプラットフォームでファイルを共有しない限り、アクション不要</li>
+</ul>
+<h1 data-number="9" id="結論-設計思想と実装の妥当性"><span class="header-section-number">9</span> 結論: 設計思想と実装の妥当性</h1>
+<p>Pandoc の改行コード処理は、<strong>バグではなく意図的な設計判断</strong>です。調査により以下が明らかになりました。</p>
+<h2 data-number="9.1" id="ソースコードレベルの実装"><span class="header-section-number">9.1</span> ソースコードレベルの実装</h2>
+<ol type="1">
+<li><strong>分離されたアーキテクチャ</strong> - 改行コード処理は HTML Writer (<code>src/Text/Pandoc/Writers/HTML.hs</code>) から分離され、出力ハンドラ (<code>src/Text/Pandoc/App/OutputSettings.hs</code>) で実装</li>
+<li><strong>プラットフォーム検出</strong> - Haskell の <code>#ifdef _WINDOWS</code> 条件付きコンパイルを使用</li>
+<li><strong>統一的な処理</strong> - 全出力フォーマットで同じロジックを使用し、コード重複を回避</li>
+<li><strong>設定可能な動作</strong> - <code>WriterOptions</code> データ構造に EOL 設定を含め、柔軟性を提供</li>
+</ol>
+<h2 data-number="9.2" id="設計の妥当性"><span class="header-section-number">9.2</span> 設計の妥当性</h2>
+<ul>
+<li><strong>デフォルトの「native」動作</strong>は大多数のユーザーの期待に沿っており、後方互換性を維持</li>
+<li><strong><code>--eol</code> オプション</strong>により、CI/CD パイプライン、Git リポジトリ管理、自動ドキュメント生成など、クロスプラットフォーム要件に対応</li>
+<li><strong>クリーンな実装</strong>により保守性が向上し、全ての出力フォーマットで一貫した動作を保証</li>
+<li><strong>2015 年の問題報告から 2017 年の実装まで</strong>、コミュニティのフィードバックを反映した段階的な開発</li>
+</ul>
+<h2 data-number="9.3" id="実用上の影響"><span class="header-section-number">9.3</span> 実用上の影響</h2>
+<ul>
+<li>Windows では <code>\r\n</code> (CRLF) がデフォルト、Linux では <code>\n</code> (LF) がデフォルト</li>
+<li>両プラットフォームで <code>--eol=lf</code> または <code>--eol=crlf</code> を指定することで統一可能</li>
+<li>HTML Writer 自体は改行コードを処理せず、出力段階で変換が行われる</li>
+<li>この設計により、フォーマット固有のコードを変更せずに、全出力形式で改行コード制御が実現</li>
+</ul>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>
