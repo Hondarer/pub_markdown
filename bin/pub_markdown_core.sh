@@ -79,31 +79,43 @@ export NODE_NO_WARNINGS=1
 extract_links_from_markdown() {
     local md_file="$1"
     local base_dir="$2"
+    local line
 
-    if [[ -f "$md_file" ]]; then
-        while IFS= read -r line; do
-            # bash の正規表現でリンクを抽出
-            img_pattern='!\[[^]]*\]\(([^)]+)\)'
-            link_pattern='\[[^]]*\]\(([^)]+)\)'
-
-            # パターン1: 画像リンク ![alt](path)
-            if [[ $line =~ $img_pattern ]]; then
-                link_path="${BASH_REMATCH[1]}"
-                # .md, .yaml ファイルを除外
-                if [[ ! $link_path =~ \.(md|yaml)$ ]]; then
-                    files_linked+=("${base_dir}/${link_path}")
-                fi
-            fi
-            # パターン2: 通常リンク [text](path)
-            if [[ $line =~ $link_pattern ]]; then
-                link_path="${BASH_REMATCH[1]}"
-                # .md, .yaml ファイルを除外
-                if [[ ! $link_path =~ \.(md|yaml)$ ]]; then
-                    files_linked+=("${base_dir}/${link_path}")
-                fi
-            fi
-        done < "$md_file"
+    if command -v realpath >/dev/null 2>&1; then
+        base_dir="$(realpath -m "$base_dir")"
     fi
+
+    [[ -f "$md_file" ]] || return 0
+
+    while IFS= read -r line; do
+        # 画像リンクをすべて抽出
+        while IFS= read -r link_path; do
+            # フィルタ条件
+            if [[ ! $link_path =~ ^(https?://|mailto:|ftp://) ]] \
+               && [[ ! $link_path =~ ^# ]] \
+               && [[ ! $link_path =~ \.(md|yaml)$ ]]; then
+                local full_path="${base_dir}/${link_path}"
+                if command -v realpath >/dev/null 2>&1; then
+                    full_path="$(realpath -m "$full_path")"
+                fi
+                [[ -e "$full_path" ]] && files_linked+=("$full_path")
+            fi
+        done < <(printf '%s\n' "$line" | grep -oP '!\[[^]]*\]\(\K[^)\s]+(?=\))')
+
+        # 通常リンクをすべて抽出
+        while IFS= read -r link_path; do
+            if [[ ! $link_path =~ ^(https?://|mailto:|ftp://) ]] \
+               && [[ ! $link_path =~ ^# ]] \
+               && [[ ! $link_path =~ \.(md|yaml)$ ]]; then
+                local full_path="${base_dir}/${link_path}"
+                if command -v realpath >/dev/null 2>&1; then
+                    full_path="$(realpath -m "$full_path")"
+                fi
+                [[ -e "$full_path" ]] && files_linked+=("$full_path")
+            fi
+        done < <(printf '%s\n' "$line" | grep -oP '\[[^]]*\]\(\K[^)\s]+(?=\))')
+
+    done < "$md_file"
 }
 
 # ファイル配列をマージ・ソート・重複排除する関数
@@ -196,7 +208,7 @@ parse_yaml() {
 if [ -f "$configFile" ]; then
 
     # ファイルの内容を読み込む
-    config_content=$(cat "$configFile")
+    config_content=$(tr -d '\r' < "$configFile")
 
     # キーを指定して値を取得する
     mdRoot=$(parse_yaml "$config_content" "mdRoot")
@@ -366,17 +378,22 @@ else
 
     base_dir="${workspaceFolder}/${mdRoot}"
     mkdir -p "${workspaceFolder}/${pubRoot}"
+
     # 出力フォルダの clean
     if [[ "$details" == "true" ]]; then
-        # "-details" で終わっているディレクトリを削除
-        #echo find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -print
-        #find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -print
-        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d ! -name '*-details' -prune -o -type d -exec rm -rf {} +
+        # "-details" で終わっているディレクトリを削除、doxygen は常に残す
+        # 先に doxygen を prune して探索・削除対象から外す
+        find "${workspaceFolder}/${pubRoot}" \
+            -mindepth 1 -type d \
+            -name 'doxygen' -prune \
+            -o -type d ! -name 'doxygen' -name '*-details' -exec rm -rf {} +
     else
-        # "-details" で終わっていないディレクトリを削除
-        #echo find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -print
-        #find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -print
-        find "${workspaceFolder}/${pubRoot}" -mindepth 1 -type d -name '*-details' -prune -o -type d -exec rm -rf {} +
+        # "-details" で終わっていないディレクトリを削除、doxygen は常に残す
+        # doxygen と *-details を prune し、残りのみ削除
+        find "${workspaceFolder}/${pubRoot}" \
+            -mindepth 1 -type d \
+            \( -name 'doxygen' -o -name '*-details' \) -prune \
+            -o -type d -exec rm -rf {} +
     fi
 fi
 
@@ -537,15 +554,24 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
 
     # 2) Git check-ignore に NUL 区切りで渡し、結果も NUL 区切りで受け取る
     mapfile -d '' -t filtered_rel_array < <(
-        printf '%s\0' "${files_rel_zero_array[@]}" | \
-        git -C "$workspaceFolder" \
-            check-ignore --verbose --non-matching --stdin -z 2>/dev/null | \
-        perl -0777 -ne '
-        # レコード全体を一度に読み込んで、
-        # "\x00\x00\x00<パス>\x00" にマッチする箇所だけを取り出す
-        while (/\x00\x00\x00([^\x00]+)\x00/g) {
-            print "$1\0";
+    printf '%s\0' "${files_rel_zero_array[@]}" | \
+    git -C "$workspaceFolder" \
+        check-ignore --verbose --non-matching --stdin -z 2>/dev/null | \
+    perl -0777 -ne '
+        my @records = split(/\x00/, $_);
+        my @out;
+        # 「rule」「path」のペアで処理。ただし空の path は捨てる
+        for (my $i = 0; $i + 1 < @records; $i += 2) {
+            my $rule = $records[$i];
+            my $path = $records[$i + 1];
+            next unless defined($path) && length($path);
+            # ルールが空（:: 相当）または「!」で始まるルールのみ採用
+            if ($rule eq "" || $rule =~ /^!/) {
+                push @out, $path;
+            }
         }
+        # 末尾に余分な NUL を付けないよう、join でまとめて出力
+        print join("\0", @out);
         '
     )
 
@@ -677,8 +703,11 @@ for file in "${files[@]}"; do
         # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
         openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
-
-        openapi_md_title=$(echo "$openapi_md" | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+        openapi_md_title=$(echo "${openapi_md}" \
+            | sed -n '/^#/p' \
+            | head -n 1 \
+            | sed 's/^# *//' \
+            | tr -d '\r')
 
         firstLang=""
         for langElement in ${lang}; do
@@ -824,7 +853,12 @@ for file in "${files[@]}"; do
             # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
             # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
             replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${details})
-            md_title=$(echo "${replaced_md}" | perl -0777 -pe 's/<!--.*?-->//gs' | sed -n '/^#/p' | head -n 1 | sed 's/^# *//')
+            md_title=$(echo "${replaced_md}" \
+                | perl -0777 -pe 's/<!--.*?-->//gs' \
+                | sed -n '/^#/p' \
+                | head -n 1 \
+                | sed 's/^# *//' \
+                | tr -d '\r')
             md_body=$(echo "${replaced_md}" | sed '/^# /d')
 
             export DOCUMENT_LANG=$langElement
