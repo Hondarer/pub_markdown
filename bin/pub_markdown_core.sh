@@ -148,9 +148,6 @@ resolve_path() {
 
 #-------------------------------------------------------------------
 
-# 定義ファイルのデフォルトパス
-configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
-
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --workspaceFolder=*)
@@ -182,6 +179,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 #echo ""
+
+# 定義ファイルのデフォルトパス
+configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
 
 #-------------------------------------------------------------------
 
