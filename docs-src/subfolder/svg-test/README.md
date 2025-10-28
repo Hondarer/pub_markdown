@@ -1,6 +1,6 @@
 # drawio.svg 変換テスト
 
-draw.io の SVG と Pandoc による Word 変換の問題について、整理しますね。
+draw.io の SVG と Pandoc による Word 変換の問題について、整理します。
 
 ## 問題
 

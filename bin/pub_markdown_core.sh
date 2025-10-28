@@ -826,12 +826,13 @@ for file in "${files[@]}"; do
         publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
 
         # README.md を index.html に変換するロジック
+        # index.md が存在しない場合のみ、README.md を index.html として出力
         file_basename=$(basename "$file")
         file_basename_lower=$(echo "$file_basename" | tr '[:upper:]' '[:lower:]')
         file_dirname=$(dirname "$file")
 
         if [[ "$file_basename_lower" == "readme.md" ]]; then
-            # 同じディレクトリに index.md が存在しないかチェック (大文字小文字を無視)
+            # 同じディレクトリに index.md が存在するかチェック (大文字小文字を無視)
             index_md_exists=false
             if [ -d "$file_dirname" ]; then
                 for potential_index in "$file_dirname"/*; do
@@ -845,12 +846,11 @@ for file in "${files[@]}"; do
                 done
             fi
 
+            # index.md が存在しない場合のみ、README.md を index.html として出力
             if [[ "$index_md_exists" == "false" ]]; then
-                # publish_file を index.html に変更
                 publish_file="${publish_file%/*}/index.md"
                 publish_file_self_contain="${publish_file_self_contain%/*}/index.md"
-                # docx は対象外
-                #publish_file_docx="${publish_file_docx%/*}/index.md"
+                publish_file_docx="${publish_file_docx%/*}/index.md"
             fi
         fi
 

@@ -40,7 +40,7 @@
         <span class="doc-title">drawio.svg 変換テスト</span>
         <ul class="nav pull-right doc-info">
                     <li><p class="navbar-text">Tetsuo Honda</p></li>
-                              <li><p class="navbar-text">Mon, 27 Oct 2025 07:43:41 +0900 946cb84</p></li>
+                              <li><p class="navbar-text">Wed, 29 Oct 2025 07:42:19 +0900 946cb84*</p></li>
                   </ul>
       </div>
     </div>
@@ -63,7 +63,7 @@
                 <H1>drawio.svg 変換テスト</H1>
       
       
-      <p>draw.io の SVG と Pandoc による Word 変換の問題について、整理しますね。</p>
+      <p>draw.io の SVG と Pandoc による Word 変換の問題について、整理します。</p>
 <h1 data-number="1" id="問題"><span class="header-section-number">1</span> 問題</h1>
 <p>draw.io は図を SVG (Scalable Vector Graphics: 拡大縮小可能なベクター画像形式) としてエクスポートする際、テキスト部分を <code>foreignObject</code> という要素で表現することがあります。この <code>foreignObject</code> は、SVG の中に HTML を埋め込むための仕組みです。draw.io はこれを使って、テキストの改行や装飾を柔軟に表現しています。</p>
 <p>しかし、この <code>foreignObject</code> は比較的新しい SVG の機能で、すべてのソフトウェアが対応しているわけではありません。特に Microsoft Word は <code>foreignObject</code> を処理できないため、Pandoc で Markdown から Word へ変換する際に以下のような問題が起きます。</p>

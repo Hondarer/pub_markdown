@@ -471,9 +471,33 @@ generate_toc() {
         done
 
         if [[ "$type" == "file" ]]; then
-            # base_title が index (大文字小文字無視) の場合はスキップ
-            if [[ "$base_title" =~ ^[Ii][Nn][Dd][Ee][Xx]$ ]]; then
+            local file_basename_only="${filename}"
+            local file_basename_lower=$(echo "$file_basename_only" | tr '[:upper:]' '[:lower:]')
+
+            # index.md はディレクトリインデックスとして扱われるため、通常のファイルとしては表示しない
+            if [[ "$file_basename_lower" == "index.md" ]]; then
                 continue
+            fi
+
+            # README.md は、同じディレクトリに index.md が存在しない場合のみディレクトリインデックスとして扱われる
+            if [[ "$file_basename_lower" == "readme.md" ]]; then
+                # 同じディレクトリに index.md が存在するかチェック
+                local file_dir_path=$(dirname "$abs_path")
+                local has_index_md=false
+                for sibling_path in "${sorted_keys[@]}"; do
+                    if [[ $(dirname "$sibling_path") == "$file_dir_path" ]]; then
+                        local sibling_basename=$(basename "$sibling_path" | tr '[:upper:]' '[:lower:]')
+                        if [[ "$sibling_basename" == "index.md" ]]; then
+                            has_index_md=true
+                            break
+                        fi
+                    fi
+                done
+
+                # index.md が存在しない場合は、README.md をディレクトリインデックスとして扱う
+                if [[ "$has_index_md" == "false" ]]; then
+                    continue
+                fi
             fi
 
             # Markdownファイルの場合：タイトルとリンクを出力
@@ -496,14 +520,13 @@ generate_toc() {
             # PROGRESS
             #printf '%s' "." >&2
 
-            # sorted_keys の中に、abs_path/index.md, index.markdown (ケース揺らぎ許容) が存在した場合は
-            # そのエントリの display_title と file_relative_path をディレクトリのリスト項目とする。
-
+            # ディレクトリインデックスを探す
+            # 優先順位: 1. index.md, 2. README.md (index.md に読み替え)
             local index_file_found=""
             local index_display_title=""
             local index_relative_path=""
 
-            # ディレクトリ配下の index 系ファイルを検索 (ケース揺らぎ許容)
+            # ディレクトリ配下のインデックスファイルを検索 (ケース揺らぎ許容)
             local dir_prefix="$abs_path/"
             for check_path in "${sorted_keys[@]}"; do
                 # 前方一致チェック: abs_path 配下でない場合は即座にスキップ
@@ -520,29 +543,62 @@ generate_toc() {
                 [[ -z "$check_entry" ]] && continue
                 [[ "$check_entry" != *$'\t'file$'\t'* ]] && continue
 
-                # index 系ファイルかチェック (ケース揺らぎ許容)
-                if [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Dd]$ ]] || \
-                   [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Aa][Rr][Kk][Dd][Oo][Ww][Nn]$ ]]; then
+                # index.md かチェック (ケース揺らぎ許容)
+                if [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Dd]$ ]]; then
                     index_file_found="$check_path"
 
                     # ファイルの情報を取得
-                    local index_base_title index_lang_titles
-                    IFS=$'\t' read -r _ _ index_base_title index_lang_titles <<< "$check_entry"
+                    local file_base_title file_lang_titles
+                    IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
 
                     # 表示タイトルを決定
-                    index_display_title="$index_base_title"
-                    if [[ -n "$index_lang_titles" && "$index_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                    index_display_title="$file_base_title"
+                    if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
                         index_display_title="${BASH_REMATCH[1]}"
                     fi
 
                     # 基準ディレクトリからの相対パスを計算
                     index_relative_path="${check_path#$base_dir/}"
 
-                    break  # 最初に見つかった index 系ファイルを使用
+                    break  # index.md が見つかったので終了
                 fi
             done
 
-            # index 系ファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
+            # index.md が見つからなかった場合、README.md を探す
+            if [[ -z "$index_file_found" ]]; then
+                for check_path in "${sorted_keys[@]}"; do
+                    [[ "$check_path" != "$dir_prefix"* ]] && continue
+                    local remaining_path="${check_path#$dir_prefix}"
+                    [[ "$remaining_path" == */* ]] && continue
+
+                    local check_entry="${memory_cache[$check_path]}"
+                    [[ -z "$check_entry" ]] && continue
+                    [[ "$check_entry" != *$'\t'file$'\t'* ]] && continue
+
+                    # README.md かチェック (ケース揺らぎ許容)
+                    if [[ "$remaining_path" =~ ^[Rr][Ee][Aa][Dd][Mm][Ee]\.[Mm][Dd]$ ]]; then
+                        index_file_found="$check_path"
+
+                        # ファイルの情報を取得
+                        local file_base_title file_lang_titles
+                        IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
+
+                        # 表示タイトルを決定
+                        index_display_title="$file_base_title"
+                        if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                            index_display_title="${BASH_REMATCH[1]}"
+                        fi
+
+                        # 基準ディレクトリからの相対パスを計算 (README.md を index.md に読み替え)
+                        index_relative_path="${check_path#$base_dir/}"
+                        index_relative_path="${index_relative_path%/*}/index.md"
+
+                        break  # README.md が見つかったので終了
+                    fi
+                done
+            fi
+
+            # インデックスファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
             if [[ -n "$index_file_found" ]]; then
                 echo "${indent}- 📁 [$index_display_title]($index_relative_path)"
             else
