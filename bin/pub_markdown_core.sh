@@ -825,6 +825,35 @@ for file in "${files[@]}"; do
         fi
         publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
 
+        # README.md を index.html に変換するロジック
+        file_basename=$(basename "$file")
+        file_basename_lower=$(echo "$file_basename" | tr '[:upper:]' '[:lower:]')
+        file_dirname=$(dirname "$file")
+
+        if [[ "$file_basename_lower" == "readme.md" ]]; then
+            # 同じディレクトリに index.md が存在しないかチェック (大文字小文字を無視)
+            index_md_exists=false
+            if [ -d "$file_dirname" ]; then
+                for potential_index in "$file_dirname"/*; do
+                    if [[ -f "$potential_index" ]]; then
+                        potential_basename=$(basename "$potential_index" | tr '[:upper:]' '[:lower:]')
+                        if [[ "$potential_basename" == "index.md" ]]; then
+                            index_md_exists=true
+                            break
+                        fi
+                    fi
+                done
+            fi
+
+            if [[ "$index_md_exists" == "false" ]]; then
+                # publish_file を index.html に変更
+                publish_file="${publish_file%/*}/index.md"
+                publish_file_self_contain="${publish_file_self_contain%/*}/index.md"
+                # docx は対象外
+                #publish_file_docx="${publish_file_docx%/*}/index.md"
+            fi
+        fi
+
         # path to css
         nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
         up_dir=""

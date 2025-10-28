@@ -1,0 +1,183 @@
+<!doctype html>
+<html >
+<head>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/template.css" />
+
+    <link href="https://vjs.zencdn.net/5.4.4/video-js.css" rel="stylesheet" />
+
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
+
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.cookie.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.hoverIntent.minified.js'></script>
+    <script type='text/javascript' src='https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/js/jquery.dcjqaccordion.2.7.min.js'></script>
+
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
+    <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
+    
+    <meta name="generator" content="pandoc" />
+  <meta name="author" content="Tetsuo Honda" />
+  <title>Windows における PlantUML の `dot.exe` 自動展開 (同梱 Graphviz) 仕様</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="../html-style.css" />
+</head>
+<body>
+
+    
+    <div class="navbar navbar-static-top">
+    <div class="navbar-inner">
+      <div class="container">
+        <span class="doc-title">Windows における PlantUML の `dot.exe` 自動展開 (同梱 Graphviz) 仕様</span>
+        <ul class="nav pull-right doc-info">
+                    <li><p class="navbar-text">Tetsuo Honda</p></li>
+                              <li><p class="navbar-text">Tue, 28 Oct 2025 07:14:53 +0900 5603b49</p></li>
+                  </ul>
+      </div>
+    </div>
+  </div>
+    <div class="container">
+    <div class="row">
+            <div id="TOC" class="span3">
+        <div class="well toc">
+
+        <ul>
+        <li><a href="#何が起きているか" id="toc-何が起きているか"><span class="toc-section-number">1</span> 何が起きているか</a></li>
+        <li><a href="#導入の経緯-タイムライン" id="toc-導入の経緯-タイムライン"><span class="toc-section-number">2</span> 導入の経緯 (タイムライン)</a></li>
+        <li><a href="#探索と優先順位" id="toc-探索と優先順位"><span class="toc-section-number">3</span> 探索と優先順位</a></li>
+        <li><a href="#動作確認と切り替え" id="toc-動作確認と切り替え"><span class="toc-section-number">4</span> 動作確認と切り替え</a></li>
+        <li><a href="#linux-との違い-参考" id="toc-linux-との違い-参考"><span class="toc-section-number">5</span> Linux との違い (参考)</a>
+        <ul>
+        <li><a href="#参考リンク-公式" id="toc-参考リンク-公式"><span class="toc-section-number">5.1</span> 参考リンク (公式)</a></li>
+        </ul></li>
+        </ul>
+
+        </div>
+      </div>
+            <div class="span9">
+
+                <H1>Windows における PlantUML の `dot.exe` 自動展開 (同梱 Graphviz) 仕様</H1>
+      
+      
+      <h1 data-number="1" id="何が起きているか"><span class="header-section-number">1</span> 何が起きているか</h1>
+<p>PlantUML は <strong>v1.2020.21 以降</strong>、Windows 環境で外部 Graphviz (<code>dot.exe</code>) が見つからない場合に、<strong>最小構成の Graphviz (graphviz-lite) を同梱</strong>しており、実行時に <strong>ユーザーの一時フォルダへ自動展開</strong>してから利用します。展開先の既定パスは次のとおりです。<br />
+<code>%LOCALAPPDATA%\Temp\_graphviz\dot.exe</code> 。(外部の <code>dot.exe</code> が見つからない場合に限る) (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>) (<a href="https://github.com/plantuml/graphviz-distributions" title="GitHub - plantuml/graphviz-distributions: Some plug and play distributions for GraphViz">GitHub</a>)</p>
+<h1 data-number="2" id="導入の経緯-タイムライン"><span class="header-section-number">2</span> 導入の経緯 (タイムライン)</h1>
+<ul>
+<li><strong>1.2020.21 以降</strong>: Windows では <strong>Graphviz を手動インストールしなくてもよい</strong>運用を公式に案内。最小版 <code>dot.exe</code> を <strong>必要時に一時フォルダへ自動解凍</strong>して使う挙動が導入。1.2020.25 以前は生成時にメッセージが出る不具合があり、<strong>1.2020.25 以上の利用が推奨</strong>。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+<li>同梱される <code>graphviz-lite</code> の配布元 (公式 GitHub リポジトリ) でも、<strong>「PlantUML v1.2020.21+ はここからの lite 版を内蔵しており、外部 <code>dot.exe</code> が無いときだけ <code>%LOCALAPPDATA%\Temp\_graphviz</code> に展開する」</strong>と明記。 (<a href="https://github.com/plantuml/graphviz-distributions" title="GitHub - plantuml/graphviz-distributions: Some plug and play distributions for GraphViz">GitHub</a>)</li>
+</ul>
+<h1 data-number="3" id="探索と優先順位"><span class="header-section-number">3</span> 探索と優先順位</h1>
+<p>PlantUML が Graphviz を探す順序・優先ルールは次のとおりです。</p>
+<ol type="1">
+<li><strong>環境変数 <code>GRAPHVIZ_DOT</code></strong> が指す <code>dot.exe</code> があればそれを使用。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+<li>Windows の <strong>既知パスの走査</strong>（旧来互換）：<code>c:\*\graphviz*\bin\dot.exe</code> または <code>c:\*\graphviz*\release\bin\dot.exe</code> をルート直下からスキャン（再帰しない）。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+<li>上記で見つからない場合、<strong>同梱の graphviz-lite を <code>%LOCALAPPDATA%\Temp\_graphviz</code> に自動展開</strong>して使用。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+</ol>
+<blockquote>
+<p>補足：同梱 <code>dot.exe</code> は <strong>PlantUML 用に必要最小限のモジュールだけ</strong>を含む「最小構成」ビルドです（<code>gvplugin_core.dll</code> と <code>gvplugin_dot_layout.dll</code> など）。 (<a href="https://github.com/plantuml/graphviz-distributions" title="GitHub - plantuml/graphviz-distributions: Some plug and play distributions for GraphViz">GitHub</a>)</p>
+</blockquote>
+<h1 data-number="4" id="動作確認と切り替え"><span class="header-section-number">4</span> 動作確認と切り替え</h1>
+<ul>
+<li><p><strong>どの Graphviz が使われているか確認</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">plantuml</span> <span class="at">-version</span>        <span class="co"># または: java -jar plantuml.jar -version</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">plantuml</span> <span class="at">-testdot</span></span></code></pre></div>
+<p>これらは PlantUML 公式のテスト手順として案内されています。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</p></li>
+<li><p><strong>外部 Graphviz を明示的に使う</strong></p>
+<ul>
+<li>例: <code>GRAPHVIZ_DOT=C:\Program Files\Graphviz\bin\dot.exe</code> を設定 (環境変数で上書き)。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+</ul></li>
+<li><p><strong>同梱 (自動展開) を使わせたい</strong></p>
+<ul>
+<li><code>GRAPHVIZ_DOT</code> を未設定にし、PATH 上にも <code>dot.exe</code> が無い状態にして実行すれば、同梱版が <code>%LOCALAPPDATA%\Temp\_graphviz</code> に展開されて使用されます。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+</ul></li>
+</ul>
+<h1 data-number="5" id="linux-との違い-参考"><span class="header-section-number">5</span> Linux との違い (参考)</h1>
+<p>Linux/Mac の項では、基本的に <strong>外部 Graphviz のインストール</strong> (<code>apt</code>, <code>yum</code>, <code>brew</code> 等) を案内しており、Windows のような <strong>同梱版の自動展開は前提にしていません</strong>。必要であれば <code>GRAPHVIZ_DOT</code> で場所を指定します。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</p>
+<h2 data-number="5.1" id="参考リンク-公式"><span class="header-section-number">5.1</span> 参考リンク (公式)</h2>
+<ul>
+<li><strong>Graphviz/DOT (公式ドキュメント)</strong>: Windows セクションに「1.2020.21 以降は同梱 <code>dot.exe</code> を一時フォルダへ自動解凍して使う」旨を明記。探索順や <code>GRAPHVIZ_DOT</code>、<code>-testdot</code> もここに記載。 (<a href="https://plantuml.com/graphviz-dot" title="Test your GraphViz installation">PlantUML.com</a>)</li>
+<li><strong>graphviz-distributions (PlantUML 公式 GitHub)</strong>: 同梱する <strong>graphviz-lite</strong> の内容と、<strong>「<code>%LOCALAPPDATA%\Temp\_graphviz</code> に抽出する」仕様</strong>を README に明記。 (<a href="https://github.com/plantuml/graphviz-distributions" title="GitHub - plantuml/graphviz-distributions: Some plug and play distributions for GraphViz">GitHub</a>)</li>
+</ul>
+            </div>
+    </div>
+  </div>
+  <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
+
+</body>
+</html>
