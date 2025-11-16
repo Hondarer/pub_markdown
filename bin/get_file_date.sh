@@ -3,7 +3,7 @@
 # get_file_date FILEPATH
 #   ・git コマンドが使えない           → ファイルの最終更新時刻 (RFC2822)
 #   ・Git 管理下にない                 → ファイルの最終更新時刻 (RFC2822)
-#   ・Git 管理下にあり、変更あり       → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "*"
+#   ・Git 管理下にあり、変更あり       → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "+"
 #   ・Git 管理下にあり、変更なし       → 最終コミット時刻 (RFC2822) + " " + 最終コミットID
 get_file_date() {
   local file=$1
@@ -85,10 +85,10 @@ get_file_date() {
 
   # ─── 5) 未コミット差分の有無チェック ─────────────────────────────
   if ! git -C "$repo" diff --quiet HEAD -- "$rel"; then
-    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "*"
+    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "+"
     local commit_id
     commit_id=$(git -C "$repo" log -1 --format=%h -- "$rel")
-    echo "$(LC_TIME=C date -R -r "$abs_file") $commit_id*"
+    echo "$(LC_TIME=C date -R -r "$abs_file") $commit_id+"
   else
     # 差分なし → 最終コミットのコミッター日時 (RFC2822) + " " + 最終コミットID
     git -C "$repo" log -1 --format="%cD %h" -- "$rel"
