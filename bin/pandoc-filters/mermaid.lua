@@ -230,9 +230,9 @@ return {
                         :gsub('(<svg)', '%1 width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"', 1)
                 end
 
-                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、font-family:メイリオ, "Helvetica Neue", Helvetica, Arial, sans-serif; に置換する。
+                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、font-family:メイリオ, "UDEV Gothic HSRFJPDOC", "Helvetica Neue", Helvetica, Arial, sans-serif; に置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
-                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:メイリオ, "Helvetica Neue", Helvetica, Arial, sans-serif;')
+                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:メイリオ, "UDEV Gothic HSRFJPDOC", "Helvetica Neue", Helvetica, Arial, sans-serif;')
 
                 -- 上書き保存
                 local f = io.open(_image_file_path, "w")

@@ -409,14 +409,14 @@ return {
                 end
 
                 -- pu_config.format が "svg" の場合は、
-                -- font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換する。
+                -- font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, `UDEV Gothic HSRFJPDOC`, Helvetica Neue, Helvetica, Arial, sans-serif" に置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
                 if pu_config.format == "svg" then
                     local f = io.open(_image_file_path, "r")
                     if f then
                         local content = f:read("*a")
                         f:close()
-                        content = string.gsub(content, 'font%-family="sans%-serif"', 'font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif"')
+                        content = string.gsub(content, 'font%-family="sans%-serif"', 'font-family="メイリオ, `UDEV Gothic HSRFJPDOC`, Helvetica Neue, Helvetica, Arial, sans-serif"')
                         f = io.open(_image_file_path, "w")
                         if f then
                             f:write(content)
