@@ -66,6 +66,55 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 - `"*.tmp"`: 拡張子による除外
 - `"temp.md"`: 特定ファイル名
 
+### 起点ディレクトリ指定 (basedir)
+
+目次生成の起点となるディレクトリを指定します。指定しない場合は、`\toc` コマンドが記述されているファイルの存在するディレクトリが起点となります。
+
+指定方法を次に示す。
+
+```markdown
+\toc basedir="docs"           # 現在のディレクトリからの相対パス
+\toc basedir="docs/api"       # サブディレクトリを指定
+\toc basedir="../other"       # 親ディレクトリからの相対パス
+```
+
+#### パス指定の基準
+
+- **相対パス**: `\toc` コマンドが記述されているファイルの存在するディレクトリからの相対パス
+- **絶対パス**: サポートされません（相対パスのみ）
+
+#### 使用例
+
+プロジェクトルートの `index.md` から、`docs/` サブディレクトリ以下の目次を生成する場合:
+
+```text
+project/
+├── index.md          # \toc basedir="docs" を記述
+├── README.md
+└── docs/
+    ├── guide.md
+    └── api/
+        └── reference.md
+```
+
+`index.md` 内で以下のように記述:
+
+```markdown
+# ドキュメント一覧
+
+\toc basedir="docs" depth=-1
+```
+
+生成される目次:
+
+```markdown
+- 📄 [ガイド](docs/guide.md)
+- 📁 [API](docs/api/index.md)
+  - 📄 [リファレンス](docs/api/reference.md)
+```
+
+**注意**: 生成されるリンクは、`\toc` コマンドが記述されているファイルからの相対パスになります。
+
 ### デフォルト値
 
 Lua フィルタ内で定義されるデフォルト値は以下の通りです。
@@ -73,7 +122,8 @@ Lua フィルタ内で定義されるデフォルト値は以下の通りです�
 ```lua
 local defaults = {
     depth = 0,        -- 現在のディレクトリのみ
-    exclude = {}      -- 除外なし
+    exclude = {},     -- 除外なし
+    basedir = ""      -- 起点ディレクトリ指定なし（現在のディレクトリ）
 }
 ```
 
@@ -141,6 +191,12 @@ index.md または index.markdown が存在する場合は、階層名に index.
 
 ## チュートリアルのみ
 \toc depth=1 exclude="reference/*" exclude="intro.md"
+
+## docs ディレクトリ以下のすべて
+\toc basedir="docs" depth=-1
+
+## API リファレンス（別ディレクトリ指定 + 除外）
+\toc basedir="docs/api" depth=-1 exclude="internal/*"
 ```
 
 ## コマンド実行例

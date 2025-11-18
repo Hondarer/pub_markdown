@@ -24,6 +24,7 @@ DEPTH="$1"
 CURRENT_FILE="$2"
 DOCUMENT_LANG="${3:-neutral}" # 指定がない場合はニュートラル言語
 EXCLUDE="$4"
+BASEDIR="$5"
 
 # デバッグ用: 引数をエコー
 #echo "# Debug: Received arguments" >&2
@@ -31,6 +32,7 @@ EXCLUDE="$4"
 #echo "CURRENT_FILE: $CURRENT_FILE" >&2
 #echo "DOCUMENT_LANG: $DOCUMENT_LANG" >&2
 #echo "EXCLUDE: $EXCLUDE" >&2
+#echo "BASEDIR: $BASEDIR" >&2
 
 # ========================================
 # メモリベースキャッシュ関数
@@ -343,12 +345,13 @@ is_excluded() {
 }
 
 # メイン目次生成関数
-# 引数: 基準ディレクトリ 最大深度 除外パターン 言語コード
+# 引数: 基準ディレクトリ 最大深度 言語コード 除外パターン basedir_prefix
 generate_toc() {
     local base_dir="$1"
     local max_depth="$2"
     local lang_code="$3"
     local exclude_patterns="$4"
+    local basedir_prefix="$5"
 
     #echo "# 目次生成開始" >&2
 
@@ -543,6 +546,11 @@ generate_toc() {
             # 基準ディレクトリからの相対パスを計算
             local file_relative_path="${abs_path#$base_dir/}"
 
+            # basedir_prefix を追加
+            if [[ -n "$basedir_prefix" ]]; then
+                file_relative_path="$basedir_prefix/$file_relative_path"
+            fi
+
             # Markdownリンク形式で出力
             echo "${indent}- 📄 [$display_title]($file_relative_path)"
 
@@ -592,6 +600,11 @@ generate_toc() {
                     # 基準ディレクトリからの相対パスを計算
                     index_relative_path="${check_path#$base_dir/}"
 
+                    # basedir_prefix を追加
+                    if [[ -n "$basedir_prefix" ]]; then
+                        index_relative_path="$basedir_prefix/$index_relative_path"
+                    fi
+
                     break  # index.md が見つかったので終了
                 fi
             done
@@ -633,6 +646,11 @@ generate_toc() {
                         else
                             # サブディレクトリの README.md
                             index_relative_path="$readme_dir_relative/index.md"
+                        fi
+
+                        # basedir_prefix を追加
+                        if [[ -n "$basedir_prefix" ]]; then
+                            index_relative_path="$basedir_prefix/$index_relative_path"
                         fi
 
                         break  # README.md が見つかったので終了
@@ -767,7 +785,7 @@ mapfile -t sorted_keys < <(printf '%s\n' "${unsorted_keys[@]}" | sort)
 #echo '```' >&2
 
 # 実際の目次生成
-generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE"
+generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE" "$BASEDIR"
 
 # PROGRESS
 #printf '%s\n' " -> done" >&2

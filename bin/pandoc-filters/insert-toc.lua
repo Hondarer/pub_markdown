@@ -82,7 +82,8 @@ end
 -- デフォルト設定
 local defaults = {
     depth = 0,        -- 現在のディレクトリのみ
-    exclude = {}      -- 除外なし
+    exclude = {},     -- 除外なし
+    basedir = ""      -- 起点ディレクトリ指定なし（現在のディレクトリ）
 }
 
 -- パラメータパース
@@ -275,10 +276,19 @@ local function process_toc_command(params_str, current_file)
     -- params と current_file を引数として渡す
     local script_path = "'" .. get_filter_path() .. "/insert-toc.sh" .. "'"
 
+    -- basedir が指定されている場合、current_file を調整
+    local adjusted_current_file = current_file or ""
+    if params.basedir and params.basedir ~= "" then
+        -- current_file のディレクトリを取得
+        local current_dir = adjusted_current_file:match("(.+)[/\\][^/\\]+$") or "."
+        -- basedir を結合（ダミーファイル名を付与してディレクトリを指定）
+        adjusted_current_file = current_dir .. "/" .. params.basedir .. "/.toc-dummy.md"
+    end
+
     -- 引数を構築
     local args = {
         tostring(params.depth),
-        current_file or "",
+        adjusted_current_file,
         os.getenv("DOCUMENT_LANG") or "ja"
     }
 
@@ -288,6 +298,9 @@ local function process_toc_command(params_str, current_file)
     else
         table.insert(args, "")
     end
+
+    -- basedir パラメータを追加（リンク生成用）
+    table.insert(args, params.basedir or "")
 
     -- bash コマンドを構築
     local command = script_path
