@@ -86,14 +86,42 @@ local defaults = {
 }
 
 -- パラメータパース
+-- クォート除去関数
+-- 注意: スマートクォート（" "）にも対応しています。
+-- 一部のエディタは自動的に通常のダブルクォート " を スマートクォートに変換するため、
+-- この対応が必要です。トラブルシューティング時は、以下のデバッグ行のコメントを外してください。
 local function unquote(str)
-    return str:gsub('^"([^"]*)"$', "%1"):gsub("^'([^']*)'$", "%1")
+    --debug_print("unquote input:", str, "length:", #str)
+
+    -- 通常のクォート（ASCII）
+    if (str:sub(1, 1) == '"' and str:sub(-1) == '"') or
+       (str:sub(1, 1) == "'" and str:sub(-1) == "'") then
+        local result = str:sub(2, -2)
+        --debug_print("unquote result (ASCII quote):", result)
+        return result
+    end
+
+    -- スマートクォート（UTF-8バイト列）
+    -- " (U+201C) = E2 80 9C (左ダブルクォーテーションマーク)
+    -- " (U+201D) = E2 80 9D (右ダブルクォーテーションマーク)
+    if #str >= 6 then
+        local first3 = str:sub(1, 3)
+        local last3 = str:sub(-3)
+        if first3 == "\xE2\x80\x9C" and last3 == "\xE2\x80\x9D" then
+            local result = str:sub(4, -4)
+            --debug_print("unquote result (smart quote):", result)
+            return result
+        end
+    end
+
+    --debug_print("unquote result (not quoted):", str)
+    return str
 end
 
 local function parse_toc_params(params_str)
     --debug_print("Parsing params:", params_str)
     local params = {exclude = {}}
-    
+
     -- key=value パターンのパース
     for key, value in params_str:gmatch('(%w+)=([^%s]+)') do
         --debug_print("Found param:", key, "=", value)
@@ -102,7 +130,9 @@ local function parse_toc_params(params_str)
             if type(params.exclude) ~= "table" then
                 params.exclude = {}
             end
-            table.insert(params.exclude, unquote(value))
+            local unquoted = unquote(value)
+            --debug_print("Unquoted value:", value, "->", unquoted)
+            table.insert(params.exclude, unquoted)
         else
             params[key] = unquote(value)
         end
@@ -138,13 +168,13 @@ local function parse_toc_params(params_str)
             result.depth = depth
         end
     end
-    
-    --debug_print("Final params - depth:", result.depth, "sort:", result.sort, "format:", result.format)
+
+    --debug_print("Final params - depth:", result.depth)
     --debug_print("Final exclude count:", #result.exclude)
     --for i, ex in ipairs(result.exclude) do
     --    debug_print("Final exclude", i .. ":", ex)
     --end
-    
+
     return result
 end
 
@@ -266,7 +296,7 @@ local function process_toc_command(params_str, current_file)
         command = command .. " '" .. arg:gsub("'", "'\"'\"'") .. "'"
     end
 
-    --debug_print("pcall:", command)
+    --debug_print("bash command:", command)
     local proc_ok, proc_output = pcall(pandoc.pipe, utf8_to_active_cp(bash_path), {"-c", command}, "")
     if proc_ok and proc_output then
         --debug_print("insert-toc.sh execute successful:\n", proc_output)

@@ -286,27 +286,59 @@ get_depth_level() {
 
 # 除外パターンマッチング
 # 引数: ファイルパス 除外パターン配列
+# パターン形式:
+#   - "pattern/*" : pattern ディレクトリ配下のすべてを除外
+#   - "pattern"   : パスに pattern を含むものを除外（部分文字列マッチング）
+# トラブルシューティング: デバッグが必要な場合は、以下の echo 行のコメントを外してください
 is_excluded() {
     local file_path="$1"
     local exclude_patterns="$2"
 
     # 除外パターンが空の場合は除外しない
-    [[ -z "$exclude_patterns" ]] && return 1
+    if [[ -z "$exclude_patterns" ]]; then
+        #echo "# is_excluded: パターンなし -> 除外しない: $file_path" >&2
+        return 1
+    fi
 
     # カンマ区切りの除外パターンを処理
     IFS=',' read -ra patterns <<< "$exclude_patterns"
+    #echo "# is_excluded: チェック対象: $file_path" >&2
+    #echo "# is_excluded: 除外パターン: $exclude_patterns" >&2
+
     for pattern in "${patterns[@]}"; do
         # bash parameter expansion でトリム処理
         pattern="${pattern#"${pattern%%[![:space:]]*}"}"  # 先頭空白除去
         pattern="${pattern%"${pattern##*[![:space:]]}"}"  # 末尾空白除去
         [[ -z "$pattern" ]] && continue
 
+        #echo "# is_excluded: パターン処理: '$pattern'" >&2
+
         # パターンマッチング
-        case "$file_path" in
-            *"$pattern"*) return 0 ;;  # マッチした場合は除外
-        esac
+        if [[ "$pattern" == *"/*" ]]; then
+            # ディレクトリ配下すべてを除外するパターン (例: doxybook/*)
+            local dir_pattern="${pattern%/\*}"
+            #echo "# is_excluded: ディレクトリパターン検出: '$dir_pattern'" >&2
+            case "$file_path" in
+                *"/$dir_pattern"/*|*"/$dir_pattern")
+                    #echo "# is_excluded: マッチ！ -> 除外: $file_path" >&2
+                    return 0
+                    ;;
+            esac
+            #echo "# is_excluded: マッチせず (ディレクトリパターン)" >&2
+        else
+            # 通常の部分文字列マッチング
+            #echo "# is_excluded: 部分文字列マッチング: '$pattern'" >&2
+            case "$file_path" in
+                *"$pattern"*)
+                    #echo "# is_excluded: マッチ！ -> 除外: $file_path" >&2
+                    return 0
+                    ;;
+            esac
+            #echo "# is_excluded: マッチせず (部分文字列)" >&2
+        fi
     done
 
+    #echo "# is_excluded: すべてのパターンでマッチせず -> 除外しない: $file_path" >&2
     return 1  # 除外しない
 }
 
@@ -590,8 +622,18 @@ generate_toc() {
                         fi
 
                         # 基準ディレクトリからの相対パスを計算 (README.md を index.md に読み替え)
-                        index_relative_path="${check_path#$base_dir/}"
-                        index_relative_path="${index_relative_path%/*}/index.md"
+                        # README.md の親ディレクトリを取得
+                        local readme_dir="$(dirname "$check_path")"
+                        local readme_dir_relative="${readme_dir#$base_dir}"
+                        readme_dir_relative="${readme_dir_relative#/}"  # 先頭スラッシュ除去
+
+                        if [[ -z "$readme_dir_relative" ]]; then
+                            # ルートディレクトリの README.md
+                            index_relative_path="index.md"
+                        else
+                            # サブディレクトリの README.md
+                            index_relative_path="$readme_dir_relative/index.md"
+                        fi
 
                         break  # README.md が見つかったので終了
                     fi
