@@ -185,6 +185,12 @@ while [[ $# -gt 0 ]]; do
             #echo details=${details}
             shift
         ;;
+        --lang=*)
+            lang="${1#*=}"
+            lang="${lang//,/ }"  # カンマをスペースに変換
+            #echo lang=${lang}
+            shift
+        ;;
         *)
             shift
         ;;
@@ -216,7 +222,10 @@ if [ -f "$configFile" ]; then
     if [[ "$details" == "" ]]; then
         details=$(parse_yaml "$config_content" "details")
     fi
-    lang=$(parse_yaml "$config_content" "lang")
+    if [[ "$lang" == "" ]]; then
+        lang=$(parse_yaml "$config_content" "lang")
+        lang="${lang//,/ }"  # カンマをスペースに変換
+    fi
     htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
     htmlSelfContainTemplate=$(parse_yaml "$config_content" "htmlSelfContainTemplate")

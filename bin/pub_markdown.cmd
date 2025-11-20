@@ -38,6 +38,11 @@ echo !arg! | findstr /b /c:"/details:" >nul && (
     set "options=%options%--details=!arg:/details:=! "
 )
 
+:: /lang: ‚Ìê‡
+echo !arg! | findstr /b /c:"/lang:" >nul && (
+    set "options=%options%--lang=!arg:/lang:=! "
+)
+
 :: Ÿ‚Ìˆø”‚Ö
 shift
 goto :parse_args
