@@ -393,28 +393,20 @@ else
     base_dir="${workspaceFolder}/${mdRoot}"
     mkdir -p "${workspaceFolder}/${pubRoot}"
 
-    # 出力フォルダの clean
-    if [[ "$details" == "both" ]]; then
-        # 両方出力する場合は、doxygen 以外のすべてのディレクトリを削除
-        find "${workspaceFolder}/${pubRoot}" \
-            -mindepth 1 -type d \
-            -name 'doxygen' -prune \
-            -o -type d ! -name 'doxygen' -exec rm -rf {} +
-    elif [[ "$details" == "true" ]]; then
-        # "-details" で終わっているディレクトリを削除、doxygen は常に残す
-        # 先に doxygen を prune して探索・削除対象から外す
-        find "${workspaceFolder}/${pubRoot}" \
-            -mindepth 1 -type d \
-            -name 'doxygen' -prune \
-            -o -type d ! -name 'doxygen' -name '*-details' -exec rm -rf {} +
-    else
-        # "-details" で終わっていないディレクトリを削除、doxygen は常に残す
-        # doxygen と *-details を prune し、残りのみ削除
-        find "${workspaceFolder}/${pubRoot}" \
-            -mindepth 1 -type d \
-            \( -name 'doxygen' -o -name '*-details' \) -prune \
-            -o -type d -exec rm -rf {} +
-    fi
+    # 出力フォルダの clean（対象言語に絞る）
+    for langElement in ${lang}; do
+        if [[ "$details" == "both" ]]; then
+            # 両方出力する場合は、対象言語の通常版と details 版を削除
+            rm -rf "${workspaceFolder}/${pubRoot}/${langElement}"
+            rm -rf "${workspaceFolder}/${pubRoot}/${langElement}-details"
+        elif [[ "$details" == "true" ]]; then
+            # 対象言語の "-details" ディレクトリを削除
+            rm -rf "${workspaceFolder}/${pubRoot}/${langElement}-details"
+        else
+            # 対象言語の通常版ディレクトリを削除
+            rm -rf "${workspaceFolder}/${pubRoot}/${langElement}"
+        fi
+    done
 fi
 
 # 実行条件をチェックする関数
