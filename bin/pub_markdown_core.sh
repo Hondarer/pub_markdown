@@ -332,10 +332,13 @@ if [[ "$docxCondition" == "" ]]; then
 fi
 
 # Adjust output directories based on the `details` flag
-if [[ "$details" == "true" ]]; then
-    details_suffix="-details"
+# details can be "true", "false", or "both"
+if [[ "$details" == "both" ]]; then
+    details_suffixes=("" "-details")
+elif [[ "$details" == "true" ]]; then
+    details_suffixes=("-details")
 else
-    details_suffix=""
+    details_suffixes=("")
 fi
 
 #-------------------------------------------------------------------
@@ -362,8 +365,10 @@ if [ -n "$relativeFile" ]; then
         fi
 
         for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
-            find "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" -maxdepth 1 -type f -exec rm -f {} +
+            for details_suffix in "${details_suffixes[@]}"; do
+                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
+                find "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" -maxdepth 1 -type f -exec rm -f {} +
+            done
         done
     else
         # 実行モード=ファイル
@@ -380,7 +385,13 @@ else
     mkdir -p "${workspaceFolder}/${pubRoot}"
 
     # 出力フォルダの clean
-    if [[ "$details" == "true" ]]; then
+    if [[ "$details" == "both" ]]; then
+        # 両方出力する場合は、doxygen 以外のすべてのディレクトリを削除
+        find "${workspaceFolder}/${pubRoot}" \
+            -mindepth 1 -type d \
+            -name 'doxygen' -prune \
+            -o -type d ! -name 'doxygen' -exec rm -rf {} +
+    elif [[ "$details" == "true" ]]; then
         # "-details" で終わっているディレクトリを削除、doxygen は常に残す
         # 先に doxygen を prune して探索・削除対象から外す
         find "${workspaceFolder}/${pubRoot}" \
@@ -613,7 +624,9 @@ for file in "${files[@]}"; do
         fi
 
         for langElement in ${lang}; do
-            mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
+            for details_suffix in "${details_suffixes[@]}"; do
+                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
+            done
         done
         publish_file="html/${file#${workspaceFolder}/${mdRoot}/}"
 
@@ -622,7 +635,9 @@ for file in "${files[@]}"; do
             # コンテンツのコピー
             echo "Processing Other file: ${file#${workspaceFolder}/}"
             for langElement in ${lang}; do
-                copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_file"
+                for details_suffix in "${details_suffixes[@]}"; do
+                    copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_file"
+                done
             done
         fi
     fi
@@ -630,7 +645,9 @@ done
 
 # CSS の配置
 for langElement in ${lang}; do
-    copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
+    for details_suffix in "${details_suffixes[@]}"; do
+        copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
+    done
 done
 
 for file in "${files[@]}"; do
@@ -657,7 +674,9 @@ for file in "${files[@]}"; do
         fi
         if should_execute "$executionMode" "$htmlSelfContainCondition"; then
             for langElement in ${lang}; do
-                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+                for details_suffix in "${details_suffixes[@]}"; do
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+                done
             done
         fi
         publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
@@ -671,7 +690,9 @@ for file in "${files[@]}"; do
         fi
         if should_execute "$executionMode" "$docxCondition"; then
             for langElement in ${lang}; do
-                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+                for details_suffix in "${details_suffixes[@]}"; do
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+                done
             done
         fi
         publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
@@ -684,14 +705,14 @@ for file in "${files[@]}"; do
         done
 
         if [[ "$autoSetDate" == "true" ]]; then
-            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
         else
             export -n DOCUMENT_DATE
         fi
 
         if [[ "$autoSetAuthor" == "true" ]]; then
-            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定
             export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
         else
             export -n DOCUMENT_AUTHOR
@@ -710,30 +731,14 @@ for file in "${files[@]}"; do
             | tr -d '\r')
 
         firstLang=""
-        for langElement in ${lang}; do
+        firstSuffix=""
+        for details_suffix in "${details_suffixes[@]}"; do
+            for langElement in ${lang}; do
 
-            export DOCUMENT_LANG=$langElement
+                export DOCUMENT_LANG=$langElement
 
-            if [ "$firstLang" == "" ]; then
-                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                printf "\e[33m" # 文字色を黄色に設定
-                echo "${openapi_md}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                        --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                        ${PANDOC_CROSSREF} \
-                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                        --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                printf "\e[0m" # 文字色を通常に設定
-                if should_execute "$executionMode" "$htmlSelfContainCondition"; then
-                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                if [ "$firstLang" == "" ]; then
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     printf "\e[33m" # 文字色を黄色に設定
                     echo "${openapi_md}" | \
                         ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
@@ -745,44 +750,64 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                            ${PANDOC_CROSSREF} \
-                            --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
-                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                            --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    printf "\e[0m" # 文字色を通常に設定
-                fi
-                if should_execute "$executionMode" "$docxCondition"; then
-                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    printf "\e[33m" # 文字色を黄色に設定
-                    echo "${openapi_md}" | \
-                        ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             ${PANDOC_CROSSREF} \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                            --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                            --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     printf "\e[0m" # 文字色を通常に設定
+                    if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                        echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        printf "\e[33m" # 文字色を黄色に設定
+                        echo "${openapi_md}" | \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                                ${PANDOC_CROSSREF} \
+                                --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
+                                --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                                --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        printf "\e[0m" # 文字色を通常に設定
+                    fi
+                    if should_execute "$executionMode" "$docxCondition"; then
+                        echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                        printf "\e[33m" # 文字色を黄色に設定
+                        echo "${openapi_md}" | \
+                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                                ${PANDOC_CROSSREF} \
+                                --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                                --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                        printf "\e[0m" # 文字色を通常に設定
+                    fi
+                    firstLang="${langElement}"
+                    firstSuffix="${details_suffix}"
+                else
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                    cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                    if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                        echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                    fi
+                    if should_execute "$executionMode" "$docxCondition"; then
+                        echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                    fi
                 fi
-                firstLang="${langElement}"
-            else
-                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                if should_execute "$executionMode" "$htmlSelfContainCondition"; then
-                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                fi
-                if should_execute "$executionMode" "$docxCondition"; then
-                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${details_suffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                fi
-            fi
+            done
         done
     elif [[ "$file" == *.md ]]; then
         # .md ファイルの処理
@@ -806,7 +831,9 @@ for file in "${files[@]}"; do
         fi
         if should_execute "$executionMode" "$htmlSelfContainCondition"; then
             for langElement in ${lang}; do
-                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+                for details_suffix in "${details_suffixes[@]}"; do
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
+                done
             done
         fi
         publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
@@ -820,7 +847,9 @@ for file in "${files[@]}"; do
         fi
         if should_execute "$executionMode" "$docxCondition"; then
             for langElement in ${lang}; do
-                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+                for details_suffix in "${details_suffixes[@]}"; do
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
+                done
             done
         fi
         publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
@@ -878,40 +907,29 @@ for file in "${files[@]}"; do
         # オリジナルのソースファイル名を環境変数に保持
         export SOURCE_FILE="$file"
 
-        for langElement in ${lang}; do
-            # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
-            # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-            replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${details})
-            md_title=$(echo "${replaced_md}" \
-                | perl -0777 -pe 's/<!--.*?-->//gs' \
-                | sed -n '/^#/p' \
-                | head -n 1 \
-                | sed 's/^# *//' \
-                | tr -d '\r')
-            md_body=$(echo "${replaced_md}" | sed '/^# /d')
+        for details_suffix in "${details_suffixes[@]}"; do
+            # details_suffix から details 値を決定
+            if [[ "$details_suffix" == "-details" ]]; then
+                current_details="true"
+            else
+                current_details="false"
+            fi
 
-            export DOCUMENT_LANG=$langElement
+            for langElement in ${lang}; do
+                # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
+                # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
+                replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${current_details})
+                md_title=$(echo "${replaced_md}" \
+                    | perl -0777 -pe 's/<!--.*?-->//gs' \
+                    | sed -n '/^#/p' \
+                    | head -n 1 \
+                    | sed 's/^# *//' \
+                    | tr -d '\r')
+                md_body=$(echo "${replaced_md}" | sed '/^# /d')
 
-            echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-            # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
-            printf "\e[33m" # 文字色を黄色に設定
-            echo "${md_body}" | \
-                ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
-                    --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                    ${PANDOC_CROSSREF} \
-                    --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                    --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                    --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-            printf "\e[0m" # 文字色を通常に設定
-            if should_execute "$executionMode" "$htmlSelfContainCondition"; then
-                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                export DOCUMENT_LANG=$langElement
+
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${md_body}" | \
@@ -925,32 +943,52 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         ${PANDOC_CROSSREF} \
-                        --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
+                        --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                        --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-            fi
-            if should_execute "$executionMode" "$docxCondition"; then
-                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
-                printf "\e[33m" # 文字色を黄色に設定
-                echo "${md_body}" | \
-                    ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
-                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                        ${PANDOC_CROSSREF} \
-                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                        --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                printf "\e[0m" # 文字色を通常に設定
-            fi
+                if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                    # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    printf "\e[33m" # 文字色を黄色に設定
+                    echo "${md_body}" | \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            ${PANDOC_CROSSREF} \
+                            --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                            --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                    printf "\e[0m" # 文字色を通常に設定
+                fi
+                if should_execute "$executionMode" "$docxCondition"; then
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                    # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    printf "\e[33m" # 文字色を黄色に設定
+                    echo "${md_body}" | \
+                        ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            ${PANDOC_CROSSREF} \
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                            --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                    printf "\e[0m" # 文字色を通常に設定
+                fi
+            done
         done
     fi
 done
