@@ -187,6 +187,7 @@ while [[ $# -gt 0 ]]; do
         ;;
         --lang=*)
             lang="${1#*=}"
+            lang="${lang//,/ }"  # カンマをスペースに変換
             #echo lang=${lang}
             shift
         ;;
@@ -223,6 +224,7 @@ if [ -f "$configFile" ]; then
     fi
     if [[ "$lang" == "" ]]; then
         lang=$(parse_yaml "$config_content" "lang")
+        lang="${lang//,/ }"  # カンマをスペースに変換
     fi
     htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
