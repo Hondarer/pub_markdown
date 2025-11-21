@@ -191,6 +191,11 @@ while [[ $# -gt 0 ]]; do
             #echo lang=${lang}
             shift
         ;;
+        --docx=*)
+            docxOutput="${1#*=}"
+            #echo docxOutput=${docxOutput}
+            shift
+        ;;
         *)
             shift
         ;;
@@ -233,7 +238,9 @@ if [ -f "$configFile" ]; then
     htmlTocEnable=$(parse_yaml "$config_content" "htmlTocEnable")
     htmlTocDepth=$(parse_yaml "$config_content" "htmlTocDepth")
     docxTemplate=$(parse_yaml "$config_content" "docxTemplate")
-    docxCondition=$(parse_yaml "$config_content" "docxCondition")
+    if [[ "$docxOutput" == "" ]]; then
+        docxOutput=$(parse_yaml "$config_content" "docxOutput")
+    fi
     autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
 fi
@@ -335,9 +342,9 @@ if [[ ! -e "$docxTemplate" ]]; then
     exit 1
 fi
 
-# 設定ファイルに docxCondition が指定されなかった場合の値を singlefile にする
-if [[ "$docxCondition" == "" ]]; then
-    docxCondition="singlefile"
+# 設定ファイルに docxOutput が指定されなかった場合の値を false にする
+if [[ "$docxOutput" == "" ]]; then
+    docxOutput="false"
 fi
 
 # Adjust output directories based on the `details` flag
@@ -689,7 +696,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_docx=docx
         fi
-        if should_execute "$executionMode" "$docxCondition"; then
+        if [[ "$docxOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
@@ -775,7 +782,7 @@ for file in "${files[@]}"; do
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         printf "\e[0m" # 文字色を通常に設定
                     fi
-                    if should_execute "$executionMode" "$docxCondition"; then
+                    if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         printf "\e[33m" # 文字色を黄色に設定
                         echo "${openapi_md}" | \
@@ -803,7 +810,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     fi
-                    if should_execute "$executionMode" "$docxCondition"; then
+                    if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     fi
@@ -846,7 +853,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_docx=docx
         fi
-        if should_execute "$executionMode" "$docxCondition"; then
+        if [[ "$docxOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
@@ -968,7 +975,7 @@ for file in "${files[@]}"; do
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     printf "\e[0m" # 文字色を通常に設定
                 fi
-                if should_execute "$executionMode" "$docxCondition"; then
+                if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     printf "\e[33m" # 文字色を黄色に設定
