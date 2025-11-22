@@ -10,18 +10,18 @@ lang: ja en
 #htmlTemplate: styles/html/html-template.html
 # html (self-contain) テンプレートの指定
 #htmlSelfContainTemplate: styles/html/html-template.html
-# html (self-contain) の出力条件 (workspace / folder / singlefile / disable)
-# デフォルト: disable
-#htmlSelfContainCondition: disable
+# html (self-contain) の出力有無 (true / false)
+# デフォルト: false
+#htmlSelfContainOutput: false
 # html における toc 出力要否 (false / true)
 #htmlTocEnable: true
 # html における toc の深さ
 #htmlTocDepth: 3
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
-# docx の出力条件 (workspace / folder / singlefile / disable)
-# デフォルト: singlefile
-#docxCondition: singlefile
+# docx の出力有無 (true / false)
+# デフォルト: false
+#docxOutput: false
 # date 自動設定の有無 (false / true)
 autoSetDate: true
 # author 自動設定の有無 (false / true)

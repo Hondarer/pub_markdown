@@ -191,6 +191,16 @@ while [[ $# -gt 0 ]]; do
             #echo lang=${lang}
             shift
         ;;
+        --docx=*)
+            docxOutput="${1#*=}"
+            #echo docxOutput=${docxOutput}
+            shift
+        ;;
+        --htmlSelfContain=*)
+            htmlSelfContainOutput="${1#*=}"
+            #echo htmlSelfContainOutput=${htmlSelfContainOutput}
+            shift
+        ;;
         *)
             shift
         ;;
@@ -229,11 +239,15 @@ if [ -f "$configFile" ]; then
     htmlStyleSheet=$(parse_yaml "$config_content" "htmlStyleSheet")
     htmlTemplate=$(parse_yaml "$config_content" "htmlTemplate")
     htmlSelfContainTemplate=$(parse_yaml "$config_content" "htmlSelfContainTemplate")
-    htmlSelfContainCondition=$(parse_yaml "$config_content" "htmlSelfContainCondition")
+    if [[ "$htmlSelfContainOutput" == "" ]]; then
+        htmlSelfContainOutput=$(parse_yaml "$config_content" "htmlSelfContainOutput")
+    fi
     htmlTocEnable=$(parse_yaml "$config_content" "htmlTocEnable")
     htmlTocDepth=$(parse_yaml "$config_content" "htmlTocDepth")
     docxTemplate=$(parse_yaml "$config_content" "docxTemplate")
-    docxCondition=$(parse_yaml "$config_content" "docxCondition")
+    if [[ "$docxOutput" == "" ]]; then
+        docxOutput=$(parse_yaml "$config_content" "docxOutput")
+    fi
     autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
 fi
@@ -319,9 +333,9 @@ if [[ ! -e "$htmlSelfContainTemplate" ]]; then
     exit 1
 fi
 
-# 設定ファイルに htmlSelfContainCondition が指定されなかった場合の値を disable にする
-if [[ "$htmlSelfContainCondition" == "" ]]; then
-    htmlSelfContainCondition="disable"
+# 設定ファイルに htmlSelfContainOutput が指定されなかった場合の値を false にする
+if [[ "$htmlSelfContainOutput" == "" ]]; then
+    htmlSelfContainOutput="false"
 fi
 
 # 設定ファイルに docxTemplate が指定されなかった場合の値を "$HOME_DIR/styles/docx/docx-template.dotx" にする
@@ -335,9 +349,9 @@ if [[ ! -e "$docxTemplate" ]]; then
     exit 1
 fi
 
-# 設定ファイルに docxCondition が指定されなかった場合の値を singlefile にする
-if [[ "$docxCondition" == "" ]]; then
-    docxCondition="singlefile"
+# 設定ファイルに docxOutput が指定されなかった場合の値を false にする
+if [[ "$docxOutput" == "" ]]; then
+    docxOutput="false"
 fi
 
 # Adjust output directories based on the `details` flag
@@ -408,50 +422,6 @@ else
         fi
     done
 fi
-
-# 実行条件をチェックする関数
-# この関数は以下の仕様で動作します:
-#
-#  - 引数: $1=executionMode, $2=condition
-#  - 戻り値: 0=true, 1=false (bash の標準的な戻り値)
-#
-#  条件判定ロジック:
-#  - condition="disable" → 常に false
-#  - condition="workspace" → 常に true
-#  - condition="folder" → executionMode が "folder" または "singlefile" の時 true
-#  - condition="singlefile" → executionMode が "singlefile" の時のみ true
-#  - 未知の condition → デフォルトで false
-should_execute() {
-    local execution_mode="$1"
-    local condition="$2"
-
-    case "$condition" in
-        "disable")
-            return 1  # false
-            ;;
-        "workspace")
-            return 0  # true
-            ;;
-        "folder")
-            if [[ "$execution_mode" == "folder" || "$execution_mode" == "singlefile" ]]; then
-                return 0  # true
-            else
-                return 1  # false
-            fi
-            ;;
-        "singlefile")
-            if [[ "$execution_mode" == "singlefile" ]]; then
-                return 0  # true
-            else
-                return 1  # false
-            fi
-            ;;
-        *)
-            # 未知の condition の場合はデフォルトで false
-            return 1
-            ;;
-    esac
-}
 
 #-------------------------------------------------------------------
 
@@ -673,7 +643,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_self_contain="html-self-contain"
         fi
-        if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+        if [[ "$htmlSelfContainOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
@@ -689,7 +659,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_docx=docx
         fi
-        if should_execute "$executionMode" "$docxCondition"; then
+        if [[ "$docxOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
@@ -756,7 +726,7 @@ for file in "${files[@]}"; do
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     printf "\e[0m" # 文字色を通常に設定
-                    if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                    if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         printf "\e[33m" # 文字色を黄色に設定
                         echo "${openapi_md}" | \
@@ -775,7 +745,7 @@ for file in "${files[@]}"; do
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         printf "\e[0m" # 文字色を通常に設定
                     fi
-                    if should_execute "$executionMode" "$docxCondition"; then
+                    if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         printf "\e[33m" # 文字色を黄色に設定
                         echo "${openapi_md}" | \
@@ -799,11 +769,11 @@ for file in "${files[@]}"; do
                 else
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                    if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                    if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     fi
-                    if should_execute "$executionMode" "$docxCondition"; then
+                    if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     fi
@@ -830,7 +800,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_self_contain="html-self-contain"
         fi
-        if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+        if [[ "$htmlSelfContainOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_self_contain"
@@ -846,7 +816,7 @@ for file in "${files[@]}"; do
         else
             publish_dir_docx=docx
         fi
-        if should_execute "$executionMode" "$docxCondition"; then
+        if [[ "$docxOutput" == "true" ]]; then
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx"
@@ -948,7 +918,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 printf "\e[0m" # 文字色を通常に設定
-                if should_execute "$executionMode" "$htmlSelfContainCondition"; then
+                if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     printf "\e[33m" # 文字色を黄色に設定
@@ -968,7 +938,7 @@ for file in "${files[@]}"; do
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     printf "\e[0m" # 文字色を通常に設定
                 fi
-                if should_execute "$executionMode" "$docxCondition"; then
+                if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     printf "\e[33m" # 文字色を黄色に設定

@@ -43,13 +43,23 @@ echo !arg! | findstr /b /c:"/lang:" >nul && (
     set "options=%options%--lang=!arg:/lang:=! "
 )
 
+:: /docx: の場合
+echo !arg! | findstr /b /c:"/docx:" >nul && (
+    set "options=%options%--docx=!arg:/docx:=! "
+)
+
+:: /htmlSelfContain: の場合
+echo !arg! | findstr /b /c:"/htmlSelfContain:" >nul && (
+    set "options=%options%--htmlSelfContain=!arg:/htmlSelfContain:=! "
+)
+
 :: 次の引数へ
 shift
 goto :parse_args
 
 :end_parse
 
-:: 引数が指定されていない場合のエラーメッセージ
+:: 必須引数が指定されていない場合のエラーメッセージ
 if "!workspaceFolder!"=="" (
     echo Error: workspaceFolder does not set. Exiting.
     exit /b 1
