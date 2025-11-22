@@ -1,68 +1,73 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: ï¿½ï¿½ï¿½Ìƒoï¿½bï¿½`ï¿½tï¿½@ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fï¿½Bï¿½ï¿½ï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½æ“¾
+:: ‚±‚Ìƒoƒbƒ`ƒtƒ@ƒCƒ‹‚ª‚ ‚éƒfƒBƒŒƒNƒgƒŠ‚ğæ“¾
 set "binFolder=%~dp0"
 
-:: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+:: ‰Šú‰»
 set "workspaceFolder="
 set "relativeFile="
 set "configFile="
 set "options="
 
-:: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+:: ˆø”‰ğÍ
 :parse_args
 set "arg=%~1"
 if not defined arg goto :end_parse
 
-:: /workspaceFolder: ï¿½Ìê‡
+:: /workspaceFolder: ‚Ìê‡
 echo !arg! | findstr /b /c:"/workspaceFolder:" >nul && (
     set "workspaceFolder=!arg:/workspaceFolder:=!"
     set "workspaceFolder=!workspaceFolder:"=!"
 )
 
-:: /relativeFile: ï¿½Ìê‡
+:: /relativeFile: ‚Ìê‡
 echo !arg! | findstr /b /c:"/relativeFile:" >nul && (
     set "relativeFile=!arg:/relativeFile:=!"
     set "relativeFile=!relativeFile:"=!"
 )
 
-:: /configFile: ï¿½Ìê‡
+:: /configFile: ‚Ìê‡
 echo !arg! | findstr /b /c:"/configFile:" >nul && (
     set "configFile=!arg:/configFile:=!"
     set "configFile=!configFile:"=!"
 )
 
-:: /details: ï¿½Ìê‡
+:: /details: ‚Ìê‡
 echo !arg! | findstr /b /c:"/details:" >nul && (
     set "options=%options%--details=!arg:/details:=! "
 )
 
-:: /lang: ï¿½Ìê‡
+:: /lang: ‚Ìê‡
 echo !arg! | findstr /b /c:"/lang:" >nul && (
     set "options=%options%--lang=!arg:/lang:=! "
 )
 
-:: /docx: ï¿½Ìê‡
+:: /docx: ‚Ìê‡
 echo !arg! | findstr /b /c:"/docx:" >nul && (
     set "options=%options%--docx=!arg:/docx:=! "
 )
 
-:: ï¿½ï¿½ï¿½Ìˆï¿½ï¿½ï¿½ï¿½ï¿½
+:: /htmlSelfContain: ‚Ìê‡
+echo !arg! | findstr /b /c:"/htmlSelfContain:" >nul && (
+    set "options=%options%--htmlSelfContain=!arg:/htmlSelfContain:=! "
+)
+
+:: Ÿ‚Ìˆø”‚Ö
 shift
 goto :parse_args
 
 :end_parse
 
-:: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wï¿½è‚³ï¿½ï¿½Ä‚ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½ÌƒGï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½bï¿½Zï¿½[ï¿½W
+:: •K{ˆø”‚ªw’è‚³‚ê‚Ä‚¢‚È‚¢ê‡‚ÌƒGƒ‰[ƒƒbƒZ[ƒW
 if "!workspaceFolder!"=="" (
     echo Error: workspaceFolder does not set. Exiting.
     exit /b 1
 )
 
-:: ï¿½tï¿½Hï¿½ï¿½ï¿½_ï¿½ï¿½Ø‚ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Gï¿½Xï¿½Pï¿½[ï¿½v
-:: Git bash ï¿½Éƒtï¿½@ï¿½Cï¿½ï¿½ï¿½pï¿½Xï¿½ï¿½nï¿½ï¿½ï¿½ÛAï¿½ï¿½Ø‚è•¶ï¿½ï¿½ï¿½ï¿½ÏŠï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½çˆï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½ï¿½
-:: ï¿½Gï¿½Xï¿½Pï¿½[ï¿½vï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½ßAWindows ï¿½ï¿½ï¿½É‚Ä’uï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+:: ƒtƒHƒ‹ƒ_‹æØ‚è‹L†‚ğƒGƒXƒP[ƒv
+:: Git bash ‚Éƒtƒ@ƒCƒ‹ƒpƒX‚ğ“n‚·ÛA‹æØ‚è•¶š‚ğ•ÏŠ·‚µ‚Ä‚©‚çˆ—‚µ‚È‚¢‚Æ
+:: ƒGƒXƒP[ƒv‚³‚ê‚Ä‚µ‚Ü‚¤‚½‚ßAWindows ‘¤‚É‚Ä’uŠ·‚·‚é
 set "escapedBinFolder=!binFolder:\=/!"
 set "escapedWorkspaceFolder=!workspaceFolder:\=/!"
 if not "!relativeFile!"=="" (
@@ -72,14 +77,14 @@ if not "!configFile!"=="" (
     set "escapedConfigFile=!configFile:\=/!"
 )
 
-:: ï¿½fï¿½oï¿½bï¿½Oï¿½pï¿½oï¿½ï¿½
+:: ƒfƒoƒbƒO—po—Í
 rem echo Escaped Bin Folder: !escapedBinFolder!
 rem echo Escaped Workspace Folder: !escapedWorkspaceFolder!
 rem echo Escaped Relative File: !escapedRelativeFile!
 rem echo Escaped Config File: !escapedConfigFile!
 rem echo Options: !options!
 
-:: git.exe ï¿½Ìƒpï¿½Xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+:: git.exe ‚ÌƒpƒX‚ğŒŸõ
 for /f "delims=" %%A in ('where git.exe 2^>nul') do (
     set "gitDir=%%~dpA"
     goto :gotgitdir
@@ -89,10 +94,10 @@ echo Error: Git for Windows ^(Git Bash^) does not found. Exiting.
 exit /b 1
 
 :gotgitdir
-:: git.exe ï¿½Ìƒpï¿½Xï¿½ï¿½ï¿½ï¿½Abash.exe ï¿½Ìƒpï¿½Xï¿½ï¿½gï¿½İ—ï¿½ï¿½ï¿½
+:: git.exe ‚ÌƒpƒX‚©‚çAbash.exe ‚ÌƒpƒX‚ğ‘g‚İ—§‚Ä
 set "gitBin=!gitDir!..\bin"
 
-:: ï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½Ì‘gï¿½İ—ï¿½ï¿½ï¿½
+:: ƒRƒ}ƒ“ƒh‚Ì‘g‚İ—§‚Ä
 set "command="!gitBin!\bash.exe" -i "!escapedBinFolder!pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!""
 
 if not "!relativeFile!"=="" (
@@ -107,12 +112,12 @@ if not "!options!"=="" (
     set "command=!command! !options!"
 )
 
-:: ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½eï¿½ï¿½ï¿½oï¿½ï¿½
+:: Às“à—e‚ğo—Í
 rem echo !command!
 
-:: ï¿½Rï¿½}ï¿½ï¿½ï¿½hï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ß‚ï¿½lï¿½ï¿½ï¿½æ“¾
+:: ƒRƒ}ƒ“ƒh‚ğÀs‚µ–ß‚è’l‚ğæ“¾
 !command!
 set "returnCode=!ERRORLEVEL!"
 
-:: ï¿½ß‚ï¿½lï¿½ï¿½Ûï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½
+:: –ß‚è’l‚ğ•Û‚µI—¹
 endlocal & exit /b !returnCode!
