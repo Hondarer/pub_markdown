@@ -566,7 +566,7 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
 
 else
     # Git 管理外ならファイル名を NUL→改行区切りに変えてそのまま使う
-    files_raw=$(printf "%s" "${files_raw_initial[@]}" | tr '\0' '\n')
+    files_raw=$(printf '%s\n' "${files_raw_initial[@]}")
 fi
 
 # 配列に格納
