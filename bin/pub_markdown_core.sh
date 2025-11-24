@@ -547,8 +547,15 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
             my $rule = $records[$i];
             my $path = $records[$i + 1];
             next unless defined($path) && length($path);
-            # ルールが空（:: 相当）または「!」で始まるルールのみ採用
-            if ($rule eq "" || $rule =~ /^!/) {
+
+            # 処理対象ファイル（.md, .yaml, .yml, .json）は .gitignore を無視
+            my $is_source_file = ($path =~ /\.(md|yaml|yml|json)$/i);
+
+            if ($is_source_file) {
+                # ソースファイルは常に含める（.gitignore を無視）
+                push @out, $path;
+            } elsif ($rule eq "" || $rule =~ /^!/) {
+                # その他のファイルは .gitignore ルールを尊重
                 push @out, $path;
             }
         }
