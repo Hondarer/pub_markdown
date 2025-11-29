@@ -33,8 +33,46 @@ fi
 # Puppeteer に組み込まれた Chromium のパスを取得する
 CHROME=$(cd $(dirname "$0") && node -e "console.log(require('puppeteer').executablePath())")
 if [ ! -x "$CHROME" ]; then
-  echo "Chromium not found: $CHROME" >&2
-  exit 1
+  echo "Chromium not found at: $CHROME" >&2
+
+  # executablePath() の戻り値からキャッシュディレクトリの親ディレクトリを推定
+  # 例: /home/user/.cache/puppeteer/chrome/linux-142.0.7444.175/chrome-linux64/chrome
+  #     → /home/user/.cache/puppeteer/chrome
+  PUPPETEER_CACHE_DIR=$(dirname "$(dirname "$CHROME")")
+
+  # パスにバージョン番号らしき部分 (linux-X.X.X.X) が含まれるか確認
+  if [[ "$CHROME" =~ (.*)/linux-[0-9.]+/(.*) ]]; then
+    PUPPETEER_CACHE_DIR="${BASH_REMATCH[1]}"
+    CHROME_SUBPATH="${BASH_REMATCH[2]}"
+
+    echo "Searching for alternative Chromium in $PUPPETEER_CACHE_DIR..." >&2
+
+    if [ -d "$PUPPETEER_CACHE_DIR" ]; then
+      # 各バージョンディレクトリ内の chrome 実行ファイルを探し、バージョンでソート
+      # 元のパスと同じサブパス構造を持つものを優先
+      LATEST_CHROME=$(find "$PUPPETEER_CACHE_DIR" -type f -path "*/linux-*/$CHROME_SUBPATH" -executable 2>/dev/null | while read chrome_path; do
+        # パスからバージョン番号を抽出 (例: linux-142.0.7444.175 から 142.0.7444.175)
+        version=$(echo "$chrome_path" | grep -oP 'linux-\K[0-9.]+' | head -1)
+        if [ ! -z "$version" ]; then
+          echo "$version $chrome_path"
+        fi
+      done | sort -V -r | head -1 | awk '{print $2}')
+
+      if [ ! -z "$LATEST_CHROME" ] && [ -x "$LATEST_CHROME" ]; then
+        CHROME="$LATEST_CHROME"
+        echo "Using alternative Chromium: $CHROME" >&2
+      else
+        echo "No alternative Chromium found in $PUPPETEER_CACHE_DIR" >&2
+        exit 1
+      fi
+    else
+      echo "Puppeteer cache directory not found: $PUPPETEER_CACHE_DIR" >&2
+      exit 1
+    fi
+  else
+    echo "Unable to determine cache directory structure from path: $CHROME" >&2
+    exit 1
+  fi
 fi
 
 # Puppeteer に返す stderr を FD 3 に退避しておく

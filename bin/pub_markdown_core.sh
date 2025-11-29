@@ -32,15 +32,25 @@ if [ $LINUX -eq 1 ]; then
     chmod +x "${SCRIPT_DIR}/pandoc-filters/insert-toc.sh"
 else
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
-    EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
+    # レジストリから Microsoft Edge のパスを取得
+    EDGE_REG_PATH=$(reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" //v Path 2>/dev/null | grep "Path" | sed 's/.*REG_SZ[[:space:]]*//' | tr -d '\r')
+    if [ -n "$EDGE_REG_PATH" ]; then
+        EDGE_PATH="${EDGE_REG_PATH}/msedge.exe"
+    else
+        # フォールバック: 環境変数から取得を試みる
+        EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
+    fi
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
         #echo "PUPPETEER_EXECUTABLE_PATH = ${PUPPETEER_EXECUTABLE_PATH}"
+    else
+        echo "Error: Microsoft Edge not found at $EDGE_PATH"
+        exit 1
     fi
 fi
 
-# pandoc が ${SCRIPT_DIR} にある または PATH が通っていれば
-# PANDOC に pandoc のパスを設定
+# Pandoc が ${SCRIPT_DIR} にある または PATH が通っていれば
+# PANDOC に Pandoc のパスを設定
 if [ -x "${SCRIPT_DIR}/pandoc" ] || [ -x "${SCRIPT_DIR}/pandoc.exe" ]; then
     PANDOC="${SCRIPT_DIR}/pandoc"
 elif command -v pandoc >/dev/null 2>&1 || command -v pandoc.exe >/dev/null 2>&1; then
