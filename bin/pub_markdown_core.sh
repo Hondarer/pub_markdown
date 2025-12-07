@@ -20,16 +20,31 @@ trap 'cleanup' INT TERM
 #-------------------------------------------------------------------
 
 LINUX=0
+WSL=0
+
 if [[ "$(uname -s)" == "Linux" ]]; then
     LINUX=1
+    # WSL環境かどうかを判定
+    if grep -qi microsoft /proc/version 2>/dev/null || uname -r | grep -qi microsoft 2>/dev/null; then
+        WSL=1
+    fi
 fi
 
 if [ $LINUX -eq 1 ]; then
     chmod +x "${SCRIPT_DIR}/replace-tag.sh"
     chmod +x "${SCRIPT_DIR}/mmdc-wrapper.sh"
     chmod +x "${SCRIPT_DIR}/chrome-wrapper.sh"
-    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
     chmod +x "${SCRIPT_DIR}/pandoc-filters/insert-toc.sh"
+    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
+
+    if [ $WSL -eq 1 ]; then
+        # NOTE: WSL2 では 127.0.0.1 のネットワーク分離問題があるため、
+        # PUPPETEER_EXECUTABLE_PATH に Windows 側の Edge を指定しても、
+        # WSL2 から Edge (127.0.0.1でLISTEN) にアクセスできない。
+        # そのため、PUPPETEER_EXECUTABLE_PATH は設定せず、
+        # Puppeteer が自動的にダウンロードする Linux 版 Chromium を使用する。
+        :
+    fi
 else
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
     # レジストリから Microsoft Edge のパスを取得
@@ -42,7 +57,9 @@ else
     fi
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
-        #echo "PUPPETEER_EXECUTABLE_PATH = ${PUPPETEER_EXECUTABLE_PATH}"
+        export PUPPETEER_SKIP_DOWNLOAD=1
+        #echo "PUPPETEER_EXECUTABLE_PATH=\"${PUPPETEER_EXECUTABLE_PATH}\""
+        #echo "PUPPETEER_SKIP_DOWNLOAD=1"
     else
         echo "Error: Microsoft Edge not found at $EDGE_PATH"
         exit 1
