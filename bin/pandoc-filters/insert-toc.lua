@@ -341,7 +341,7 @@ function Para(elem)
             for i = 2, #elem.content do
                 local element = elem.content[i]
                 --debug_print("Processing element", i, ":", element.t)
-                
+
                 if element.t == "Str" then
                     -- Pandoc 3.x API では .text を使用
                     local str_content = element.text or element.c
@@ -350,6 +350,23 @@ function Para(elem)
                     end
                 elseif element.t == "Space" then
                     table.insert(params_parts, " ")
+                elseif element.t == "Quoted" then
+                    -- Quoted ノードの処理（例: basedir="doxybook/calc"）
+                    table.insert(params_parts, '"')
+                    -- Quoted ノードの中身を展開
+                    if element.content then
+                        for _, quoted_elem in ipairs(element.content) do
+                            if quoted_elem.t == "Str" then
+                                local quoted_str = quoted_elem.text or quoted_elem.c
+                                if quoted_str then
+                                    table.insert(params_parts, quoted_str)
+                                end
+                            elseif quoted_elem.t == "Space" then
+                                table.insert(params_parts, " ")
+                            end
+                        end
+                    end
+                    table.insert(params_parts, '"')
                 end
             end
             
