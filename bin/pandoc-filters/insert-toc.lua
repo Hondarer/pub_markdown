@@ -81,9 +81,10 @@ end
 
 -- デフォルト設定
 local defaults = {
-    depth = 0,        -- 現在のディレクトリのみ
-    exclude = {},     -- 除外なし
-    basedir = ""      -- 起点ディレクトリ指定なし（現在のディレクトリ）
+    depth = 0,                  -- 現在のディレクトリのみ
+    exclude = {},               -- 除外なし
+    basedir = "",               -- 起点ディレクトリ指定なし（現在のディレクトリ）
+    ["exclude-basedir"] = false -- 基準ディレクトリを除外しない
 }
 
 -- パラメータパース
@@ -123,8 +124,8 @@ local function parse_toc_params(params_str)
     --debug_print("Parsing params:", params_str)
     local params = {exclude = {}}
 
-    -- key=value パターンのパース
-    for key, value in params_str:gmatch('(%w+)=([^%s]+)') do
+    -- key=value パターンのパース（ハイフンも許可）
+    for key, value in params_str:gmatch('([%w-_]+)=([^%s]+)') do
         --debug_print("Found param:", key, "=", value)
         if key == "exclude" then
             -- exclude パラメータは配列に追加
@@ -301,6 +302,9 @@ local function process_toc_command(params_str, current_file)
 
     -- basedir パラメータを追加（リンク生成用）
     table.insert(args, params.basedir or "")
+
+    -- exclude-basedir パラメータを追加
+    table.insert(args, tostring(params["exclude-basedir"] or false))
 
     -- bash コマンドを構築
     local command = script_path

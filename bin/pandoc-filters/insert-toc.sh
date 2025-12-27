@@ -25,6 +25,7 @@ CURRENT_FILE="$2"
 DOCUMENT_LANG="${3:-neutral}" # 指定がない場合はニュートラル言語
 EXCLUDE="$4"
 BASEDIR="$5"
+EXCLUDE_BASEDIR="${6:-false}"
 
 # デバッグ用: 引数をエコー
 #echo "# Debug: Received arguments" >&2
@@ -378,10 +379,10 @@ generate_toc() {
         fi
 
         # 2. 基準ディレクトリ自体を除外（配下のファイル/ディレクトリは保持）
-        #if [[ "$abs_path" == "$base_dir" ]]; then
-        #    echo "# 除外 (基準ディレクトリ): $abs_path" >&2
-        #    continue
-        #fi
+        if [[ "$EXCLUDE_BASEDIR" == "true" && "$abs_path" == "$base_dir" ]]; then
+            #echo "# 除外 (基準ディレクトリ): $abs_path" >&2
+            continue
+        fi
 
         # 3. 深度制限チェック
         if [[ "$max_depth" -ge 0 ]]; then
@@ -551,8 +552,8 @@ generate_toc() {
                 file_relative_path="$basedir_prefix/$file_relative_path"
             fi
 
-            # Markdownリンク形式で出力
-            echo "${indent}- 📄 [$display_title]($file_relative_path)"
+            # Markdownリンク形式で出力（ファイル名 + 説明文）
+            echo "${indent}- 📄 [$file_basename_only]($file_relative_path) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$display_title"
 
         elif [[ "$type" == "directory" ]]; then
             # ディレクトリの場合
@@ -660,7 +661,7 @@ generate_toc() {
 
             # インデックスファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
             if [[ -n "$index_file_found" ]]; then
-                echo "${indent}- 📁 [$index_display_title]($index_relative_path)"
+                echo "${indent}- 📁 [$base_title]($index_relative_path) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$index_display_title"
             else
                 echo "${indent}- 📁 $base_title"
             fi

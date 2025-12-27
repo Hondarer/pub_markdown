@@ -4,6 +4,16 @@
 
 この Lua フィルタは、指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的に目次リストを生成し、対象ファイルに挿入します。
 
+### 出力形式
+
+生成される目次は以下の形式で出力されます：
+
+- **ファイル**: `📄 [ファイル名](パス) <br/>     説明文`
+- **フォルダ** (index.md あり): `📁 [フォルダ名](パス) <br/>     説明文`
+- **フォルダ** (index.md なし): `📁 フォルダ名`
+
+ファイル名/フォルダ名がリンクテキストとして表示され、Markdown ファイル内の最初の見出し（`# タイトル`）が説明文として表示されます。
+
 ## 目次挿入の書式
 
 ### 基本書式
@@ -17,7 +27,7 @@ Pandoc Lua フィルタの慣例に従い、`\toc` コマンドを使用しま�
 ### パラメータ付き書式
 
 ```markdown
-\toc depth=1 exclude="temp.md" exclude="draft/*"
+\toc depth=1 exclude="temp.md" exclude="draft/*" exclude-basedir=true
 ```
 
 ### 書式の特徴
@@ -108,12 +118,52 @@ project/
 生成される目次:
 
 ```markdown
-- 📄 [ガイド](docs/guide.md)
-- 📁 [API](docs/api/index.md)
-  - 📄 [リファレンス](docs/api/reference.md)
+- 📄 [guide.md](docs/guide.md) <br/>     ガイド
+- 📁 [api](docs/api/index.md) <br/>     API
+  - 📄 [reference.md](docs/api/reference.md) <br/>     リファレンス
 ```
 
 **注意**: 生成されるリンクは、`\toc` コマンドが記述されているファイルからの相対パスになります。
+
+### 基準ディレクトリ除外 (exclude-basedir)
+
+目次生成時に、基準ディレクトリ自体を目次から除外し、直下のファイル/フォルダを第一階層として表示します。
+
+指定方法を次に示す。
+
+```markdown
+\toc depth=-1 exclude-basedir=true
+```
+
+#### 使用例
+
+`docs-src/README.md` で以下のように記述した場合:
+
+```markdown
+## 関連ドキュメント
+
+\toc depth=-1 exclude="doxybook/*" exclude-basedir=true
+```
+
+**exclude-basedir=false (デフォルト)**:
+
+```markdown
+- 📁 [docs-src](index.md) <br/>     Document of c-modernization-kit
+  - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
+  - 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
+```
+
+**exclude-basedir=true**:
+
+```markdown
+- 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
+- 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
+```
+
+#### 用途
+
+- プロジェクトルートのドキュメントで、自身のディレクトリ名を表示せずに直下のファイルを列挙したい場合
+- 目次の階層を1つ浅くして、よりフラットな構造で表示したい場合
 
 ### デフォルト値
 
@@ -121,9 +171,10 @@ Lua フィルタ内で定義されるデフォルト値は以下の通りです�
 
 ```lua
 local defaults = {
-    depth = 0,        -- 現在のディレクトリのみ
-    exclude = {},     -- 除外なし
-    basedir = ""      -- 起点ディレクトリ指定なし（現在のディレクトリ）
+    depth = 0,                  -- 現在のディレクトリのみ
+    exclude = {},               -- 除外なし
+    basedir = "",               -- 起点ディレクトリ指定なし（現在のディレクトリ）
+    ["exclude-basedir"] = false -- 基準ディレクトリを除外しない
 }
 ```
 
@@ -140,9 +191,13 @@ local defaults = {
 実行結果 (現在のディレクトリのみ)。
 
 ```markdown
-- [Chapter1](chapter1.md)
-- [Chapter2](chapter2.md)
+- 📄 [chapter1.md](chapter1.md) <br/>     Chapter 1: イントロダクション
+- 📄 [chapter2.md](chapter2.md) <br/>     Chapter 2: 基本操作
 ```
+
+**出力形式**:
+- ファイル/フォルダ名をリンクテキストとして表示
+- `<br/>     ` (5つの `&nbsp;`) の後に Markdown ファイル内の見出し（説明文）を表示
 
 #### 1 階層下まで指定
 
@@ -162,20 +217,21 @@ index.md または index.markdown が存在する場合は、階層名に index.
 **階層名の表示ロジック**：
 
 1. index.md が存在する場合：
-   - index.md内の最初の `# タイトル` を使用
-   - タイトルがない場合 → フォルダ名を使用
+   - フォルダ名をリンクテキストとして表示
+   - index.md 内の最初の `# タイトル` を説明文として表示
+   - タイトルがない場合 → 説明文は表示されない
 2. index.md が存在しない場合：
-   - フォルダ名のみ (リンクなし)
+   - フォルダ名のみ (リンクなし、説明文なし)
 
 ```markdown
 # プロジェクト概要
 
-- [イントロダクション](intro.md)
-- [チュートリアル](tutorial/index.md)
-  - [基本操作](tutorial/basics.md)
-  - [応用](tutorial/advanced.md)
-- reference
-  - [API](reference/api.md)
+- 📄 [intro.md](intro.md) <br/>     イントロダクション
+- 📁 [tutorial](tutorial/index.md) <br/>     チュートリアル
+  - 📄 [basics.md](tutorial/basics.md) <br/>     基本操作
+  - 📄 [advanced.md](tutorial/advanced.md) <br/>     応用
+- 📁 reference
+  - 📄 [api.md](reference/api.md) <br/>     API リファレンス
 
 ## 詳細
 ```
@@ -197,6 +253,9 @@ index.md または index.markdown が存在する場合は、階層名に index.
 
 ## API リファレンス（別ディレクトリ指定 + 除外）
 \toc basedir="docs/api" depth=-1 exclude="internal/*"
+
+## 関連ドキュメント（基準ディレクトリを除外）
+\toc depth=-1 exclude="doxybook/*" exclude-basedir=true
 ```
 
 ## コマンド実行例
