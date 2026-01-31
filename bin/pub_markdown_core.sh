@@ -6,7 +6,7 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダを選択させる
 cd $HOME_DIR
 
-#── Ctrl+C（SIGINT）や SIGTERM を捕まえて実行するクリーンアップ処理 ──
+# Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
 cleanup() {
     #echo >&2 "スクリプトが中断されました。"
     printf "\e[0m" # 文字色を通常に設定
@@ -167,7 +167,7 @@ resolve_path() {
     local input_path="$1"
     local resolved_path=""
 
-    # 絶対パスの判定（Linux/Unix および Windows Git Bash 対応）
+    # 絶対パスの判定 (Linux/Unix および Windows Git Bash 対応)
     if [[ "$input_path" == /* || "$input_path" =~ ^[a-zA-Z]:\\ ]]; then
         # 絶対パスの場合はそのまま使用
         resolved_path="$input_path"
@@ -277,6 +277,7 @@ if [ -f "$configFile" ]; then
     fi
     autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
+    mergeSubmoduleDocs=$(parse_yaml "$config_content" "mergeSubmoduleDocs")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "docs-src" にする
@@ -314,14 +315,14 @@ if [[ "$htmlTocEnable" == "true" ]]; then
     htmlTocOption="--toc --toc-depth=${htmlTocDepth}"
 fi
 
-# 設定ファイルに autoSetDate が指定されなかった場合の値を false にする
+# 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
 if [[ "$autoSetDate" == "" ]]; then
-    autoSetDate="false"
+    autoSetDate="true"
 fi
 
-# 設定ファイルに autoSetAuthor が指定されなかった場合の値を false にする
+# 設定ファイルに autoSetAuthor が指定されなかった場合の値を true にする
 if [[ "$autoSetAuthor" == "" ]]; then
-    autoSetAuthor="false"
+    autoSetAuthor="true"
 fi
 
 #-------------------------------------------------------------------
@@ -392,11 +393,169 @@ else
 fi
 
 #-------------------------------------------------------------------
+# サブモジュール mdRoot マージ機能
+#-------------------------------------------------------------------
 
-if [[ -n $relativeFile && $relativeFile != ${mdRoot}/* && $relativeFile != ${mdRoot} ]]; then
-    # NOTE: ワークスペース外のファイルの場合、ここでチェックアウトされる
-    echo "Error: relativeFile does not start with '${mdRoot}/'. Exiting."
-    exit 1
+# 設定ファイルで指定されたサブモジュールのパスリストを設定する関数
+# 引数: $1=スペース区切りのサブモジュール名リスト (例: "doxyfw makefw testfw")
+# 戻り値: グローバル配列 submodule_paths にサブモジュールパスを設定
+set_submodule_paths() {
+    local submodule_list="$1"
+    submodule_paths=()
+
+    if [[ -z "$submodule_list" ]]; then
+        return 0
+    fi
+
+    # スペース区切りで配列に変換
+    read -ra submodule_paths <<< "$submodule_list"
+}
+
+# サブモジュール内の mdRoot ディレクトリを検出する関数
+# 戻り値: グローバル配列 submodule_mdroot_paths に "サブモジュール名:mdRootパス" を設定
+detect_submodule_docs() {
+    submodule_mdroot_paths=()
+
+    for submodule in "${submodule_paths[@]}"; do
+        local submodule_mdroot_path="${workspaceFolder}/${submodule}/${mdRoot}"
+        if [[ -d "$submodule_mdroot_path" ]]; then
+            submodule_mdroot_paths+=("${submodule}:${submodule_mdroot_path}")
+        fi
+    done
+}
+
+# 実パスを仮想パス (mdRoot 基準) に変換する関数
+# 引数: $1=実パス (絶対パス)
+# 戻り値: 標準出力に仮想パスを出力
+real_to_virtual_path() {
+    local real_path="$1"
+
+    # サブモジュール mdRoot のパスかチェック
+    for entry in "${submodule_mdroot_paths[@]}"; do
+        local submodule="${entry%%:*}"
+        local submodule_mdroot="${entry#*:}"
+
+        if [[ "$real_path" == "${submodule_mdroot}/"* ]]; then
+            # サブモジュール mdRoot 配下のファイル
+            local relative="${real_path#${submodule_mdroot}/}"
+            echo "${workspaceFolder}/${mdRoot}/${submodule}/${relative}"
+            return 0
+        elif [[ "$real_path" == "${submodule_mdroot}" ]]; then
+            # サブモジュール mdRoot 自体
+            echo "${workspaceFolder}/${mdRoot}/${submodule}"
+            return 0
+        fi
+    done
+
+    # メイン mdRoot のファイル (変換不要)
+    echo "$real_path"
+}
+
+# 仮想パスを実パスに変換する関数
+# 引数: $1=仮想パス (絶対パス)
+# 戻り値: 標準出力に実パスを出力
+virtual_to_real_path() {
+    local virtual_path="$1"
+    local mdroot_prefix="${workspaceFolder}/${mdRoot}/"
+
+    # mdRoot 配下のパスかチェック
+    if [[ "$virtual_path" != "${mdroot_prefix}"* && "$virtual_path" != "${workspaceFolder}/${mdRoot}" ]]; then
+        echo "$virtual_path"
+        return 0
+    fi
+
+    local relative="${virtual_path#${mdroot_prefix}}"
+
+    # サブモジュール名で始まるかチェック
+    for entry in "${submodule_mdroot_paths[@]}"; do
+        local submodule="${entry%%:*}"
+        local submodule_mdroot="${entry#*:}"
+
+        if [[ "$relative" == "${submodule}/"* ]]; then
+            # サブモジュール mdRoot へのパスに変換
+            local submodule_relative="${relative#${submodule}/}"
+            echo "${submodule_mdroot}/${submodule_relative}"
+            return 0
+        elif [[ "$relative" == "${submodule}" ]]; then
+            # サブモジュール mdRoot 自体
+            echo "${submodule_mdroot}"
+            return 0
+        fi
+    done
+
+    # メイン mdRoot のファイル (変換不要)
+    echo "$virtual_path"
+}
+
+# サブモジュール情報を初期化
+declare -a submodule_paths=()
+declare -a submodule_mdroot_paths=()
+
+if [[ -n "$mergeSubmoduleDocs" ]]; then
+    set_submodule_paths "$mergeSubmoduleDocs"
+    detect_submodule_docs
+    # insert-toc.sh 用に環境変数をエクスポート
+    export MERGE_SUBMODULE_DOCS="$mergeSubmoduleDocs"
+    export SUBMODULE_DOCS_PATHS="${submodule_mdroot_paths[*]}"
+fi
+
+#-------------------------------------------------------------------
+
+# relativeFile のパス検証 (サブモジュールマージ対応)
+if [[ -n $relativeFile ]]; then
+    path_type=""
+
+    # 1. メイン mdRoot パスのチェック
+    if [[ $relativeFile == ${mdRoot}/* || $relativeFile == ${mdRoot} ]]; then
+        path_type="mdroot"
+    fi
+
+    # 2. サブモジュール実パスのチェック
+    if [[ -z "$path_type" && -n "$mergeSubmoduleDocs" ]]; then
+        for entry in "${submodule_mdroot_paths[@]}"; do
+            _submodule="${entry%%:*}"
+            if [[ $relativeFile == ${_submodule}/${mdRoot}/* || $relativeFile == ${_submodule}/${mdRoot} ]]; then
+                path_type="submodule_real"
+                break
+            fi
+        done
+    fi
+
+    # 3. 仮想パスのチェック
+    if [[ -z "$path_type" && -n "$mergeSubmoduleDocs" ]]; then
+        for entry in "${submodule_mdroot_paths[@]}"; do
+            _submodule="${entry%%:*}"
+            if [[ $relativeFile == ${mdRoot}/${_submodule}/* || $relativeFile == ${mdRoot}/${_submodule} ]]; then
+                path_type="submodule_virtual"
+                break
+            fi
+        done
+    fi
+
+    # 4. いずれにも該当しない場合はエラー
+    if [[ -z "$path_type" ]]; then
+        echo "Error: relativeFile is not a valid path: $relativeFile"
+        exit 1
+    fi
+
+    # relativeFile が実パスの場合、仮想パスに変換 (内部処理の統一のため)
+    if [[ "$path_type" == "submodule_real" ]]; then
+        for entry in "${submodule_mdroot_paths[@]}"; do
+            _submodule="${entry%%:*}"
+            _submodule_mdroot_rel="${_submodule}/${mdRoot}"
+
+            if [[ $relativeFile == ${_submodule_mdroot_rel}/* ]]; then
+                _subpath="${relativeFile#${_submodule_mdroot_rel}/}"
+                original_relativeFile="$relativeFile"
+                relativeFile="${mdRoot}/${_submodule}/${_subpath}"
+                break
+            elif [[ $relativeFile == ${_submodule_mdroot_rel} ]]; then
+                original_relativeFile="$relativeFile"
+                relativeFile="${mdRoot}/${_submodule}"
+                break
+            fi
+        done
+    fi
 fi
 
 if [ -n "$relativeFile" ]; then
@@ -434,7 +593,7 @@ else
     base_dir="${workspaceFolder}/${mdRoot}"
     mkdir -p "${workspaceFolder}/${pubRoot}"
 
-    # 出力フォルダの clean（対象言語に絞る）
+    # 出力フォルダの clean (対象言語に絞る)
     for langElement in ${lang}; do
         if [[ "$details" == "both" ]]; then
             # 両方出力する場合は、対象言語の通常版と details 版を削除
@@ -499,39 +658,87 @@ echo -n "Correcting target files..."
 
 # ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──
 if [ -n "$relativeFile" ]; then
-    if [ -d "${workspaceFolder}/$relativeFile" ]; then
+    # 実パスの解決
+    # original_relativeFile が設定されている場合 (実パス→仮想パス変換が行われた場合) はそれを使用
+    # そうでない場合は relativeFile をそのまま使用 (メイン mdRoot のファイル)
+    if [[ -n "$original_relativeFile" ]]; then
+        real_relativeFile="$original_relativeFile"
+    else
+        # 仮想パスから実パスへの変換 (仮想パスで指定された場合)
+        real_relativeFile="$relativeFile"
+        if [[ -n "$mergeSubmoduleDocs" ]]; then
+            for entry in "${submodule_mdroot_paths[@]}"; do
+                _submodule="${entry%%:*}"
+                _submodule_mdroot="${entry#*:}"
+
+                if [[ $relativeFile == ${mdRoot}/${_submodule}/* ]]; then
+                    _subpath="${relativeFile#${mdRoot}/${_submodule}/}"
+                    real_relativeFile="${_submodule}/${mdRoot}/${_subpath}"
+                    break
+                elif [[ $relativeFile == ${mdRoot}/${_submodule} ]]; then
+                    real_relativeFile="${_submodule}/${mdRoot}"
+                    break
+                fi
+            done
+        fi
+    fi
+
+    if [ -d "${workspaceFolder}/$real_relativeFile" ]; then
         # relativeFile がディレクトリの場合: そのディレクトリ内のリンク先も含めて収集
+        # base_dir は実パスを使用 (ファイル探索用)
+        real_base_dir="${workspaceFolder}/${real_relativeFile}"
+        # 仮想パスの base_dir も設定 (出力パス計算用)
         base_dir="${workspaceFolder}/${relativeFile}"
 
         # 1) Markdown や YAML に埋め込まれたリンク資産を抽出
         declare -a files_linked=()
         while IFS= read -r -d '' md_file; do
-            extract_links_from_markdown "$md_file" "$base_dir"
-        done < <(find "${base_dir}" -maxdepth 1 -type f -name "*.md" -print0)
+            extract_links_from_markdown "$md_file" "$real_base_dir"
+        done < <(find "${real_base_dir}" -maxdepth 1 -type f -name "*.md" -print0)
         unset IFS
 
         # 2) ディレクトリ直下のすべてのファイルを追加
         mapfile -d '' -t additional_files < <(
-            find "${base_dir}" -maxdepth 1 -type f -print0
+            find "${real_base_dir}" -maxdepth 1 -type f -print0
         )
 
         # 3) マージ＆ソート＆重複排除
         merge_and_deduplicate_files "${files_linked[@]}" "${additional_files[@]}"
     else
         # relativeFile が単一ファイルの場合: そのファイル＋リンク先ファイルを抽出
+        # base_dir は実パスを使用
+        real_base_dir="${workspaceFolder}/$(dirname "$real_relativeFile")"
+        base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
+
         declare -a files_linked=()
-        if [[ -f "${workspaceFolder}/${relativeFile}" ]]; then
-            extract_links_from_markdown "${workspaceFolder}/${relativeFile}" "$base_dir"
+        if [[ -f "${workspaceFolder}/${real_relativeFile}" ]]; then
+            extract_links_from_markdown "${workspaceFolder}/${real_relativeFile}" "$real_base_dir"
         fi
 
         # マージ＆ソート＆重複排除 (単一ファイル自身も含める)
-        merge_and_deduplicate_files "${files_linked[@]}" "${workspaceFolder}/${relativeFile}"
+        merge_and_deduplicate_files "${files_linked[@]}" "${workspaceFolder}/${real_relativeFile}"
     fi
 else
     # relativeFile が指定されていない場合: mdRoot 以下の全ファイルを対象
     mapfile -d '' -t files_raw_initial < <(
         find "${base_dir}" -type f -print0 | sort -z -u
     )
+
+    # サブモジュール mdRoot のファイルを追加 (mergeSubmoduleDocs が指定されている場合)
+    if [[ -n "$mergeSubmoduleDocs" ]]; then
+        for entry in "${submodule_mdroot_paths[@]}"; do
+            _submodule="${entry%%:*}"
+            _submodule_mdroot="${entry#*:}"
+
+            # サブモジュール mdRoot 配下のファイルを収集
+            mapfile -d '' -t submodule_files < <(
+                find "${_submodule_mdroot}" -type f -print0 | sort -z -u
+            )
+
+            # files_raw_initial に追加
+            files_raw_initial+=("${submodule_files[@]}")
+        done
+    fi
 fi
 
 # ── (B) files_raw_initial から .gitignore と .gitkeep を除外 ──
@@ -555,9 +762,33 @@ fi
 
 # ── (C) Git 管理下なら NUL 区切りでフィルタ ──
 if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り)
+    # サブモジュール配下のファイルを分離 (gitignore フィルタリング対象外)
+    declare -a submodule_files_array=()
+    declare -a main_files_array=()
+
+    if [[ -n "$mergeSubmoduleDocs" && ${#submodule_mdroot_paths[@]} -gt 0 ]]; then
+        for f in "${files_raw_initial[@]}"; do
+            is_submodule_file=false
+            for entry in "${submodule_mdroot_paths[@]}"; do
+                _submodule_mdroot="${entry#*:}"
+                if [[ "$f" == "${_submodule_mdroot}/"* || "$f" == "${_submodule_mdroot}" ]]; then
+                    is_submodule_file=true
+                    break
+                fi
+            done
+            if [[ "$is_submodule_file" == "true" ]]; then
+                submodule_files_array+=("$f")
+            else
+                main_files_array+=("$f")
+            fi
+        done
+    else
+        main_files_array=("${files_raw_initial[@]}")
+    fi
+
+    # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り) - メインファイルのみ
     mapfile -d '' -t files_rel_zero_array < <(
-        printf '%s\0' "${files_raw_initial[@]}" | \
+        printf '%s\0' "${main_files_array[@]}" | \
         sed -z "s|^${workspaceFolder}/||g"
     )
 
@@ -575,11 +806,11 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
             my $path = $records[$i + 1];
             next unless defined($path) && length($path);
 
-            # 処理対象ファイル（.md, .yaml, .yml, .json）は .gitignore を無視
+            # 処理対象ファイル (.md, .yaml, .yml, .json) は .gitignore を無視
             my $is_source_file = ($path =~ /\.(md|yaml|yml|json)$/i);
 
             if ($is_source_file) {
-                # ソースファイルは常に含める（.gitignore を無視）
+                # ソースファイルは常に含める (.gitignore を無視)
                 push @out, $path;
             } elsif ($rule eq "" || $rule =~ /^!/) {
                 # その他のファイルは .gitignore ルールを尊重
@@ -598,6 +829,11 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
         files_raw+="${workspaceFolder}/${relpath}"$'\n'
     done
 
+    # 4) サブモジュール配下のファイルを追加 (フィルタリング済みとして扱う)
+    for f in "${submodule_files_array[@]}"; do
+        files_raw+="${f}"$'\n'
+    done
+
 else
     # Git 管理外ならファイル名を NUL→改行区切りに変えてそのまま使う
     files_raw=$(printf '%s\n' "${files_raw_initial[@]}")
@@ -605,13 +841,6 @@ fi
 
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
-
-#echo "***"
-#for file in "${files[@]}"; do
-#    echo ${file}
-#done
-#echo "***"
-#exit
 
 echo " done."
 
@@ -621,7 +850,14 @@ for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない
     # → ファイルが存在する場合のみ処理を行う
     if [[ -e "$file" ]]; then
-        publish_dir=$(dirname "${file}")
+        # サブモジュールマージ時は仮想パスに変換して出力パスを計算
+        if [[ -n "$mergeSubmoduleDocs" ]]; then
+            virtual_file=$(real_to_virtual_path "$file")
+        else
+            virtual_file="$file"
+        fi
+
+        publish_dir=$(dirname "${virtual_file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir="html/${publish_dir#${workspaceFolder}/${mdRoot}/}"
         else
@@ -633,12 +869,12 @@ for file in "${files[@]}"; do
                 mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
             done
         done
-        publish_file="html/${file#${workspaceFolder}/${mdRoot}/}"
+        publish_file="html/${virtual_file#${workspaceFolder}/${mdRoot}/}"
 
-        # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う(除外処理をしない)
+        # NOTE: OpenAPI ファイルは発行時に同梱すべきかと考えたため、コピーを行う (除外処理をしない)
         if [[ "$file" != *.md ]] ; then
-            # コンテンツのコピー
-            echo "Processing Other file: ${file#${workspaceFolder}/}"
+            # コンテンツのコピー (実パスを使用)
+            echo "Processing Other file: ${virtual_file#${workspaceFolder}/}"
             for langElement in ${lang}; do
                 for details_suffix in "${details_suffixes[@]}"; do
                     copy_if_different_timestamp "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_file"
@@ -656,22 +892,29 @@ for langElement in ${lang}; do
 done
 
 for file in "${files[@]}"; do
+    # サブモジュールマージ時は仮想パスに変換して出力パスを計算
+    if [[ -n "$mergeSubmoduleDocs" ]]; then
+        virtual_file=$(real_to_virtual_path "$file")
+    else
+        virtual_file="$file"
+    fi
+
     if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。
-        
+
         # FIXME: markdown ファイルとの重複処理は統合すべき。
         echo "Processing OpenAPI file: ${file#${workspaceFolder}/}"
 
-        # html
-        publish_dir=$(dirname "${file}")
+        # html (仮想パスベースで出力パスを計算)
+        publish_dir=$(dirname "${virtual_file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file=html/${virtual_file#${workspaceFolder}/${mdRoot}/}
 
         # html-self-contain
-        publish_dir_self_contain=$(dirname "${file}")
+        publish_dir_self_contain=$(dirname "${virtual_file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
         else
@@ -684,10 +927,10 @@ for file in "${files[@]}"; do
                 done
             done
         fi
-        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
+        publish_file_self_contain="html-self-contain/${virtual_file#${workspaceFolder}/${mdRoot}/}"
 
         # docx
-        publish_dir_docx=$(dirname "${file}")
+        publish_dir_docx=$(dirname "${virtual_file}")
         if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
         else
@@ -700,7 +943,7 @@ for file in "${files[@]}"; do
                 done
             done
         fi
-        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file_docx=docx/${virtual_file#${workspaceFolder}/${mdRoot}/}
 
         # path to css
         nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
@@ -818,17 +1061,17 @@ for file in "${files[@]}"; do
         # .md ファイルの処理
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
-        # html
-        publish_dir=$(dirname "${file}")
+        # html (仮想パスベースで出力パスを計算)
+        publish_dir=$(dirname "${virtual_file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
         else
             publish_dir=html
         fi
-        publish_file=html/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file=html/${virtual_file#${workspaceFolder}/${mdRoot}/}
 
         # html-self-contain
-        publish_dir_self_contain=$(dirname "${file}")
+        publish_dir_self_contain=$(dirname "${virtual_file}")
         if [[ "$publish_dir_self_contain" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_self_contain="html-self-contain/${publish_dir_self_contain#${workspaceFolder}/${mdRoot}/}"
         else
@@ -841,10 +1084,10 @@ for file in "${files[@]}"; do
                 done
             done
         fi
-        publish_file_self_contain="html-self-contain/${file#${workspaceFolder}/${mdRoot}/}"
+        publish_file_self_contain="html-self-contain/${virtual_file#${workspaceFolder}/${mdRoot}/}"
 
         # docx
-        publish_dir_docx=$(dirname "${file}")
+        publish_dir_docx=$(dirname "${virtual_file}")
         if [[ "$publish_dir_docx" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_docx=docx/${publish_dir_docx#${workspaceFolder}/${mdRoot}/}
         else
@@ -857,7 +1100,7 @@ for file in "${files[@]}"; do
                 done
             done
         fi
-        publish_file_docx=docx/${file#${workspaceFolder}/${mdRoot}/}
+        publish_file_docx=docx/${virtual_file#${workspaceFolder}/${mdRoot}/}
 
         # README.md を index.html に変換するロジック
         # index.md が存在しない場合のみ、README.md を index.html として出力

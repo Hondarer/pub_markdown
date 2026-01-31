@@ -1,9 +1,9 @@
 # markdown が格納されているフォルダ名 (ワークスペースフォルダからの相対パス)
-mdRoot: docs-src
+#mdRoot: docs-src
 # 発行先のフォルダ名 (ワークスペースフォルダからの相対パス)
-pubRoot: docs
+#pubRoot: docs
 # 言語の指定 (スペース区切りで複数言語の指定可)
-lang: ja en
+#lang: ja en
 # html スタイルシートの指定
 #htmlTemplate: styles/html/html-style.css
 # html テンプレートの指定
@@ -23,6 +23,10 @@ lang: ja en
 # デフォルト: false
 #docxOutput: false
 # date 自動設定の有無 (false / true)
-autoSetDate: true
+#autoSetDate: true
 # author 自動設定の有無 (false / true)
-autoSetAuthor: true
+#autoSetAuthor: true
+# サブモジュール mdRoot マージ機能
+# マージ対象のサブモジュールをスペース区切りで指定
+# 空または未指定の場合は機能無効
+#mergeSubmoduleDocs:

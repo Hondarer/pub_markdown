@@ -6,14 +6,14 @@
 # キャッシュファイルパス
 CACHE_FILE="/tmp/insert-toc-cache.tsv"
 
-# メモリ内キャッシュ（連想配列）
+# メモリ内キャッシュ (連想配列)
 # キー: 絶対パス, 値: "ファイル名\t種別\tベースタイトル\t言語別タイトル"
 declare -A memory_cache
 
-# ソート前キーリスト（順序付き配列）
+# ソート前キーリスト (順序付き配列)
 declare -a unsorted_keys
 
-# ソート済みキーリスト（順序付き配列）
+# ソート済みキーリスト (順序付き配列)
 declare -a sorted_keys
 
 # キャッシュ変更フラグ
@@ -27,6 +27,16 @@ EXCLUDE="$4"
 BASEDIR="$5"
 EXCLUDE_BASEDIR="${6:-false}"
 
+# 環境変数からサブモジュールマージ設定を取得
+# 値はスペース区切りのサブモジュール名リスト (空の場合は機能無効)
+MERGE_SUBMODULE_DOCS="${MERGE_SUBMODULE_DOCS:-}"
+# スペース区切りの文字列を配列に変換
+if [[ -n "$SUBMODULE_DOCS_PATHS" ]]; then
+    IFS=' ' read -ra submodule_entries <<< "$SUBMODULE_DOCS_PATHS"
+else
+    submodule_entries=()
+fi
+
 # デバッグ用: 引数をエコー
 #echo "# Debug: Received arguments" >&2
 #echo "DEPTH: $DEPTH" >&2
@@ -34,6 +44,8 @@ EXCLUDE_BASEDIR="${6:-false}"
 #echo "DOCUMENT_LANG: $DOCUMENT_LANG" >&2
 #echo "EXCLUDE: $EXCLUDE" >&2
 #echo "BASEDIR: $BASEDIR" >&2
+#echo "MERGE_SUBMODULE_DOCS: $MERGE_SUBMODULE_DOCS" >&2
+#echo "SUBMODULE_DOCS_PATHS: $SUBMODULE_DOCS_PATHS" >&2
 
 # ========================================
 # メモリベースキャッシュ関数
@@ -132,7 +144,7 @@ has_lang_title_in_memory_cache() {
         return 1  # エントリ自体が存在しない
     fi
 
-    # TSVの4番目のフィールド（言語別タイトル）を取得
+    # TSVの4番目のフィールド (言語別タイトル) を取得
     local lang_titles
     IFS=$'\t' read -r _ _ _ lang_titles <<< "$cache_entry"
 
@@ -172,7 +184,7 @@ update_memory_cache_title() {
     else
         # 同じ言語コードが既に存在するかチェック
         if [[ "$lang_titles" =~ $lang_code: ]]; then
-            # 既存の言語タイトルを置換（bash parameter expansion使用）
+            # 既存の言語タイトルを置換 (bash parameter expansion 使用)
             if [[ "$lang_titles" =~ (.*)(${lang_code}:[^|]*)(.*) ]]; then
                 lang_titles="${BASH_REMATCH[1]}${new_lang_title}${BASH_REMATCH[3]}"
             fi
@@ -244,7 +256,7 @@ extract_markdown_title() {
         return 0
     fi
 
-    # 対象言語のタイトルが見つからない場合、従来の処理（最初の # 見出し）を実行
+    # 対象言語のタイトルが見つからない場合、従来の処理 (最初の # 見出し) を実行
     line_count=0
     while IFS= read -r line && ((line_count < 50)); do
         if [[ "$line" =~ ^#[[:space:]](.*)$ ]]; then
@@ -279,7 +291,7 @@ get_depth_level() {
     local relative_path="${target_path#$base_path}"
     relative_path="${relative_path#/}"  # 先頭スラッシュ除去
 
-    # 階層数をカウント（スラッシュの数）
+    # 階層数をカウント (スラッシュの数)
     if [[ -z "$relative_path" || "$relative_path" == "$target_path" ]]; then
         echo 0  # 同じディレクトリ
     else
@@ -291,7 +303,7 @@ get_depth_level() {
 # 引数: ファイルパス 除外パターン配列
 # パターン形式:
 #   - "pattern/*" : pattern ディレクトリ配下のすべてを除外
-#   - "pattern"   : パスに pattern を含むものを除外（部分文字列マッチング）
+#   - "pattern"   : パスに pattern を含むものを除外 (部分文字列マッチング)
 # トラブルシューティング: デバッグが必要な場合は、以下の echo 行のコメントを外してください
 is_excluded() {
     local file_path="$1"
@@ -378,7 +390,7 @@ generate_toc() {
             continue
         fi
 
-        # 2. 基準ディレクトリ自体を除外（配下のファイル/ディレクトリは保持）
+        # 2. 基準ディレクトリ自体を除外 (配下のファイル/ディレクトリは保持)
         if [[ "$EXCLUDE_BASEDIR" == "true" && "$abs_path" == "$base_dir" ]]; then
             #echo "# 除外 (基準ディレクトリ): $abs_path" >&2
             continue
@@ -552,7 +564,7 @@ generate_toc() {
                 file_relative_path="$basedir_prefix/$file_relative_path"
             fi
 
-            # Markdownリンク形式で出力（ファイル名 + 説明文）
+            # Markdownリンク形式で出力 (ファイル名 + 説明文)
             echo "${indent}- 📄 [$file_basename_only]($file_relative_path) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$display_title"
 
         elif [[ "$type" == "directory" ]]; then
@@ -727,7 +739,7 @@ scan_directory() {
             add_to_memory_cache "$abs_path" "$filename" "file" "$base_title" ""
             unsorted_keys+=("$abs_path")
 
-            # Markdownタイトル抽出（キャッシュに指定言語のタイトルがない場合のみ）
+            # Markdownタイトル抽出 (キャッシュに指定言語のタイトルがない場合のみ)
             if ! has_lang_title_in_memory_cache "$abs_path" "$lang_code"; then
                 #echo "# Markdownタイトル抽出実行: $abs_path" >&2
                 local lang_title
@@ -769,11 +781,129 @@ fi
 # ディレクトリ探索実行
 scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
 
+# サブモジュール docs-src の探索 (mergeSubmoduleDocs が指定されている場合)
+# 注意: この機能は current_dir が mdRoot の場合のみ有効
+if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
+    #echo "# サブモジュール docs-src 探索開始" >&2
+
+    for entry in "${submodule_entries[@]}"; do
+        submodule="${entry%%:*}"
+        docs_src="${entry#*:}"
+
+        #echo "# サブモジュール探索: $submodule -> $docs_src" >&2
+
+        # サブモジュール docs-src 配下のファイルを探索
+        # 仮想パスとしてキャッシュに追加(current_dir/submodule/... として)
+        if [[ -d "$docs_src" ]]; then
+            # find コマンドで探索
+            _find_args=("$docs_src")
+            if [[ "$DEPTH" -ge 0 ]]; then
+                _find_args+=(-maxdepth $((DEPTH + 1)))
+            fi
+
+            while read -r path; do
+                # 実パスから仮想パスを計算
+                # 実パス: {docs_src}/path/to/file.md
+                # 仮想パス: {current_dir}/{submodule}/path/to/file.md
+                _relative_to_docs_src="${path#$docs_src}"
+                _relative_to_docs_src="${_relative_to_docs_src#/}"  # 先頭スラッシュ除去
+
+                if [[ -z "$_relative_to_docs_src" ]]; then
+                    _virtual_abs_path="${current_dir}/${submodule}"
+                else
+                    _virtual_abs_path="${current_dir}/${submodule}/${_relative_to_docs_src}"
+                fi
+
+                # ファイル名取得
+                # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を使用
+                # 例: testfw/gtest -> gtest
+                if [[ "$path" == "$docs_src" ]]; then
+                    _filename="${submodule##*/}"
+                else
+                    _filename="${path##*/}"
+                fi
+
+                #echo "# サブモジュールファイル: $path -> $_virtual_abs_path" >&2
+
+                if [[ -d "$path" ]]; then
+                    # ディレクトリの場合
+                    # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を base_title に使用
+                    if [[ "$path" == "$docs_src" ]]; then
+                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${submodule##*/}" ""
+                    else
+                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "$_filename" ""
+                    fi
+                    unsorted_keys+=("$_virtual_abs_path")
+                elif [[ -f "$path" ]]; then
+                    # ファイルの場合
+                    _base_title="$_filename"
+                    if [[ "$_base_title" == *.md ]]; then
+                        _base_title="${_base_title%.md}"
+                    elif [[ "$_base_title" == *.markdown ]]; then
+                        _base_title="${_base_title%.markdown}"
+                    fi
+
+                    add_to_memory_cache "$_virtual_abs_path" "$_filename" "file" "$_base_title" ""
+                    unsorted_keys+=("$_virtual_abs_path")
+
+                    # Markdownタイトル抽出(実パスを使用)
+                    if ! has_lang_title_in_memory_cache "$_virtual_abs_path" "$DOCUMENT_LANG"; then
+                        if _lang_title=$(extract_markdown_title "$path" "$DOCUMENT_LANG"); then
+                            _title="${_lang_title#*:}"
+                            update_memory_cache_title "$_virtual_abs_path" "$DOCUMENT_LANG" "$_title"
+                        fi
+                    fi
+                fi
+            done < <(find "${_find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
+        fi
+    done
+
+    #echo "# サブモジュール docs-src 探索完了" >&2
+fi
+
 # キャッシュを永続化ファイルに保存
 save_cache
 
 # unsorted_keys をソートして sorted_keys に設定
-mapfile -t sorted_keys < <(printf '%s\n' "${unsorted_keys[@]}" | sort)
+# カスタムソート: 各階層でディレクトリ→ファイルの順にソート
+# ソートキー生成: パスの各コンポーネントにプレフィックスを付ける
+# - ディレクトリ部分: "0" - 先にソートされる
+# - ファイル部分: "1" - 後にソートされる
+generate_sort_key() {
+    local path="$1"
+    local type="$2"  # "directory" or "file"
+
+    # パスを / で分割
+    IFS='/' read -ra parts <<< "$path"
+    local key=""
+    local last_idx=$((${#parts[@]} - 1))
+
+    for i in "${!parts[@]}"; do
+        local part="${parts[$i]}"
+        if [[ $i -eq $last_idx && "$type" == "file" ]]; then
+            # 最後の部分がファイルなら "1" を付ける
+            key+="1${part}"
+        else
+            # ディレクトリ (または中間パス) なら "0" を付ける
+            key+="0${part}"
+        fi
+        if [[ $i -lt $last_idx ]]; then
+            key+="/"
+        fi
+    done
+
+    echo "$key"
+}
+
+# ソートキーと元パスのペアを生成してソート
+mapfile -t sorted_keys < <(
+    for path in "${unsorted_keys[@]}"; do
+        entry="${memory_cache[$path]}"
+        IFS=$'\t' read -r _ type _ _ <<< "$entry"
+        sort_key=$(generate_sort_key "$path" "$type")
+        printf '%s\t%s\n' "$sort_key" "$path"
+    done | sort -t$'\t' -k1 | cut -f2
+)
 
 # メモリキャッシュ内容を表示
 #echo "# キャッシュ内容" >&2
