@@ -433,6 +433,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   content: "▷ ";
   display: inline-block;
   width: 1em;
+  margin-left: -1.3em;
 }
 
 .collapsible-list details[open] > summary::before {
