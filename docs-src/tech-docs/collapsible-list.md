@@ -116,10 +116,26 @@ JavaScript により、子要素を持つ `<li>` 要素が以下のように変�
 
 ### 展開マーカー
 
-展開/折りたたみ状態を示すマーカーは、CSS の `::before` 疑似要素で実装されます。
+展開/折りたたみ状態を示すマーカーは、CSS の `::before` 疑似要素で実装されます。Windows 11 エクスプローラー風のシェブロン（>）を CSS の `border` プロパティで描画しています。
 
-- **折りたたみ時**: `▷` (白抜き三角)
-- **展開時**: `▽` (白抜き三角)
+- **折りたたみ時**: 右向きシェブロン `>`
+- **展開時**: 下向きシェブロン `∨`
+
+```css
+.collapsible-list details > summary::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  transform: rotate(-45deg);  /* 折りたたみ時: 右向き */
+}
+
+.collapsible-list details[open] > summary::before {
+  transform: rotate(45deg);   /* 展開時: 下向き */
+}
+```
 
 展開マーカーを持つ項目 (子リストを持つ `<li>`) は、Bullet (・) が非表示になります。これは CSS の `:has()` セレクタにより実現されています。
 
