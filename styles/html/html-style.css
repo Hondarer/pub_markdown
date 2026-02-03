@@ -402,7 +402,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 /* ============================================================
    展開可能リスト (collapsible-list)
 
-   このクラスは追加クラス（modifier class）として設計されています。
+   このクラスは追加クラス (modifier class) として設計されています。
    .collapsible-list 内のネストされたリストは、JavaScript により
    展開可能な <details>/<summary> 構造に変換されます。
 
@@ -412,10 +412,10 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
      - 子項目
    :::
 
-   詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
+   詳細は docs-src/collapsible-list.md を参照してください。
    ============================================================ */
 
-/* details を持つ li は Bullet を非表示（展開マーカーで代用） */
+/* details を持つ li は Bullet を非表示 (展開マーカーで代用) */
 .collapsible-list li:has(> details) {
   list-style: none;
 }
