@@ -432,25 +432,23 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 }
 
 .collapsible-list details > summary::before {
-  content: "+";
+  content: "";
   display: inline-block;
-  width: 0.9em;
-  height: 0.9em;
-  line-height: calc(0.9em - 1px);
-  text-align: center;
-  margin-left: -1.3em;
-  margin-right: 0.4em;
-  border: 1px solid #888;
-  font-size: 0.75em;
-  color: #888;
-  background-color: #fff;
-  padding-right: 1px;
+  width: 6px;
+  height: 6px;
+  margin-left: -1.1em;
+  margin-right: 0.5em;
+  border-right: 2px solid #000;
+  border-bottom: 2px solid #000;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
   position: relative;
-  top: -3px;
+  top: -1px;
 }
 
 .collapsible-list details[open] > summary::before {
-  content: "-";
+  transform: rotate(45deg);
+  top: -3px;
 }
 
 .collapsible-list details > summary:hover {
