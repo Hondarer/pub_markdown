@@ -445,6 +445,8 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   color: #555;
   background-color: #fff;
   padding-right: 1px;
+  position: relative;
+  top: -3px;
 }
 
 .collapsible-list details[open] > summary::before {
