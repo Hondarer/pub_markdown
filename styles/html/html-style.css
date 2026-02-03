@@ -398,3 +398,48 @@ code span.st { color: #4070a0; font-style: normal; } /* String */
 code span.va { color: #19177c; font-style: normal; } /* Variable */
 code span.vs { color: #4070a0; font-style: normal; } /* VerbatimString */
 code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warning */
+
+/* ============================================================
+   展開可能リスト (collapsible-list)
+
+   このクラスは追加クラス（modifier class）として設計されています。
+   .collapsible-list 内のネストされたリストは、JavaScript により
+   展開可能な <details>/<summary> 構造に変換されます。
+
+   Markdown での使用方法:
+   ::: {.collapsible-list}
+   - 親項目
+     - 子項目
+   :::
+
+   詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
+   ============================================================ */
+
+.collapsible-list details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.collapsible-list details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-list details > summary::before {
+  content: "▶ ";
+  display: inline-block;
+  width: 1em;
+  transition: transform 0.2s ease;
+}
+
+.collapsible-list details[open] > summary::before {
+  content: "▼ ";
+}
+
+.collapsible-list details > summary:hover {
+  background-color: #f5f5f5;
+}
+
+.collapsible-list details > ul,
+.collapsible-list details > ol {
+  margin-top: 3px;
+}

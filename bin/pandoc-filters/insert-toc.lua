@@ -394,7 +394,12 @@ function Para(elem)
                 local doc = pandoc.read(markdown_content, "markdown")
                 if doc and doc.blocks and #doc.blocks > 0 then
                     --debug_print("Successfully parsed markdown to AST")
-                    return doc.blocks[1]  -- 最初のブロック（リスト）を返す
+                    -- collapsible-list クラスでラップ
+                    -- 注意: このクラスは追加クラス（modifier class）として設計されています。
+                    -- .collapsible-list 内のリストは JavaScript により展開可能な
+                    -- <details>/<summary> 構造に変換されます。
+                    -- 詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
+                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
                     debug_print("Failed to parse markdown")
                 end
@@ -437,7 +442,12 @@ function RawBlock(elem)
                 local doc = pandoc.read(markdown_content, "markdown")
                 if doc and doc.blocks and #doc.blocks > 0 then
                     --debug_print("Successfully parsed markdown to AST")
-                    return doc.blocks[1]  -- 最初のブロック（リスト）を返す
+                    -- collapsible-list クラスでラップ
+                    -- 注意: このクラスは追加クラス（modifier class）として設計されています。
+                    -- .collapsible-list 内のリストは JavaScript により展開可能な
+                    -- <details>/<summary> 構造に変換されます。
+                    -- 詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
+                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
                     --debug_print("Failed to parse markdown, falling back to manual construction")
                     -- フォールバック: 手動でリスト項目を構築
