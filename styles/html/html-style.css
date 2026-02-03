@@ -432,14 +432,22 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 }
 
 .collapsible-list details > summary::before {
-  content: "▷ ";
+  content: "+";
   display: inline-block;
-  width: 1.3em;
+  width: 1em;
+  height: 1em;
+  line-height: 1em;
+  text-align: center;
   margin-left: -1.3em;
+  margin-right: 0.3em;
+  border: 1px solid #888;
+  font-size: 0.85em;
+  color: #555;
+  background-color: #fff;
 }
 
 .collapsible-list details[open] > summary::before {
-  content: "▽ ";
+  content: "-";
 }
 
 .collapsible-list details > summary:hover {
