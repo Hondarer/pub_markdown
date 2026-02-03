@@ -423,6 +423,8 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 .collapsible-list details > summary {
   cursor: pointer;
   list-style: none;
+  margin-left: -1.3em;
+  padding-left: 1.3em;
 }
 
 .collapsible-list details > summary::-webkit-details-marker {
@@ -432,7 +434,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 .collapsible-list details > summary::before {
   content: "▷ ";
   display: inline-block;
-  width: 1em;
+  width: 1.3em;
   margin-left: -1.3em;
 }
 
