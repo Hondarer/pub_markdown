@@ -415,6 +415,11 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
    詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
    ============================================================ */
 
+/* details を持つ li は Bullet を非表示（展開マーカーで代用） */
+.collapsible-list li:has(> details) {
+  list-style: none;
+}
+
 .collapsible-list details > summary {
   cursor: pointer;
   list-style: none;
@@ -425,14 +430,13 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 }
 
 .collapsible-list details > summary::before {
-  content: "▶ ";
+  content: "▷ ";
   display: inline-block;
   width: 1em;
-  transition: transform 0.2s ease;
 }
 
 .collapsible-list details[open] > summary::before {
-  content: "▼ ";
+  content: "▽ ";
 }
 
 .collapsible-list details > summary:hover {
