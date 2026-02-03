@@ -436,7 +436,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   display: inline-block;
   width: 0.9em;
   height: 0.9em;
-  line-height: 0.9em;
+  line-height: calc(0.9em - 1px);
   text-align: center;
   margin-left: -1.3em;
   margin-right: 0.4em;
@@ -444,6 +444,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   font-size: 0.75em;
   color: #555;
   background-color: #fff;
+  padding-right: 1px;
 }
 
 .collapsible-list details[open] > summary::before {
