@@ -40,7 +40,7 @@ $endif$
     .toc li {
       list-style: none;
     }
-    .toc-home {
+    .toc-navi {
       padding-left: 6px;
       border-bottom: 1px solid #e5e5e5;
     }
@@ -91,7 +91,10 @@ $if(toc)$
 <div id="$idprefix$TOC" class="span3">
 <nav class="toc" style="top:1rem; position: sticky;">
 $if(homelink)$
-<div class="toc-home"><a href="$homelink$">HOME</a></div>
+<div class="toc-navi">
+<a href="javascript:history.back()">BACK</a>&nbsp;
+<a href="$homelink$">HOME</a>
+</div>
 $endif$
 $table-of-contents$
 </nav>

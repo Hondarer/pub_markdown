@@ -90,7 +90,10 @@ $endfor$
         <div class="well toc">
 
         $if(homelink)$
-        <div class="toc-home"><a href="$homelink$">HOME</a></div>
+        <div class="toc-navi">
+          <a href="javascript:history.back()">BACK</a>&nbsp;
+          <a href="$homelink$">HOME</a>
+        </div>
         $endif$
 
         $toc$
