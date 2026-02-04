@@ -118,6 +118,12 @@ h6 {
   margin-right: 8px;
   font-size: 14px; }
 
+.toc-home {
+  padding-left: 6px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 14px;
+}
+
 .toc ul, .toc ol, .toc dl, .toc li {
   margin: 3px 0; }
 

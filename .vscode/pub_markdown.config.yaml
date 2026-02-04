@@ -17,6 +17,9 @@
 #htmlTocEnable: true
 # html における toc の深さ
 #htmlTocDepth: 3
+# ナビゲーションリンクの表示有無 (true / false)
+# デフォルト: true
+#htmlNavigationLinkEnable: true
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
 # docx の出力有無 (true / false)

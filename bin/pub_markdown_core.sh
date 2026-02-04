@@ -278,6 +278,7 @@ if [ -f "$configFile" ]; then
     autoSetDate=$(parse_yaml "$config_content" "autoSetDate")
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
     mergeSubmoduleDocs=$(parse_yaml "$config_content" "mergeSubmoduleDocs")
+    htmlNavigationLinkEnable=$(parse_yaml "$config_content" "htmlNavigationLinkEnable")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "docs-src" にする
@@ -323,6 +324,11 @@ fi
 # 設定ファイルに autoSetAuthor が指定されなかった場合の値を true にする
 if [[ "$autoSetAuthor" == "" ]]; then
     autoSetAuthor="true"
+fi
+
+# 設定ファイルに htmlNavigationLinkEnable (ナビゲーションリンク) が指定されなかった場合の値を true にする
+if [[ "$htmlNavigationLinkEnable" == "" ]]; then
+    htmlNavigationLinkEnable="true"
 fi
 
 #-------------------------------------------------------------------
@@ -952,6 +958,12 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
+        # ナビゲーションリンクメタデータの構築
+        navigationLinkMetadata=""
+        if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
+            navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
@@ -989,7 +1001,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     printf "\e[33m" # 文字色を黄色に設定
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1007,7 +1019,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         printf "\e[33m" # 文字色を黄色に設定
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1138,8 +1150,14 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
+        # ナビゲーションリンクメタデータの構築
+        navigationLinkMetadata=""
+        if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
+            navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
-            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定 
+            # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
         else
             export -n DOCUMENT_DATE
@@ -1181,7 +1199,7 @@ for file in "${files[@]}"; do
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 printf "\e[33m" # 文字色を黄色に設定
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
+                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1200,7 +1218,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     printf "\e[33m" # 文字色を黄色に設定
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
