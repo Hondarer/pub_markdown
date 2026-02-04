@@ -117,11 +117,41 @@ $body$
        - 対象: .collapsible-list 内の子要素（<ul>/<ol>）を持つ <li>
        - 動作: デフォルトで折りたたみ、クリックで展開
        - 通常のリストには影響しません
+       - sessionStorage により展開状態をページ遷移後も保持
 
        詳細は docs-src/tech-docs/collapsible-list.md を参照してください。
        ============================================================ -->
   <script>
   (function() {
+    // 展開状態の保存キー（ページ URL ベース）
+    var storageKey = 'collapsible-list:' + location.pathname;
+
+    // sessionStorage から展開状態を取得
+    function loadState() {
+      try {
+        var json = sessionStorage.getItem(storageKey);
+        return json ? JSON.parse(json) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    // sessionStorage に展開状態を保存
+    function saveState(state) {
+      try {
+        sessionStorage.setItem(storageKey, JSON.stringify(state));
+      } catch (e) {
+        // sessionStorage が使用できない場合は無視
+      }
+    }
+
+    // details 要素のインデックスから一意キーを生成
+    function getDetailsKey(details, index) {
+      var summary = details.querySelector(':scope > summary');
+      var text = summary ? summary.textContent.trim().substring(0, 50) : '';
+      return index + ':' + text;
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       // .collapsible-list 内のすべての li 要素を処理
       var containers = document.querySelectorAll('.collapsible-list');
@@ -173,6 +203,30 @@ $body$
 
           // li に details を挿入
           li.insertBefore(details, li.firstChild);
+        });
+      });
+
+      // 展開状態の復元
+      var state = loadState();
+      var allDetails = document.querySelectorAll('.collapsible-list details');
+      allDetails.forEach(function(details, index) {
+        var key = getDetailsKey(details, index);
+        if (state[key]) {
+          details.open = true;
+        }
+      });
+
+      // 展開状態の変更を監視して保存
+      allDetails.forEach(function(details, index) {
+        details.addEventListener('toggle', function() {
+          var currentState = loadState();
+          var key = getDetailsKey(details, index);
+          if (details.open) {
+            currentState[key] = true;
+          } else {
+            delete currentState[key];
+          }
+          saveState(currentState);
         });
       });
     });
