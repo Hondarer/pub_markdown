@@ -436,10 +436,10 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   display: inline-block;
   width: 6px;
   height: 6px;
-  margin-left: -1.0em;
-  margin-right: 0.5em;
-  border-right: 2px solid #000;
-  border-bottom: 2px solid #000;
+  margin-left: -1.25em;
+  margin-right: 0.75em;
+  border-right: 1.5px solid #000;
+  border-bottom: 1.5px solid #000;
   transform: rotate(-45deg);
   position: relative;
   top: -1px;
