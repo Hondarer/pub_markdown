@@ -85,23 +85,33 @@ $endfor$
   $endif$
   <div class="container">
     <div class="row">
-      $if(toc)$
+      $if(homelink)$
       <div id="$idprefix$TOC" class="span3">
         <div class="well toc">
 
-        $if(homelink)$
         <div class="toc-navi">
           <a href="javascript:history.back()">BACK</a>&nbsp;
           <a href="$homelink$">HOME</a>
         </div>
+
+        $if(toc)$
+        $toc$
         $endif$
+
+        </div>
+      </div>
+      $else$
+      $if(toc)$
+      <div id="$idprefix$TOC" class="span3">
+        <div class="well toc">
 
         $toc$
 
         </div>
       </div>
       $endif$
-      <div class="span$if(toc)$9$else$12$endif$">
+      $endif$
+      <div class="span$if(homelink)$9$else$$if(toc)$9$else$12$endif$$endif$">
 
       $if(title)$
           <H1>$title$</H1>

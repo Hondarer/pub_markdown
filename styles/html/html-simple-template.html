@@ -42,7 +42,9 @@ $endif$
     }
     .toc-navi {
       padding-left: 6px;
-      border-bottom: 1px solid #e5e5e5;
+    }
+    .toc-navi + ul {
+      border-top: 1px solid #e5e5e5;
     }
     .span9 {
       margin-left: 30px;
@@ -87,20 +89,28 @@ $if(title)$
   </div>
 $endif$
 <div class="container">
-$if(toc)$
+$if(homelink)$
 <div id="$idprefix$TOC" class="span3">
 <nav class="toc" style="top:1rem; position: sticky;">
-$if(homelink)$
 <div class="toc-navi">
 <a href="javascript:history.back()">BACK</a>&nbsp;
 <a href="$homelink$">HOME</a>
 </div>
+$if(toc)$
+$table-of-contents$
 $endif$
+</nav>
+</div>
+$else$
+$if(toc)$
+<div id="$idprefix$TOC" class="span3">
+<nav class="toc" style="top:1rem; position: sticky;">
 $table-of-contents$
 </nav>
 </div>
 $endif$
-<div class="span9">
+$endif$
+<div class="span$if(homelink)$9$else$$if(toc)$9$else$12$endif$$endif$">
 $body$
 </div>
 

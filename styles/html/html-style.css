@@ -120,8 +120,11 @@ h6 {
 
 .toc-navi {
   padding-left: 6px;
-  border-bottom: 1px solid #e5e5e5;
   font-size: 14px;
+}
+
+.toc-navi + ul {
+  border-top: 1px solid #e5e5e5;
 }
 
 .toc ul, .toc ol, .toc dl, .toc li {
