@@ -119,4 +119,6 @@ trap 'rm -f "$FIFO"' EXIT
 ) &
 
 # Chrome を起動し、その stderr を FIFO に流す (stdout はそのまま)
-"$CHROME" "$@" 2> "$FIFO"
+# --no-sandbox: CI/コンテナ環境ではサンドボックスが使用できないため無効化する。
+# このラッパー経由の起動は自動レンダリング用途(Mermaid/SVG変換等)に限られるため安全。
+"$CHROME" --no-sandbox "$@" 2> "$FIFO"
