@@ -350,6 +350,20 @@ pre code, pre tt {
   font-size: 14px;
   border: none; }
 
+/* Pandoc の構文ハイライト付きコードブロック:
+   Pandoc CSS は div.sourceCode に overflow: auto、
+   pre.sourceCode に overflow: visible を設定する。
+   そのため border と padding を div.sourceCode (スクロールコンテナ) に
+   移動し、横スクロール時に枠が動かないようにする。 */
+div.sourceCode {
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  padding: 6px 10px; }
+
+div.sourceCode > pre {
+  border: none;
+  padding: 0; }
+
 figure {
   border: 1px solid #cccccc;
   border-radius: 3px;
