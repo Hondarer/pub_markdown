@@ -3,9 +3,13 @@
  *  ⊳ pandoc 互換: -f png -a --dpi-x N --dpi-y N のみ想定
  *  ⊳ 入力:  SVG (text)  via STDIN
  *  ⊳ 出力:  PNG (binary) via STDOUT
+ *
+ *  環境変数 PUB_MARKDOWN_BROWSER_WS_FILE が設定されている場合、
+ *  共有ブラウザインスタンスに接続して再利用する。
  */
 const puppeteer = require('puppeteer');
 const minimist  = require('minimist');
+const fs        = require('fs');
 
 /* ── 1. オプション解析 ─────────────────────────────────────────────── */
 const argv  = minimist(process.argv.slice(2), {
@@ -24,61 +28,89 @@ const readStdin = () => new Promise(res => {
   process.stdin.on('data', c=>d+=c);
   process.stdin.on('end', ()=>res(d));
 });
+
+/* ── 共有ブラウザ接続 or 新規起動 ────────────────────────────────── */
+async function getBrowser() {
+  const wsFile = process.env.PUB_MARKDOWN_BROWSER_WS_FILE;
+  if (wsFile) {
+    try {
+      const wsEndpoint = fs.readFileSync(wsFile, 'utf8').trim();
+      if (wsEndpoint) {
+        const browser = await puppeteer.connect({ browserWSEndpoint: wsEndpoint });
+        return { browser, shared: true };
+      }
+    } catch (_) {
+      // ファイルが読めない・接続失敗時はフォールバック
+    }
+  }
+  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  return { browser, shared: false };
+}
+
 (async () => {
   const svgText = (await readStdin()).trim();
   if (!svgText) { console.error('STDIN が空です'); process.exit(2); }
 
-  /* ── 3. Puppeteer 起動 ─────────────────────────────────────────── */
-  const browser = await puppeteer.launch({args:['--no-sandbox']});
-  const page    = await browser.newPage();
+  /* ── 3. Puppeteer 起動 or 共有ブラウザ接続 ─────────────────────── */
+  const { browser, shared } = await getBrowser();
+  const page = await browser.newPage();
 
-  /* 3-A. 仮に大きめ viewport を張っておく（計測用） */
-  await page.setViewport({width: 4096, height: 4096, deviceScaleFactor: 1});
-  await page.setContent(`<html><body style="margin:0">${svgText}</body></html>`, 
-                        {waitUntil:'load'});   // <img>, 外部 CSS 等も読み込ませる
+  try {
+    /* 3-A. 仮に大きめ viewport を張っておく（計測用） */
+    await page.setViewport({width: 4096, height: 4096, deviceScaleFactor: 1});
+    await page.setContent(`<html><body style="margin:0">${svgText}</body></html>`,
+                          {waitUntil:'load'});   // <img>, 外部 CSS 等も読み込ませる
 
-  /* ── 4. サイズ決定ロジック (ブラウザ側で実行) ─────────────────── */
-  const {w,h} = await page.evaluate(() => {
-    const svg = document.querySelector('svg');
-    /* ① width/height 属性 (単位付含む) を優先 */
-    const parseUnit = v => {
-      if (!v) return null;
-      const m = String(v).trim().match(/^([+-]?\d*\.?\d+)([a-z%]*)$/i);
-      if (!m) return null;
-      const num = parseFloat(m[1]);
-      const unit = m[2] || 'px';
-      /* SVG CSS 仕様: 1pt=1.25px, 1pc=15px, 1mm≈3.7795px, 1cm=10mm */
-      const conv = {px:1, pt:1.25, pc:15, mm:3.7795275591, cm:37.795275591,
-                    in:96, '%':null};
-      return conv[unit] ? num*conv[unit] : null;   // % は計算できないので無視
-    };
-    const wAttr = parseUnit(svg.getAttribute('width'));
-    const hAttr = parseUnit(svg.getAttribute('height'));
-    if (wAttr && hAttr) return {w:wAttr, h:hAttr};
+    /* ── 4. サイズ決定ロジック (ブラウザ側で実行) ─────────────────── */
+    const {w,h} = await page.evaluate(() => {
+      const svg = document.querySelector('svg');
+      /* ① width/height 属性 (単位付含む) を優先 */
+      const parseUnit = v => {
+        if (!v) return null;
+        const m = String(v).trim().match(/^([+-]?\d*\.?\d+)([a-z%]*)$/i);
+        if (!m) return null;
+        const num = parseFloat(m[1]);
+        const unit = m[2] || 'px';
+        /* SVG CSS 仕様: 1pt=1.25px, 1pc=15px, 1mm≈3.7795px, 1cm=10mm */
+        const conv = {px:1, pt:1.25, pc:15, mm:3.7795275591, cm:37.795275591,
+                      in:96, '%':null};
+        return conv[unit] ? num*conv[unit] : null;   // % は計算できないので無視
+      };
+      const wAttr = parseUnit(svg.getAttribute('width'));
+      const hAttr = parseUnit(svg.getAttribute('height'));
+      if (wAttr && hAttr) return {w:wAttr, h:hAttr};
 
-    /* ② viewBox の幅高 */
-    const vb = svg.getAttribute('viewBox');
-    if (vb) {
-      const p = vb.split(/[\s,]+/).map(Number);
-      if (p.length === 4 && p.every(n=>!isNaN(n))) return {w:p[2], h:p[3]};
+      /* ② viewBox の幅高 */
+      const vb = svg.getAttribute('viewBox');
+      if (vb) {
+        const p = vb.split(/[\s,]+/).map(Number);
+        if (p.length === 4 && p.every(n=>!isNaN(n))) return {w:p[2], h:p[3]};
+      }
+
+      /* ③ 最終手段: レイアウト後の実ピクセル矩形 */
+      const r = svg.getBoundingClientRect();
+      return {w:r.width, h:r.height};
+    });
+
+    const width  = Math.max(1, Math.ceil(w));
+    const height = Math.max(1, Math.ceil(h));
+
+    /* ── 5. 実 viewport へ張り直し & deviceScaleFactor 反映 ─────────── */
+    await page.setViewport({width, height, deviceScaleFactor: scale});
+    /* レイアウト再計算を待つ */
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
+
+    /* ── 6. PNG 出力 → STDOUT ──────────────────────────────────────── */
+    const buf = await page.screenshot({type:'png', omitBackground:true});
+    process.stdout.write(buf);
+  } finally {
+    /* 共有ブラウザの場合はページを閉じて切断。専用ブラウザの場合はブラウザごと閉じる */
+    await page.close();
+    if (shared) {
+      browser.disconnect();
+    } else {
+      await browser.close();
     }
-
-    /* ③ 最終手段: レイアウト後の実ピクセル矩形 */
-    const r = svg.getBoundingClientRect();
-    return {w:r.width, h:r.height};
-  });
-
-  const width  = Math.max(1, Math.ceil(w));
-  const height = Math.max(1, Math.ceil(h));
-
-  /* ── 5. 実 viewport へ張り直し & deviceScaleFactor 反映 ─────────── */
-  await page.setViewport({width, height, deviceScaleFactor: scale});
-  /* レイアウト再計算を待つ */
-  await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
-
-  /* ── 6. PNG 出力 → STDOUT ──────────────────────────────────────── */
-  const buf = await page.screenshot({type:'png', omitBackground:true});
-  await browser.close();
-  process.stdout.write(buf);
+  }
 
 })().catch(err => { console.error(err); process.exit(3); });
