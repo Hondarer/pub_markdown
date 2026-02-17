@@ -9,6 +9,12 @@ cd $HOME_DIR
 # Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
 cleanup() {
     #echo >&2 "スクリプトが中断されました。"
+    # 共有ブラウザサーバーを停止
+    if [[ -n "$BROWSER_SERVER_PID" ]]; then
+        kill "$BROWSER_SERVER_PID" 2>/dev/null
+        wait "$BROWSER_SERVER_PID" 2>/dev/null
+        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+    fi
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
@@ -97,6 +103,37 @@ fi
 
 # node.js の警告を非表示にする
 export NODE_NO_WARNINGS=1
+
+#-------------------------------------------------------------------
+# 共有ブラウザインスタンスの起動
+#-------------------------------------------------------------------
+
+# rsvg-convert.js や mmdc-reuse.js が共有ブラウザに接続するための
+# WebSocket エンドポイントファイルを設定
+export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
+BROWSER_SERVER_PID=""
+
+# 共有ブラウザサーバーをバックグラウンドで起動
+# NOTE: browser-server.js は Puppeteer のデフォルトブラウザ検出を使用する。
+#       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
+#       chrome-wrapper.sh の WebSocket 競合回避はファイルベースの待機で代替する。
+#       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
+node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" &
+BROWSER_SERVER_PID=$!
+
+# WebSocket エンドポイントファイルが作成されるまで待機 (最大 30 秒)
+for _i in $(seq 1 300); do
+    if [[ -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
+        break
+    fi
+    sleep 0.1
+done
+
+if [[ ! -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
+    echo "Warning: Shared browser server failed to start. Falling back to per-process browser instances."
+    BROWSER_SERVER_PID=""
+    export -n PUB_MARKDOWN_BROWSER_WS_FILE
+fi
 
 #-------------------------------------------------------------------
 
@@ -1260,6 +1297,16 @@ for file in "${files[@]}"; do
 done
 
 #-------------------------------------------------------------------
+
+#-------------------------------------------------------------------
+# 共有ブラウザサーバーの停止
+#-------------------------------------------------------------------
+
+if [[ -n "$BROWSER_SERVER_PID" ]]; then
+    kill "$BROWSER_SERVER_PID" 2>/dev/null
+    wait "$BROWSER_SERVER_PID" 2>/dev/null
+    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+fi
 
 echo "*** pub_markdown_core end   $(date -Is)"
 
