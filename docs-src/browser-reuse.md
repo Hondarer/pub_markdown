@@ -2,22 +2,18 @@
 
 ## 概要
 
-pub_markdown のビルドプロセスでは、SVG→PNG 変換 (rsvg-convert.js) や Mermaid 図のレンダリング (mmdc) において Puppeteer 経由で Chromium ブラウザを使用する。従来はこれらの処理が呼び出されるたびにブラウザインスタンスを起動・停止していたが、共有ブラウザインスタンス機構により、ビルド全体で 1 つのブラウザを使い回すことで起動コストを削減する。
+pub_markdown のビルドプロセスでは、SVG→PNG 変換 (rsvg-convert.js) や Mermaid 図のレンダリング (mmdc) において Puppeteer 経由で Chromium ブラウザを使用します。共有ブラウザインスタンス機構により、ビルド全体で 1 つのブラウザを使い回すことで起動コストを削減しています。
 
 ## 背景と課題
 
 ### ブラウザ起動コストの問題
 
-Puppeteer による Chromium 起動には約 1〜2 秒を要する。ビルド対象に多数の SVG 画像や Mermaid 図が含まれる場合、以下の累積コストが発生していた:
+Puppeteer による Chromium 起動には約 1〜2 秒を要します。ビルド対象に多数の SVG 画像や Mermaid 図が含まれる場合、以下の累積コストが発生します。
 
 1. **rsvg-convert.js**: Pandoc が DOCX 生成時に SVG→PNG 変換のたびにブラウザを起動・停止
 2. **mmdc (mermaid-cli)**: Mermaid 図のレンダリングのたびにブラウザを起動・停止
 
-例えば SVG 画像 10 個と Mermaid 図 5 個を含むドキュメントの場合、従来方式ではブラウザの起動だけで 15〜30 秒のオーバーヘッドが発生していた。
-
-### 既存の最適化
-
-Mermaid 図については、`mermaid.lua` フィルタが SHA-1 ハッシュによるキャッシュ機構を持ち、変更のない図は再レンダリングをスキップする。しかし初回ビルドや図の変更時にはブラウザ起動コストが発生する。
+例えば SVG 画像 10 個と Mermaid 図 5 個を含むドキュメントの場合、ブラウザの起動だけで 15〜30 秒のオーバーヘッドが発生してしまいます。
 
 ## アーキテクチャ
 
@@ -120,16 +116,16 @@ pub_markdown_core.sh    # メインビルドスクリプト (ライフサイク�
 
 ### browser-server.js
 
-共有ブラウザの起動と管理を行うサーバースクリプトである。
+共有ブラウザの起動と管理を行うサーバースクリプトです。
 
 ```javascript
 puppeteer.launch({ args: ['--no-sandbox'] })
 ```
 
-- Puppeteer のデフォルトブラウザ検出を使用する
-- `chrome-wrapper.sh` は適用しない (WebSocket 競合回避はファイルベースの待機で代替)
-- SIGTERM/SIGINT でブラウザを閉じ、エンドポイントファイルを削除して終了する
-- ブラウザプロセスが予期せず終了した場合もエンドポイントファイルを削除する
+- Puppeteer のデフォルトブラウザ検出を使用します
+- `chrome-wrapper.sh` は適用しません (WebSocket 競合回避はファイルベースの待機で代替)
+- SIGTERM/SIGINT でブラウザを閉じ、エンドポイントファイルを削除して終了します
+- ブラウザプロセスが予期せず終了した場合もエンドポイントファイルを削除します
 
 ### rsvg-convert.js の共有ブラウザ対応
 
@@ -142,11 +138,11 @@ puppeteer.launch({ args: ['--no-sandbox'] })
 リソース管理:
 
 - **共有ブラウザ使用時**: `page.close()` でページのみ閉じ、`browser.disconnect()` で切断
-- **専用ブラウザ使用時**: `browser.close()` でブラウザごと閉じる (従来動作)
+- **専用ブラウザ使用時**: `browser.close()` でブラウザごと閉じる
 
 ### mmdc-reuse.js
 
-`@mermaid-js/mermaid-cli` の `mmdc` コマンドの代替として動作する Mermaid レンダラーである。
+`@mermaid-js/mermaid-cli` の `mmdc` コマンドの代替として動作する Mermaid レンダラーです。
 
 対応オプション:
 
@@ -156,7 +152,7 @@ puppeteer.launch({ args: ['--no-sandbox'] })
 
 Mermaid ライブラリの検出:
 
-以下の優先順位でブラウザバンドル (`mermaid.min.js`) を探索する。
+以下の優先順位でブラウザバンドル (`mermaid.min.js`) を探索します。
 
 1. `require.resolve('mermaid/package.json')` 経由
 2. `require.resolve('@mermaid-js/mermaid-cli/package.json')` 経由のネスト検索
@@ -177,7 +173,7 @@ Mermaid ライブラリの検出:
 if PUB_MARKDOWN_BROWSER_WS_FILE が存在する
     → mmdc-reuse.js を使用 (共有ブラウザ経由)
 else
-    → 従来の mmdc を使用 (chrome-wrapper.sh 経由)
+    → mmdc を使用 (chrome-wrapper.sh 経由)
 ```
 
 ### pub_markdown_core.sh のライフサイクル管理
@@ -198,7 +194,7 @@ else
 
 ### 二重ラップの回避
 
-`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性がある:
+`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります:
 
 1. `pub_markdown_core.sh` が `prepare_puppeteer_env.sh` を source → `PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
 2. 後に `rsvg-convert` シェルスクリプトが `prepare_puppeteer_env.sh` を再度 source → `ORG_PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
@@ -206,7 +202,7 @@ else
 4. `chrome-wrapper.sh` が `ORG_PUPPETEER_EXECUTABLE_PATH` を復元 → `PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
 5. `puppeteer.executablePath()` が `chrome-wrapper.sh` を返す → **無限ループ**
 
-この問題を避けるため、`browser-server.js` は `prepare_puppeteer_env.sh` を経由せず、Puppeteer のデフォルトブラウザ検出を使用する。
+この問題を避けるため、`browser-server.js` は `prepare_puppeteer_env.sh` を経由せず、Puppeteer のデフォルトブラウザ検出を使用します。
 
 ### プラットフォーム別の動作
 
@@ -218,7 +214,7 @@ else
 
 ## フォールバック機構
 
-共有ブラウザが利用できない場合でも、従来通りの動作が保証される。
+共有ブラウザが利用できない場合は、都度ブラウザを起動します。
 
 ### フォールバック発生条件
 
@@ -228,12 +224,12 @@ else
 
 ### フォールバック時の動作
 
-- `PUB_MARKDOWN_BROWSER_WS_FILE` 環境変数が未設定になる
-- `rsvg-convert.js` は `puppeteer.launch()` で自前のブラウザを起動
-- `mmdc-wrapper.sh` は従来の `mmdc` コマンドを使用
+- `PUB_MARKDOWN_BROWSER_WS_FILE` 環境変数が未設定になります
+- `rsvg-convert.js` は `puppeteer.launch()` で自前のブラウザを起動します
+- `mmdc-wrapper.sh` は `mmdc` コマンドを使用します
 
 ## 前提事項、制約事項
 
-- `browser-server.js` は Puppeteer のデフォルトブラウザ検出に依存するため、`chrome-wrapper.sh` のバージョンフォールバック機能は利用されない
-- `mmdc-reuse.js` は `@mermaid-js/mermaid-cli` に同梱される mermaid ライブラリのブラウザバンドルに依存する
-- 同時に複数の pub_markdown ビルドを実行する場合、PID ベースのエンドポイントファイルにより干渉は発生しない
+- `browser-server.js` は Puppeteer のデフォルトブラウザ検出に依存するため、`chrome-wrapper.sh` のバージョンフォールバック機能は利用されません
+- `mmdc-reuse.js` は `@mermaid-js/mermaid-cli` に同梱される mermaid ライブラリのブラウザバンドルに依存します
+- 同時に複数の pub_markdown ビルドを実行する場合でも、PID ベースのエンドポイントファイルにより干渉は発生しません
