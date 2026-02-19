@@ -67,7 +67,7 @@ This document format requires a nonempty <title> element.
 ### PlantUML を docx に取り込んだ際のフォント名
 
 svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
-pu_config.format が svg の場合は、font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="メイリオ, Helvetica Neue, Helvetica, Arial, sans-serif" に置換するように改修。
+pu_config.format が svg の場合は、font-family="sans-serif" (デフォルトの場合のフォント名) を、font-family="'Verdana', 'メイリオ', 'UDEV Gothic HSRFJPDOC', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP', 'Helvetica Neue', Helvetica, Arial, sans-serif" に置換するように改修。
 
 ## 既知の問題
 
