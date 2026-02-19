@@ -20,7 +20,7 @@ cleanup() {
         wait "$BROWSER_SERVER_PID" 2>/dev/null
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
-    rm -f "$OUTPUT_LOCK" 2>/dev/null
+    rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
@@ -151,8 +151,10 @@ fi
 # 環境変数 PUB_MARKDOWN_PARALLEL で上書き可能 (例: PUB_MARKDOWN_PARALLEL=2 pub_markdown_core.sh ...)
 MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(nproc 2>/dev/null || echo 4)}
 
-# 並列出力の排他制御用ロックファイル (複数ジョブの標準出力が混在しないようにする)
-OUTPUT_LOCK=$(mktemp)
+# 並列出力の排他制御用ロックベースパス
+# flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
+# MSYS2 (Windows) 環境でも動作する
+OUTPUT_LOCK=$(mktemp -u)
 
 # 実行中のバックグラウンドジョブ数が MAX_PARALLEL に達している場合、
 # 1つ完了するまで待機する関数
@@ -1336,8 +1338,11 @@ for file in "${files[@]}"; do
         done
         } >"$_pm_tmpout" 2>&1
         _pm_exit=$?
-        # flock でロックを取得し、バッファリングした出力をアトミックに表示する
-        ( flock -x 9; cat "$_pm_tmpout" ) 9>"$OUTPUT_LOCK"
+        # mkdir をアトミックロックとして使い、バッファリングした出力を表示する
+        # (mkdir は Linux/MSYS2/Windows いずれでもアトミック操作)
+        while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
+        cat "$_pm_tmpout"
+        rmdir "${OUTPUT_LOCK}.lck"
         rm -f "$_pm_tmpout"
         exit $_pm_exit
         ) &
@@ -1360,8 +1365,6 @@ for _i in "${!_file_pids[@]}"; do
         _overall_exit=1
     fi
 done
-
-rm -f "$OUTPUT_LOCK" 2>/dev/null
 
 if [[ $_overall_exit -ne 0 ]]; then
     # 共有ブラウザサーバーを停止してから終了
