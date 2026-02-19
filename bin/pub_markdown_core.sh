@@ -9,12 +9,18 @@ cd $HOME_DIR
 # Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
 cleanup() {
     #echo >&2 "スクリプトが中断されました。"
+    # バックグラウンドジョブを停止
+    local _bg_jobs
+    _bg_jobs=$(jobs -rp 2>/dev/null)
+    [[ -n "$_bg_jobs" ]] && kill $_bg_jobs 2>/dev/null
+    wait 2>/dev/null
     # 共有ブラウザサーバーを停止
     if [[ -n "$BROWSER_SERVER_PID" ]]; then
         kill "$BROWSER_SERVER_PID" 2>/dev/null
         wait "$BROWSER_SERVER_PID" 2>/dev/null
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
+    rm -f "$OUTPUT_LOCK" 2>/dev/null
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
@@ -134,6 +140,29 @@ if [[ ! -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
     BROWSER_SERVER_PID=""
     export -n PUB_MARKDOWN_BROWSER_WS_FILE
 fi
+
+#-------------------------------------------------------------------
+
+#-------------------------------------------------------------------
+# 並列処理設定
+#-------------------------------------------------------------------
+
+# 並列処理の最大ジョブ数
+# 環境変数 PUB_MARKDOWN_PARALLEL で上書き可能 (例: PUB_MARKDOWN_PARALLEL=2 pub_markdown_core.sh ...)
+MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(nproc 2>/dev/null || echo 4)}
+
+# 並列出力の排他制御用ロックファイル (複数ジョブの標準出力が混在しないようにする)
+OUTPUT_LOCK=$(mktemp)
+
+# 実行中のバックグラウンドジョブ数が MAX_PARALLEL に達している場合、
+# 1つ完了するまで待機する関数
+wait_for_parallel_slot() {
+    while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
+        # wait -n はいずれか1つのジョブ完了まで待機 (bash 4.3+)
+        # 未対応環境では 0.05 秒ポーリングにフォールバック
+        wait -n 2>/dev/null || sleep 0.05
+    done
+}
 
 #-------------------------------------------------------------------
 
@@ -934,6 +963,10 @@ for langElement in ${lang}; do
     done
 done
 
+# ファイルレベルの並列処理用追跡配列
+declare -a _file_pids=()
+declare -a _file_names=()
+
 for file in "${files[@]}"; do
     # サブモジュールマージ時は仮想パスに変換して出力パスを計算
     if [[ -n "$mergeSubmoduleDocs" ]]; then
@@ -1107,6 +1140,14 @@ for file in "${files[@]}"; do
             done
         done
     elif [[ "$file" == *.md ]]; then
+        # .md ファイルを並列処理する
+        # 空きスロットが生じるまで待ってからバックグラウンドで起動する
+        wait_for_parallel_slot
+        (
+        # このサブシェル内の出力を一時ファイルにバッファリングし、
+        # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
+        _pm_tmpout=$(mktemp)
+        {
         # .md ファイルの処理
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
@@ -1293,8 +1334,44 @@ for file in "${files[@]}"; do
                 fi
             done
         done
+        } >"$_pm_tmpout" 2>&1
+        _pm_exit=$?
+        # flock でロックを取得し、バッファリングした出力をアトミックに表示する
+        ( flock -x 9; cat "$_pm_tmpout" ) 9>"$OUTPUT_LOCK"
+        rm -f "$_pm_tmpout"
+        exit $_pm_exit
+        ) &
+        _file_pids+=($!)
+        _file_names+=("$file")
     fi
 done
+
+#-------------------------------------------------------------------
+
+#-------------------------------------------------------------------
+# 全ファイルジョブの完了待機
+#-------------------------------------------------------------------
+
+_overall_exit=0
+for _i in "${!_file_pids[@]}"; do
+    wait "${_file_pids[$_i]}"
+    if [[ $? -ne 0 ]]; then
+        echo >&2 "Error: Failed to process ${_file_names[$_i]}"
+        _overall_exit=1
+    fi
+done
+
+rm -f "$OUTPUT_LOCK" 2>/dev/null
+
+if [[ $_overall_exit -ne 0 ]]; then
+    # 共有ブラウザサーバーを停止してから終了
+    if [[ -n "$BROWSER_SERVER_PID" ]]; then
+        kill "$BROWSER_SERVER_PID" 2>/dev/null
+        wait "$BROWSER_SERVER_PID" 2>/dev/null
+        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+    fi
+    exit 1
+fi
 
 #-------------------------------------------------------------------
 
