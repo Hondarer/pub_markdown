@@ -9,12 +9,18 @@ cd $HOME_DIR
 # Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
 cleanup() {
     #echo >&2 "スクリプトが中断されました。"
+    # バックグラウンドジョブを停止
+    local _bg_jobs
+    _bg_jobs=$(jobs -rp 2>/dev/null)
+    [[ -n "$_bg_jobs" ]] && kill $_bg_jobs 2>/dev/null
+    wait 2>/dev/null
     # 共有ブラウザサーバーを停止
     if [[ -n "$BROWSER_SERVER_PID" ]]; then
         kill "$BROWSER_SERVER_PID" 2>/dev/null
         wait "$BROWSER_SERVER_PID" 2>/dev/null
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
+    rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
@@ -134,6 +140,31 @@ if [[ ! -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
     BROWSER_SERVER_PID=""
     export -n PUB_MARKDOWN_BROWSER_WS_FILE
 fi
+
+#-------------------------------------------------------------------
+
+#-------------------------------------------------------------------
+# 並列処理設定
+#-------------------------------------------------------------------
+
+# 並列処理の最大ジョブ数
+# 環境変数 PUB_MARKDOWN_PARALLEL で上書き可能 (例: PUB_MARKDOWN_PARALLEL=2 pub_markdown_core.sh ...)
+MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(nproc 2>/dev/null || echo 4)}
+
+# 並列出力の排他制御用ロックベースパス
+# flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
+# MSYS2 (Windows) 環境でも動作する
+OUTPUT_LOCK=$(mktemp -u)
+
+# 実行中のバックグラウンドジョブ数が MAX_PARALLEL に達している場合、
+# 1つ完了するまで待機する関数
+wait_for_parallel_slot() {
+    while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
+        # wait -n はいずれか1つのジョブ完了まで待機 (bash 4.3+)
+        # 未対応環境では 0.05 秒ポーリングにフォールバック
+        wait -n 2>/dev/null || sleep 0.05
+    done
+}
 
 #-------------------------------------------------------------------
 
@@ -934,6 +965,10 @@ for langElement in ${lang}; do
     done
 done
 
+# ファイルレベルの並列処理用追跡配列
+declare -a _file_pids=()
+declare -a _file_names=()
+
 for file in "${files[@]}"; do
     # サブモジュールマージ時は仮想パスに変換して出力パスを計算
     if [[ -n "$mergeSubmoduleDocs" ]]; then
@@ -945,6 +980,11 @@ for file in "${files[@]}"; do
     if [[ "$file" == *.yaml ]] || [[ "$file" == *.json ]]; then # TODO: OpenAPI ファイルを .yaml 拡張子で判断してよいかどうかは怪しい。ファイル内に"openapi:"があることくらいは見たほうがいい。
 
         # FIXME: markdown ファイルとの重複処理は統合すべき。
+        # OpenAPI 処理全体を一時ファイルにバッファリングし、ロックでアトミックに出力する
+        # (.md の並列ジョブと printf "\e[33m" / "\e[0m" が競合するのを防ぐ)
+        _pm_openapi_tmpout=$(mktemp)
+        {
+
         echo "Processing OpenAPI file: ${file#${workspaceFolder}/}"
 
         # html (仮想パスベースで出力パスを計算)
@@ -1036,7 +1076,7 @@ for file in "${files[@]}"; do
 
                 if [ "$firstLang" == "" ]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                    printf "\e[33m" # 文字色を黄色に設定
+                    _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
                         ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1050,11 +1090,17 @@ for file in "${files[@]}"; do
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             ${PANDOC_CROSSREF} \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                            --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                    printf "\e[0m" # 文字色を通常に設定
+                            --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
+                            2>"$_pm_pandoc_stderr"
+                    if [[ -s "$_pm_pandoc_stderr" ]]; then
+                        printf "\e[33m"
+                        cat "$_pm_pandoc_stderr"
+                        printf "\e[0m"
+                    fi
+                    rm -f "$_pm_pandoc_stderr"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                        printf "\e[33m" # 文字色を黄色に設定
+                        _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
                             ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1068,12 +1114,18 @@ for file in "${files[@]}"; do
                                 ${PANDOC_CROSSREF} \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                                --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                        printf "\e[0m" # 文字色を通常に設定
+                                --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
+                                2>"$_pm_pandoc_stderr"
+                        if [[ -s "$_pm_pandoc_stderr" ]]; then
+                            printf "\e[33m"
+                            cat "$_pm_pandoc_stderr"
+                            printf "\e[0m"
+                        fi
+                        rm -f "$_pm_pandoc_stderr"
                     fi
                     if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                        printf "\e[33m" # 文字色を黄色に設定
+                        _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
                             ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1087,8 +1139,14 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                                 ${PANDOC_CROSSREF} \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                                --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                        printf "\e[0m" # 文字色を通常に設定
+                                --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                                2>"$_pm_pandoc_stderr"
+                        if [[ -s "$_pm_pandoc_stderr" ]]; then
+                            printf "\e[33m"
+                            cat "$_pm_pandoc_stderr"
+                            printf "\e[0m"
+                        fi
+                        rm -f "$_pm_pandoc_stderr"
                     fi
                     firstLang="${langElement}"
                     firstSuffix="${details_suffix}"
@@ -1106,7 +1164,21 @@ for file in "${files[@]}"; do
                 fi
             done
         done
+
+        } >"$_pm_openapi_tmpout" 2>&1
+        while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
+        cat "$_pm_openapi_tmpout"
+        rmdir "${OUTPUT_LOCK}.lck"
+        rm -f "$_pm_openapi_tmpout"
     elif [[ "$file" == *.md ]]; then
+        # .md ファイルを並列処理する
+        # 空きスロットが生じるまで待ってからバックグラウンドで起動する
+        wait_for_parallel_slot
+        (
+        # このサブシェル内の出力を一時ファイルにバッファリングし、
+        # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
+        _pm_tmpout=$(mktemp)
+        {
         # .md ファイルの処理
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
@@ -1234,7 +1306,7 @@ for file in "${files[@]}"; do
 
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
-                printf "\e[33m" # 文字色を黄色に設定
+                _pm_pandoc_stderr=$(mktemp)
                 echo "${md_body}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1247,13 +1319,19 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         ${PANDOC_CROSSREF} \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                        --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                printf "\e[0m" # 文字色を通常に設定
+                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir:$(dirname "$file")" \
+                        --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
+                        2>"$_pm_pandoc_stderr"
+                if [[ -s "$_pm_pandoc_stderr" ]]; then
+                    printf "\e[33m"
+                    cat "$_pm_pandoc_stderr"
+                    printf "\e[0m"
+                fi
+                rm -f "$_pm_pandoc_stderr"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
-                    printf "\e[33m" # 文字色を黄色に設定
+                    _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1266,14 +1344,20 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
-                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                            --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    printf "\e[0m" # 文字色を通常に設定
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir:$(dirname "$file")" \
+                            --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
+                            2>"$_pm_pandoc_stderr"
+                    if [[ -s "$_pm_pandoc_stderr" ]]; then
+                        printf "\e[33m"
+                        cat "$_pm_pandoc_stderr"
+                        printf "\e[0m"
+                    fi
+                    rm -f "$_pm_pandoc_stderr"
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
-                    printf "\e[33m" # 文字色を黄色に設定
+                    _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1287,14 +1371,57 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
-                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
-                            --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    printf "\e[0m" # 文字色を通常に設定
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx:$(dirname "$file")" \
+                            --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                            2>"$_pm_pandoc_stderr"
+                    if [[ -s "$_pm_pandoc_stderr" ]]; then
+                        printf "\e[33m"
+                        cat "$_pm_pandoc_stderr"
+                        printf "\e[0m"
+                    fi
+                    rm -f "$_pm_pandoc_stderr"
                 fi
             done
         done
+        } >"$_pm_tmpout" 2>&1
+        _pm_exit=$?
+        # mkdir をアトミックロックとして使い、バッファリングした出力を表示する
+        # (mkdir は Linux/MSYS2/Windows いずれでもアトミック操作)
+        while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
+        cat "$_pm_tmpout"
+        rmdir "${OUTPUT_LOCK}.lck"
+        rm -f "$_pm_tmpout"
+        exit $_pm_exit
+        ) &
+        _file_pids+=($!)
+        _file_names+=("$file")
     fi
 done
+
+#-------------------------------------------------------------------
+
+#-------------------------------------------------------------------
+# 全ファイルジョブの完了待機
+#-------------------------------------------------------------------
+
+_overall_exit=0
+for _i in "${!_file_pids[@]}"; do
+    wait "${_file_pids[$_i]}"
+    if [[ $? -ne 0 ]]; then
+        echo >&2 "Error: Failed to process ${_file_names[$_i]}"
+        _overall_exit=1
+    fi
+done
+
+if [[ $_overall_exit -ne 0 ]]; then
+    # 共有ブラウザサーバーを停止してから終了
+    if [[ -n "$BROWSER_SERVER_PID" ]]; then
+        kill "$BROWSER_SERVER_PID" 2>/dev/null
+        wait "$BROWSER_SERVER_PID" 2>/dev/null
+        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+    fi
+    exit 1
+fi
 
 #-------------------------------------------------------------------
 
