@@ -95,7 +95,7 @@ exit /b 1
 
 :gotgitdir
 :: git.exe のパスから、bash.exe のパスを組み立て
-set "gitBin=!gitDir!..\bin"
+set "gitBin=!gitDir!..\..\usr\bin"
 
 :: コマンドの組み立て
 set "command="!gitBin!\bash.exe" -i "!escapedBinFolder!pub_markdown_core.sh" --workspaceFolder="!escapedWorkspaceFolder!""
@@ -113,7 +113,7 @@ if not "!options!"=="" (
 )
 
 :: 実行内容を出力
-rem echo !command!
+echo !command!
 
 :: コマンドを実行し戻り値を取得
 !command!
