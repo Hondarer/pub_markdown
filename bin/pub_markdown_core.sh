@@ -168,68 +168,6 @@ wait_for_parallel_slot() {
 
 #-------------------------------------------------------------------
 
-# Markdown ファイルからリンク先ファイルを抽出する関数
-# 引数: $1=Markdownファイルのパス, $2=ベースディレクトリのパス
-# 戻り値: グローバル配列 files_linked に抽出されたファイルパスを追加
-extract_links_from_markdown() {
-    local md_file="$1"
-    local base_dir="$2"
-    local line
-
-    if command -v realpath >/dev/null 2>&1; then
-        base_dir="$(realpath -m "$base_dir")"
-    fi
-
-    [[ -f "$md_file" ]] || return 0
-
-    while IFS= read -r line; do
-        # 画像リンクをすべて抽出
-        while IFS= read -r link_path; do
-            # フィルタ条件
-            if [[ ! $link_path =~ ^(https?://|mailto:|ftp://) ]] \
-               && [[ ! $link_path =~ ^# ]] \
-               && [[ ! $link_path =~ \.(md|yaml)$ ]]; then
-                local full_path="${base_dir}/${link_path}"
-                if command -v realpath >/dev/null 2>&1; then
-                    full_path="$(realpath -m "$full_path")"
-                fi
-                [[ -e "$full_path" ]] && files_linked+=("$full_path")
-            fi
-        done < <(printf '%s\n' "$line" | grep -oP '!\[[^]]*\]\(\K[^)\s]+(?=\))')
-
-        # 通常リンクをすべて抽出
-        while IFS= read -r link_path; do
-            if [[ ! $link_path =~ ^(https?://|mailto:|ftp://) ]] \
-               && [[ ! $link_path =~ ^# ]] \
-               && [[ ! $link_path =~ \.(md|yaml)$ ]]; then
-                local full_path="${base_dir}/${link_path}"
-                if command -v realpath >/dev/null 2>&1; then
-                    full_path="$(realpath -m "$full_path")"
-                fi
-                [[ -e "$full_path" ]] && files_linked+=("$full_path")
-            fi
-        done < <(printf '%s\n' "$line" | grep -oP '\[[^]]*\]\(\K[^)\s]+(?=\))')
-
-    done < "$md_file"
-}
-
-# ファイル配列をマージ・ソート・重複排除する関数
-# 引数: 複数のファイルパス
-# 戻り値: グローバル配列 files_raw_initial にソート済みの重複排除されたファイルパスを設定
-merge_and_deduplicate_files() {
-    declare -A unique_files
-    for file in "$@"; do
-        [[ -n "$file" ]] && unique_files["$file"]=1
-    done
-    files_raw_initial=()
-    for file in "${!unique_files[@]}"; do
-        files_raw_initial+=("$file")
-    done
-    # ソート
-    IFS=$'\n' files_raw_initial=($(sort <<< "${files_raw_initial[*]}"))
-    unset IFS
-}
-
 # パスを絶対パスに変換する関数
 resolve_path() {
     local input_path="$1"
@@ -758,44 +696,28 @@ if [ -n "$relativeFile" ]; then
     fi
 
     if [ -d "${workspaceFolder}/$real_relativeFile" ]; then
-        # relativeFile がディレクトリの場合: そのディレクトリ内のリンク先も含めて収集
+        # relativeFile がディレクトリの場合: そのディレクトリ直下の対象ファイルを収集
         # base_dir は実パスを使用 (ファイル探索用)
         real_base_dir="${workspaceFolder}/${real_relativeFile}"
         # 仮想パスの base_dir も設定 (出力パス計算用)
         base_dir="${workspaceFolder}/${relativeFile}"
 
-        # 1) Markdown や YAML に埋め込まれたリンク資産を抽出
-        declare -a files_linked=()
-        while IFS= read -r -d '' md_file; do
-            extract_links_from_markdown "$md_file" "$real_base_dir"
-        done < <(find "${real_base_dir}" -maxdepth 1 -type f -name "*.md" -print0)
-        unset IFS
-
-        # 2) ディレクトリ直下のすべてのファイルを追加
-        mapfile -d '' -t additional_files < <(
-            find "${real_base_dir}" -maxdepth 1 -type f -print0
+        # ディレクトリ直下の対象ファイル (.md / .yaml / .json) を追加
+        mapfile -d '' -t files_raw_initial < <(
+            find "${real_base_dir}" -maxdepth 1 -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0
         )
-
-        # 3) マージ＆ソート＆重複排除
-        merge_and_deduplicate_files "${files_linked[@]}" "${additional_files[@]}"
     else
-        # relativeFile が単一ファイルの場合: そのファイル＋リンク先ファイルを抽出
+        # relativeFile が単一ファイルの場合: そのファイルを対象とする
         # base_dir は実パスを使用
         real_base_dir="${workspaceFolder}/$(dirname "$real_relativeFile")"
         base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
 
-        declare -a files_linked=()
-        if [[ -f "${workspaceFolder}/${real_relativeFile}" ]]; then
-            extract_links_from_markdown "${workspaceFolder}/${real_relativeFile}" "$real_base_dir"
-        fi
-
-        # マージ＆ソート＆重複排除 (単一ファイル自身も含める)
-        merge_and_deduplicate_files "${files_linked[@]}" "${workspaceFolder}/${real_relativeFile}"
+        files_raw_initial=("${workspaceFolder}/${real_relativeFile}")
     fi
 else
-    # relativeFile が指定されていない場合: mdRoot 以下の全ファイルを対象
+    # relativeFile が指定されていない場合: mdRoot 以下の対象ファイル (.md / .yaml / .json) を対象
     mapfile -d '' -t files_raw_initial < <(
-        find "${base_dir}" -type f -print0 | sort -z -u
+        find "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
     )
 
     # サブモジュール mdRoot のファイルを追加 (mergeSubmoduleDocs が指定されている場合)
@@ -804,9 +726,9 @@ else
             _submodule="${entry%%:*}"
             _submodule_mdroot="${entry#*:}"
 
-            # サブモジュール mdRoot 配下のファイルを収集
+            # サブモジュール mdRoot 配下の対象ファイルを収集
             mapfile -d '' -t submodule_files < <(
-                find "${_submodule_mdroot}" -type f -print0 | sort -z -u
+                find "${_submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
             )
 
             # files_raw_initial に追加
@@ -815,26 +737,7 @@ else
     fi
 fi
 
-# ── (B) files_raw_initial から .gitignore と .gitkeep を除外 ──
-{
-    # 一時配列を作って、除外後に元の配列へ上書き
-    mapfile -d '' -t _tmp_filtered < <(
-    for _f in "${files_raw_initial[@]}"; do
-        # basename が .gitignore でも .gitkeep でもなければ、残す
-        case "${_f##*/}" in
-        .gitignore|.gitkeep) 
-            ;;
-        *) 
-            printf '%s\0' "$_f"
-            ;;
-        esac
-    done
-    )
-    files_raw_initial=( "${_tmp_filtered[@]}" )
-    unset _tmp_filtered
-}
-
-# ── (C) Git 管理下なら NUL 区切りでフィルタ ──
+# ── (B) Git 管理下なら NUL 区切りでフィルタ ──
 if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
     # サブモジュール配下のファイルを分離 (gitignore フィルタリング対象外)
     declare -a submodule_files_array=()
@@ -1282,6 +1185,27 @@ for file in "${files[@]}"; do
         # オリジナルのソースファイル名を環境変数に保持
         export SOURCE_FILE="$file"
 
+        # Markdown から参照されているリソースファイルを html 出力ディレクトリにコピー
+        # (pandoc の --resource-path は html 出力ディレクトリを参照するため、
+        #  files[] に含まれない画像 (images/ サブディレクトリ等) を事前にコピーしておく)
+        _pm_src_dir=$(dirname "$file")
+        while IFS= read -r img_ref; do
+            img_path="${img_ref%%[?#]*}"
+            [ -z "$img_path" ] && continue
+            src_img="${_pm_src_dir}/${img_path}"
+            if [ -f "$src_img" ]; then
+                for langElement in ${lang}; do
+                    for details_suffix in "${details_suffixes[@]}"; do
+                        dest_img="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_dir}/${img_path}"
+                        mkdir -p "$(dirname "$dest_img")"
+                        copy_if_different_timestamp "$src_img" "$dest_img"
+                    done
+                done
+            fi
+        done < <(grep -oE '!\[[^]]*\]\([^)]+\)' "$file" 2>/dev/null \
+            | sed 's/.*(\(.*\))/\1/' \
+            | grep -Ev '^https?://')
+
         for details_suffix in "${details_suffixes[@]}"; do
             # details_suffix から details 値を決定
             if [[ "$details_suffix" == "-details" ]]; then
@@ -1319,7 +1243,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         ${PANDOC_CROSSREF} \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir:$(dirname "$file")" \
+                        --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                         2>"$_pm_pandoc_stderr"
                 if [[ -s "$_pm_pandoc_stderr" ]]; then
@@ -1344,7 +1268,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
-                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir:$(dirname "$file")" \
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                             2>"$_pm_pandoc_stderr"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then
@@ -1371,7 +1295,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
-                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir_docx:$(dirname "$file")" \
+                            --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             2>"$_pm_pandoc_stderr"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then

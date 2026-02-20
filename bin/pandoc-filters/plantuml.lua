@@ -432,7 +432,7 @@ return {
                     if f then
                         local content = f:read("*a")
                         f:close()
-                        content = string.gsub(content, 'font%-family="sans%-serif"', "font-family=\"'Verdana', 'メイリオ', 'UDEV Gothic HSRFJPDOC', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP', 'Helvetica Neue', Helvetica, Arial, sans-serif\"")
+                        content = string.gsub(content, 'font%-family="sans%-serif"', "font-family=\"'Segoe UI', 'メイリオ', 'UDEV Gothic HSRFJPDOC', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP', 'Helvetica Neue', Helvetica, Arial, sans-serif\"")
                         f = io.open(_temp_output, "w")
                         if f then
                             f:write(content)
