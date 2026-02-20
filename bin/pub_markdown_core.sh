@@ -60,7 +60,11 @@ if [ $LINUX -eq 1 ]; then
 else
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
     # レジストリから Microsoft Edge のパスを取得
-    EDGE_REG_PATH=$(reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" //v Path 2>/dev/null | grep "Path" | sed 's/.*REG_SZ[[:space:]]*//' | tr -d '\r')
+    EDGE_REG_PATH=$(
+        reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" /v Path 2>/dev/null \
+            | tr -d '\r' \
+            | sed -n 's/^[[:space:]]*Path[[:space:]]\+REG_SZ[[:space:]]\+//p'
+    )
     if [ -n "$EDGE_REG_PATH" ]; then
         EDGE_PATH="${EDGE_REG_PATH}/msedge.exe"
     else
@@ -149,7 +153,9 @@ fi
 
 # 並列処理の最大ジョブ数
 # 環境変数 PUB_MARKDOWN_PARALLEL で上書き可能 (例: PUB_MARKDOWN_PARALLEL=2 pub_markdown_core.sh ...)
-MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(nproc 2>/dev/null || echo 4)}
+# CPU コア数に依存するが、上限は 4 に制限する
+_nproc=$(nproc 2>/dev/null || echo 4)
+MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _nproc > 4 ? 4 : _nproc ))}
 
 # 並列出力の排他制御用ロックベースパス
 # flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
@@ -161,8 +167,8 @@ OUTPUT_LOCK=$(mktemp -u)
 wait_for_parallel_slot() {
     while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
         # wait -n はいずれか1つのジョブ完了まで待機 (bash 4.3+)
-        # 未対応環境では 0.05 秒ポーリングにフォールバック
-        wait -n 2>/dev/null || sleep 0.05
+        # 未対応環境では 1 秒ポーリングにフォールバック
+        wait -n 2>/dev/null || sleep 1
     done
 }
 
@@ -658,6 +664,9 @@ copy_if_different_timestamp() {
 #-------------------------------------------------------------------
 
 echo "*** pub_markdown_core start $(date -Is)"
+if [ "${MAX_PARALLEL:-0}" -ge 2 ]; then
+    echo "Parallelism: ${MAX_PARALLEL}"
+fi
 
 #-------------------------------------------------------------------
 
