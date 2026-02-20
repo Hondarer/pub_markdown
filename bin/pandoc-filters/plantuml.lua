@@ -195,10 +195,15 @@ local function check_local_plantuml()
 end
 
 -- ローカルの plantuml コマンドを使用して変換
+-- 並列実行時の競合を防ぐため、仮ファイル名に出力する
+-- 成功時: true, 仮ファイルパス を返す (呼び出し元でアトミックにリネームすること)
+-- 失敗時: false, エラーメッセージ を返す
 local function convert_with_local_plantuml(puml_text, output_path, format)
     local temp_puml = create_temp_file()
-    local _output_path = utf8_to_active_cp(output_path)
-    
+    -- 仮ファイル名: 並列プロセス間で衝突しないようランダム値を付与
+    local temp_output = output_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
+    local _temp_output = utf8_to_active_cp(temp_output)
+
     -- PlantUML ソースを一時ファイルに書き出し
     local f = io.open(temp_puml, "w")
     if not f then
@@ -206,32 +211,33 @@ local function convert_with_local_plantuml(puml_text, output_path, format)
     end
     f:write(puml_text)
     f:close()
-    
-    -- plantuml コマンドを実行
+
+    -- plantuml コマンドを実行（仮ファイル名に出力）
     local cmd
     local os_name = os.getenv("OS")
-    
+
     if os_name and string.match(os_name:lower(), "windows") then
-        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, _output_path)
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, _temp_output)
     else
-        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, output_path)
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, temp_output)
     end
-    
+
     local result = os.execute(cmd)
-    
-    -- 一時ファイルを削除
+
+    -- PlantUML ソース一時ファイルを削除
     os.remove(temp_puml)
-    
+
     if result ~= true then
+        os.remove(temp_output)
         return false, "plantuml command failed"
     end
-    
+
     -- 出力ファイルが生成されたかチェック
-    if not file_exists(output_path) then
+    if not file_exists(temp_output) then
         return false, "Output file not generated"
     end
-    
-    return true, nil
+
+    return true, temp_output
 end
 
 return {
@@ -357,12 +363,14 @@ return {
             local _image_file_path = utf8_to_active_cp(image_file_path)
 
             if not file_exists(image_file_path) then
-                local local_success=false
+                local local_success = false
+                local temp_output = nil
+
                 -- plantuml コマンドに PATH が通っているかチェック
                 if check_local_plantuml() then
                     -- ローカルの plantuml コマンドで変換
                     --io.stderr:write("[plantuml] Using local plantuml command\n")
-                    
+
                     -- 出力ディレクトリが存在しない場合は作成
                     -- ※ Windows の場合は、file_exists では既存ディレクトリの不存在チェックができないので、nul にリダイレクト
                     if not file_exists(resource_dir) then
@@ -372,10 +380,13 @@ return {
                             os.execute("mkdir -p " .. resource_dir)
                         end
                     end
-                    
-                    local_success, error_msg = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
-                    if not local_success then
-                        io.stderr:write("[plantuml] Local conversion failed: " .. (error_msg or "unknown error") .. ", falling back to server\n")
+
+                    local temp_path
+                    local_success, temp_path = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
+                    if local_success then
+                        temp_output = temp_path
+                    else
+                        io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. ", falling back to server\n")
                         -- ローカル変換に失敗した場合はサーバー変換にフォールバック
                     end
                 end
@@ -391,8 +402,10 @@ return {
                         return el
                     end
 
-                    -- write to file
-                    local fs, errorDisc, errorCode = io.open(_image_file_path, "wb")
+                    -- 仮ファイルに書き込む（並列実行時の競合を防ぐため）
+                    local temp_path = image_file_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
+                    local _temp_path = utf8_to_active_cp(temp_path)
+                    local fs, errorDisc, errorCode = io.open(_temp_path, "wb")
 
                     if errorCode == 2 then
                         -- Use platform-specific commands to create the directory
@@ -401,28 +414,37 @@ return {
                         else -- Unix-like systems (Linux, macOS, etc.)
                             os.execute("mkdir -p " .. resource_dir)
                         end
-                        fs = io.open(_image_file_path, "wb")
+                        fs = io.open(_temp_path, "wb")
                     end
 
                     fs:write(img)
                     fs:close()
+                    temp_output = temp_path
                 end
 
                 -- pu_config.format が "svg" の場合は、
                 -- font-family="sans-serif" (デフォルトの場合のフォント名) を、html-style.css の body font-family に準じたフォントスタックに置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応、および iPhone 等 iOS 環境でゴシック体が適用されるようにする対応)
-                if pu_config.format == "svg" then
-                    local f = io.open(_image_file_path, "r")
+                -- フォント置換は仮ファイルに対して実施してからアトミックにリネームする
+                if temp_output and pu_config.format == "svg" then
+                    local _temp_output = utf8_to_active_cp(temp_output)
+                    local f = io.open(_temp_output, "r")
                     if f then
                         local content = f:read("*a")
                         f:close()
                         content = string.gsub(content, 'font%-family="sans%-serif"', "font-family=\"'Verdana', 'メイリオ', 'UDEV Gothic HSRFJPDOC', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP', 'Helvetica Neue', Helvetica, Arial, sans-serif\"")
-                        f = io.open(_image_file_path, "w")
+                        f = io.open(_temp_output, "w")
                         if f then
                             f:write(content)
                             f:close()
                         end
                     end
+                end
+
+                -- 仮ファイルを最終ファイル名にアトミックにリネーム
+                -- 複数プロセスが同時に完了しても os.rename は上書きになるだけで内容は同一
+                if temp_output then
+                    os.rename(temp_output, image_file_path)
                 end
             end
             
