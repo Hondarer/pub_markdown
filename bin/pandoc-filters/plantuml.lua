@@ -444,7 +444,8 @@ return {
                 -- 仮ファイルを最終ファイル名にアトミックにリネーム
                 -- 複数プロセスが同時に完了しても os.rename は上書きになるだけで内容は同一
                 if temp_output then
-                    os.rename(temp_output, image_file_path)
+                    local _temp_output = utf8_to_active_cp(temp_output)
+                    os.rename(_temp_output, _image_file_path)
                 end
             end
             
