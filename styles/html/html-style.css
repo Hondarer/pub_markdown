@@ -135,7 +135,17 @@ h6 {
   
 p, ul, ol, dl, li {
   margin: 8px 0; }
-  
+
+ul.task-list {
+  list-style: none;
+  padding-left: 0; }
+
+ul.task-list li {
+  padding-left: 1.5em; }
+
+ul.task-list li label > input[type="checkbox"] {
+  margin-right: 0.4em; }
+
 blockquote, table, pre {
   margin: 15px 0; }
 
