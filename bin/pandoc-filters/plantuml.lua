@@ -322,6 +322,11 @@ return {
                 end
             end
 
+            -- PlantUML の ~ エスケープを除去（~__attribute__~ 等のコールグラフ表現を正規化）
+            if caption then
+                caption = caption:gsub("~(.)", "%1")
+            end
+
             -- "skinparam backgroundColor " の処理
             local hasBackgroundColor = false
             for i, line in ipairs(removeCaptionLines) do
