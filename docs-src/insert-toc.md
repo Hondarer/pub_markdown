@@ -142,7 +142,7 @@ project/
 ```markdown
 ## 関連ドキュメント
 
-\toc depth=-1 exclude="doxybook/*" exclude-basedir=true
+\toc depth=-1 exclude="doxybook2/*" exclude-basedir=true
 ```
 
 **exclude-basedir=false (デフォルト)**:
@@ -255,7 +255,7 @@ index.md または index.markdown が存在する場合は、階層名に index.
 \toc basedir="docs/api" depth=-1 exclude="internal/*"
 
 ## 関連ドキュメント（基準ディレクトリを除外）
-\toc depth=-1 exclude="doxybook/*" exclude-basedir=true
+\toc depth=-1 exclude="doxybook2/*" exclude-basedir=true
 ```
 
 ## コマンド実行例

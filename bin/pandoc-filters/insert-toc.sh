@@ -330,7 +330,7 @@ is_excluded() {
 
         # パターンマッチング
         if [[ "$pattern" == *"/*" ]]; then
-            # ディレクトリ配下すべてを除外するパターン (例: doxybook/*)
+            # ディレクトリ配下すべてを除外するパターン (例: doxybook2/*)
             local dir_pattern="${pattern%/\*}"
             #echo "# is_excluded: ディレクトリパターン検出: '$dir_pattern'" >&2
             case "$file_path" in

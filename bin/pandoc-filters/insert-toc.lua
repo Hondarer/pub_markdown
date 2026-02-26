@@ -355,7 +355,7 @@ function Para(elem)
                 elseif element.t == "Space" then
                     table.insert(params_parts, " ")
                 elseif element.t == "Quoted" then
-                    -- Quoted ノードの処理（例: basedir="doxybook/calc"）
+                    -- Quoted ノードの処理（例: basedir="doxybook2/calc"）
                     table.insert(params_parts, '"')
                     -- Quoted ノードの中身を展開
                     if element.content then
