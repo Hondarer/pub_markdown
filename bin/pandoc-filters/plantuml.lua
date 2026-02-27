@@ -322,7 +322,7 @@ return {
                 end
             end
 
-            -- PlantUML の ~ エスケープを除去（~__attribute__~ 等のコールグラフ表現を正規化）
+            -- PlantUML の ~ エスケープを除去（~__attribute__~ 等の表現を正規化）
             if caption then
                 caption = caption:gsub("~(.)", "%1")
             end
