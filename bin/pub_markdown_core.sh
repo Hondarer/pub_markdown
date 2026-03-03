@@ -291,6 +291,7 @@ if [ -f "$configFile" ]; then
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
     mergeSubmoduleDocs=$(parse_yaml "$config_content" "mergeSubmoduleDocs")
     htmlNavigationLinkEnable=$(parse_yaml "$config_content" "htmlNavigationLinkEnable")
+    mathLatexEnable=$(parse_yaml "$config_content" "mathLatexEnable")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "docs-src" にする
@@ -326,6 +327,19 @@ fi
 # toc 関連オプションの組み立て
 if [[ "$htmlTocEnable" == "true" ]]; then
     htmlTocOption="--toc --toc-depth=${htmlTocDepth}"
+fi
+
+# 設定ファイルに mathLatexEnable が指定されなかった場合の値を true にする
+if [[ "$mathLatexEnable" == "" ]]; then
+    mathLatexEnable="true"
+fi
+
+# 数式サポート (LaTeX 書式) 関連オプションの組み立て
+# mathExtension: Pandoc 入力拡張。\[...\] \(...\) 書式の LaTeX 数式を認識させる (HTML/docx 共通)
+# mathJaxOption: MathJax によるブラウザレンダリングを指定する Pandoc オプション (HTML のみ)
+if [[ "$mathLatexEnable" == "true" ]]; then
+    mathExtension="+tex_math_single_backslash"
+    mathJaxOption="--mathjax"
 fi
 
 # 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
@@ -990,7 +1004,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1001,6 +1015,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             ${PANDOC_CROSSREF} \
+                            ${mathJaxOption} \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                             2>"$_pm_pandoc_stderr"
@@ -1014,7 +1029,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1024,6 +1039,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                                 ${PANDOC_CROSSREF} \
+                                ${mathJaxOption} \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
@@ -1039,7 +1055,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks \
+                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1241,7 +1257,7 @@ for file in "${files[@]}"; do
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 _pm_pandoc_stderr=$(mktemp)
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
+                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1251,6 +1267,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         ${PANDOC_CROSSREF} \
+                        ${mathJaxOption} \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
@@ -1266,7 +1283,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1276,6 +1293,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
+                            ${mathJaxOption} \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
@@ -1292,7 +1310,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks \
+                        ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \

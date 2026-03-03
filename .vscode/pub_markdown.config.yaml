@@ -20,6 +20,10 @@
 # ナビゲーションリンクの表示有無 (true / false)
 # デフォルト: true
 #htmlNavigationLinkEnable: true
+# 数式 (LaTeX 書式) サポートの有無 (true / false)
+# true にすると \[...\] \(...\) 書式の数式が HTML (MathJax) および docx (OMML) で有効になる
+# デフォルト: true
+#mathLatexEnable: true
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
 # docx の出力有無 (true / false)
