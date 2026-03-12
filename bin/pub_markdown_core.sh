@@ -1062,6 +1062,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
@@ -1317,6 +1318,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
