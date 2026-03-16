@@ -1062,6 +1062,8 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
@@ -1076,6 +1078,9 @@ for file in "${files[@]}"; do
                             printf "\e[0m"
                         fi
                         rm -f "$_pm_pandoc_stderr"
+                        python3 "${SCRIPT_DIR}/pandoc-filters/inject-toc-placeholder.py" \
+                            "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                            2>/dev/null || true
                     fi
                     firstLang="${langElement}"
                     firstSuffix="${details_suffix}"
@@ -1318,6 +1323,8 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
@@ -1333,6 +1340,9 @@ for file in "${files[@]}"; do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    python3 "${SCRIPT_DIR}/pandoc-filters/inject-toc-placeholder.py" \
+                        "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                        2>/dev/null || true
                 fi
             done
         done
