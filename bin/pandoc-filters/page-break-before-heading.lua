@@ -1,23 +1,35 @@
 -- page-break-before-heading.lua
--- 見出し2~Nがページの指定位置(%)を超えた場所から始まる場合、直前に改ページを挿入
+-- 見出し1~Nがページの指定位置(%)を超えた場所から始まる場合、直前に改ページを挿入
+-- デフォルトは無効。メタデータで明示的に有効化した文書にのみ機能する。
 --
--- 使用例:
---   pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua
+-- 使用例 (ショートハンド):
 --   pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua \
---     -M page-threshold=50 -M chars-per-page=1500 -M heading-level-to=4
+--     -M page-break-before-heading=true
 --
--- オプション:
---   page-threshold    : 改ページを挿入する閾値 [%] (デフォルト: 50)
+-- 使用例 (個別設定、--metadata-file を使用):
+--   # settings.yaml:
+--   # page-break-before-heading:
+--   #   enabled: true
+--   #   threshold: 70
+--   #   chars-per-page: 2000
+--   #   heading-level-to: 2
+--   pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua \
+--     --metadata-file=settings.yaml
+--
+-- オプション (page-break-before-heading: 配下):
+--   enabled           : フィルター有効フラグ (デフォルト: false)
+--   threshold         : 改ページを挿入する閾値 [%] (デフォルト: 50)
 --   chars-per-page    : 1ページあたりの推定文字数 (デフォルト: 1500)
---   heading-level-to  : 対象見出しレベルの上限 (デフォルト: 3、範囲は 2~N)
+--   heading-level-to  : 対象見出しレベルの上限 (デフォルト: 3、範囲は 1~N)
 --   image-height-chars: 画像1枚あたりの推定文字数 (デフォルト: 300)
 --   table-row-chars   : 表の1行あたりの推定文字数 (デフォルト: 80)
 
 -- 設定値 (メタデータで上書き可能)
 local CONFIG = {
+  enabled = false,          -- フィルター有効フラグ (デフォルト: false)
   threshold = 50,           -- ページ位置の閾値 [%]
   chars_per_page = 1500,    -- 1ページあたりの推定文字数
-  heading_level_to = 3,     -- 対象見出しレベルの上限 (2~この値)
+  heading_level_to = 3,     -- 対象見出しレベルの上限 (1~この値)
   image_height_chars = 300, -- 画像1枚あたりの推定文字数 (約5行相当)
   table_row_chars = 80,     -- 表の1行あたりの推定文字数
 }
@@ -27,7 +39,7 @@ local current_page_chars = 0
 
 -- 対象の見出しレベルか判定
 local function is_target_level(level)
-  return level >= 2 and level <= CONFIG.heading_level_to
+  return level >= 1 and level <= CONFIG.heading_level_to
 end
 
 -- 画像サイズキャッシュ (同じ画像を何度も読まないため)
@@ -362,29 +374,46 @@ end
 
 -- メタデータから設定を読み込み
 function Meta(meta)
-  if meta["page-threshold"] then
-    CONFIG.threshold = tonumber(pandoc.utils.stringify(meta["page-threshold"])) or CONFIG.threshold
-  end
-  if meta["chars-per-page"] then
-    CONFIG.chars_per_page = tonumber(pandoc.utils.stringify(meta["chars-per-page"])) or CONFIG.chars_per_page
-  end
-  if meta["heading-level-to"] then
-    local val = tonumber(pandoc.utils.stringify(meta["heading-level-to"]))
-    if val and val >= 2 then
-      CONFIG.heading_level_to = val
+  local pbh = meta["page-break-before-heading"]
+  if pbh == nil then return meta end
+
+  if pbh.t == "MetaBool" then
+    CONFIG.enabled = pbh.c
+
+  elseif pbh.t == "MetaMap" then
+    local m = pbh.c
+    local function read_bool(key)
+      if m[key] == nil then return nil end
+      if m[key].t == "MetaBool" then return m[key].c end
+      local s = pandoc.utils.stringify(m[key]):lower()
+      return s ~= "false" and s ~= "0" and s ~= "no"
     end
+    local function read_num(key)
+      if m[key] == nil then return nil end
+      return tonumber(pandoc.utils.stringify(m[key]))
+    end
+
+    local en = read_bool("enabled")
+    if en ~= nil then CONFIG.enabled = en end
+    CONFIG.threshold          = read_num("threshold") or CONFIG.threshold
+    CONFIG.chars_per_page     = read_num("chars-per-page") or CONFIG.chars_per_page
+    CONFIG.image_height_chars = read_num("image-height-chars") or CONFIG.image_height_chars
+    CONFIG.table_row_chars    = read_num("table-row-chars") or CONFIG.table_row_chars
+    local lvl = read_num("heading-level-to")
+    if lvl and lvl >= 1 then CONFIG.heading_level_to = lvl end
+
+  else
+    -- 文字列フォールバック (-M page-break-before-heading=true 等)
+    local s = pandoc.utils.stringify(pbh):lower()
+    CONFIG.enabled = s ~= "false" and s ~= "0" and s ~= "no"
   end
-  if meta["image-height-chars"] then
-    CONFIG.image_height_chars = tonumber(pandoc.utils.stringify(meta["image-height-chars"])) or CONFIG.image_height_chars
-  end
-  if meta["table-row-chars"] then
-    CONFIG.table_row_chars = tonumber(pandoc.utils.stringify(meta["table-row-chars"])) or CONFIG.table_row_chars
-  end
+
   return meta
 end
 
 -- ブロックリストを処理
 function Blocks(blocks)
+  if not CONFIG.enabled then return blocks end
   local result = {}
   current_page_chars = 0
 
