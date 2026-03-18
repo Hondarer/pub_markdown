@@ -136,6 +136,215 @@ $body$
   <script src="https://vjs.zencdn.net/5.4.4/video.js"></script>
 
   <!-- ============================================================
+       コードブロック エキスパンダー
+
+       先頭 5 行は常に表示し、6 行目以降をトグルボタンで拡縮します。
+       ボタンはコードブロックの最上部に配置し、ブロックを分断しません。
+
+       構造 (縮小時):
+         [▶ 開く]                   ← トグルバー (最上部)
+         │ line 1                  │
+         │ ...                     │
+         │ line 5                  │
+         ── (スクロールバー) ──
+         さらに N 行 (全 M 行)      ← ヒント行 (クリックで開く)
+
+       構造 (展開時):
+         [▼ 閉じる]
+         │ line 1                  │
+         │ ...                     │
+         │ line M                  │
+         ── (スクロールバー) ──
+       ============================================================ -->
+  <style>
+    /* wrapper が外枠 (border/radius/margin) を担う。border 値は JS で pre から取得して適用 */
+    .code-expander-wrapper {
+      overflow: hidden;
+    }
+    .code-expander-btn {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: left;
+      background: #e8e8e8;
+      border: none;
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      padding: 3px 0.75em;
+      margin: 0;
+      cursor: pointer;
+      font-size: 0.82em;
+      color: #555;
+      line-height: 1.6;
+    }
+    .code-expander-btn:hover { background: #ddd; color: #222; }
+    .code-expander-btn .code-expander-arrow {
+      display: inline-block;
+      font-size: 0.7em;
+      margin-right: 0.3em;
+      transition: transform 0.15s;
+    }
+    .code-expander-btn[aria-expanded="true"] .code-expander-arrow {
+      transform: rotate(90deg);
+    }
+    /* scroll コンテナが横スクロールを一本化する */
+    .code-expander-scroll {
+      overflow-x: auto;
+    }
+    /* scroll コンテナ内の pre は外枠・スクロールを scroll コンテナに委譲 */
+    .code-expander-scroll > pre {
+      border: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      overflow-x: visible !important;
+      min-width: max-content;
+    }
+    /* 5行目と6行目の境界で padding が二重にならないよう除去 */
+    .code-expander-scroll > .code-first {
+      padding-bottom: 0 !important;
+    }
+    .code-expander-scroll > .code-rest {
+      padding-top: 0 !important;
+    }
+    /* 縮小時に先頭ブロック末尾に表示する「続きあり」インジケーター */
+    .code-expander-hint {
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #999;
+      background: #f8f8f8;
+      border: none;
+      border-top: 1px solid rgba(0,0,0,0.12);
+      margin: 0;
+      padding: 1px 0.8em;
+      text-align: center;
+    }
+  </style>
+  <script>
+  (function() {
+    document.addEventListener('DOMContentLoaded', function() {
+      var LINE_THRESHOLD = 5;
+
+      // HTML 文字列を N 番目の改行位置で分割する。
+      // タグ内の改行はカウントしない。
+      // 戻り値: { first, rest } または null (N 行以下の場合)
+      function splitHtmlAtLine(html, n) {
+        var lineCount = 0;
+        var inTag = false;
+        for (var i = 0; i < html.length; i++) {
+          var ch = html[i];
+          if (ch === '<') { inTag = true; continue; }
+          if (ch === '>') { inTag = false; continue; }
+          if (ch === '\n' && !inTag) {
+            lineCount++;
+            if (lineCount === n) {
+              return { first: html.substring(0, i + 1),
+                       rest:  html.substring(i + 1) };
+            }
+          }
+        }
+        return null;
+      }
+
+      var preBlocks = document.querySelectorAll('pre');
+      preBlocks.forEach(function(pre) {
+        var codeEl = pre.querySelector('code');
+        var text = codeEl ? codeEl.textContent : pre.textContent;
+        var lines = text.split('\n');
+        // 末尾の空行を除いた実質行数
+        var lineCount = (lines.length > 0 && lines[lines.length - 1] === '')
+          ? lines.length - 1 : lines.length;
+        if (lineCount <= LINE_THRESHOLD) return;
+
+        // pre の外枠スタイルを取得してから DOM を変更する
+        var preStyle = window.getComputedStyle(pre);
+        var outerBorder       = preStyle.border;
+        var outerBorderRadius = preStyle.borderRadius;
+        var outerMarginTop    = preStyle.marginTop;
+        var outerMarginBottom = preStyle.marginBottom;
+
+        // HTML を先頭5行と残りに分割
+        var targetEl = codeEl || pre;
+        var split = splitHtmlAtLine(targetEl.innerHTML, LINE_THRESHOLD);
+        if (!split) return;
+
+        // 後半用 <pre><code> を複製 (属性のみ)
+        var restPre = pre.cloneNode(false);
+        restPre.className = (restPre.className ? restPre.className + ' ' : '') + 'code-rest';
+        restPre.style.display = 'none';
+        if (codeEl) {
+          var restCode = codeEl.cloneNode(false);
+          restCode.innerHTML = split.rest;
+          restPre.appendChild(restCode);
+        } else {
+          restPre.innerHTML = split.rest;
+        }
+
+        // 前半を元の <pre> に残す
+        targetEl.innerHTML = split.first;
+        pre.className = (pre.className ? pre.className + ' ' : '') + 'code-first';
+
+        // トグルバー (ボタン) を作成
+        var restCount = lineCount - LINE_THRESHOLD;
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-expander-btn';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.innerHTML =
+          '<span class="code-expander-arrow">▶</span>' +
+          '<span class="code-expander-label">開く</span>';
+
+        // 縮小時に先頭ブロック末尾へ表示する「続きあり」ヒント行
+        var hintEl = document.createElement('div');
+        hintEl.className = 'code-expander-hint';
+        hintEl.textContent = 'さらに ' + restCount + ' 行 (全 ' + lineCount + ' 行)';
+        hintEl.style.cursor = 'pointer';
+        hintEl.addEventListener('click', function() {
+          // 「開く」と同じ動作（縮小時のみ）
+          if (restPre.style.display === 'none') {
+            restPre.style.display = '';
+            hintEl.style.display  = 'none';
+            btn.setAttribute('aria-expanded', 'true');
+            btn.querySelector('.code-expander-label').textContent = '閉じる';
+          }
+        });
+
+        btn.addEventListener('click', function() {
+          var opening = restPre.style.display === 'none';
+          restPre.style.display = opening ? '' : 'none';
+          hintEl.style.display  = opening ? 'none' : '';
+          btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+          btn.querySelector('.code-expander-label').textContent =
+            opening ? '閉じる' : '開く';
+        });
+
+        // wrapper: ボタン → scroll コンテナ (前半 <pre> + ヒント行 + 後半 <pre>)
+        var wrapper = document.createElement('div');
+        wrapper.className = 'code-expander-wrapper';
+        var scrollEl = document.createElement('div');
+        scrollEl.className = 'code-expander-scroll';
+
+        // wrapper に pre の外枠スタイルを継承させる
+        wrapper.style.border        = outerBorder;
+        wrapper.style.borderRadius  = outerBorderRadius;
+        wrapper.style.marginTop     = outerMarginTop;
+        wrapper.style.marginBottom  = outerMarginBottom;
+
+        var parentEl = pre.parentNode;
+        parentEl.insertBefore(wrapper, pre);
+        // 親 div.sourceCode の padding を除去して横幅を拡縮なしと揃える
+        if (parentEl.classList && parentEl.classList.contains('sourceCode')) {
+          parentEl.style.padding = '0';
+        }
+        scrollEl.appendChild(pre);
+        scrollEl.appendChild(restPre);
+        wrapper.appendChild(btn);
+        wrapper.appendChild(scrollEl);
+        wrapper.appendChild(hintEl);
+      });
+    });
+  })();
+  </script>
+
+  <!-- ============================================================
        展開可能リスト (collapsible-list) 変換スクリプト
 
        このスクリプトは .collapsible-list クラスを持つ要素内の
