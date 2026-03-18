@@ -2,10 +2,22 @@ body {
   font-family: 'Verdana', 'Meiryo UI', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP';
   font-size: 16px;
   line-height: 1.5;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding: 10px 30px 0;
   background-color: white;
-  padding: 10px 30px; }
+  overflow-x: hidden; }
+
+/* 幅768px未満では Bootstrap が期待する 20px に戻す
+   (html-style.css が template.css より後に読まれるため上書きが必要) */
+@media (max-width: 767px) {
+  body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  /* template.css が .navbar-static-top に margin: -20px を付けるため、
+     .nav.pull-right の -35px がその外にはみ出して横スクロールが発生する。
+     幅768px未満ではリセットする。 */
+  .navbar .nav.pull-right {
+    margin-right: 0; } }
 
 header > hr {
   border: 0 none; 

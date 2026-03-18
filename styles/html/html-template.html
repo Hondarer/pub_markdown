@@ -25,13 +25,26 @@
     <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
 
     <style type="text/css">
-        /* TOC のスクロールバーを常にビューポート全高にする。
-           sticky-kit の挙動 (ヘッダ考慮・ページ下部処理) はそのまま維持する。 */
+        /* TOC をビューポートに固定し、コンテンツが長い場合はスクロール可能にする。
+           sticky-kit (CDN) に依存せず CSS position: sticky で実現する。
+
+           ページ下端での TOC ずれ対策:
+           - navbar-static-top の高さ分だけ sticky container (.row) の外側に
+             スクロール余白が生じるため、navbar の margin-bottom を 0 に。
+           - Bootstrap の .well の margin-bottom も余分なスクロール高を生む
+             ため 0 に。これにより sticky 範囲がスクロール最下端と一致する。 */
         @media (min-width: 768px) {
             #TOC {
+                position: sticky;
+                top: 0;
                 height: 100vh;
+                overflow-y: auto;
                 box-sizing: border-box;
             }
+            /* navbar の下マージンを除去してスクロール高を .row 範囲に収める */
+            .navbar { margin-bottom: 0 !important; }
+            /* .well の下マージンを除去 */
+            #TOC .well { margin-bottom: 0 !important; }
         }
     </style>
 
