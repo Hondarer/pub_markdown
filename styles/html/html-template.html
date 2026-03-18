@@ -46,6 +46,9 @@
             /* .well の下マージンを上に揃える */
             #TOC .well { margin-bottom: 10px !important; }
         }
+        @media (max-width: 767px) {
+            #TOC { overflow-y: hidden; }
+        }
     </style>
 
     <meta name="generator" content="pandoc" />
@@ -185,7 +188,7 @@ $body$
       padding: 3px 0.75em;
       margin: 0;
       cursor: pointer;
-      font-size: 0.82em;
+      font-size: 14px;
       color: #555;
       line-height: 1.6;
     }
@@ -221,7 +224,7 @@ $body$
     /* 縮小時に先頭ブロック末尾に表示する「続きあり」インジケーター */
     .code-expander-hint {
       font-family: monospace;
-      font-size: 0.9em;
+      font-size: 14px;
       color: #999;
       background: #f8f8f8;
       border: none;
@@ -303,7 +306,7 @@ $body$
         btn.setAttribute('aria-expanded', 'false');
         btn.innerHTML =
           '<span class="code-expander-arrow">▶</span>' +
-          '<span class="code-expander-label">開く</span>';
+          '<span class="code-expander-label">&nbsp;開く</span>';
 
         // 縮小時に先頭ブロック末尾へ表示する「続きあり」ヒント行
         var hintEl = document.createElement('div');
@@ -316,7 +319,7 @@ $body$
             restPre.style.display = '';
             hintEl.style.display  = 'none';
             btn.setAttribute('aria-expanded', 'true');
-            btn.querySelector('.code-expander-label').textContent = '閉じる';
+            btn.querySelector('.code-expander-label').textContent = ' 畳む';
           }
         });
 
@@ -326,7 +329,7 @@ $body$
           hintEl.style.display  = opening ? 'none' : '';
           btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
           btn.querySelector('.code-expander-label').textContent =
-            opening ? '閉じる' : '開く';
+            opening ? ' 畳む' : ' 開く';
         });
 
         // wrapper: ボタン → scroll コンテナ (前半 <pre> + ヒント行 + 後半 <pre>)
