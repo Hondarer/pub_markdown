@@ -6,6 +6,9 @@ body {
   background-color: white;
   overflow-x: hidden; }
 
+.span9 {
+  margin-bottom: 20px; }
+
 /* 幅768px未満では Bootstrap が期待する 20px に戻す
    (html-style.css が template.css より後に読まれるため上書きが必要) */
 @media (max-width: 767px) {
