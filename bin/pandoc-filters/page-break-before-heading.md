@@ -56,8 +56,9 @@ page-break-before-heading:
 | オプション | デフォルト | 説明 |
 |-----------|-----------|------|
 | `enabled` | false | フィルターの有効フラグ |
-| `threshold` | 50 | 改ページを挿入する閾値 [%] |
+| `threshold` | 75 | 改ページを挿入する閾値 [%] |
 | `chars-per-page` | 1500 | 1 ページあたりの推定文字数 |
+| `heading-level-always` | 1 | 常に改ページする見出しレベルの上限 (0 で無効) |
 | `heading-level-to` | 3 | 対象見出しレベルの上限 (1〜N) |
 | `image-height-chars` | 300 | 画像高さ不明時のフォールバック文字数 |
 | `table-row-chars` | 80 | 表の 1 行あたりの推定文字数 |
@@ -153,6 +154,30 @@ page-break-before-heading:
 page-break-before-heading:
   enabled: true
   chars-per-page: 1000
+---
+```
+
+### H1 は常に改ページ、H2〜H3 は閾値で判定する
+
+```yaml
+---
+page-break-before-heading:
+  enabled: true
+  heading-level-always: 1   # H1 は常に改ページ (デフォルト)
+  heading-level-to: 3       # H2, H3 は threshold で判定
+  threshold: 50
+---
+```
+
+### 常に改ページを無効化して閾値判定のみにする
+
+```yaml
+---
+page-break-before-heading:
+  enabled: true
+  heading-level-always: 0   # 常改ページなし
+  heading-level-to: 3
+  threshold: 50
 ---
 ```
 

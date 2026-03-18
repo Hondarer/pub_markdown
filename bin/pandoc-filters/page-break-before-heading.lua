@@ -18,8 +18,9 @@
 --
 -- オプション (page-break-before-heading: 配下):
 --   enabled           : フィルター有効フラグ (デフォルト: false)
---   threshold         : 改ページを挿入する閾値 [%] (デフォルト: 50)
+--   threshold         : 改ページを挿入する閾値 [%] (デフォルト: 75)
 --   chars-per-page    : 1ページあたりの推定文字数 (デフォルト: 1500)
+--   heading-level-always: 常に改ページする見出しレベルの上限 (デフォルト: 1、0 で無効)
 --   heading-level-to  : 対象見出しレベルの上限 (デフォルト: 3、範囲は 1~N)
 --   image-height-chars: 画像1枚あたりの推定文字数 (デフォルト: 300)
 --   table-row-chars   : 表の1行あたりの推定文字数 (デフォルト: 80)
@@ -27,9 +28,10 @@
 -- 設定値 (メタデータで上書き可能)
 local CONFIG = {
   enabled = false,          -- フィルター有効フラグ (デフォルト: false)
-  threshold = 50,           -- ページ位置の閾値 [%]
+  threshold = 75,           -- ページ位置の閾値 [%]
   chars_per_page = 1500,    -- 1ページあたりの推定文字数
   heading_level_to = 3,     -- 対象見出しレベルの上限 (1~この値)
+  heading_level_always = 1, -- 常に改ページする見出しレベルの上限 (0 で無効)
   image_height_chars = 300, -- 画像1枚あたりの推定文字数 (約5行相当)
   table_row_chars = 80,     -- 表の1行あたりの推定文字数
 }
@@ -406,6 +408,8 @@ function Meta(meta)
     CONFIG.table_row_chars    = read_num("table-row-chars") or CONFIG.table_row_chars
     local lvl = read_num("heading-level-to")
     if lvl and lvl >= 1 then CONFIG.heading_level_to = lvl end
+    local lvl_always = read_num("heading-level-always")
+    if lvl_always ~= nil and lvl_always >= 0 then CONFIG.heading_level_always = lvl_always end
 
   else
     -- 文字列フォールバック (-M page-break-before-heading=true 等)
@@ -425,14 +429,19 @@ function Blocks(blocks)
   for _, block in ipairs(blocks) do
     local block_chars = count_block_chars(block)
 
-    if block.t == "Header" and is_target_level(block.level) then
-      -- 現在のページ位置を計算 [%]
-      local page_position = (current_page_chars % CONFIG.chars_per_page) / CONFIG.chars_per_page * 100
-
-      if page_position >= CONFIG.threshold then
-        -- 閾値を超えていたら改ページを挿入
+    if block.t == "Header" then
+      local level = block.level
+      if level <= CONFIG.heading_level_always and current_page_chars > 0 then
+        -- 常に改ページ（ページ先頭の場合は挿入しない）
         table.insert(result, make_page_break())
-        current_page_chars = 0  -- 新しいページからカウント開始
+        current_page_chars = 0
+      elseif is_target_level(level) then
+        -- 閾値チェック（既存動作）
+        local page_position = (current_page_chars % CONFIG.chars_per_page) / CONFIG.chars_per_page * 100
+        if page_position >= CONFIG.threshold then
+          table.insert(result, make_page_break())
+          current_page_chars = 0
+        end
       end
     end
 
