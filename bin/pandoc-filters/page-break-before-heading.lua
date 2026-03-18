@@ -377,13 +377,18 @@ function Meta(meta)
   local pbh = meta["page-break-before-heading"]
   if pbh == nil then return meta end
 
-  if pbh.t == "MetaBool" then
+  -- Pandoc 新バージョンではブール値が Lua boolean として直接返される
+  if type(pbh) == "boolean" then
+    CONFIG.enabled = pbh
+
+  elseif pbh.t == "MetaBool" then
     CONFIG.enabled = pbh.c
 
   elseif pbh.t == "MetaMap" then
     local m = pbh.c
     local function read_bool(key)
       if m[key] == nil then return nil end
+      if type(m[key]) == "boolean" then return m[key] end
       if m[key].t == "MetaBool" then return m[key].c end
       local s = pandoc.utils.stringify(m[key]):lower()
       return s ~= "false" and s ~= "0" and s ~= "no"
