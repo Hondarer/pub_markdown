@@ -17,24 +17,34 @@
 --     --metadata-file=settings.yaml
 --
 -- オプション (page-break-before-heading: 配下):
---   enabled           : フィルター有効フラグ (デフォルト: false)
---   threshold         : 改ページを挿入する閾値 [%] (デフォルト: 75)
---   chars-per-page    : 1ページあたりの推定文字数 (デフォルト: 1500)
---   heading-level-always: 常に改ページする見出しレベルの上限 (デフォルト: 1、0 で無効)
---   heading-level-to  : 対象見出しレベルの上限 (デフォルト: 3、範囲は 1~N)
---   image-height-chars: 画像1枚あたりの推定文字数 (デフォルト: 300)
---   table-row-chars   : 表の1行あたりの推定文字数 (デフォルト: 80)
+--   enabled              : フィルター有効フラグ (デフォルト: false)
+--   threshold            : 改ページを挿入する閾値 [%] (デフォルト: 75)
+--   chars-per-page       : 1ページあたりの推定文字数 (デフォルト: 1500)
+--   heading-level-always : 常に改ページする見出しレベルの上限 (デフォルト: 1、0 で無効)
+--   heading-level-to     : 対象見出しレベルの上限 (デフォルト: 2、範囲は 1~N)
+--   shift-heading-level-by: --shift-heading-level-by と同じ値を指定 (デフォルト: 自動検出)
+--                           heading-level-always / heading-level-to は出力上のレベルで指定する。
+--                           Pandoc 3.x 以降は PANDOC_WRITER_OPTIONS から自動取得するため
+--                           通常は指定不要。
+--   image-height-chars   : 画像1枚あたりの推定文字数 (デフォルト: 300)
+--   table-row-chars      : 表の1行あたりの推定文字数 (デフォルト: 80)
 
 -- 設定値 (メタデータで上書き可能)
 local CONFIG = {
-  enabled = false,          -- フィルター有効フラグ (デフォルト: false)
-  threshold = 75,           -- ページ位置の閾値 [%]
-  chars_per_page = 1500,    -- 1ページあたりの推定文字数
-  heading_level_to = 3,     -- 対象見出しレベルの上限 (1~この値)
-  heading_level_always = 1, -- 常に改ページする見出しレベルの上限 (0 で無効)
-  image_height_chars = 300, -- 画像1枚あたりの推定文字数 (約5行相当)
-  table_row_chars = 80,     -- 表の1行あたりの推定文字数
+  enabled = false,               -- フィルター有効フラグ (デフォルト: false)
+  threshold = 75,                -- ページ位置の閾値 [%]
+  chars_per_page = 1500,         -- 1ページあたりの推定文字数
+  heading_level_to = 2,          -- 対象見出しレベルの上限 (出力上のレベル、1~この値)
+  heading_level_always = 1,      -- 常に改ページする見出しレベルの上限 (出力上のレベル、0 で無効)
+  shift_heading_level_by = nil,  -- --shift-heading-level-by の値 (nil = 自動検出)
+  image_height_chars = 300,      -- 画像1枚あたりの推定文字数 (約5行相当)
+  table_row_chars = 80,          -- 表の1行あたりの推定文字数
 }
+
+-- PANDOC_WRITER_OPTIONS から --shift-heading-level-by の値を自動取得 (Pandoc 3.x 以降)
+if PANDOC_WRITER_OPTIONS and PANDOC_WRITER_OPTIONS.shift_heading_level_by then
+  CONFIG.shift_heading_level_by = PANDOC_WRITER_OPTIONS.shift_heading_level_by
+end
 
 -- 現在のページ内文字数カウンター
 local current_page_chars = 0
@@ -376,6 +386,15 @@ end
 
 -- メタデータから設定を読み込み
 function Meta(meta)
+  -- 最上位の shift-heading-level-by を読み取る (pub_markdown_core.sh が --metadata で渡す値)
+  -- PANDOC_WRITER_OPTIONS に shift_heading_level_by が含まれない Pandoc バージョン向けの代替手段
+  if CONFIG.shift_heading_level_by == nil then
+    local top_shift = meta["shift-heading-level-by"]
+    if top_shift ~= nil then
+      CONFIG.shift_heading_level_by = tonumber(pandoc.utils.stringify(top_shift))
+    end
+  end
+
   local pbh = meta["page-break-before-heading"]
   if pbh == nil then return meta end
 
@@ -410,6 +429,8 @@ function Meta(meta)
     if lvl and lvl >= 1 then CONFIG.heading_level_to = lvl end
     local lvl_always = read_num("heading-level-always")
     if lvl_always ~= nil and lvl_always >= 0 then CONFIG.heading_level_always = lvl_always end
+    local shift = read_num("shift-heading-level-by")
+    if shift ~= nil then CONFIG.shift_heading_level_by = shift end
 
   else
     -- 文字列フォールバック (-M page-break-before-heading=true 等)
@@ -426,27 +447,124 @@ function Blocks(blocks)
   local result = {}
   current_page_chars = 0
 
-  for _, block in ipairs(blocks) do
-    local block_chars = count_block_chars(block)
+  -- shift_heading_level_by が nil (自動検出未成功) の場合は 0 として扱う
+  local shift = CONFIG.shift_heading_level_by or 0
+
+  -- ブロックが「セクション終端」か判定する。
+  -- 改ページ候補となる見出し (effective level 1 ~ max(always, to)) または
+  -- 明示的な OpenXML 改ページが終端となる。
+  local function is_section_end(block)
+    if block.t == "RawBlock" and block.format == "openxml"
+       and block.text:find('w:type="page"', 1, true) then
+      return true
+    end
+    if block.t == "Header" then
+      local eff = block.level + shift
+      return eff >= 1 and eff <= math.max(CONFIG.heading_level_always, CONFIG.heading_level_to)
+    end
+    return false
+  end
+
+  -- 事前スキャン 1: 各ブロックの文字数を計算
+  local precomp = {}
+  for i = 1, #blocks do
+    precomp[i] = count_block_chars(blocks[i])
+  end
+
+  -- 事前スキャン 2: 閾値チェック対象見出しごとにセクション文字数を計算。
+  -- セクション文字数 = 当該見出し自身 + 次の改ページ候補直前までの累積文字数。
+  -- 「current + section_chars > chars_per_page」でページあふれを事前検知する。
+  local section_chars_map = {}
+  for i = 1, #blocks do
+    local b = blocks[i]
+    if b.t == "Header" then
+      local eff = b.level + shift
+      if eff >= 1 and eff <= CONFIG.heading_level_to
+         and eff > CONFIG.heading_level_always then
+        local sc = 0
+        for j = i, #blocks do
+          if j > i and is_section_end(blocks[j]) then break end
+          sc = sc + precomp[j]
+        end
+        section_chars_map[i] = sc
+      end
+    end
+  end
+
+  -- 直前の改ページを引き起こした見出しの effective_level を記録する。
+  -- nil = 外部由来の改ページ (toc-pagebreak.lua など)、または改ページ未発生。
+  -- あふれチェックで「直前の改ページが自身より 1 レベル上の見出し」の場合に
+  -- 改ページを抑制するために使用する。
+  local last_break_effective_level = nil
+
+  -- メインループ
+  for idx, block in ipairs(blocks) do
+    local block_chars = precomp[idx]
 
     if block.t == "Header" then
-      local level = block.level
-      if level <= CONFIG.heading_level_always and current_page_chars > 0 then
+      local raw_level = block.level
+      local effective_level = raw_level + shift  -- 出力上のレベル
+      local heading_text = pandoc.utils.stringify(pandoc.Pandoc({pandoc.Para(block.content)}))
+
+      if effective_level <= 0 then
+        -- タイトルに昇格するレベル (--shift-heading-level-by で level 0 以下になる) → スキップ
+        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (promoted to title)\n", raw_level, effective_level, heading_text))
+      elseif effective_level <= CONFIG.heading_level_always and current_page_chars > 0 then
         -- 常に改ページ（ページ先頭の場合は挿入しない）
+        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" always-break: current=%d\n", raw_level, effective_level, heading_text, current_page_chars))
         table.insert(result, make_page_break())
         current_page_chars = 0
-      elseif is_target_level(level) then
-        -- 閾値チェック（既存動作）
-        local page_position = (current_page_chars % CONFIG.chars_per_page) / CONFIG.chars_per_page * 100
-        if page_position >= CONFIG.threshold then
+        last_break_effective_level = effective_level
+      elseif effective_level >= 1 and effective_level <= CONFIG.heading_level_to then
+        -- 閾値チェック
+        local page_position = current_page_chars / CONFIG.chars_per_page * 100
+        local do_break = page_position >= CONFIG.threshold
+        local break_reason = do_break and string.format("threshold(%.1f%%>=%.1f%%)", page_position, CONFIG.threshold) or nil
+
+        -- あふれチェック: 閾値未満でも current + section_chars がページをあふれるなら改ページ。
+        -- ただし、直前の改ページ要因が自身より 1 レベル上の見出しの場合は抑制する。
+        -- （親見出し直後のセクションは同一ページに置く方が読みやすいため）
+        if not do_break then
+          local sc = section_chars_map[idx] or 0
+          if current_page_chars + sc > CONFIG.chars_per_page then
+            if last_break_effective_level ~= nil and last_break_effective_level == effective_level - 1 then
+              io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% overflow-skip: parent-break (last_break_eff=%d)\n",
+                raw_level, effective_level, heading_text, current_page_chars, page_position, last_break_effective_level))
+            else
+              do_break = true
+              break_reason = string.format("overflow: current(%d)+section(%d)=%d > chars_per_page(%d)",
+                current_page_chars, sc, current_page_chars + sc, CONFIG.chars_per_page)
+            end
+          end
+        end
+
+        if do_break then
+          io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% -> BREAK (%s)\n",
+            raw_level, effective_level, heading_text, current_page_chars, page_position, break_reason))
           table.insert(result, make_page_break())
           current_page_chars = 0
+          last_break_effective_level = effective_level
+        else
+          io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% threshold=%.1f%% section=%d -> no-break\n",
+            raw_level, effective_level, heading_text, current_page_chars, page_position, CONFIG.threshold,
+            section_chars_map[idx] or 0))
         end
+      else
+        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (eff level > heading_level_to=%d)\n", raw_level, effective_level, heading_text, CONFIG.heading_level_to))
       end
     end
 
     table.insert(result, block)
-    current_page_chars = current_page_chars + block_chars
+    -- 他フィルター (toc-pagebreak.lua 等) が挿入した OpenXML 改ページは
+    -- ページ境界を意味するのでカウンターをリセットする。
+    -- これがないと改ページ直後の見出しにも always-break が二重発火する。
+    if block.t == "RawBlock" and block.format == "openxml"
+       and block.text:find('w:type="page"', 1, true) then
+      current_page_chars = 0
+      last_break_effective_level = nil  -- 外部改ページは要因不明としてリセット
+    else
+      current_page_chars = current_page_chars + block_chars
+    end
   end
 
   return result
