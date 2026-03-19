@@ -28,6 +28,7 @@
 --                           通常は指定不要。
 --   image-height-chars   : 画像1枚あたりの推定文字数 (デフォルト: 300)
 --   table-row-chars      : 表の1行あたりの推定文字数 (デフォルト: 80)
+--   debug                : デバッグ出力を stderr に出力する (デフォルト: false)
 
 -- 設定値 (メタデータで上書き可能)
 local CONFIG = {
@@ -39,7 +40,15 @@ local CONFIG = {
   shift_heading_level_by = nil,  -- --shift-heading-level-by の値 (nil = 自動検出)
   image_height_chars = 300,      -- 画像1枚あたりの推定文字数 (約5行相当)
   table_row_chars = 80,          -- 表の1行あたりの推定文字数
+  debug = false,                 -- デバッグ出力フラグ (デフォルト: false)
 }
+
+-- デバッグ出力ヘルパー
+local function dbg(fmt, ...)
+  if CONFIG.debug then
+    io.stderr:write(string.format(fmt, ...))
+  end
+end
 
 -- PANDOC_WRITER_OPTIONS から --shift-heading-level-by の値を自動取得 (Pandoc 3.x 以降)
 if PANDOC_WRITER_OPTIONS and PANDOC_WRITER_OPTIONS.shift_heading_level_by then
@@ -431,6 +440,8 @@ function Meta(meta)
     if lvl_always ~= nil and lvl_always >= 0 then CONFIG.heading_level_always = lvl_always end
     local shift = read_num("shift-heading-level-by")
     if shift ~= nil then CONFIG.shift_heading_level_by = shift end
+    local dbg_flag = read_bool("debug")
+    if dbg_flag ~= nil then CONFIG.debug = dbg_flag end
 
   else
     -- 文字列フォールバック (-M page-break-before-heading=true 等)
@@ -508,12 +519,16 @@ function Blocks(blocks)
 
       if effective_level <= 0 then
         -- タイトルに昇格するレベル (--shift-heading-level-by で level 0 以下になる) → スキップ
-        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (promoted to title)\n", raw_level, effective_level, heading_text))
-      elseif effective_level <= CONFIG.heading_level_always and current_page_chars > 0 then
-        -- 常に改ページ（ページ先頭の場合は挿入しない）
-        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" always-break: current=%d\n", raw_level, effective_level, heading_text, current_page_chars))
-        table.insert(result, make_page_break())
-        current_page_chars = 0
+        dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (promoted to title)\n", raw_level, effective_level, heading_text)
+      elseif effective_level <= CONFIG.heading_level_always then
+        -- 常に改ページ候補（ページ先頭の場合は挿入しないが、レベルは常に記録する）
+        if current_page_chars > 0 then
+          dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" always-break: current=%d\n", raw_level, effective_level, heading_text, current_page_chars)
+          table.insert(result, make_page_break())
+          current_page_chars = 0
+        else
+          dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" always-break: skip (page top, current=0)\n", raw_level, effective_level, heading_text)
+        end
         last_break_effective_level = effective_level
       elseif effective_level >= 1 and effective_level <= CONFIG.heading_level_to then
         -- 閾値チェック
@@ -528,8 +543,8 @@ function Blocks(blocks)
           local sc = section_chars_map[idx] or 0
           if current_page_chars + sc > CONFIG.chars_per_page then
             if last_break_effective_level ~= nil and last_break_effective_level == effective_level - 1 then
-              io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% overflow-skip: parent-break (last_break_eff=%d)\n",
-                raw_level, effective_level, heading_text, current_page_chars, page_position, last_break_effective_level))
+              dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% overflow-skip: parent-break (last_break_eff=%d)\n",
+                raw_level, effective_level, heading_text, current_page_chars, page_position, last_break_effective_level)
             else
               do_break = true
               break_reason = string.format("overflow: current(%d)+section(%d)=%d > chars_per_page(%d)",
@@ -539,18 +554,18 @@ function Blocks(blocks)
         end
 
         if do_break then
-          io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% -> BREAK (%s)\n",
-            raw_level, effective_level, heading_text, current_page_chars, page_position, break_reason))
+          dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% -> BREAK (%s)\n",
+            raw_level, effective_level, heading_text, current_page_chars, page_position, break_reason)
           table.insert(result, make_page_break())
           current_page_chars = 0
           last_break_effective_level = effective_level
         else
-          io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% threshold=%.1f%% section=%d -> no-break\n",
+          dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% threshold=%.1f%% section=%d -> no-break\n",
             raw_level, effective_level, heading_text, current_page_chars, page_position, CONFIG.threshold,
-            section_chars_map[idx] or 0))
+            section_chars_map[idx] or 0)
         end
       else
-        io.stderr:write(string.format("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (eff level > heading_level_to=%d)\n", raw_level, effective_level, heading_text, CONFIG.heading_level_to))
+        dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" skip (eff level > heading_level_to=%d)\n", raw_level, effective_level, heading_text, CONFIG.heading_level_to)
       end
     end
 

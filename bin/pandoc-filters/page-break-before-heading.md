@@ -63,6 +63,7 @@ page-break-before-heading:
 | `shift-heading-level-by` | 0 | `--shift-heading-level-by` と同じ値を指定 (後述) |
 | `image-height-chars` | 300 | 画像高さ不明時のフォールバック文字数 |
 | `table-row-chars` | 80 | 表の 1 行あたりの推定文字数 |
+| `debug` | false | デバッグ情報を stderr に出力する |
 
 `heading-level-always` と `heading-level-to` は、`shift-heading-level-by` を設定した場合は**出力上のレベル**で指定する。設定しない場合は Markdown ソース上のレベルで指定する。
 
@@ -106,7 +107,11 @@ current_page_chars + section_chars > chars_per_page
   AND NOT (last_break_effective_level == effective_level - 1)
 ```
 
-`last_break_effective_level` は always-break・threshold・overflow のいずれの改ページ時にも記録する。外部由来の改ページ (OpenXML `w:type="page"`) では `nil` にリセットされるため、抑制条件は成立しない。
+`last_break_effective_level` は以下のタイミングで更新される:
+
+- **always-break 対象の見出し** (effective level ≤ `heading-level-always`): 実際に改ページを挿入するかどうかにかかわらず記録する。ページ先頭 (`current_page_chars == 0`) で改ページを挿入しない場合も同様。
+- **threshold / overflow による改ページ**: 改ページを挿入した場合のみ記録する。
+- **外部由来の改ページ** (OpenXML `w:type="page"`): `nil` にリセットされる。ただし、その直後に always-break 対象の見出しが来れば、ページ先頭でも記録されるため抑制条件が再び成立する。
 
 親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計とする。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしない。
 
@@ -134,7 +139,11 @@ effective_level = raw_level + shift_heading_level_by
 
 ### 他フィルターの改ページとの連携
 
-`toc-pagebreak.lua` など他フィルターが先に挿入した OpenXML 改ページ (`w:type="page"`) を検出した場合、ページ内文字数カウンターをリセットする。これにより、目次直後の最初の見出しへの二重改ページを防ぐ。
+`toc-pagebreak.lua` など他フィルターが先に挿入した OpenXML 改ページ (`w:type="page"`) を検出した場合、ページ内文字数カウンターと `last_break_effective_level` をリセットする。これにより、目次直後の最初の見出しへの二重改ページを防ぐ。
+
+その後に always-break 対象の見出し (eff H1 など) がページ先頭に続く場合、改ページは挿入されないが `last_break_effective_level` は記録される。これにより、その子見出し (eff H2 など) に対するあふれチェックの抑制条件が正しく成立する。
+
+**例**: `toc: true` の文書で `## ファイル` (eff H1) → `### foo` (eff H2) の構造がある場合、目次改ページ後に `## ファイル` はページ先頭に来るため改ページしないが、`last_break_effective_level = 1` は記録される。`### foo` のセクションが 1 ページを超えてもあふれ改ページが抑制される。
 
 ### 要素ごとの文字数換算
 
