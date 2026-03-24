@@ -33,48 +33,77 @@ markdown_text=$(cat)
 
 markdown_text=$(awk -v lang="$lang" -v details="$details" -v supported_langs="$(IFS=,; echo "${supported_langs[*]}")" '
 BEGIN {
-    # サポート対象の言語一覧を分割して配列に格納
     split(supported_langs, langs, ",");
+    in_code_block = 0;
+    in_skip = 0;
+    skip_key = "";
+
+    # 有効なキーセットを初期化 (1: 有効、0: 無効)
+    # details キー
+    valid_keys["details"] = (details == "true") ? 1 : 0;
+    # 言語キー (対象言語のみ有効)
+    for (i in langs) {
+        valid_keys[langs[i]] = (langs[i] == lang) ? 1 : 0;
+    }
 }
 
 {
-    if (/^```/) {
-        in_code_block = !in_code_block
-    }
+    # CRLF 対応: 行末の \r を除去
+    gsub(/\r$/, "");
 
+    # コードブロック追跡 (skip 中でも追跡して状態がずれないようにする)
+    if (/^```/) in_code_block = !in_code_block;
+
+    # コードブロック内: skip 中でなければそのまま出力
     if (in_code_block) {
-        # 入力をそのまま出力する
-        print $0
-    } else {
-        # サポートされている言語を処理
-        for (i in langs) {
-            current_lang = langs[i]
-            if (current_lang == lang) {
-                # 対象の言語の場合、言語タグをコメント化して内部を活かす
-                $0 = gensub("<!--" current_lang ":([^\\-])", "<!--" current_lang ":-->\\1", "g")
-                $0 = gensub("([^-]):" current_lang "-->", "\\1<!--:" current_lang "-->", "g")
-                gsub("<!--" current_lang ":$", "<!--" current_lang ":-->")
-                gsub("^:" current_lang "-->", "<!--:" current_lang "-->")
-            } else {
-                # 対象以外の言語は言語タグを使って内部をコメント化
-                gsub("<!--" current_lang ":-->", "<!--" current_lang ":")
-                gsub("<!--:" current_lang "-->", ":" current_lang "-->")
-            }
-        }
-
-        # details フラグの処理
-        if (details == "true") {
-            $0 = gensub(/<!--details:([^-])/, "<!--details:-->\\1", "g")
-            $0 = gensub(/([^-]):details-->/, "\\1<!--:details-->", "g")
-            gsub(/<!--details:$/, "<!--details:-->")
-            gsub(/^:details-->/, "<!--:details-->")
-        } else {
-            gsub(/<!--details:-->/, "<!--details:")
-            gsub(/<!--:details-->/, ":details-->")
-        }
-
-        print $0
+        if (!in_skip) print $0;
+        next;
     }
+
+    # ステップ 1: 不完全なタグを補正 (コードブロック外のみ)
+    # 行全体が <!--key: の形式 → <!--key:-->
+    if (/^<!--[a-z]+:$/) {
+        key = substr($0, 5, length($0) - 5);
+        $0 = "<!--" key ":-->";
+    }
+    # 行全体が :key--> の形式 → <!--:key-->
+    if (/^:[a-z]+-->$/) {
+        key = substr($0, 2, length($0) - 4);
+        $0 = "<!--:" key "-->";
+    }
+
+    # ステップ 2: 開始タグ <!--key:--> の処理
+    if (/^<!--[a-z]+:-->$/) {
+        key = substr($0, 5, length($0) - 8);
+        if (key in valid_keys) {
+            if (!valid_keys[key]) {
+                # 無効なキー: 削除モードに入る
+                in_skip = 1;
+                skip_key = key;
+            }
+            # 有効・無効どちらもタグ行は出力しない
+            next;
+        }
+    }
+
+    # ステップ 2: 終了タグ <!--:key--> の処理
+    if (/^<!--:[a-z]+-->$/) {
+        key = substr($0, 6, length($0) - 8);
+        if (key in valid_keys) {
+            if (in_skip && key == skip_key) {
+                # 削除モードを終了
+                in_skip = 0;
+                skip_key = "";
+            }
+            # 有効・無効どちらもタグ行は出力しない
+            next;
+        }
+    }
+
+    # 削除モード中は出力しない
+    if (in_skip) next;
+
+    print $0;
 }' <<< "$markdown_text")
 
 echo "$markdown_text"
