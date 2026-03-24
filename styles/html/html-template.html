@@ -319,7 +319,7 @@ $body$
             restPre.style.display = '';
             hintEl.style.display  = 'none';
             btn.setAttribute('aria-expanded', 'true');
-            btn.querySelector('.code-expander-label').textContent = ' 畳む';
+            btn.querySelector('.code-expander-label').textContent = ' たたむ';
           }
         });
 
@@ -329,7 +329,7 @@ $body$
           hintEl.style.display  = opening ? 'none' : '';
           btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
           btn.querySelector('.code-expander-label').textContent =
-            opening ? ' 畳む' : ' 開く';
+            opening ? ' たたむ' : ' 開く';
         });
 
         // wrapper: ボタン → scroll コンテナ (前半 <pre> + ヒント行 + 後半 <pre>)
