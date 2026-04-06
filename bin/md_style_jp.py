@@ -17,10 +17,89 @@ Usage:
     cat input.md | python md_style_jp.py > output.md
 """
 
+import json
+import os
 import re
 import unicodedata
 from enum import Enum, auto
 from typing import Callable, List, Tuple, Union
+
+
+# ---------------------------------------------------------------------------
+# URL 保護
+# ---------------------------------------------------------------------------
+
+_URL_RE = re.compile(r'https?://\S+')
+_URL_TRAILING_PUNCT = frozenset('。、！？：；」』）】〕〉》〙〗')
+
+# ---------------------------------------------------------------------------
+# 辞書ベーススペース制御
+# ---------------------------------------------------------------------------
+
+_no_space_words: List[str] = []   # スペース挿入を抑制する単語リスト
+_replace_pairs: List[Tuple[str, str]] = []    # 汎用文字列置換ペアリスト（長音記号付与・省略など）
+_add_space_pairs: List[Tuple[str, str]] = []  # スペースを挿入する変換ペアリスト
+_dict_loaded: bool = False
+
+
+def _load_dictionaries() -> None:
+    """辞書ファイルを読み込む（初回呼び出し時のみ実行）
+
+    読み込み順: home → docsfw → カレントディレクトリ
+    同じ from キーが複数の辞書に存在する場合、後から読み込まれた to が優先される。
+    no_space は重複を除いて全エントリを使用する。
+    """
+    global _no_space_words, _replace_pairs, _add_space_pairs, _dict_loaded
+    if _dict_loaded:
+        return
+    _dict_loaded = True
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidate_paths = [
+        os.path.join(os.path.expanduser("~"), ".md_style_jp"),
+        os.path.join(script_dir, "..", ".md_style_jp"),
+        os.path.join(os.getcwd(), ".md_style_jp"),
+    ]
+
+    # 二重処理防止: 絶対パスで重複除去（docsfw がカレントディレクトリと一致する場合など）
+    seen = set()  # type: set
+    search_paths = []
+    for p in candidate_paths:
+        abs_p = os.path.abspath(p)
+        if abs_p not in seen:
+            seen.add(abs_p)
+            search_paths.append(abs_p)
+
+    # add_space / replace は from をキーとした OrderedDict で管理し、後から読んだ to で上書き
+    no_space_set = []        # type: List[str]
+    add_space_map = {}       # type: dict
+    replace_map = {}         # type: dict
+
+    for dict_dir in search_paths:
+        if not os.path.isdir(dict_dir):
+            continue
+        for fname in sorted(os.listdir(dict_dir)):
+            if not fname.endswith(".json"):
+                continue
+            fpath = os.path.join(dict_dir, fname)
+            try:
+                with open(fpath, encoding="utf-8") as f:
+                    data = json.load(f)
+                for word in data.get("no_space", []):
+                    if isinstance(word, str) and word not in no_space_set:
+                        no_space_set.append(word)
+                for pair in data.get("add_space", []):
+                    if isinstance(pair, dict) and "from" in pair and "to" in pair:
+                        add_space_map[pair["from"]] = pair["to"]
+                for pair in data.get("replace", []):
+                    if isinstance(pair, dict) and "from" in pair and "to" in pair:
+                        replace_map[pair["from"]] = pair["to"]
+            except Exception:
+                pass  # 読み込みエラーは無視（辞書なし扱い）
+
+    _no_space_words[:] = no_space_set
+    _add_space_pairs[:] = list(add_space_map.items())
+    _replace_pairs[:] = list(replace_map.items())
 
 
 class CharType(Enum):
@@ -390,24 +469,87 @@ def style_markdown(text: str) -> str:
     return "\n".join(result_lines)
 
 
+def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
+    """from_word を to_word に置換する。ただし同位置に既に to_word がある場合はスキップする"""
+    if from_word == to_word:
+        return text
+    result = []
+    i = 0
+    flen = len(from_word)
+    tlen = len(to_word)
+    while i < len(text):
+        if text[i:i + flen] == from_word:
+            if text[i:i + tlen] == to_word:
+                # 既に to_word が存在する位置はそのまま通過
+                result.append(to_word)
+                i += tlen
+            else:
+                result.append(to_word)
+                i += flen
+        else:
+            result.append(text[i])
+            i += 1
+    return "".join(result)
+
+
 def _style_line_preserve_inline_code(line: str) -> str:
     """インラインコードを保護しながら行をスタイリングする"""
-    # インラインコードを抽出して保護（長いバッククォートのシーケンスを先にマッチ）
+    _load_dictionaries()
+
+    # a. インラインコードを抽出して保護（長いバッククォートのシーケンスを先にマッチ）
     pattern = r"``+.+?``+|`[^`]+`"
     code_spans = re.findall(pattern, line)
-    placeholders = [f"\x00CODE{i}\x00" for i in range(len(code_spans))]
+    code_placeholders = [f"\x00CODE{i}\x00" for i in range(len(code_spans))]
 
-    # インラインコードをプレースホルダーに置換
     protected_line = line
-    for code, placeholder in zip(code_spans, placeholders):
-        protected_line = protected_line.replace(code, placeholder, 1)
+    for code, ph in zip(code_spans, code_placeholders):
+        protected_line = protected_line.replace(code, ph, 1)
 
-    # スタイリングを適用
+    # b. URL をプレースホルダーに（インラインコード保護後に実行するので、バッククォート内は除外済み）
+    url_spans = []  # type: List[str]
+
+    def _url_replacer(m):
+        # type: (re.Match) -> str
+        url = m.group(0)
+        while url and url[-1] in _URL_TRAILING_PUNCT:
+            url = url[:-1]
+        if len(url) <= len("https://"):
+            return m.group(0)
+        url_spans.append(url)
+        ph = f"\x00URL{len(url_spans) - 1}\x00"
+        return ph + m.group(0)[len(url):]
+
+    protected_line = _URL_RE.sub(_url_replacer, protected_line)
+    url_placeholders = [f"\x00URL{i}\x00" for i in range(len(url_spans))]
+
+    # c. no_space 単語をプレースホルダーに（長い順で部分一致誤置換を防止）
+    sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
+    nosp_placeholders = [f"\x00NOSP{i}\x00" for i in range(len(sorted_nosp))]
+    for word, ph in zip(sorted_nosp, nosp_placeholders):
+        protected_line = protected_line.replace(word, ph)
+
+    # d. スタイリングを適用
     styled_line = apply_ms_style(protected_line)
 
-    # プレースホルダーを元のインラインコードに戻す
-    for code, placeholder in zip(code_spans, placeholders):
-        styled_line = styled_line.replace(placeholder, code, 1)
+    # e. no_space プレースホルダーを元の単語に復元
+    for word, ph in zip(sorted_nosp, nosp_placeholders):
+        styled_line = styled_line.replace(ph, word)
+
+    # f. 辞書置換を適用（URL・インラインコードはまだプレースホルダーなので保護される）
+    # f1. add_space: スペース挿入
+    for from_word, to_word in _add_space_pairs:
+        styled_line = styled_line.replace(from_word, to_word)
+    # f2. replace: 汎用文字列置換（長音記号付与・省略など）。to が既にある位置はスキップ
+    for from_word, to_word in _replace_pairs:
+        styled_line = _replace_skip_existing(styled_line, from_word, to_word)
+
+    # g. URL を復元
+    for url, ph in zip(url_spans, url_placeholders):
+        styled_line = styled_line.replace(ph, url, 1)
+
+    # h. インラインコードを復元
+    for code, ph in zip(code_spans, code_placeholders):
+        styled_line = styled_line.replace(ph, code, 1)
 
     return styled_line
 
@@ -446,6 +588,16 @@ def run_tests() -> bool:
 
         # 数字/数字 + 括弧
         ("10/13(ページ)", "10/13 (ページ)"),
+
+    ]
+
+    # style_markdown() を使うテスト（URL 保護など Markdown 固有の処理を含む）
+    markdown_test_cases = [
+        # URL 内のスペース挿入防止
+        ("詳しくは https://example.com/日本語abc を参照", "詳しくは https://example.com/日本語abc を参照"),
+        ("https://example.com/abc日本語終端", "https://example.com/abc日本語終端"),
+        ("[テキスト](https://example.com/日本語パス)", "[テキスト](https://example.com/日本語パス)"),
+        ("参照先 https://example.com/doc。次の章", "参照先 https://example.com/doc。次の章"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")
@@ -454,6 +606,18 @@ def run_tests() -> bool:
     all_passed = True
     for original, expected in test_cases:
         result = apply_ms_style(original)
+        passed = result == expected
+        status = "✓" if passed else "✗"
+
+        print(f"\n{status} 入力: {original!r}")
+        print(f"  期待: {expected!r}")
+        print(f"  結果: {result!r}")
+
+        if not passed:
+            all_passed = False
+
+    for original, expected in markdown_test_cases:
+        result = style_markdown(original)
         passed = result == expected
         status = "✓" if passed else "✗"
 
