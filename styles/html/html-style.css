@@ -514,3 +514,72 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 .collapsible-list details > ol {
   margin-top: 3px;
 }
+
+/* ===== GitHub-style Admonitions ===== */
+
+.admonition {
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-left: 4px solid;
+  border-radius: 4px;
+  color: inherit;
+}
+
+.admonition p {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.admonition > :first-child {
+  margin-top: 0;
+}
+
+.admonition > :last-child {
+  margin-bottom: 0;
+}
+
+.admonition-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.admonition-note {
+  border-left-color: #1f6feb;
+  background-color: #ddf4ff;
+}
+.admonition-note .admonition-title {
+  color: #1f6feb;
+}
+
+.admonition-tip {
+  border-left-color: #238636;
+  background-color: #dafbe1;
+}
+.admonition-tip .admonition-title {
+  color: #238636;
+}
+
+.admonition-important {
+  border-left-color: #8957e5;
+  background-color: #eddeff;
+}
+.admonition-important .admonition-title {
+  color: #8957e5;
+}
+
+.admonition-warning {
+  border-left-color: #9a6700;
+  background-color: #fff8c5;
+}
+.admonition-warning .admonition-title {
+  color: #9a6700;
+}
+
+.admonition-caution {
+  border-left-color: #da3633;
+  background-color: #ffebe9;
+}
+.admonition-caution .admonition-title {
+  color: #da3633;
+}

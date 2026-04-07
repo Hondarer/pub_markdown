@@ -1011,6 +1011,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
@@ -1036,6 +1037,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                                 ${PANDOC_CROSSREF} \
@@ -1062,6 +1064,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
@@ -1270,6 +1273,7 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                         ${PANDOC_CROSSREF} \
@@ -1296,6 +1300,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             ${PANDOC_CROSSREF} \
@@ -1323,6 +1328,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
