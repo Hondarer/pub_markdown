@@ -2,7 +2,7 @@
 
 ## 概要
 
-`pub_markdown_core.sh` によるドキュメント発行処理において、プロジェクトルート直下に存在するサブモジュール内の `mdRoot` ディレクトリを、メインの `mdRoot` (デフォルト: `docs-src`) 配下にマージします。
+`pub_markdown_core.sh` によるドキュメント発行処理において、指定したサブモジュール内の `mdRoot` ディレクトリを、メインの `mdRoot` (デフォルト: `docs-src`) 配下にマージします。
 
 ### 背景
 
@@ -19,7 +19,7 @@
 # サブモジュール mdRoot マージ機能
 # マージ対象のサブモジュールをスペース区切りで指定
 # 空または未指定の場合は機能無効
-mergeSubmoduleDocs: doxyfw makefw testfw docsfw
+mergeSubmoduleDocs: doxyfw makefw testfw docsfw=framework/docsfw
 ```
 
 ### 設定値
@@ -27,7 +27,8 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 | 設定値 | 動作 |
 |--------|------|
 | 空または未指定 | 機能無効 |
-| サブモジュール名リスト | 指定されたサブモジュールのみマージ対象 |
+| `path` | 表示名と実パスの両方に同じ値を使用 |
+| `alias=path` | 表示名と実パスを分離して使用 |
 
 ## パス変換ルール
 
@@ -35,7 +36,7 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 
 | 種類 | 実パス | 仮想パス |
 |------|--------|----------|
-| サブモジュールドキュメント | `{submodule}/{mdRoot}/{path}` | `{mdRoot}/{submodule}/{path}` |
+| サブモジュールドキュメント | `{submodulePath}/{mdRoot}/{path}` | `{mdRoot}/{alias}/{path}` |
 | メインドキュメント | `{mdRoot}/{path}` | `{mdRoot}/{path}` |
 
 ### パス変換の具体例
@@ -47,6 +48,15 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
 
+alias を使う例:
+
+| ステップ | docsfw の例 |
+|----------|-------------|
+| 設定値 | `docsfw=framework/docsfw` |
+| 実パス | `framework/docsfw/docs-src/pipeline.md` |
+| 仮想パス | `docs-src/docsfw/pipeline.md` |
+| HTML 出力 | `docs/ja/html/docsfw/pipeline.html` |
+
 ## relativeFile パラメータ
 
 ### 受け入れ可能なパス形式
@@ -56,7 +66,7 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
 | メイン mdRoot パス | `docs-src/build-design.md` | 従来通り処理 |
-| 実パス(主) | `makefw/docs-src/make-local.md` | 実パスを内部で仮想パスに変換して処理 |
+| 実パス(主) | `makefw/docs-src/make-local.md` / `framework/docsfw/docs-src/pipeline.md` | 実パスを内部で仮想パスに変換して処理 |
 | 仮想パス(拡張) | `docs-src/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
 ### フォルダ指定時の動作
@@ -66,6 +76,8 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 | `docs-src` | メイン mdRoot + 指定サブモジュールの mdRoot |
 | `docs-src/makefw` | makefw サブモジュールの mdRoot 配下のみ |
 | `makefw/docs-src` | makefw サブモジュールの mdRoot 配下のみ (実パス指定) |
+| `docs-src/docsfw` | `framework/docsfw/docs-src` 配下のみ |
+| `framework/docsfw/docs-src` | `framework/docsfw/docs-src` 配下のみ (実パス指定) |
 
 ## 目次生成
 
@@ -85,7 +97,7 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw
 
 ```yaml
 # 例: testfw/gtest も対象にする場合
-mergeSubmoduleDocs: doxyfw makefw testfw testfw/gtest
+mergeSubmoduleDocs: doxyfw makefw testfw testfw/gtest docsfw=framework/docsfw
 ```
 
 この場合のパス変換:

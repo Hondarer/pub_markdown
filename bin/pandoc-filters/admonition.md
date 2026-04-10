@@ -50,7 +50,7 @@ BlockQuote
 </div>
 ```
 
-CSS は `docsfw/styles/html/html-style.css` に定義。GitHub 準拠の配色:
+CSS は `styles/html/html-style.css` に定義。GitHub 準拠の配色:
 
 | タイプ | 左罫線色 | 背景色 | タイトル色 |
 |---|---|---|---|

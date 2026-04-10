@@ -30,11 +30,12 @@ EXCLUDE_BASEDIR="${6:-false}"
 # 環境変数からサブモジュールマージ設定を取得
 # 値はスペース区切りのサブモジュール名リスト (空の場合は機能無効)
 MERGE_SUBMODULE_DOCS="${MERGE_SUBMODULE_DOCS:-}"
-# スペース区切りの文字列を配列に変換
+# 改行区切りの文字列を配列に変換
+declare -a submodule_entries=()
 if [[ -n "$SUBMODULE_DOCS_PATHS" ]]; then
-    IFS=' ' read -ra submodule_entries <<< "$SUBMODULE_DOCS_PATHS"
-else
-    submodule_entries=()
+    while IFS= read -r entry; do
+        [[ -n "$entry" ]] && submodule_entries+=("$entry")
+    done <<< "$SUBMODULE_DOCS_PATHS"
 fi
 
 # デバッグ用: 引数をエコー
@@ -46,6 +47,16 @@ fi
 #echo "BASEDIR: $BASEDIR" >&2
 #echo "MERGE_SUBMODULE_DOCS: $MERGE_SUBMODULE_DOCS" >&2
 #echo "SUBMODULE_DOCS_PATHS: $SUBMODULE_DOCS_PATHS" >&2
+
+parse_submodule_entry() {
+    local entry="$1"
+    local rest
+
+    submodule_alias="${entry%%|*}"
+    rest="${entry#*|}"
+    submodule_path="${rest%%|*}"
+    submodule_docs_src="${rest#*|}"
+}
 
 # ========================================
 # メモリベースキャッシュ関数
@@ -787,16 +798,15 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
     #echo "# サブモジュール docs-src 探索開始" >&2
 
     for entry in "${submodule_entries[@]}"; do
-        submodule="${entry%%:*}"
-        docs_src="${entry#*:}"
+        parse_submodule_entry "$entry"
 
-        #echo "# サブモジュール探索: $submodule -> $docs_src" >&2
+        #echo "# サブモジュール探索: $submodule_alias -> $submodule_docs_src" >&2
 
         # サブモジュール docs-src 配下のファイルを探索
         # 仮想パスとしてキャッシュに追加(current_dir/submodule/... として)
-        if [[ -d "$docs_src" ]]; then
+        if [[ -d "$submodule_docs_src" ]]; then
             # find コマンドで探索
-            _find_args=("$docs_src")
+            _find_args=("$submodule_docs_src")
             if [[ "$DEPTH" -ge 0 ]]; then
                 _find_args+=(-maxdepth $((DEPTH + 1)))
             fi
@@ -805,20 +815,20 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
                 # 実パスから仮想パスを計算
                 # 実パス: {docs_src}/path/to/file.md
                 # 仮想パス: {current_dir}/{submodule}/path/to/file.md
-                _relative_to_docs_src="${path#$docs_src}"
+                _relative_to_docs_src="${path#$submodule_docs_src}"
                 _relative_to_docs_src="${_relative_to_docs_src#/}"  # 先頭スラッシュ除去
 
                 if [[ -z "$_relative_to_docs_src" ]]; then
-                    _virtual_abs_path="${current_dir}/${submodule}"
+                    _virtual_abs_path="${current_dir}/${submodule_alias}"
                 else
-                    _virtual_abs_path="${current_dir}/${submodule}/${_relative_to_docs_src}"
+                    _virtual_abs_path="${current_dir}/${submodule_alias}/${_relative_to_docs_src}"
                 fi
 
                 # ファイル名取得
                 # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を使用
                 # 例: testfw/gtest -> gtest
-                if [[ "$path" == "$docs_src" ]]; then
-                    _filename="${submodule##*/}"
+                if [[ "$path" == "$submodule_docs_src" ]]; then
+                    _filename="${submodule_alias##*/}"
                 else
                     _filename="${path##*/}"
                 fi
@@ -828,8 +838,8 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
                 if [[ -d "$path" ]]; then
                     # ディレクトリの場合
                     # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を base_title に使用
-                    if [[ "$path" == "$docs_src" ]]; then
-                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${submodule##*/}" ""
+                    if [[ "$path" == "$submodule_docs_src" ]]; then
+                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${submodule_alias##*/}" ""
                     else
                         add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "$_filename" ""
                     fi

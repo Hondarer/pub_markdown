@@ -428,30 +428,72 @@ fi
 # サブモジュール mdRoot マージ機能
 #-------------------------------------------------------------------
 
+# サブモジュール設定 1 件を解析する関数
+# 引数: $1=サブモジュール設定 (例: "doxyfw" / "docsfw=framework/docsfw")
+# 戻り値: グローバル変数 submodule_alias / submodule_path
+parse_submodule_spec() {
+    local submodule_spec="$1"
+
+    if [[ "$submodule_spec" == *=* ]]; then
+        submodule_alias="${submodule_spec%%=*}"
+        submodule_path="${submodule_spec#*=}"
+    else
+        submodule_alias="$submodule_spec"
+        submodule_path="$submodule_spec"
+    fi
+}
+
+# submodule_paths の要素を解析する関数
+# 形式: "alias|path"
+parse_submodule_path_entry() {
+    local entry="$1"
+    submodule_alias="${entry%%|*}"
+    submodule_path="${entry#*|}"
+}
+
+# submodule_mdroot_paths の要素を解析する関数
+# 形式: "alias|path|mdRoot絶対パス"
+parse_submodule_mdroot_entry() {
+    local entry="$1"
+    local rest
+
+    submodule_alias="${entry%%|*}"
+    rest="${entry#*|}"
+    submodule_path="${rest%%|*}"
+    submodule_mdroot="${rest#*|}"
+}
+
 # 設定ファイルで指定されたサブモジュールのパスリストを設定する関数
-# 引数: $1=スペース区切りのサブモジュール名リスト (例: "doxyfw makefw testfw")
-# 戻り値: グローバル配列 submodule_paths にサブモジュールパスを設定
+# 引数: $1=スペース区切りのサブモジュール名リスト (例: "doxyfw testfw docsfw=framework/docsfw")
+# 戻り値: グローバル配列 submodule_paths に "alias|path" を設定
 set_submodule_paths() {
     local submodule_list="$1"
+    local -a submodule_specs=()
+    local spec
     submodule_paths=()
 
     if [[ -z "$submodule_list" ]]; then
         return 0
     fi
 
-    # スペース区切りで配列に変換
-    read -ra submodule_paths <<< "$submodule_list"
+    # スペース区切りで配列に変換し、alias/path 形式へ正規化
+    read -ra submodule_specs <<< "$submodule_list"
+    for spec in "${submodule_specs[@]}"; do
+        parse_submodule_spec "$spec"
+        submodule_paths+=("${submodule_alias}|${submodule_path}")
+    done
 }
 
 # サブモジュール内の mdRoot ディレクトリを検出する関数
-# 戻り値: グローバル配列 submodule_mdroot_paths に "サブモジュール名:mdRootパス" を設定
+# 戻り値: グローバル配列 submodule_mdroot_paths に "alias|path|mdRoot絶対パス" を設定
 detect_submodule_docs() {
     submodule_mdroot_paths=()
 
-    for submodule in "${submodule_paths[@]}"; do
-        local submodule_mdroot_path="${workspaceFolder}/${submodule}/${mdRoot}"
+    for entry in "${submodule_paths[@]}"; do
+        parse_submodule_path_entry "$entry"
+        local submodule_mdroot_path="${workspaceFolder}/${submodule_path}/${mdRoot}"
         if [[ -d "$submodule_mdroot_path" ]]; then
-            submodule_mdroot_paths+=("${submodule}:${submodule_mdroot_path}")
+            submodule_mdroot_paths+=("${submodule_alias}|${submodule_path}|${submodule_mdroot_path}")
         fi
     done
 }
@@ -464,17 +506,16 @@ real_to_virtual_path() {
 
     # サブモジュール mdRoot のパスかチェック
     for entry in "${submodule_mdroot_paths[@]}"; do
-        local submodule="${entry%%:*}"
-        local submodule_mdroot="${entry#*:}"
+        parse_submodule_mdroot_entry "$entry"
 
         if [[ "$real_path" == "${submodule_mdroot}/"* ]]; then
             # サブモジュール mdRoot 配下のファイル
             local relative="${real_path#${submodule_mdroot}/}"
-            echo "${workspaceFolder}/${mdRoot}/${submodule}/${relative}"
+            echo "${workspaceFolder}/${mdRoot}/${submodule_alias}/${relative}"
             return 0
         elif [[ "$real_path" == "${submodule_mdroot}" ]]; then
             # サブモジュール mdRoot 自体
-            echo "${workspaceFolder}/${mdRoot}/${submodule}"
+            echo "${workspaceFolder}/${mdRoot}/${submodule_alias}"
             return 0
         fi
     done
@@ -500,15 +541,14 @@ virtual_to_real_path() {
 
     # サブモジュール名で始まるかチェック
     for entry in "${submodule_mdroot_paths[@]}"; do
-        local submodule="${entry%%:*}"
-        local submodule_mdroot="${entry#*:}"
+        parse_submodule_mdroot_entry "$entry"
 
-        if [[ "$relative" == "${submodule}/"* ]]; then
+        if [[ "$relative" == "${submodule_alias}/"* ]]; then
             # サブモジュール mdRoot へのパスに変換
-            local submodule_relative="${relative#${submodule}/}"
+            local submodule_relative="${relative#${submodule_alias}/}"
             echo "${submodule_mdroot}/${submodule_relative}"
             return 0
-        elif [[ "$relative" == "${submodule}" ]]; then
+        elif [[ "$relative" == "${submodule_alias}" ]]; then
             # サブモジュール mdRoot 自体
             echo "${submodule_mdroot}"
             return 0
@@ -528,7 +568,7 @@ if [[ -n "$mergeSubmoduleDocs" ]]; then
     detect_submodule_docs
     # insert-toc.sh 用に環境変数をエクスポート
     export MERGE_SUBMODULE_DOCS="$mergeSubmoduleDocs"
-    export SUBMODULE_DOCS_PATHS="${submodule_mdroot_paths[*]}"
+    export SUBMODULE_DOCS_PATHS="$(printf '%s\n' "${submodule_mdroot_paths[@]}")"
 fi
 
 #-------------------------------------------------------------------
@@ -536,32 +576,33 @@ fi
 # relativeFile のパス検証 (サブモジュールマージ対応)
 if [[ -n $relativeFile ]]; then
     path_type=""
+    resolved_relativeFile="$relativeFile"
 
-    # 1. メイン mdRoot パスのチェック
-    if [[ $relativeFile == ${mdRoot}/* || $relativeFile == ${mdRoot} ]]; then
-        path_type="mdroot"
-    fi
-
-    # 2. サブモジュール実パスのチェック
-    if [[ -z "$path_type" && -n "$mergeSubmoduleDocs" ]]; then
+    # 1. サブモジュール実パスのチェック
+    if [[ -n "$mergeSubmoduleDocs" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
-            _submodule="${entry%%:*}"
-            if [[ $relativeFile == ${_submodule}/${mdRoot}/* || $relativeFile == ${_submodule}/${mdRoot} ]]; then
+            parse_submodule_mdroot_entry "$entry"
+            if [[ $relativeFile == ${submodule_path}/${mdRoot}/* || $relativeFile == ${submodule_path}/${mdRoot} ]]; then
                 path_type="submodule_real"
                 break
             fi
         done
     fi
 
-    # 3. 仮想パスのチェック
+    # 2. 仮想パスのチェック
     if [[ -z "$path_type" && -n "$mergeSubmoduleDocs" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
-            _submodule="${entry%%:*}"
-            if [[ $relativeFile == ${mdRoot}/${_submodule}/* || $relativeFile == ${mdRoot}/${_submodule} ]]; then
+            parse_submodule_mdroot_entry "$entry"
+            if [[ $relativeFile == ${mdRoot}/${submodule_alias}/* || $relativeFile == ${mdRoot}/${submodule_alias} ]]; then
                 path_type="submodule_virtual"
                 break
             fi
         done
+    fi
+
+    # 3. メイン mdRoot パスのチェック
+    if [[ -z "$path_type" && ( $relativeFile == ${mdRoot}/* || $relativeFile == ${mdRoot} ) ]]; then
+        path_type="mdroot"
     fi
 
     # 4. いずれにも該当しない場合はエラー
@@ -573,17 +614,32 @@ if [[ -n $relativeFile ]]; then
     # relativeFile が実パスの場合、仮想パスに変換 (内部処理の統一のため)
     if [[ "$path_type" == "submodule_real" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
-            _submodule="${entry%%:*}"
-            _submodule_mdroot_rel="${_submodule}/${mdRoot}"
+            parse_submodule_mdroot_entry "$entry"
+            _submodule_mdroot_rel="${submodule_path}/${mdRoot}"
 
             if [[ $relativeFile == ${_submodule_mdroot_rel}/* ]]; then
                 _subpath="${relativeFile#${_submodule_mdroot_rel}/}"
                 original_relativeFile="$relativeFile"
-                relativeFile="${mdRoot}/${_submodule}/${_subpath}"
+                resolved_relativeFile="$relativeFile"
+                relativeFile="${mdRoot}/${submodule_alias}/${_subpath}"
                 break
             elif [[ $relativeFile == ${_submodule_mdroot_rel} ]]; then
                 original_relativeFile="$relativeFile"
-                relativeFile="${mdRoot}/${_submodule}"
+                resolved_relativeFile="$relativeFile"
+                relativeFile="${mdRoot}/${submodule_alias}"
+                break
+            fi
+        done
+    elif [[ "$path_type" == "submodule_virtual" ]]; then
+        for entry in "${submodule_mdroot_paths[@]}"; do
+            parse_submodule_mdroot_entry "$entry"
+
+            if [[ $relativeFile == ${mdRoot}/${submodule_alias}/* ]]; then
+                _subpath="${relativeFile#${mdRoot}/${submodule_alias}/}"
+                resolved_relativeFile="${submodule_path}/${mdRoot}/${_subpath}"
+                break
+            elif [[ $relativeFile == ${mdRoot}/${submodule_alias} ]]; then
+                resolved_relativeFile="${submodule_path}/${mdRoot}"
                 break
             fi
         done
@@ -591,7 +647,7 @@ if [[ -n $relativeFile ]]; then
 fi
 
 if [ -n "$relativeFile" ]; then
-    if [ -d "${workspaceFolder}/$relativeFile" ]; then
+    if [ -d "${workspaceFolder}/$resolved_relativeFile" ]; then
         # 実行モード=フォルダ
         executionMode="folder"
 
@@ -694,29 +750,9 @@ echo -n "Correcting target files..."
 # ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──
 if [ -n "$relativeFile" ]; then
     # 実パスの解決
-    # original_relativeFile が設定されている場合 (実パス→仮想パス変換が行われた場合) はそれを使用
-    # そうでない場合は relativeFile をそのまま使用 (メイン mdRoot のファイル)
-    if [[ -n "$original_relativeFile" ]]; then
-        real_relativeFile="$original_relativeFile"
-    else
-        # 仮想パスから実パスへの変換 (仮想パスで指定された場合)
-        real_relativeFile="$relativeFile"
-        if [[ -n "$mergeSubmoduleDocs" ]]; then
-            for entry in "${submodule_mdroot_paths[@]}"; do
-                _submodule="${entry%%:*}"
-                _submodule_mdroot="${entry#*:}"
-
-                if [[ $relativeFile == ${mdRoot}/${_submodule}/* ]]; then
-                    _subpath="${relativeFile#${mdRoot}/${_submodule}/}"
-                    real_relativeFile="${_submodule}/${mdRoot}/${_subpath}"
-                    break
-                elif [[ $relativeFile == ${mdRoot}/${_submodule} ]]; then
-                    real_relativeFile="${_submodule}/${mdRoot}"
-                    break
-                fi
-            done
-        fi
-    fi
+    # resolved_relativeFile にはメイン mdRoot / サブモジュール実パス / 仮想パスの
+    # いずれで指定されても、実ファイル系の相対パスが入っている
+    real_relativeFile="$resolved_relativeFile"
 
     if [ -d "${workspaceFolder}/$real_relativeFile" ]; then
         # relativeFile がディレクトリの場合: そのディレクトリ直下の対象ファイルを収集
@@ -746,12 +782,11 @@ else
     # サブモジュール mdRoot のファイルを追加 (mergeSubmoduleDocs が指定されている場合)
     if [[ -n "$mergeSubmoduleDocs" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
-            _submodule="${entry%%:*}"
-            _submodule_mdroot="${entry#*:}"
+            parse_submodule_mdroot_entry "$entry"
 
             # サブモジュール mdRoot 配下の対象ファイルを収集
             mapfile -d '' -t submodule_files < <(
-                find "${_submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+                find "${submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
             )
 
             # files_raw_initial に追加
@@ -770,8 +805,8 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
         for f in "${files_raw_initial[@]}"; do
             is_submodule_file=false
             for entry in "${submodule_mdroot_paths[@]}"; do
-                _submodule_mdroot="${entry#*:}"
-                if [[ "$f" == "${_submodule_mdroot}/"* || "$f" == "${_submodule_mdroot}" ]]; then
+                parse_submodule_mdroot_entry "$entry"
+                if [[ "$f" == "${submodule_mdroot}/"* || "$f" == "${submodule_mdroot}" ]]; then
                     is_submodule_file=true
                     break
                 fi
