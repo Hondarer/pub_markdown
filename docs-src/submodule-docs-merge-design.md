@@ -19,7 +19,7 @@
 # サブモジュール mdRoot マージ機能
 # マージ対象のサブモジュールをスペース区切りで指定
 # 空または未指定の場合は機能無効
-mergeSubmoduleDocs: doxyfw makefw testfw docsfw=framework/docsfw
+mergeSubmoduleDocs: doxyfw=framework/doxyfw makefw testfw=framework/testfw docsfw=framework/docsfw
 ```
 
 ### 設定値
@@ -43,7 +43,7 @@ mergeSubmoduleDocs: doxyfw makefw testfw docsfw=framework/docsfw
 
 | ステップ | makefw の例 | testfw の例 |
 |----------|-------------|-------------|
-| 実パス | `makefw/docs-src/make-local.md` | `testfw/docs-src/how-to-mock.md` |
+| 実パス | `makefw/docs-src/make-local.md` | `framework/testfw/docs-src/how-to-mock.md` |
 | 仮想パス | `docs-src/makefw/make-local.md` | `docs-src/testfw/how-to-mock.md` |
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
@@ -97,14 +97,14 @@ alias を使う例:
 
 ```yaml
 # 例: testfw/gtest も対象にする場合
-mergeSubmoduleDocs: doxyfw makefw testfw testfw/gtest docsfw=framework/docsfw
+mergeSubmoduleDocs: doxyfw=framework/doxyfw makefw testfw=framework/testfw testfw/gtest=framework/testfw/gtest docsfw=framework/docsfw
 ```
 
 この場合のパス変換:
 
 | 実パス | 仮想パス | HTML 出力 |
 |--------|----------|-----------|
-| `testfw/gtest/docs-src/MANUAL_BUILD.md` | `docs-src/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
+| `framework/testfw/gtest/docs-src/MANUAL_BUILD.md` | `docs-src/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
 
 ## 制約事項
 
