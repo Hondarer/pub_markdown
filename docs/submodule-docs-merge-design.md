@@ -2,12 +2,12 @@
 
 ## 概要
 
-`pub_markdown_core.sh` によるドキュメント発行処理において、指定したサブモジュール内の `mdRoot` ディレクトリを、メインの `mdRoot` (デフォルト: `docs-src`) 配下にマージします。
+`pub_markdown_core.sh` によるドキュメント発行処理において、指定したサブモジュール内の `mdRoot` ディレクトリを、メインの `mdRoot` (デフォルト: `docs`) 配下にマージします。
 
 ### 背景
 
-サブモジュール構成を採用したプロジェクトでは、各サブモジュール (`doxyfw`, `testfw`, `makefw` 等) はそれぞれ独自の `docs-src` ディレクトリを持っています。  
-これらのドキュメントを統合的に発行するためには、サブモジュール内のドキュメントをメインプロジェクトの `docs-src` 配下にあるかのように扱う必要があります。
+サブモジュール構成を採用したプロジェクトでは、各サブモジュール (`doxyfw`, `testfw`, `makefw` 等) はそれぞれ独自の `docs` ディレクトリを持っています。  
+これらのドキュメントを統合的に発行するためには、サブモジュール内のドキュメントをメインプロジェクトの `docs` 配下にあるかのように扱う必要があります。
 
 ## 設定
 
@@ -43,8 +43,8 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw makefw testfw=framework/testfw docsf
 
 | ステップ | makefw の例 | testfw の例 |
 |----------|-------------|-------------|
-| 実パス | `framework/makefw/docs-src/make-local.md` | `framework/testfw/docs-src/how-to-mock.md` |
-| 仮想パス | `docs-src/makefw/make-local.md` | `docs-src/testfw/how-to-mock.md` |
+| 実パス | `framework/makefw/docs/make-local.md` | `framework/testfw/docs/how-to-mock.md` |
+| 仮想パス | `docs/makefw/make-local.md` | `docs/testfw/how-to-mock.md` |
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
 
@@ -53,8 +53,8 @@ alias を使う例:
 | ステップ | docsfw の例 |
 |----------|-------------|
 | 設定値 | `docsfw=framework/docsfw` |
-| 実パス | `framework/docsfw/docs-src/pipeline.md` |
-| 仮想パス | `docs-src/docsfw/pipeline.md` |
+| 実パス | `framework/docsfw/docs/pipeline.md` |
+| 仮想パス | `docs/docsfw/pipeline.md` |
 | HTML 出力 | `docs/ja/html/docsfw/pipeline.html` |
 
 ## relativeFile パラメータ
@@ -65,19 +65,19 @@ alias を使う例:
 
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
-| メイン mdRoot パス | `docs-src/build-design.md` | 従来通り処理 |
-| 実パス(主) | `framework/makefw/docs-src/make-local.md` / `framework/docsfw/docs-src/pipeline.md` | 実パスを内部で仮想パスに変換して処理 |
-| 仮想パス(拡張) | `docs-src/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
+| メイン mdRoot パス | `docs/build-design.md` | 従来通り処理 |
+| 実パス(主) | `framework/makefw/docs/make-local.md` / `framework/docsfw/docs/pipeline.md` | 実パスを内部で仮想パスに変換して処理 |
+| 仮想パス(拡張) | `docs/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
 ### フォルダ指定時の動作
 
 | 指定パス | 処理対象 |
 |----------|----------|
-| `docs-src` | メイン mdRoot + 指定サブモジュールの mdRoot |
-| `docs-src/makefw` | makefw サブモジュールの mdRoot 配下のみ |
-| `framework/makefw/docs-src` | makefw サブモジュールの mdRoot 配下のみ (実パス指定) |
-| `docs-src/docsfw` | `framework/docsfw/docs-src` 配下のみ |
-| `framework/docsfw/docs-src` | `framework/docsfw/docs-src` 配下のみ (実パス指定) |
+| `docs` | メイン mdRoot + 指定サブモジュールの mdRoot |
+| `docs/makefw` | makefw サブモジュールの mdRoot 配下のみ |
+| `framework/makefw/docs` | makefw サブモジュールの mdRoot 配下のみ (実パス指定) |
+| `docs/docsfw` | `framework/docsfw/docs` 配下のみ |
+| `framework/docsfw/docs` | `framework/docsfw/docs` 配下のみ (実パス指定) |
 
 ## 目次生成
 
@@ -104,7 +104,7 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw makefw testfw=framework/testfw testf
 
 | 実パス | 仮想パス | HTML 出力 |
 |--------|----------|-----------|
-| `framework/testfw/gtest/docs-src/MANUAL_BUILD.md` | `docs-src/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
+| `framework/testfw/gtest/docs/MANUAL_BUILD.md` | `docs/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
 
 ## 制約事項
 

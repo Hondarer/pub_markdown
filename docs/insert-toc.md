@@ -137,7 +137,7 @@ project/
 
 #### 使用例
 
-`docs-src/README.md` で以下のように記述した場合:
+`docs/README.md` で以下のように記述した場合:
 
 ```markdown
 ## 関連ドキュメント
@@ -148,7 +148,7 @@ project/
 **exclude-basedir=false (デフォルト)**:
 
 ```markdown
-- 📁 [docs-src](index.md) <br/>     Document of c-modernization-kit
+- 📁 [docs](index.md) <br/>     Document of c-modernization-kit
   - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
   - 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
 ```

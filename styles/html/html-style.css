@@ -468,7 +468,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
      - 子項目
    :::
 
-   詳細は docs-src/collapsible-list.md を参照してください。
+   詳細は docs/collapsible-list.md を参照してください。
    ============================================================ */
 
 /* details を持つ li は Bullet を非表示 (展開マーカーで代用) */

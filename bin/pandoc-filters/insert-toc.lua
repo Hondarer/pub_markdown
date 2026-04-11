@@ -398,7 +398,7 @@ function Para(elem)
                     -- 注意: このクラスは追加クラス (modifier class) として設計されています。
                     -- .collapsible-list 内のリストは HTML の場合、JavaScript により展開可能な
                     -- <details>/<summary> 構造に変換されます。
-                    -- 詳細は docs-src/collapsible-list.md を参照してください。
+                    -- 詳細は docs/collapsible-list.md を参照してください。
                     return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
                     debug_print("Failed to parse markdown")
@@ -446,7 +446,7 @@ function RawBlock(elem)
                     -- 注意: このクラスは追加クラス (modifier class) として設計されています。
                     -- .collapsible-list 内のリストは HTML の場合、JavaScript により展開可能な
                     -- <details>/<summary> 構造に変換されます。
-                    -- 詳細は docs-src/collapsible-list.md を参照してください。
+                    -- 詳細は docs/collapsible-list.md を参照してください。
                     return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
                     --debug_print("Failed to parse markdown, falling back to manual construction")
