@@ -43,7 +43,7 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw makefw testfw=framework/testfw docsf
 
 | ステップ | makefw の例 | testfw の例 |
 |----------|-------------|-------------|
-| 実パス | `makefw/docs-src/make-local.md` | `framework/testfw/docs-src/how-to-mock.md` |
+| 実パス | `framework/makefw/docs-src/make-local.md` | `framework/testfw/docs-src/how-to-mock.md` |
 | 仮想パス | `docs-src/makefw/make-local.md` | `docs-src/testfw/how-to-mock.md` |
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
@@ -66,7 +66,7 @@ alias を使う例:
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
 | メイン mdRoot パス | `docs-src/build-design.md` | 従来通り処理 |
-| 実パス(主) | `makefw/docs-src/make-local.md` / `framework/docsfw/docs-src/pipeline.md` | 実パスを内部で仮想パスに変換して処理 |
+| 実パス(主) | `framework/makefw/docs-src/make-local.md` / `framework/docsfw/docs-src/pipeline.md` | 実パスを内部で仮想パスに変換して処理 |
 | 仮想パス(拡張) | `docs-src/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
 ### フォルダ指定時の動作
@@ -75,7 +75,7 @@ alias を使う例:
 |----------|----------|
 | `docs-src` | メイン mdRoot + 指定サブモジュールの mdRoot |
 | `docs-src/makefw` | makefw サブモジュールの mdRoot 配下のみ |
-| `makefw/docs-src` | makefw サブモジュールの mdRoot 配下のみ (実パス指定) |
+| `framework/makefw/docs-src` | makefw サブモジュールの mdRoot 配下のみ (実パス指定) |
 | `docs-src/docsfw` | `framework/docsfw/docs-src` 配下のみ |
 | `framework/docsfw/docs-src` | `framework/docsfw/docs-src` 配下のみ (実パス指定) |
 
