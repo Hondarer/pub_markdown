@@ -294,14 +294,14 @@ if [ -f "$configFile" ]; then
     mathLatexEnable=$(parse_yaml "$config_content" "mathLatexEnable")
 fi
 
-# 設定ファイルに mdRoot が指定されなかった場合の値を "docs-src" にする
+# 設定ファイルに mdRoot が指定されなかった場合の値を "docs" にする
 if [[ "$mdRoot" == "" ]]; then
-    mdRoot="docs-src"
+    mdRoot="docs"
 fi
 
-# 設定ファイルに pubRoot が指定されなかった場合の値を "docs" にする
+# 設定ファイルに pubRoot が指定されなかった場合の値を "pages" にする
 if [[ "$pubRoot" == "" ]]; then
-    pubRoot="docs"
+    pubRoot="pages"
 fi
 
 # 設定ファイルに details が指定されなかった場合の値を "false" にする

@@ -792,17 +792,17 @@ fi
 # ディレクトリ探索実行
 scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
 
-# サブモジュール docs-src の探索 (mergeSubmoduleDocs が指定されている場合)
+# サブモジュール docs の探索 (mergeSubmoduleDocs が指定されている場合)
 # 注意: この機能は current_dir が mdRoot の場合のみ有効
 if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
-    #echo "# サブモジュール docs-src 探索開始" >&2
+    #echo "# サブモジュール docs 探索開始" >&2
 
     for entry in "${submodule_entries[@]}"; do
         parse_submodule_entry "$entry"
 
         #echo "# サブモジュール探索: $submodule_alias -> $submodule_docs_src" >&2
 
-        # サブモジュール docs-src 配下のファイルを探索
+        # サブモジュール docs 配下のファイルを探索
         # 仮想パスとしてキャッシュに追加(current_dir/submodule/... として)
         if [[ -d "$submodule_docs_src" ]]; then
             # find コマンドで探索
@@ -868,7 +868,7 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
         fi
     done
 
-    #echo "# サブモジュール docs-src 探索完了" >&2
+    #echo "# サブモジュール docs 探索完了" >&2
 fi
 
 # キャッシュを永続化ファイルに保存

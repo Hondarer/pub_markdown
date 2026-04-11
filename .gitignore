@@ -5,12 +5,12 @@
 __pycache__/
 
 # output
-#/docs
-/docs/ja/html-self-contain
-/docs/en/dhtml-self-contain
-/docs/ja-details/html-self-contain
-/docs/en-details/html-self-contain
-/docs/ja/docx
-/docs/en/docx
-/docs/ja-details/docx
-/docs/en-details/docx
+#/pages
+/pages/ja/html-self-contain
+/pages/en/dhtml-self-contain
+/pages/ja-details/html-self-contain
+/pages/en-details/html-self-contain
+/pages/ja/docx
+/pages/en/docx
+/pages/ja-details/docx
+/pages/en-details/docx
