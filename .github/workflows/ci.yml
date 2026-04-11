@@ -1,0 +1,197 @@
+name: CI (Docs and Pages)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  publish-docs:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/hondarer/oracle-linux-container/oracle-linux-8-dev:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      env:
+        HOST_USER: user
+        HOST_UID: 1001
+        HOST_GID: 127
+        TZ: Asia/Tokyo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # 全履歴を取得 (git log 用: Markdown 処理時に author と date を取得するため)
+
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Generate documentation
+        run: bin/pub_markdown_core.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docx=true
+
+      - name: Create artifact archives
+        run: |
+          mkdir -p pages/artifacts
+          # HTML ドキュメント (サブディレクトリごとに分割)
+          find pages -type d -name html | while read -r html_dir; do
+            label=$(echo "$html_dir" | sed 's|^pages/||;s|/html$||;s|/|-|g')
+            zip -r "pages/artifacts/docs-html-${label}.zip" "$html_dir" || true
+          done
+          # DOCX ドキュメント (サブディレクトリごとに分割)
+          find pages -type d -name docx | while read -r docx_dir; do
+            label=$(echo "$docx_dir" | sed 's|^pages/||;s|/docx$||;s|/|-|g')
+            zip -r "pages/artifacts/docs-docx-${label}.zip" "$docx_dir" || true
+          done
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation
+          path: pages/
+          if-no-files-found: warn
+
+      - name: Upload html artifacts (ja)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-html-ja-${{ github.sha }}
+          path: pages/ja/html/
+          if-no-files-found: warn
+
+      - name: Upload html artifacts (en)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-html-en-${{ github.sha }}
+          path: pages/en/html/
+          if-no-files-found: warn
+
+      - name: Upload html artifacts (ja-details)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-html-ja-details-${{ github.sha }}
+          path: pages/ja-details/html/
+          if-no-files-found: warn
+
+      - name: Upload html artifacts (en-details)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-html-en-details-${{ github.sha }}
+          path: pages/en-details/html/
+          if-no-files-found: warn
+
+      - name: Upload docx artifacts (ja)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-docx-ja-${{ github.sha }}
+          path: pages/ja/docx/
+          if-no-files-found: warn
+
+      - name: Upload docx artifacts (en)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-docx-en-${{ github.sha }}
+          path: pages/en/docx/
+          if-no-files-found: warn
+
+      - name: Upload docx artifacts (ja-details)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-docx-ja-details-${{ github.sha }}
+          path: pages/ja-details/docx/
+          if-no-files-found: warn
+
+      - name: Upload docx artifacts (en-details)
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-docs-docx-en-details-${{ github.sha }}
+          path: pages/en-details/docx/
+          if-no-files-found: warn
+
+  deploy-pages:
+    needs: [publish-docs]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download documentation
+        uses: actions/download-artifact@v8
+        with:
+          name: documentation
+          path: pages
+
+      - name: Create Pages root index.html
+        run: |
+          {
+            cat <<'INDEX_TOP'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>docsfw ドキュメント</title>
+            <style>
+              body { font-family: sans-serif; max-width: 900px; margin: 2em auto; padding: 0 1em; }
+              h1 { border-bottom: 2px solid #333; padding-bottom: 0.3em; }
+              h2 { border-bottom: 1px solid #ccc; margin-top: 1.5em; }
+              table { border-collapse: collapse; width: 100%; }
+              th, td { text-align: left; padding: 0.4em 0.8em; border: 1px solid #ddd; }
+              th { background: #f6f8fa; }
+              a { color: #0366d6; text-decoration: none; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>pub_markdown ドキュメント</h1>
+          INDEX_TOP
+
+            # Markdown ドキュメント
+            if find ./pages -maxdepth 2 -name html -type d | grep -q .; then
+              cat <<'LANG_TABLE'
+            <h2>Markdown ドキュメント</h2>
+            <table>
+              <tr><th>言語</th><th>種別</th><th>リンク</th></tr>
+              <tr><td>日本語</td><td>通常版</td><td><a href="ja/html/index.html">日本語ドキュメント</a></td></tr>
+              <tr><td>English</td><td>Standard</td><td><a href="en/html/index.html">English Documentation</a></td></tr>
+              <tr><td>日本語</td><td>詳細版</td><td><a href="ja-details/html/index.html">日本語ドキュメント (詳細)</a></td></tr>
+              <tr><td>English</td><td>Details</td><td><a href="en-details/html/index.html">English Documentation (Details)</a></td></tr>
+            </table>
+          LANG_TABLE
+            fi
+
+            # アーティファクト (存在するものを列挙)
+            if [ -d "./pages/artifacts" ] && \
+               find ./pages/artifacts -name "*.zip" | grep -q .; then
+              echo '  <h2>アーティファクト</h2>'
+              echo '  <table>'
+              echo '    <tr><th>ファイル名</th></tr>'
+              find ./pages/artifacts -name "*.zip" | sort | while read -r zipfile; do
+                fname=$(basename "$zipfile")
+                echo "    <tr><td><a href=\"artifacts/${fname}\">${fname}</a></td></tr>"
+              done
+              echo '  </table>'
+            fi
+
+            cat <<'INDEX_BOTTOM'
+          </body>
+          </html>
+          INDEX_BOTTOM
+          } > ./pages/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
