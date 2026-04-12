@@ -629,6 +629,16 @@ def run_tests() -> bool:
         ("https://example.com/abc日本語終端", "https://example.com/abc日本語終端"),
         ("[テキスト](https://example.com/日本語パス)", "[テキスト](https://example.com/日本語パス)"),
         ("参照先 https://example.com/doc。次の章", "参照先 https://example.com/doc。次の章"),
+
+        # testfw 固有タグの no_space 例外
+        ("Pre-Assert手順", "Pre-Assert手順"),
+        ("Pre-Assert確認", "Pre-Assert確認"),
+        ("Pre-Assert確認_正常系", "Pre-Assert確認_正常系"),
+        ("Pre-Assert確認_異常系", "Pre-Assert確認_異常系"),
+        ("[Pre-Assert手順]", "[Pre-Assert手順]"),
+        ("[Pre-Assert確認]", "[Pre-Assert確認]"),
+        ("[Pre-Assert確認_正常系]", "[Pre-Assert確認_正常系]"),
+        ("[Pre-Assert確認_異常系]", "[Pre-Assert確認_異常系]"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")

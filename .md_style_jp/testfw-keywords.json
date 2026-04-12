@@ -1,0 +1,10 @@
+{
+  "_source": "about-test-phase.md",
+  "_description": "testfw 固有の Pre-Assert タグ。半角境界スペース挿入対象からキーワードを除外します。",
+  "no_space": [
+    "Pre-Assert手順",
+    "Pre-Assert確認",
+    "Pre-Assert確認_正常系",
+    "Pre-Assert確認_異常系"
+  ]
+}
