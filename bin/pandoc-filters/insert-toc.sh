@@ -123,7 +123,7 @@ add_to_memory_cache() {
     local base_title="$4"
     local lang_titles="${5:-}"
 
-    # キーが既に存在する場合はスキップ
+    # キーがすでに存在する場合はスキップ
     if [[ -n "${memory_cache[$abs_path]:-}" ]]; then
         #echo "# メモリキャッシュスキップ (既存): $abs_path ($type)" >&2
         return 0
@@ -193,7 +193,7 @@ update_memory_cache_title() {
     if [[ -z "$lang_titles" ]]; then
         lang_titles="$new_lang_title"
     else
-        # 同じ言語コードが既に存在するかチェック
+        # 同じ言語コードがすでに存在するかチェック
         if [[ "$lang_titles" =~ $lang_code: ]]; then
             # 既存の言語タイトルを置換 (bash parameter expansion 使用)
             if [[ "$lang_titles" =~ (.*)(${lang_code}:[^|]*)(.*) ]]; then

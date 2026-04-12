@@ -16,7 +16,7 @@ get_file_author() {
   # ─── 1) ファイルの絶対パスを取得 ───────────────────────────────
   local abs_file
   if [[ "$file" = /* ]]; then
-    # 既に絶対パス
+    # すでに絶対パス
     abs_file="$file"
   else
     # 相対パスを絶対パスに変換

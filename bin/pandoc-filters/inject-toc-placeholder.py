@@ -54,7 +54,7 @@ def inject_into_xml(xml, placeholder):
     fldChar[separate] と fldChar[end] の間にプレースホルダ run を挿入する。
 
     - TOC フィールドが見つからない場合 → None を返す（変更なし）
-    - separate-end 間に既にコンテンツがある場合 → None を返す（二重挿入防止）
+    - separate-end 間にすでにコンテンツがある場合 → None を返す（二重挿入防止）
     """
     # TOC フィールドの有無を確認
     if not re.search(r'<w:instrText\b[^>]*>[^<]*\bTOC\b', xml):

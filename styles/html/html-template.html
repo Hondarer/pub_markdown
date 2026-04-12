@@ -385,7 +385,7 @@ $body$
           var childList = li.querySelector(':scope > ul, :scope > ol');
           if (!childList) return;
 
-          // 既に details でラップされている場合はスキップ
+          // すでに details でラップされている場合はスキップ
           if (li.querySelector(':scope > details')) return;
 
           // li の直接のテキストコンテンツと要素を取得
