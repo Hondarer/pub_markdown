@@ -1,23 +1,29 @@
 #!/usr/bin/env python3
 """
-tbx_to_dict.py - Microsoft TBX 用語集から md_style_jp 用辞書ファイルを生成する
+tbx_to_dict.py - Microsoft tbx 用語集から md_style_jp 用辞書ファイルを生成する
 
 Usage:
     # デフォルト: スクリプトと同じディレクトリの JAPANESE.tbx を読み込み、
-    #            同ディレクトリに microsoft.json を出力する
+    #            同ディレクトリに 10_microsoft.json を出力する
     python3 tbx_to_dict.py
 
     # パスを明示する場合
     python3 tbx_to_dict.py --tbx /path/to/JAPANESE.tbx --output /path/to/out.json
 
 Input:
-    JAPANESE.tbx  - Microsoft Terminology Collection (TBX 形式)
-                    https://www.microsoft.com/en-us/language/terminology
+    JAPANESE.tbx  - Microsoft Terminology Collection (tbx 形式)
+                    tbx ファイルのダウンロード元 (Downloading Microsoft Terminology):
+                    https://download.microsoft.com/download/b/2/d/b2db7a7c-8d33-47f3-b2c1-ee5e6445cf45/MicrosoftTermCollection.zip
+                    Web ベースの用語検索 (Microsoft Terminology Search):
+                    https://msit.powerbi.com/view?r=eyJrIjoiODJmYjU4Y2YtM2M0ZC00YzYxLWE1YTktNzFjYmYxNTAxNjQ0IiwidCI6IjcyZjk4OGJmLTg2ZjEtNDFhZi05MWFiLTJkN2NkMDExZGI0NyIsImMiOjV9
 
 Output:
-    microsoft.json  - md_style_jp 用辞書ファイル
-                      replace:   末尾 ー 省略形 → Microsoft 標準形
-                      add_space: スペースなし複合語 → Microsoft 標準形（スペース区切り）
+    10_microsoft.json  - md_style_jp 用辞書ファイル
+                         replace:   末尾 ー 省略形 → Microsoft 標準形
+                         add_space: スペースなし複合語 → Microsoft 標準形（スペース区切り）
+
+    逆方向の表記揺れ（例: カテゴリー → カテゴリ）は tbx から自動導出せず、
+    別の番号付きヒント辞書で補う前提とする。
 """
 
 import argparse
@@ -52,11 +58,11 @@ def is_katakana_compound(s):
 
 
 def collect_katakana_words(tbx_path):
-    """TBX ファイルをストリームパースし、日本語カタカナ単語と複合語を収集する。
+    """tbx ファイルをストリームパースし、日本語カタカナ単語と複合語を収集する。
 
     Returns:
         tuple[set[str], set[str], set[str]]:
-            - all_words:   TBX に登場する全カタカナ単語（スペースなし）
+            - all_words:   tbx に登場する全カタカナ単語（スペースなし）
             - eer_words:   ー で終わるカタカナ単語
             - compounds:   スペース区切りの全カタカナ複合語
     """
@@ -137,7 +143,7 @@ def is_safe_replace(from_word, to_word, all_words):
     Args:
         from_word: 置換前の文字列
         to_word:   置換後の文字列（from_word + ー）
-        all_words: TBX 全カタカナ単語の集合
+        all_words: tbx 全カタカナ単語の集合
 
     Returns:
         bool: True = 安全（辞書に含めてよい）、False = 危険（除外すべき）
@@ -183,10 +189,10 @@ def build_replace_pairs(eer_words, all_words):
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     default_tbx = os.path.join(script_dir, "JAPANESE.tbx")
-    default_output = os.path.join(script_dir, "microsoft.json")
+    default_output = os.path.join(script_dir, "10_microsoft.json")
 
     parser = argparse.ArgumentParser(
-        description="Microsoft TBX 用語集から md_style_jp 用辞書ファイルを生成する",
+        description="Microsoft tbx 用語集から md_style_jp 用辞書ファイルを生成する",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "例:\n"
@@ -199,13 +205,13 @@ def main():
         "--tbx",
         default=default_tbx,
         metavar="PATH",
-        help=f"TBX ファイルのパス (デフォルト: <スクリプトと同じディレクトリ>/JAPANESE.tbx)",
+        help=f"tbx ファイルのパス (デフォルト: <スクリプトと同じディレクトリ>/JAPANESE.tbx)",
     )
     parser.add_argument(
         "--output", "-o",
         default=default_output,
         metavar="PATH",
-        help=f"出力 JSON ファイルのパス (デフォルト: <スクリプトと同じディレクトリ>/microsoft.json)",
+        help=f"出力 JSON ファイルのパス (デフォルト: <スクリプトと同じディレクトリ>/10_microsoft.json)",
     )
     args = parser.parse_args()
 
@@ -213,10 +219,10 @@ def main():
     output_path = args.output
 
     if not os.path.isfile(tbx_path):
-        print(f"エラー: TBX ファイルが見つかりません: {tbx_path}", file=sys.stderr)
+        print(f"エラー: tbx ファイルが見つかりません: {tbx_path}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"TBX をパース中: {tbx_path}")
+    print(f"tbx をパース中: {tbx_path}")
     all_words, eer_words, compounds = collect_katakana_words(tbx_path)
     print(f"  全カタカナ単語: {len(all_words)} 件")
     print(f"  ー 終わりカタカナ単語: {len(eer_words)} 件")
@@ -237,11 +243,21 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
 
     data = {
-        "_source": "Microsoft Terminology Collection (JAPANESE.tbx)",
+        "_source": (
+            "Microsoft Terminology Collection "
+            "(Downloading Microsoft Terminology / Microsoft Terminology Search)"
+        ),
         "_description": (
             "Microsoft 日本語スタイルガイドに基づくカタカナ語の表記ルール。"
+            "源泉: tbx ファイルのダウンロード元は "
+            "https://download.microsoft.com/download/b/2/d/b2db7a7c-8d33-47f3-b2c1-ee5e6445cf45/MicrosoftTermCollection.zip "
+            "(Downloading Microsoft Terminology)、"
+            "Web ベースの用語検索は "
+            "https://msit.powerbi.com/view?r=eyJrIjoiODJmYjU4Y2YtM2M0ZC00YzYxLWE1YTktNzFjYmYxNTAxNjQ0IiwidCI6IjcyZjk4OGJmLTg2ZjEtNDFhZi05MWFiLTJkN2NkMDExZGI0NyIsImMiOjV9 "
+            "(Microsoft Terminology Search)。"
             "replace: 末尾の ー が省略されたカタカナ語を Microsoft 標準形に変換する。"
             "add_space: スペースなしのカタカナ複合語を Microsoft 標準形（スペース区切り）に変換する。"
+            "逆方向の表記揺れは別の番号付きヒント辞書で補う。"
             "add_space は長さ降順に処理されるため prefix 衝突は自動的に解決される。"
         ),
         "replace": replace_pairs,

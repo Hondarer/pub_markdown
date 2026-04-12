@@ -1,0 +1,10 @@
+{
+  "_source": "manual hints",
+  "_description": "JAPANESE.tbx (Microsoft Terminology Collection) 単体では導出できない長音削除の表記揺れを補うヒント辞書。",
+  "replace": [
+    {
+      "from": "カテゴリー",
+      "to": "カテゴリ"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
-  "_source": "Microsoft Terminology Collection",
-  "_description": "Microsoft 日本語スタイルガイド (JAPANESE.tbx) に基づくカタカナ語の表記ルール。replace: 末尾の ー が省略されたカタカナ語を Microsoft 標準形に変換する。add_space: スペースなしのカタカナ複合語を Microsoft 標準形（スペース区切り）に変換する。add_space は長さ降順に処理されるため prefix 衝突は自動的に解決される。",
+  "_source": "Microsoft Terminology Collection (Downloading Microsoft Terminology / Microsoft Terminology Search)",
+  "_description": "Microsoft 日本語スタイルガイドに基づくカタカナ語の表記ルール。源泉: tbx ファイルのダウンロード元は https://download.microsoft.com/download/b/2/d/b2db7a7c-8d33-47f3-b2c1-ee5e6445cf45/MicrosoftTermCollection.zip (Downloading Microsoft Terminology)、Web ベースの用語検索は https://msit.powerbi.com/view?r=eyJrIjoiODJmYjU4Y2YtM2M0ZC00YzYxLWE1YTktNzFjYmYxNTAxNjQ0IiwidCI6IjcyZjk4OGJmLTg2ZjEtNDFhZi05MWFiLTJkN2NkMDExZGI0NyIsImMiOjV9 (Microsoft Terminology Search)。replace: 末尾の ー が省略されたカタカナ語を Microsoft 標準形に変換する。add_space: スペースなしのカタカナ複合語を Microsoft 標準形（スペース区切り）に変換する。逆方向の表記揺れは別の番号付きヒント辞書で補う。add_space は長さ降順に処理されるため prefix 衝突は自動的に解決される。",
   "replace": [
     {
       "from": "アウトソーサ",

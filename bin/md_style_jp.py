@@ -501,7 +501,7 @@ def style_markdown(text: str) -> str:
 
 
 def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
-    """from_word を to_word に置換する。ただし同位置にすでに to_word がある場合はスキップする"""
+    """from_word を to_word に正規化する。既に to_word の位置はそのまま通す。"""
     if from_word == to_word:
         return text
     result = []
@@ -509,17 +509,28 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
     flen = len(from_word)
     tlen = len(to_word)
     while i < len(text):
-        if text[i:i + flen] == from_word:
-            if text[i:i + tlen] == to_word:
-                # すでに to_word が存在する位置はそのまま通過
-                result.append(to_word)
-                i += tlen
-            else:
+        if flen >= tlen:
+            if text[i:i + flen] == from_word:
                 result.append(to_word)
                 i += flen
+                continue
+            if text[i:i + tlen] == to_word:
+                # すでに標準形がある位置はそのまま通過
+                result.append(to_word)
+                i += tlen
+                continue
         else:
-            result.append(text[i])
-            i += 1
+            if text[i:i + tlen] == to_word:
+                # すでに標準形がある位置はそのまま通過
+                result.append(to_word)
+                i += tlen
+                continue
+            if text[i:i + flen] == from_word:
+                result.append(to_word)
+                i += flen
+                continue
+        result.append(text[i])
+        i += 1
     return "".join(result)
 
 
@@ -570,7 +581,7 @@ def _style_line_preserve_inline_code(line: str) -> str:
     # f1. add_space: スペース挿入
     for from_word, to_word in _add_space_pairs:
         styled_line = styled_line.replace(from_word, to_word)
-    # f2. replace: 汎用文字列置換（長音記号付与・省略など）。to がすでにある位置はスキップ
+    # f2. replace: 汎用文字列置換（長音記号付与・省略など）。標準形がある位置は維持
     for from_word, to_word in _replace_pairs:
         styled_line = _replace_skip_existing(styled_line, from_word, to_word)
 
@@ -629,6 +640,17 @@ def run_tests() -> bool:
         ("https://example.com/abc日本語終端", "https://example.com/abc日本語終端"),
         ("[テキスト](https://example.com/日本語パス)", "[テキスト](https://example.com/日本語パス)"),
         ("参照先 https://example.com/doc。次の章", "参照先 https://example.com/doc。次の章"),
+
+        # replace: 長音付与・長音削除
+        ("サーバ", "サーバー"),
+        ("サーバー", "サーバー"),
+        ("カテゴリー", "カテゴリ"),
+        ("カテゴリ", "カテゴリ"),
+        ("カテゴリー一覧", "カテゴリ一覧"),
+
+        # replace の保護
+        ("`カテゴリー` を使う", "`カテゴリー` を使う"),
+        ("https://example.com/カテゴリー", "https://example.com/カテゴリー"),
 
         # testfw 固有タグの no_space 例外
         ("Pre-Assert手順", "Pre-Assert手順"),
