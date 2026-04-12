@@ -15,8 +15,8 @@ warn_file="$2"
 tmpfile=$(mktemp)
 trap 'rm -f "$tmpfile"' EXIT
 
-# CR を LF に正規化し、ANSI エスケープを除去して warning 行を抽出しやすくする。
-tr '\r' '\n' < "$log_file" | sed 's/\x1b\[[0-9;]*[mK]//g' > "$tmpfile"
+# 各行末の CR のみを除去し、ANSI エスケープを除去して warning 行を抽出しやすくする。
+sed $'s/\r$//' "$log_file" | sed 's/\x1b\[[0-9;]*[mK]//g' > "$tmpfile"
 
 grep -Ei '(: warning:?|: 警告:|\[warning\]|^warning:|^警告:)' "$tmpfile" \
     > "$warn_file" 2>/dev/null || true
