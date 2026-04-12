@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Modules for pub_markdown",
   "dependencies": {
-    "@mermaid-js/mermaid-cli": "^11.0.0",
-    "puppeteer": "^24.10.1",
-    "puppeteer-core": "^24.10.1",
-    "widdershins": "^4.0.1",
-    "minimist": "^1.2.8"
+    "@mermaid-js/mermaid-cli": "^11.12.0",
+    "minimist": "^1.2.8",
+    "puppeteer": "^24.40.0",
+    "puppeteer-core": "^24.40.0",
+    "widdershins": "^4.0.1"
   },
   "overrides": {
     "@mermaid-js/mermaid-cli": {

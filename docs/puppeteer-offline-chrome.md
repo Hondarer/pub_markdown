@@ -73,7 +73,7 @@ Windows の場合:
 #### Chrome の自動ダウンロードをスキップ
 
 ```bash
-export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_SKIP_DOWNLOAD=true
 npm install puppeteer
 ```
 
@@ -193,7 +193,7 @@ await browser.close();
 cd /path/to/your/project
 
 # 2. Puppeteer をインストール (Chrome の自動ダウンロードをスキップ)
-export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+export PUPPETEER_SKIP_DOWNLOAD=true
 npm install puppeteer
 
 # 3. プロジェクト内にキャッシュディレクトリを作成
