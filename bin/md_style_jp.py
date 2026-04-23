@@ -267,6 +267,7 @@ def convert_halfwidth_katakana_to_fullwidth(text: str) -> str:
 
 _HALFWIDTH_BRACKETS_OPEN = set("([{")
 _HALFWIDTH_BRACKETS_CLOSE = set(")]}")
+_FULLWIDTH_NO_SPACE = set("・。、，．！？…‥")
 
 
 def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
@@ -282,8 +283,10 @@ def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
             prev_needs_space_right = is_halfwidth_alnum(prev_char) or prev_char in _HALFWIDTH_BRACKETS_CLOSE
 
             # 全角 → 半角英数字/開き括弧、または 半角英数字/閉じ括弧 → 全角 の場合にスペースを挿入
-            if (prev_is_fullwidth and curr_needs_space_left) or \
-               (prev_needs_space_right and curr_is_fullwidth):
+            # ただし句読点・中点が隣接する場合はスペース不要
+            if ((prev_is_fullwidth and curr_needs_space_left) or \
+               (prev_needs_space_right and curr_is_fullwidth)) and \
+               prev_char not in _FULLWIDTH_NO_SPACE and char not in _FULLWIDTH_NO_SPACE:
                 # すでにスペースがある場合は挿入しない
                 if not result or result[-1] != " ":
                     result.append(" ")
