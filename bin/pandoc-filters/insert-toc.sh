@@ -27,8 +27,8 @@ EXCLUDE="$4"
 BASEDIR="$5"
 EXCLUDE_BASEDIR="${6:-false}"
 
-# 環境変数からサブモジュールマージ設定を取得
-# 値はスペース区切りのサブモジュール名リスト (空の場合は機能無効)
+# 環境変数からサブモジュールドキュメントマージ設定を取得
+# 値はスペース区切りの alias=path リスト (空の場合は機能無効)
 MERGE_SUBMODULE_DOCS="${MERGE_SUBMODULE_DOCS:-}"
 # 改行区切りの文字列を配列に変換
 declare -a submodule_entries=()
@@ -792,17 +792,17 @@ fi
 # ディレクトリ探索実行
 scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
 
-# サブモジュール docs の探索 (mergeSubmoduleDocs が指定されている場合)
+# サブモジュールドキュメントルートの探索 (mergeSubmoduleDocs が指定されている場合)
 # 注意: この機能は current_dir が mdRoot の場合のみ有効
 if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
-    #echo "# サブモジュール docs 探索開始" >&2
+    #echo "# サブモジュールドキュメント探索開始" >&2
 
     for entry in "${submodule_entries[@]}"; do
         parse_submodule_entry "$entry"
 
         #echo "# サブモジュール探索: $submodule_alias -> $submodule_docs_src" >&2
 
-        # サブモジュール docs 配下のファイルを探索
+        # サブモジュールドキュメントルート配下のファイルを探索
         # 仮想パスとしてキャッシュに追加(current_dir/submodule/... として)
         if [[ -d "$submodule_docs_src" ]]; then
             # find コマンドで探索

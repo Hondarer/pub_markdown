@@ -215,7 +215,7 @@ while [[ $# -gt 0 ]]; do
         ;;
         --configFile=*)
             configFile="${1#*=}"
-            configFile=$(resolve_path "${configFile//\\/\/}")
+            configFile="${configFile//\\/\/}"
             #echo configFile=${configFile}
             shift
         ;;
@@ -248,7 +248,11 @@ done
 #echo ""
 
 # 定義ファイルのデフォルトパス
-configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
+if [[ -z "$configFile" ]]; then
+    configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
+else
+    configFile=$(resolve_path "$configFile")
+fi
 
 #-------------------------------------------------------------------
 
@@ -429,17 +433,29 @@ fi
 #-------------------------------------------------------------------
 
 # サブモジュール設定 1 件を解析する関数
-# 引数: $1=サブモジュール設定 (例: "doxyfw" / "docsfw=framework/docsfw")
+# 引数: $1=サブモジュール設定 (例: "docsfw=framework/docsfw/docs")
 # 戻り値: グローバル変数 submodule_alias / submodule_path
 parse_submodule_spec() {
     local submodule_spec="$1"
 
-    if [[ "$submodule_spec" == *=* ]]; then
-        submodule_alias="${submodule_spec%%=*}"
-        submodule_path="${submodule_spec#*=}"
-    else
-        submodule_alias="$submodule_spec"
-        submodule_path="$submodule_spec"
+    if [[ "$submodule_spec" != *=* ]]; then
+        echo "Error: mergeSubmoduleDocs entries must use alias=path: $submodule_spec"
+        return 1
+    fi
+
+    submodule_alias="${submodule_spec%%=*}"
+    submodule_path="${submodule_spec#*=}"
+
+    while [[ "$submodule_alias" == */ && "$submodule_alias" != "/" ]]; do
+        submodule_alias="${submodule_alias%/}"
+    done
+    while [[ "$submodule_path" == */ && "$submodule_path" != "/" ]]; do
+        submodule_path="${submodule_path%/}"
+    done
+
+    if [[ -z "$submodule_alias" || -z "$submodule_path" ]]; then
+        echo "Error: mergeSubmoduleDocs entries must use non-empty alias and path: $submodule_spec"
+        return 1
     fi
 }
 
@@ -464,7 +480,7 @@ parse_submodule_mdroot_entry() {
 }
 
 # 設定ファイルで指定されたサブモジュールのパスリストを設定する関数
-# 引数: $1=スペース区切りのサブモジュール名リスト (例: "doxyfw testfw docsfw=framework/docsfw")
+# 引数: $1=スペース区切りのサブモジュール一覧 (例: "doxyfw=framework/doxyfw/docs docsfw=framework/docsfw/docs")
 # 戻り値: グローバル配列 submodule_paths に "alias|path" を設定
 set_submodule_paths() {
     local submodule_list="$1"
@@ -479,22 +495,28 @@ set_submodule_paths() {
     # スペース区切りで配列に変換し、alias/path 形式へ正規化
     read -ra submodule_specs <<< "$submodule_list"
     for spec in "${submodule_specs[@]}"; do
-        parse_submodule_spec "$spec"
+        parse_submodule_spec "$spec" || return 1
         submodule_paths+=("${submodule_alias}|${submodule_path}")
     done
 }
 
-# サブモジュール内の mdRoot ディレクトリを検出する関数
-# 戻り値: グローバル配列 submodule_mdroot_paths に "alias|path|mdRoot絶対パス" を設定
+# mergeSubmoduleDocs で指定されたドキュメントルートを検出する関数
+# 戻り値: グローバル配列 submodule_mdroot_paths に "alias|path|ドキュメントルート絶対パス" を設定
 detect_submodule_docs() {
     submodule_mdroot_paths=()
 
     for entry in "${submodule_paths[@]}"; do
         parse_submodule_path_entry "$entry"
-        local submodule_mdroot_path="${workspaceFolder}/${submodule_path}/${mdRoot}"
-        if [[ -d "$submodule_mdroot_path" ]]; then
-            submodule_mdroot_paths+=("${submodule_alias}|${submodule_path}|${submodule_mdroot_path}")
+        local submodule_mdroot_path="${workspaceFolder}/${submodule_path}"
+        if [[ ! -d "$submodule_mdroot_path" ]]; then
+            echo "Error: mergeSubmoduleDocs path does not exist or is not a directory: ${submodule_path}"
+            return 1
         fi
+        if [[ "${submodule_path##*/}" != "$mdRoot" && -d "${submodule_mdroot_path}/${mdRoot}" ]]; then
+            echo "Error: mergeSubmoduleDocs path must point to the document root itself, not its parent directory: ${submodule_path}"
+            return 1
+        fi
+        submodule_mdroot_paths+=("${submodule_alias}|${submodule_path}|${submodule_mdroot_path}")
     done
 }
 
@@ -559,13 +581,13 @@ virtual_to_real_path() {
     echo "$virtual_path"
 }
 
-# サブモジュール情報を初期化
+# mergeSubmoduleDocs 情報を初期化
 declare -a submodule_paths=()
 declare -a submodule_mdroot_paths=()
 
 if [[ -n "$mergeSubmoduleDocs" ]]; then
-    set_submodule_paths "$mergeSubmoduleDocs"
-    detect_submodule_docs
+    set_submodule_paths "$mergeSubmoduleDocs" || exit 1
+    detect_submodule_docs || exit 1
     # insert-toc.sh 用に環境変数をエクスポート
     export MERGE_SUBMODULE_DOCS="$mergeSubmoduleDocs"
     export SUBMODULE_DOCS_PATHS="$(printf '%s\n' "${submodule_mdroot_paths[@]}")"
@@ -582,7 +604,7 @@ if [[ -n $relativeFile ]]; then
     if [[ -n "$mergeSubmoduleDocs" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
             parse_submodule_mdroot_entry "$entry"
-            if [[ $relativeFile == ${submodule_path}/${mdRoot}/* || $relativeFile == ${submodule_path}/${mdRoot} ]]; then
+            if [[ $relativeFile == ${submodule_path}/* || $relativeFile == ${submodule_path} ]]; then
                 path_type="submodule_real"
                 break
             fi
@@ -615,7 +637,7 @@ if [[ -n $relativeFile ]]; then
     if [[ "$path_type" == "submodule_real" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
             parse_submodule_mdroot_entry "$entry"
-            _submodule_mdroot_rel="${submodule_path}/${mdRoot}"
+            _submodule_mdroot_rel="${submodule_path}"
 
             if [[ $relativeFile == ${_submodule_mdroot_rel}/* ]]; then
                 _subpath="${relativeFile#${_submodule_mdroot_rel}/}"
@@ -636,10 +658,10 @@ if [[ -n $relativeFile ]]; then
 
             if [[ $relativeFile == ${mdRoot}/${submodule_alias}/* ]]; then
                 _subpath="${relativeFile#${mdRoot}/${submodule_alias}/}"
-                resolved_relativeFile="${submodule_path}/${mdRoot}/${_subpath}"
+                resolved_relativeFile="${submodule_path}/${_subpath}"
                 break
             elif [[ $relativeFile == ${mdRoot}/${submodule_alias} ]]; then
-                resolved_relativeFile="${submodule_path}/${mdRoot}"
+                resolved_relativeFile="${submodule_path}"
                 break
             fi
         done
@@ -779,12 +801,12 @@ else
         find "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
     )
 
-    # サブモジュール mdRoot のファイルを追加 (mergeSubmoduleDocs が指定されている場合)
+    # マージ対象ドキュメントルートのファイルを追加 (mergeSubmoduleDocs が指定されている場合)
     if [[ -n "$mergeSubmoduleDocs" ]]; then
         for entry in "${submodule_mdroot_paths[@]}"; do
             parse_submodule_mdroot_entry "$entry"
 
-            # サブモジュール mdRoot 配下の対象ファイルを収集
+            # マージ対象ドキュメントルート配下の対象ファイルを収集
             mapfile -d '' -t submodule_files < <(
                 find "${submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
             )
