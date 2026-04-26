@@ -22,6 +22,7 @@ Usage:
 import json
 import os
 import re
+from itertools import product
 import unicodedata
 from enum import Enum, auto
 from typing import Callable, List, Tuple, Union
@@ -33,6 +34,7 @@ from typing import Callable, List, Tuple, Union
 
 _URL_RE = re.compile(r'https?://\S+')
 _URL_TRAILING_PUNCT = frozenset('。、！？：；」』）】〕〉》〙〗')
+_FULL_KATAKANA_RE = re.compile(r'^[\u30A0-\u30FF]+$')
 
 # ---------------------------------------------------------------------------
 # 辞書ベーススペース制御
@@ -40,8 +42,68 @@ _URL_TRAILING_PUNCT = frozenset('。、！？：；」』）】〕〉》〙〗')
 
 _no_space_words: List[str] = []   # スペース挿入を抑制する単語リスト
 _replace_pairs: List[Tuple[str, str]] = []    # 汎用文字列置換ペアリスト（長音記号付与・省略など）
-_add_space_pairs: List[Tuple[str, str]] = []  # スペースを挿入する変換ペアリスト
+_add_space_pairs: List[Tuple[str, str]] = []  # スペースを挿入する変換ペアリスト（逆引き別名を含む）
 _dict_loaded: bool = False
+
+
+def _is_full_katakana_text(text: str) -> bool:
+    """文字列が全角カタカナのみで構成されるかを判定する。"""
+    return bool(text) and _FULL_KATAKANA_RE.fullmatch(text) is not None
+
+
+def _is_full_katakana_char(char: str) -> bool:
+    """文字が全角カタカナかを判定する。"""
+    return len(char) == 1 and _FULL_KATAKANA_RE.fullmatch(char) is not None
+
+
+def _has_non_katakana_boundaries(text: str, start: int, length: int) -> bool:
+    """一致候補の前後が非カタカナまたは行境界かを判定する。"""
+    prev_char = text[start - 1] if start > 0 else ""
+    next_char = text[start + length] if start + length < len(text) else ""
+    return not _is_full_katakana_char(prev_char) and not _is_full_katakana_char(next_char)
+
+
+def _expand_add_space_pairs(
+    add_space_pairs: List[Tuple[str, str]],
+    replace_pairs: List[Tuple[str, str]],
+) -> List[Tuple[str, str]]:
+    """replace の逆引き別名を add_space 入力として展開する。"""
+    replace_reverse_map = {}  # type: dict
+    for from_word, to_word in replace_pairs:
+        if not (_is_full_katakana_text(from_word) and _is_full_katakana_text(to_word)):
+            continue
+        replace_reverse_map.setdefault(to_word, [])
+        if from_word not in replace_reverse_map[to_word]:
+            replace_reverse_map[to_word].append(from_word)
+
+    expanded_pairs = []  # type: List[Tuple[str, str]]
+    seen_pairs = set()  # type: set
+    for from_word, to_word in add_space_pairs:
+        if (from_word, to_word) not in seen_pairs:
+            expanded_pairs.append((from_word, to_word))
+            seen_pairs.add((from_word, to_word))
+
+        parts = to_word.split(" ")
+        if len(parts) < 2:
+            continue
+
+        part_variants = []  # type: List[List[str]]
+        for part in parts:
+            variants = [part]
+            if _is_full_katakana_text(part):
+                for alias in replace_reverse_map.get(part, []):
+                    if alias not in variants:
+                        variants.append(alias)
+            part_variants.append(variants)
+
+        for variant_parts in product(*part_variants):
+            alias_from = "".join(variant_parts)
+            if (alias_from, to_word) in seen_pairs:
+                continue
+            expanded_pairs.append((alias_from, to_word))
+            seen_pairs.add((alias_from, to_word))
+
+    return expanded_pairs
 
 
 def _load_dictionaries() -> None:
@@ -100,8 +162,8 @@ def _load_dictionaries() -> None:
                 pass  # 読み込みエラーは無視（辞書なし扱い）
 
     _no_space_words[:] = no_space_set
-    _add_space_pairs[:] = list(add_space_map.items())
     _replace_pairs[:] = list(replace_map.items())
+    _add_space_pairs[:] = _expand_add_space_pairs(list(add_space_map.items()), _replace_pairs)
 
 
 class CharType(Enum):
@@ -583,34 +645,50 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
     """from_word を to_word に正規化する。既に to_word の位置はそのまま通す。"""
     if from_word == to_word:
         return text
+    require_katakana_boundary = _is_full_katakana_text(from_word) and _is_full_katakana_text(to_word)
     result = []
     i = 0
     flen = len(from_word)
     tlen = len(to_word)
     while i < len(text):
         if flen >= tlen:
-            if text[i:i + flen] == from_word:
+            if text[i:i + flen] == from_word and (
+                not require_katakana_boundary or _has_non_katakana_boundaries(text, i, flen)
+            ):
                 result.append(to_word)
                 i += flen
                 continue
-            if text[i:i + tlen] == to_word:
+            if text[i:i + tlen] == to_word and (
+                not require_katakana_boundary or _has_non_katakana_boundaries(text, i, tlen)
+            ):
                 # すでに標準形がある位置はそのまま通過
                 result.append(to_word)
                 i += tlen
                 continue
         else:
-            if text[i:i + tlen] == to_word:
+            if text[i:i + tlen] == to_word and (
+                not require_katakana_boundary or _has_non_katakana_boundaries(text, i, tlen)
+            ):
                 # すでに標準形がある位置はそのまま通過
                 result.append(to_word)
                 i += tlen
                 continue
-            if text[i:i + flen] == from_word:
+            if text[i:i + flen] == from_word and (
+                not require_katakana_boundary or _has_non_katakana_boundaries(text, i, flen)
+            ):
                 result.append(to_word)
                 i += flen
                 continue
         result.append(text[i])
         i += 1
     return "".join(result)
+
+
+def _apply_add_space_pairs(text: str) -> str:
+    """展開済み add_space 辞書を順に適用する。"""
+    for from_word, to_word in _add_space_pairs:
+        text = text.replace(from_word, to_word)
+    return text
 
 
 def _style_line_preserve_inline_code(line: str) -> str:
@@ -657,9 +735,8 @@ def _style_line_preserve_inline_code(line: str) -> str:
         styled_line = styled_line.replace(ph, word)
 
     # f. 辞書置換を適用（URL・インラインコードはまだプレースホルダーなので保護される）
-    # f1. add_space: スペース挿入
-    for from_word, to_word in _add_space_pairs:
-        styled_line = styled_line.replace(from_word, to_word)
+    # f1. add_space: スペース挿入（replace 逆引き別名を含む）
+    styled_line = _apply_add_space_pairs(styled_line)
 
     # f2. replace 誤適用を避けたい no_space 語を再度保護
     for word, ph in zip(sorted_nosp, nosp_placeholders):
@@ -673,15 +750,18 @@ def _style_line_preserve_inline_code(line: str) -> str:
     for word, ph in zip(sorted_nosp, nosp_placeholders):
         styled_line = styled_line.replace(ph, word)
 
-    # h. URL を復元
+    # h. replace 後に add_space を再適用して複合語分割をそろえる
+    styled_line = _apply_add_space_pairs(styled_line)
+
+    # i. URL を復元
     for url, ph in zip(url_spans, url_placeholders):
         styled_line = styled_line.replace(ph, url, 1)
 
-    # i. インラインコードを復元
+    # j. インラインコードを復元
     for code, ph in zip(code_spans, code_placeholders):
         styled_line = styled_line.replace(ph, code, 1)
 
-    # j. インラインコードの直後に括弧が続く場合、スペースを挿入（備考判定不要）
+    # k. インラインコードの直後に括弧が続く場合、スペースを挿入（備考判定不要）
     styled_line = re.sub(r'(`+)\(', r'\1 (', styled_line)
 
     return styled_line
@@ -741,6 +821,9 @@ def run_tests() -> bool:
         ("参照先 https://example.com/doc。次の章", "参照先 https://example.com/doc。次の章"),
 
         # replace: 長音付与・長音削除
+        ("ブル", "ブルー"),
+        ("(ブル)", "(ブルー)"),
+        ("ブル。", "ブルー。"),
         ("サーバ", "サーバー"),
         ("サーバー", "サーバー"),
         ("カテゴリー", "カテゴリ"),
@@ -751,10 +834,17 @@ def run_tests() -> bool:
         ("`カテゴリー` を使う", "`カテゴリー` を使う"),
         ("https://example.com/カテゴリー", "https://example.com/カテゴリー"),
         ("トラブル", "トラブル"),
+        ("ケーブル", "ケーブル"),
+        ("テーブル", "テーブル"),
         ("トラブルシューティング", "トラブルシューティング"),
         ("トラブルシューティングツール", "トラブルシューティング ツール"),
+        ("トラブルシューティングパフォーマンスカウンタ", "トラブルシューティング パフォーマンス カウンター"),
         ("トラブルシューティングパフォーマンスカウンター", "トラブルシューティング パフォーマンス カウンター"),
         ("トラブルシューター", "トラブル シューター"),
+        ("メールサーバ", "メール サーバー"),
+        ("メールサーバー", "メール サーバー"),
+        ("ファイルサーバ", "ファイル サーバー"),
+        ("リソースプロバイダ", "リソース プロバイダー"),
 
         # testfw 固有タグの no_space 例外
         ("Pre-Assert手順", "Pre-Assert手順"),
