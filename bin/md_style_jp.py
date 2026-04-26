@@ -339,6 +339,21 @@ def add_space_after_number_before_bracket(text: str) -> str:
     return text
 
 
+def add_space_before_supplemental_bracket(text: str) -> str:
+    """英単語直後の括弧が補足表記とみなせる場合、スペースを挿入する。
+
+    括弧内に日本語文字または `:` が含まれる場合を補足括弧とみなす。
+    既存スペースは削除しない (挿入のみ)。
+    """
+    def _replace(m: re.Match) -> str:
+        content = m.group(2)
+        if re.search(r'[^\x00-\x7F]|:', content):
+            return m.group(1) + ' (' + content + ')'
+        return m.group(0)
+
+    return re.sub(r'([A-Za-z0-9_])\(([^)]*)\)', _replace, text)
+
+
 def normalize_spaces(text: str) -> str:
     """連続するスペースを1つに正規化する"""
     # 全角スペースを半角に変換
@@ -360,6 +375,9 @@ def apply_ms_style(text: str) -> str:
     5. 句読点周辺のスペースを調整
     6. 括弧内側のスペースを削除
     7. 単位記号周辺のスペースを調整
+    8. 句読点後の英数字前にスペースを挿入
+    9. 数字/数字 + 括弧の間にスペースを挿入
+    10. 英単語直後の補足括弧の前にスペースを挿入
     """
     # 1. 全角英数字・括弧類を半角に変換
     text = convert_fullwidth_alnum_to_halfwidth(text)
@@ -389,7 +407,10 @@ def apply_ms_style(text: str) -> str:
     # 9. 数字/数字 + 括弧の間にスペースを挿入
     text = add_space_after_number_before_bracket(text)
 
-    # 10. 最終的なスペースの正規化
+    # 10. 英単語直後の補足括弧の前にスペースを挿入
+    text = add_space_before_supplemental_bracket(text)
+
+    # 11. 最終的なスペースの正規化
     text = normalize_spaces(text)
 
     return text
@@ -427,6 +448,9 @@ def validate_text(text: str) -> ValidationResult:
     )
 
 
+_LIST_ITEM_RE = re.compile(r'^\s*([-*+]|\d+[.)]) ')
+
+
 def _remove_unnecessary_trailing_spaces(
     result_lines: List[str], code_block_flags: List[bool]
 ) -> List[str]:
@@ -434,6 +458,7 @@ def _remove_unnecessary_trailing_spaces(
 
     - 次行が非空行の本文行 → 行末を半角スペース 2 個に正規化
     - 次行が空行 or EOF の行 → trailing spaces を除去
+    - 現在行がリスト項目 (箇条書き・番号付き) の場合は付与しない
     - コードブロック内の行は対象外
     """
     n = len(result_lines)
@@ -447,7 +472,7 @@ def _remove_unnecessary_trailing_spaces(
             output.append(stripped_line)
             continue
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
-        if next_stripped:
+        if next_stripped and not _LIST_ITEM_RE.match(stripped_line):
             output.append(stripped_line + "  ")
         else:
             output.append(stripped_line)
@@ -638,6 +663,14 @@ def run_tests() -> bool:
         # 数字/数字 + 括弧
         ("10/13(ページ)", "10/13 (ページ)"),
 
+        # 英単語 + 補足括弧
+        ("hoge()", "hoge()"),
+        ("hoge(fuga)", "hoge(fuga)"),
+        ("hoge(説明)", "hoge (説明)"),
+        ("hoge(key:value)", "hoge (key:value)"),
+        ("hoge(説明:値)", "hoge (説明:値)"),
+        ("hoge (説明)", "hoge (説明)"),
+
     ]
 
     # style_markdown() を使うテスト（URL 保護など Markdown 固有の処理を含む）
@@ -676,6 +709,12 @@ def run_tests() -> bool:
         ("行1  \n", "行 1\n"),
         ("行1  \n\n行2", "行 1\n\n行 2"),
         ("```\ncode  \n```\n本文", "```\ncode  \n```\n本文"),
+
+        # 箇条書きの行末スペース
+        ("- item1\n- item2", "- item1\n- item2"),
+        ("* item1\n* item2", "* item1\n* item2"),
+        ("1. item1\n2. item2", "1. item1\n2. item2"),
+        ("- item\n\n本文", "- item\n\n本文"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")
