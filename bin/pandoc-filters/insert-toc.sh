@@ -765,7 +765,7 @@ scan_directory() {
         else
             echo "# 不明なタイプ: $abs_path (ディレクトリでもファイルでもない)" >&2
         fi
-    done < <(find "${find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
+    done < <(find -L "${find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
 
     #echo "# ディレクトリ探索完了: $start_dir" >&2
 }
@@ -864,7 +864,7 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
                         fi
                     fi
                 fi
-            done < <(find "${_find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
+            done < <(find -L "${_find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
         fi
     done
 

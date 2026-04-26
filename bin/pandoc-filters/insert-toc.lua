@@ -231,9 +231,23 @@ function get_filter_path()
         if source:sub(1, 1) == "@" then
             source = source:sub(2)
         end
+        -- シンボリックリンクを解決して実パスを取得 (Linux/macOS のみ)
+        local resolved = source
+        if not is_windows() then
+            local quoted = "'" .. source:gsub("'", "'\"'\"'") .. "'"
+            local handle = io.popen(
+                "readlink -f " .. quoted .. " 2>/dev/null || realpath " .. quoted .. " 2>/dev/null")
+            if handle then
+                local result = handle:read("*l")
+                handle:close()
+                if result and result ~= "" then
+                    resolved = result
+                end
+            end
+        end
         -- source からファイル名を取り除き、ディレクトリパスのみを返す
-        local dir_path = source:match("(.+)[/\\][^/\\]+$")
-        return dir_path or source
+        local dir_path = resolved:match("(.+)[/\\][^/\\]+$")
+        return dir_path or resolved
     end
     return nil
 end
