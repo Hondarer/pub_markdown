@@ -627,6 +627,9 @@ def _style_line_preserve_inline_code(line: str) -> str:
     for code, ph in zip(code_spans, code_placeholders):
         styled_line = styled_line.replace(ph, code, 1)
 
+    # i. インラインコードの直後に括弧が続く場合、スペースを挿入（備考判定不要）
+    styled_line = re.sub(r'(`+)\(', r'\1 (', styled_line)
+
     return styled_line
 
 
@@ -711,6 +714,12 @@ def run_tests() -> bool:
         ("行1  \n", "行 1\n"),
         ("行1  \n\n行2", "行 1\n\n行 2"),
         ("```\ncode  \n```\n本文", "```\ncode  \n```\n本文"),
+
+        # インラインコード直後の括弧
+        ("`makechild.mk`(親階層から継承)", "`makechild.mk` (親階層から継承)"),
+        ("`foo`(bar)", "`foo` (bar)"),
+        ("`foo`()", "`foo` ()"),
+        ("`foo` (already)", "`foo` (already)"),
 
         # 箇条書きの行末スペース
         ("- item1\n- item2", "- item1\n- item2"),
