@@ -345,7 +345,7 @@ def add_space_before_supplemental_bracket(text: str) -> str:
     括弧内に日本語文字または `:` が含まれる場合を補足括弧とみなす。
     既存スペースは削除しない (挿入のみ)。
     """
-    def _replace(m: re.Match) -> str:
+    def _replace(m):
         content = m.group(2)
         if re.search(r'[^\x00-\x7F]|:', content):
             return m.group(1) + ' (' + content + ')'
