@@ -451,6 +451,39 @@ def validate_text(text: str) -> ValidationResult:
 _LIST_ITEM_RE = re.compile(r'^\s*([-*+]|\d+[.)]) ')
 _TABLE_ROW_RE = re.compile(r'^\s*\|')
 _HEADING_RE = re.compile(r'^#{1,6} ')
+_BOLD_HEADING_RE = re.compile(r'^\*\*.+\*\*:?$')
+_CODE_FENCE_RE = re.compile(r'^(`{3,}|~{3,})')
+
+
+def _insert_blank_before_fence_after_bold(
+    result_lines: List[str], code_block_flags: List[bool]
+):
+    # type: (List[str], List[bool]) -> tuple
+    """字下げなし・リスト外の ** 見出し行直後にコードフェンスが続く場合、空行を挿入する。"""
+    new_lines = []  # type: List[str]
+    new_flags = []  # type: List[bool]
+    n = len(result_lines)
+    for i, line in enumerate(result_lines):
+        new_lines.append(line)
+        new_flags.append(code_block_flags[i])
+
+        if code_block_flags[i]:
+            continue
+
+        stripped = line.strip()
+        is_bold_heading = (
+            not line.startswith((' ', '\t'))
+            and not _LIST_ITEM_RE.match(line)
+            and _BOLD_HEADING_RE.match(stripped)
+        )
+        if not is_bold_heading:
+            continue
+
+        if i + 1 < n and _CODE_FENCE_RE.match(result_lines[i + 1].lstrip()):
+            new_lines.append('')
+            new_flags.append(False)
+
+    return new_lines, new_flags
 
 
 def _remove_unnecessary_trailing_spaces(
@@ -483,6 +516,7 @@ def _remove_unnecessary_trailing_spaces(
             _LIST_ITEM_RE.match(next_stripped)
             or _TABLE_ROW_RE.match(next_stripped)
             or _HEADING_RE.match(next_stripped)
+            or _CODE_FENCE_RE.match(next_stripped)
         )
         if next_stripped and not curr_is_block and not next_is_block:
             output.append(stripped_line + "  ")
@@ -540,6 +574,7 @@ def style_markdown(text: str) -> str:
         result_lines.append(_style_line_preserve_inline_code(line))
         code_block_flags.append(False)
 
+    result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
     result_lines = _remove_unnecessary_trailing_spaces(result_lines, code_block_flags)
     return "\n".join(result_lines)
 
@@ -738,6 +773,14 @@ def run_tests() -> bool:
         ("行1  \n", "行 1\n"),
         ("行1  \n\n行2", "行 1\n\n行 2"),
         ("```\ncode  \n```\n本文", "```\ncode  \n```\n本文"),
+
+        # ** 疑似見出し + コードフェンス間の空行挿入
+        ("**変更前:**\n```python\ncode\n```", "**変更前:**\n\n```python\ncode\n```"),
+        ("**変更前 (makefile):**\n```makefile\ncode\n```", "**変更前 (makefile):**\n\n```makefile\ncode\n```"),
+        ("**変更前:**\n\n```python\ncode\n```", "**変更前:**\n\n```python\ncode\n```"),
+        ("**変更前**:\n```makefile\ncode\n```", "**変更前**:\n\n```makefile\ncode\n```"),
+        ("1. **変更前:**\n```python\ncode\n```", "1. **変更前:**\n```python\ncode\n```"),
+        ("  **変更前:**\n```python\ncode\n```", "  **変更前:**\n```python\ncode\n```"),
 
         # インラインコード直後の括弧
         ("`makechild.mk`(親階層から継承)", "`makechild.mk` (親階層から継承)"),
