@@ -449,6 +449,7 @@ def validate_text(text: str) -> ValidationResult:
 
 
 _LIST_ITEM_RE = re.compile(r'^\s*([-*+]|\d+[.)]) ')
+_TABLE_ROW_RE = re.compile(r'^\s*\|')
 
 
 def _remove_unnecessary_trailing_spaces(
@@ -458,7 +459,7 @@ def _remove_unnecessary_trailing_spaces(
 
     - 次行が非空行の本文行 → 行末を半角スペース 2 個に正規化
     - 次行が空行 or EOF の行 → trailing spaces を除去
-    - 現在行がリスト項目 (箇条書き・番号付き) の場合は付与しない
+    - 現在行がリスト項目 (箇条書き・番号付き) またはテーブル行の場合は付与しない
     - コードブロック内の行は対象外
     """
     n = len(result_lines)
@@ -472,7 +473,8 @@ def _remove_unnecessary_trailing_spaces(
             output.append(stripped_line)
             continue
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
-        if next_stripped and not _LIST_ITEM_RE.match(stripped_line):
+        is_block = _LIST_ITEM_RE.match(stripped_line) or _TABLE_ROW_RE.match(stripped_line)
+        if next_stripped and not is_block:
             output.append(stripped_line + "  ")
         else:
             output.append(stripped_line)
@@ -715,6 +717,10 @@ def run_tests() -> bool:
         ("* item1\n* item2", "* item1\n* item2"),
         ("1. item1\n2. item2", "1. item1\n2. item2"),
         ("- item\n\n本文", "- item\n\n本文"),
+
+        # テーブル行の行末スペース
+        ("| A | B |\n| C | D |", "| A | B |\n| C | D |"),
+        ("|---|---|\n| C | D |", "|---|---|\n| C | D |"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")
