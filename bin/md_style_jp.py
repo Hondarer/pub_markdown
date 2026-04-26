@@ -625,19 +625,28 @@ def _style_line_preserve_inline_code(line: str) -> str:
     # f1. add_space: スペース挿入
     for from_word, to_word in _add_space_pairs:
         styled_line = styled_line.replace(from_word, to_word)
-    # f2. replace: 汎用文字列置換（長音記号付与・省略など）。標準形がある位置は維持
+
+    # f2. replace 誤適用を避けたい no_space 語を再度保護
+    for word, ph in zip(sorted_nosp, nosp_placeholders):
+        styled_line = styled_line.replace(word, ph)
+
+    # f3. replace: 汎用文字列置換（長音記号付与・省略など）。標準形がある位置は維持
     for from_word, to_word in _replace_pairs:
         styled_line = _replace_skip_existing(styled_line, from_word, to_word)
 
-    # g. URL を復元
+    # g. no_space プレースホルダーを元の単語に復元
+    for word, ph in zip(sorted_nosp, nosp_placeholders):
+        styled_line = styled_line.replace(ph, word)
+
+    # h. URL を復元
     for url, ph in zip(url_spans, url_placeholders):
         styled_line = styled_line.replace(ph, url, 1)
 
-    # h. インラインコードを復元
+    # i. インラインコードを復元
     for code, ph in zip(code_spans, code_placeholders):
         styled_line = styled_line.replace(ph, code, 1)
 
-    # i. インラインコードの直後に括弧が続く場合、スペースを挿入（備考判定不要）
+    # j. インラインコードの直後に括弧が続く場合、スペースを挿入（備考判定不要）
     styled_line = re.sub(r'(`+)\(', r'\1 (', styled_line)
 
     return styled_line
@@ -706,6 +715,11 @@ def run_tests() -> bool:
         # replace の保護
         ("`カテゴリー` を使う", "`カテゴリー` を使う"),
         ("https://example.com/カテゴリー", "https://example.com/カテゴリー"),
+        ("トラブル", "トラブル"),
+        ("トラブルシューティング", "トラブルシューティング"),
+        ("トラブルシューティングツール", "トラブルシューティング ツール"),
+        ("トラブルシューティングパフォーマンスカウンター", "トラブルシューティング パフォーマンス カウンター"),
+        ("トラブルシューター", "トラブル シューター"),
 
         # testfw 固有タグの no_space 例外
         ("Pre-Assert手順", "Pre-Assert手順"),

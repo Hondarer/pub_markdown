@@ -1,7 +1,14 @@
 {
   "_source": "manual hints",
-  "_description": "JAPANESE.tbx (Microsoft Terminology Collection) 単体では導出できない長音削除の表記揺れを補うヒント辞書。",
+  "_description": "JAPANESE.tbx (Microsoft Terminology Collection) 単体では導出できない長音削除の表記揺れと、replace の誤適用を避けたい語を補うヒント辞書。",
+  "no_space": [
+    "トラブルシューティング"
+  ],
   "replace": [
+    {
+      "from": "トラブルー",
+      "to": "トラブル"
+    },
     {
       "from": "カテゴリー",
       "to": "カテゴリ"
