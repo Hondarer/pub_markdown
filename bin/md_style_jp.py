@@ -450,6 +450,7 @@ def validate_text(text: str) -> ValidationResult:
 
 _LIST_ITEM_RE = re.compile(r'^\s*([-*+]|\d+[.)]) ')
 _TABLE_ROW_RE = re.compile(r'^\s*\|')
+_HEADING_RE = re.compile(r'^#{1,6} ')
 
 
 def _remove_unnecessary_trailing_spaces(
@@ -460,6 +461,7 @@ def _remove_unnecessary_trailing_spaces(
     - 次行が非空行の本文行 → 行末を半角スペース 2 個に正規化
     - 次行が空行 or EOF の行 → trailing spaces を除去
     - 現在行がリスト項目 (箇条書き・番号付き) またはテーブル行の場合は付与しない
+    - 次行が見出し・リスト項目・テーブル行の場合は付与しない
     - コードブロック内の行は対象外
     """
     n = len(result_lines)
@@ -473,8 +475,16 @@ def _remove_unnecessary_trailing_spaces(
             output.append(stripped_line)
             continue
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
-        is_block = _LIST_ITEM_RE.match(stripped_line) or _TABLE_ROW_RE.match(stripped_line)
-        if next_stripped and not is_block:
+        curr_is_block = (
+            _LIST_ITEM_RE.match(stripped_line)
+            or _TABLE_ROW_RE.match(stripped_line)
+        )
+        next_is_block = (
+            _LIST_ITEM_RE.match(next_stripped)
+            or _TABLE_ROW_RE.match(next_stripped)
+            or _HEADING_RE.match(next_stripped)
+        )
+        if next_stripped and not curr_is_block and not next_is_block:
             output.append(stripped_line + "  ")
         else:
             output.append(stripped_line)
@@ -730,6 +740,14 @@ def run_tests() -> bool:
         # テーブル行の行末スペース
         ("| A | B |\n| C | D |", "| A | B |\n| C | D |"),
         ("|---|---|\n| C | D |", "|---|---|\n| C | D |"),
+
+        # 次行がリスト・見出しの場合は行末スペース不要
+        ("1. first\n   continuation\n2. second", "1. first\n   continuation\n2. second"),
+        ("- item\n  detail\n- next", "- item\n  detail\n- next"),
+        ("paragraph\n# heading", "paragraph\n# heading"),
+
+        # インデント行が続く場合は付与する
+        ("   cont1\n   cont2", "   cont1  \n   cont2"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")
