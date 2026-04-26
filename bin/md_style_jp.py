@@ -430,23 +430,27 @@ def validate_text(text: str) -> ValidationResult:
 def _remove_unnecessary_trailing_spaces(
     result_lines: List[str], code_block_flags: List[bool]
 ) -> List[str]:
-    """ソフト改行と見做せない行末の不要な trailing spaces を除去する。
+    """行末 trailing spaces を Markdown の改行用途に合わせて正規化する。
 
-    - 行末に trailing spaces がある かつ 次行が空行 or EOF → trailing spaces を除去
-    - 行末に trailing spaces がある かつ 次行が非空行 → 保持（ソフト改行として有効）
+    - 次行が非空行の本文行 → 行末を半角スペース 2 個に正規化
+    - 次行が空行 or EOF の行 → trailing spaces を除去
     - コードブロック内の行は対象外
     """
     n = len(result_lines)
     output = []
     for i, line in enumerate(result_lines):
-        if code_block_flags[i] or not line.endswith((' ', '\t')):
+        if code_block_flags[i]:
             output.append(line)
+            continue
+        stripped_line = line.rstrip()
+        if not stripped_line:
+            output.append(stripped_line)
             continue
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
         if next_stripped:
-            output.append(line)            # 次行が非空 → ソフト改行として保持
+            output.append(stripped_line + "  ")
         else:
-            output.append(line.rstrip())   # 次行が空 or EOF → trailing spaces 除去
+            output.append(stripped_line)
     return output
 
 
@@ -664,6 +668,14 @@ def run_tests() -> bool:
         ("[Pre-Assert確認]", "[Pre-Assert確認]"),
         ("[Pre-Assert確認_正常系]", "[Pre-Assert確認_正常系]"),
         ("[Pre-Assert確認_異常系]", "[Pre-Assert確認_異常系]"),
+
+        # 行末 trailing spaces の正規化
+        ("行1\n行2", "行 1  \n行 2"),
+        ("行1   \n行2", "行 1  \n行 2"),
+        ("行1\t \n行2", "行 1  \n行 2"),
+        ("行1  \n", "行 1\n"),
+        ("行1  \n\n行2", "行 1\n\n行 2"),
+        ("```\ncode  \n```\n本文", "```\ncode  \n```\n本文"),
     ]
 
     print("日本語 Markdown スタイリング 変換テスト")
