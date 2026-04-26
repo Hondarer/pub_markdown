@@ -798,7 +798,7 @@ if [ -n "$relativeFile" ]; then
 else
     # relativeFile が指定されていない場合: mdRoot 以下の対象ファイル (.md / .yaml / .json) を対象
     mapfile -d '' -t files_raw_initial < <(
-        find "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+        find -L "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
     )
 
     # マージ対象ドキュメントルートのファイルを追加 (mergeSubmoduleDocs が指定されている場合)
@@ -808,7 +808,7 @@ else
 
             # マージ対象ドキュメントルート配下の対象ファイルを収集
             mapfile -d '' -t submodule_files < <(
-                find "${submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+                find -L "${submodule_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
             )
 
             # files_raw_initial に追加
