@@ -408,7 +408,7 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
 
 
 def _apply_add_space_pairs(text: str) -> str:
-    for from_word, to_word in _add_space_pairs:
+    for from_word, to_word in sorted(_add_space_pairs, key=lambda pair: len(pair[0]), reverse=True):
         text = text.replace(from_word, to_word)
     return text
 

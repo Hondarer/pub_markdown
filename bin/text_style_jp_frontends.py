@@ -68,10 +68,6 @@ def detect_mode_from_path(path: str) -> str:
     raise ValueError(f"unsupported file type for auto mode: {path}")
 
 
-def _postprocess_markdown_line(line: str) -> str:
-    return re.sub(r"(`+)\(", r"\1 (", line)
-
-
 def _insert_blank_before_fence_after_bold(
     result_lines: List[str],
     code_block_flags: List[bool],
@@ -174,7 +170,7 @@ def style_markdown(text: str) -> str:
             code_block_flags.append(True)
             continue
 
-        result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN], postprocess=_postprocess_markdown_line))
+        result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
         code_block_flags.append(False)
 
     result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
