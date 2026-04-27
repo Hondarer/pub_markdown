@@ -19,6 +19,10 @@ _replace_pairs: List[Tuple[str, str]] = []
 _add_space_pairs: List[Tuple[str, str]] = []
 _dict_loaded = False
 
+_sudachi_state: Optional[bool] = None
+_sudachi_tok = None
+_KATAKANA_RUN_RE = re.compile(r"[ァ-ヿ]+")
+
 
 class CharType(Enum):
     """Character category."""
@@ -461,6 +465,88 @@ def _restore_replacements(text: str, replacements: Sequence[Tuple[str, str]]) ->
     return restored
 
 
+def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]) -> str:
+    """no_space_words のプレースホルダーを復元し、カタカナ境界にスペースを補う。
+
+    SudachiPy が保護語の隣接部分を分割した後、復元時に境界スペースが失われる
+    ケースを補正する。例: \x00NOSP\x00パフォーマンス → トラブルシューティング パフォーマンス
+    """
+    restored = text
+    for placeholder, original in replacements:
+        while placeholder in restored:
+            idx = restored.index(placeholder)
+            end = idx + len(placeholder)
+            space_before = (
+                idx > 0
+                and _is_full_katakana_char(restored[idx - 1])
+                and original
+                and _is_full_katakana_char(original[0])
+            )
+            space_after = (
+                end < len(restored)
+                and original
+                and _is_full_katakana_char(original[-1])
+                and _is_full_katakana_char(restored[end])
+            )
+            restored = (
+                restored[:idx]
+                + (" " if space_before else "")
+                + original
+                + (" " if space_after else "")
+                + restored[end:]
+            )
+    return restored
+
+
+def _init_sudachi() -> bool:
+    """SudachiPy を初期化する。未インストールなら自動インストールを試みる。"""
+    global _sudachi_state, _sudachi_tok
+    if _sudachi_state is not None:
+        return _sudachi_state
+    try:
+        import sudachipy
+        import sudachipy.dictionary
+        _sudachi_tok = sudachipy.dictionary.Dictionary().create()
+        _sudachi_state = True
+        return True
+    except ImportError:
+        pass
+    import importlib
+    import subprocess
+    import sys
+    try:
+        print(
+            "SudachiPy が見つかりません。インストールしています (初回のみ)...",
+            file=sys.stderr,
+        )
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--user", "sudachipy", "sudachidict-core"]
+        )
+        importlib.invalidate_caches()
+        import sudachipy
+        import sudachipy.dictionary
+        _sudachi_tok = sudachipy.dictionary.Dictionary().create()
+        _sudachi_state = True
+        return True
+    except Exception:
+        _sudachi_state = False
+        return False
+
+
+def _split_katakana_with_sudachi(text: str) -> str:
+    """SudachiPy モード B でカタカナ連続部分を分割する。"""
+    if not _init_sudachi():
+        return text
+    import sudachipy
+
+    def _replace(m: re.Match) -> str:
+        morphemes = _sudachi_tok.tokenize(m.group(0), sudachipy.SplitMode.B)
+        surfaces = [morph.surface() for morph in morphemes]
+        return " ".join(surfaces)
+
+    return _KATAKANA_RUN_RE.sub(_replace, text)
+
+
 def style_text(
     text: str,
     protected_patterns: Optional[Sequence[Union[str, Pattern[str]]]] = None,
@@ -483,14 +569,14 @@ def style_text(
         nosp_replacements.append((placeholder, word))
 
     styled = style_prose(protected)
-    styled = _restore_replacements(styled, nosp_replacements)
-    styled = _apply_add_space_pairs(styled)
+    styled = _split_katakana_with_sudachi(styled)
+    styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
 
     for placeholder, word in nosp_replacements:
         styled = styled.replace(word, placeholder)
     for from_word, to_word in _replace_pairs:
         styled = _replace_skip_existing(styled, from_word, to_word)
-    styled = _restore_replacements(styled, nosp_replacements)
+    styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
     styled = _apply_add_space_pairs(styled)
 
     styled = _restore_replacements(styled, url_replacements)
