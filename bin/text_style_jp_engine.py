@@ -21,7 +21,7 @@ _dict_loaded = False
 
 _sudachi_state: Optional[bool] = None
 _sudachi_tok = None
-_KATAKANA_RUN_RE = re.compile(r"[ァ-ヿ]+")
+_KATAKANA_RUN_RE = re.compile(r"[ァ-ヺー]+")
 
 
 class CharType(Enum):
@@ -310,6 +310,10 @@ def remove_space_before_punctuation(text: str) -> str:
     return text
 
 
+def remove_space_around_middle_dot_between_katakana(text: str) -> str:
+    return re.sub(r"(?<=[ァ-ヿ])\s*・\s*(?=[ァ-ヿ])", "・", text)
+
+
 def remove_space_inside_brackets(text: str) -> str:
     text = re.sub(r"([\(\[{（［｛「『【〔〈《]) +", r"\1", text)
     text = re.sub(r" +([\)\]}）］｝」』】〕〉》])", r"\1", text)
@@ -354,6 +358,7 @@ def style_prose(text: str) -> str:
     text = normalize_spaces(text)
     text = insert_space_between_fullwidth_and_halfwidth(text)
     text = remove_space_before_punctuation(text)
+    text = remove_space_around_middle_dot_between_katakana(text)
     text = remove_space_inside_brackets(text)
     text = remove_space_before_unit_no_space(text)
     text = remove_space_before_mm_unit(text)
