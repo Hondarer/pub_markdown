@@ -146,7 +146,7 @@ https://storage.googleapis.com/chrome-for-testing-public/{VERSION}/{PLATFORM}/{B
 # Linux 64bit 版 Chrome 118.0.5962.0 をダウンロード
 curl -O https://storage.googleapis.com/chrome-for-testing-public/118.0.5962.0/linux64/chrome-linux64.zip
 
-# ダウンロードしたファイルを解凍
+# ダウンロードしたファイルを展開
 unzip chrome-linux64.zip
 ```
 
