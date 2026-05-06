@@ -153,9 +153,11 @@ fi
 
 # 並列処理の最大ジョブ数
 # 環境変数 PUB_MARKDOWN_PARALLEL で上書き可能 (例: PUB_MARKDOWN_PARALLEL=2 pub_markdown_core.sh ...)
-# CPU コア数に依存するが、上限は 4 に制限する
+# CPU コア数の 1.5 倍を基準とし、端数は切り捨てる
+# 上限は 6 に制限する
 _nproc=$(nproc 2>/dev/null || echo 4)
-MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _nproc > 4 ? 4 : _nproc ))}
+_parallel_default=$(( _nproc * 3 / 2 ))
+MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_default ))}
 
 # 並列出力の排他制御用ロックベースパス
 # flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
