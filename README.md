@@ -28,7 +28,7 @@ Markdown to html and docx with Pandoc.
 + pandoc-crossref に PATH を通す。
   + pandoc-crossref はオプション。存在しなくても動作する。
 + node.exe に PATH を通す。Linux では nodejs モジュールパッケージに含まれる。
-+ bin 配下で、`npm install` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
++ bin 配下で、`npm ci` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
 
 ### Markdown の発行方法
 
