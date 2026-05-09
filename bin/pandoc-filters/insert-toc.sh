@@ -882,6 +882,7 @@ save_cache
 generate_sort_key() {
     local path="$1"
     local type="$2"  # "directory" or "file"
+    local separator="!"
 
     # パスを / で分割
     IFS='/' read -ra parts <<< "$path"
@@ -898,7 +899,8 @@ generate_sort_key() {
             key+="0${part}"
         fi
         if [[ $i -lt $last_idx ]]; then
-            key+="/"
+            # '-' などを含む接頭辞関係の sibling より、親配下の要素を先に並べる。
+            key+="$separator"
         fi
     done
 
