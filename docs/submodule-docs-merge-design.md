@@ -18,8 +18,8 @@
 ```yaml
 # サブモジュールドキュメントマージ機能
 # マージ対象のドキュメントルートをスペース区切りで指定
-# 空または未指定の場合は機能無効
-mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs docsfw=framework/docsfw/docs skills=.claude/skills
+# 空または未指定の場合は機能無効、値には $VAR または ${VAR} 形式の環境変数を使用可能
+mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs docsfw=${DOCSFW_HOME}/docs skills=.claude/skills
 ```
 
 ### 設定値
@@ -29,7 +29,8 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 | 空または未指定 | 機能無効 |
 | `alias=path` | 表示名と実パスを分離して使用 |
 
-`path` はワークスペースルートからの相対パスで指定し、マージ対象ディレクトリそのものを指します。  
+`path` はワークスペースルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。
+`path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。
 `alias` 省略記法はサポートしません。
 
 ## パス変換ルール

@@ -435,6 +435,78 @@ fi
 # サブモジュール mdRoot マージ機能
 #-------------------------------------------------------------------
 
+# mergeSubmoduleDocs の path 部分で使用する環境変数を展開する関数
+# 対応形式: $VAR / ${VAR}
+expand_submodule_path_env_vars() {
+    local input_path="$1"
+    local rest="$input_path"
+    local expanded_path=""
+    local prefix
+    local var_name
+
+    while [[ "$rest" == *'$'* ]]; do
+        prefix="${rest%%\$*}"
+        expanded_path+="$prefix"
+        rest="${rest#*\$}"
+
+        if [[ "$rest" =~ ^\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            rest="${BASH_REMATCH[2]}"
+        elif [[ "$rest" =~ ^([A-Za-z_][A-Za-z0-9_]*)(.*)$ ]]; then
+            var_name="${BASH_REMATCH[1]}"
+            rest="${BASH_REMATCH[2]}"
+        else
+            expanded_path+='$'
+            continue
+        fi
+
+        if [[ -z "${!var_name+x}" ]]; then
+            echo "Error: mergeSubmoduleDocs path references undefined environment variable: ${var_name} (${input_path})" >&2
+            return 1
+        fi
+
+        expanded_path+="${!var_name}"
+    done
+
+    expanded_path+="$rest"
+    echo "$expanded_path"
+}
+
+# mergeSubmoduleDocs の path をワークスペース相対パスへ正規化する関数
+normalize_submodule_path() {
+    local input_path="$1"
+    local normalized_path
+    local workspace_abs_path
+    local submodule_abs_path
+
+    normalized_path=$(expand_submodule_path_env_vars "$input_path") || return 1
+    normalized_path="${normalized_path//\\/\/}"
+
+    while [[ "$normalized_path" == */ && "$normalized_path" != "/" ]]; do
+        normalized_path="${normalized_path%/}"
+    done
+
+    if [[ "$normalized_path" == /* || "$normalized_path" =~ ^[a-zA-Z]:/ ]]; then
+        workspace_abs_path="$(realpath "$workspaceFolder" 2>/dev/null || echo "$workspaceFolder")"
+        submodule_abs_path="$(realpath "$normalized_path" 2>/dev/null || echo "$normalized_path")"
+        workspace_abs_path="${workspace_abs_path//\\/\/}"
+        submodule_abs_path="${submodule_abs_path//\\/\/}"
+
+        if [[ "$submodule_abs_path" == "$workspace_abs_path" ]]; then
+            echo "Error: mergeSubmoduleDocs path must point below workspaceFolder, not workspaceFolder itself: ${input_path}" >&2
+            return 1
+        fi
+        if [[ "$submodule_abs_path" != "${workspace_abs_path}/"* ]]; then
+            echo "Error: mergeSubmoduleDocs path must be inside workspaceFolder: ${input_path}" >&2
+            return 1
+        fi
+
+        normalized_path="${submodule_abs_path#${workspace_abs_path}/}"
+    fi
+
+    echo "$normalized_path"
+}
+
 # サブモジュール設定 1 件を解析する関数
 # 引数: $1=サブモジュール設定 (例: "docsfw=framework/docsfw/docs")
 # 戻り値: グローバル変数 submodule_alias / submodule_path
@@ -448,6 +520,7 @@ parse_submodule_spec() {
 
     submodule_alias="${submodule_spec%%=*}"
     submodule_path="${submodule_spec#*=}"
+    submodule_path=$(normalize_submodule_path "$submodule_path") || return 1
 
     while [[ "$submodule_alias" == */ && "$submodule_alias" != "/" ]]; do
         submodule_alias="${submodule_alias%/}"
