@@ -177,22 +177,34 @@ $body$
     .code-expander-wrapper {
       overflow: hidden;
     }
-    .code-expander-btn {
-      display: block;
+    .code-expander-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       width: 100%;
+      gap: 8px;
       box-sizing: border-box;
-      text-align: left;
       background: #e8e8e8;
-      border: none;
       border-bottom: 1px solid rgba(0,0,0,0.12);
-      padding: 3px 0.75em;
+      padding: 4px;
       margin: 0;
+    }
+    .code-expander-btn {
+      display: inline-flex;
+      align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+      box-sizing: border-box;
+      border: none;
       cursor: pointer;
       font-size: 14px;
       color: #555;
       line-height: 1.6;
+      text-align: left;
+      background: transparent;
+      padding: 0;
     }
-    .code-expander-btn:hover { background: #ddd; color: #222; }
+    .code-expander-btn:hover { color: #222; }
     .code-expander-btn .code-expander-arrow {
       display: inline-block;
       font-size: 0.7em;
@@ -201,6 +213,10 @@ $body$
     }
     .code-expander-btn[aria-expanded="true"] .code-expander-arrow {
       transform: rotate(90deg);
+    }
+    .code-expander-btn--ghost {
+      opacity: 0;
+      pointer-events: none;
     }
     /* scroll コンテナが横スクロールを一本化する */
     .code-expander-scroll {
@@ -233,11 +249,132 @@ $body$
       padding: 1px 0.8em;
       text-align: center;
     }
+    .code-copy-shell {
+      overflow: hidden;
+    }
+    .code-copy-btn {
+      background: #efefef;
+      border: 1px solid rgba(0,0,0,0.18);
+      border-radius: 3px;
+      color: #444;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.3;
+      padding: 2px 0.75em;
+      margin: 0;
+      transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .code-copy-btn:hover {
+      background: #e2e2e2;
+      color: #222;
+    }
+    .code-copy-btn[data-copy-state="copied"] {
+      background: #dff0d8;
+      border-color: rgba(70,136,71,0.35);
+      color: #2d6a2d;
+    }
+    .code-copy-btn[data-copy-state="error"] {
+      background: #f9d7d7;
+      border-color: rgba(170,0,0,0.3);
+      color: #8a1f1f;
+    }
   </style>
   <script>
   (function() {
     document.addEventListener('DOMContentLoaded', function() {
       var LINE_THRESHOLD = 5;
+
+      function setCopyButtonState(btn, state, label) {
+        if (btn._copyResetTimer) {
+          window.clearTimeout(btn._copyResetTimer);
+          btn._copyResetTimer = null;
+        }
+        if (state) {
+          btn.setAttribute('data-copy-state', state);
+        } else {
+          btn.removeAttribute('data-copy-state');
+        }
+        if (label) {
+          btn.textContent = label;
+        }
+      }
+
+      function copyTextToClipboard(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        }
+
+        return new Promise(function(resolve, reject) {
+          var textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.left = '-9999px';
+          textarea.style.top = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+
+          try {
+            var ok = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            if (ok) {
+              resolve();
+            } else {
+              reject(new Error('copy command was rejected'));
+            }
+          } catch (err) {
+            document.body.removeChild(textarea);
+            reject(err);
+          }
+        });
+      }
+
+      function createCopyButton(copyText) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'code-copy-btn';
+        btn.textContent = 'コピー';
+        btn.title = 'コードをコピー';
+        btn.setAttribute('aria-label', 'コードをコピー');
+
+        btn.addEventListener('click', function() {
+          copyTextToClipboard(copyText).then(function() {
+            setCopyButtonState(btn, 'copied', 'コピーしました');
+            btn._copyResetTimer = window.setTimeout(function() {
+              setCopyButtonState(btn, null, 'コピー');
+            }, 1500);
+          }).catch(function() {
+            setCopyButtonState(btn, 'error', '失敗');
+            btn._copyResetTimer = window.setTimeout(function() {
+              setCopyButtonState(btn, null, 'コピー');
+            }, 1500);
+          });
+        });
+        return btn;
+      }
+
+      function createPlainCodeShell(pre) {
+        var parentEl = pre.parentNode;
+        var shell = document.createElement('div');
+        shell.className = 'code-copy-shell';
+
+        var preStyle = window.getComputedStyle(pre);
+        shell.style.marginTop = preStyle.marginTop;
+        shell.style.marginBottom = preStyle.marginBottom;
+        shell.style.border = preStyle.border;
+        shell.style.borderRadius = preStyle.borderRadius;
+        shell.style.backgroundColor = preStyle.backgroundColor;
+        shell.style.boxSizing = 'border-box';
+
+        parentEl.insertBefore(shell, pre);
+        shell.appendChild(pre);
+
+        pre.style.margin = '0';
+        pre.style.border = 'none';
+        pre.style.borderRadius = '0';
+
+        return shell;
+      }
 
       // HTML 文字列を N 番目の改行位置で分割する。
       // タグ内の改行はカウントしない。
@@ -268,93 +405,104 @@ $body$
         // 末尾の空行を除いた実質行数
         var lineCount = (lines.length > 0 && lines[lines.length - 1] === '')
           ? lines.length - 1 : lines.length;
-        if (lineCount <= LINE_THRESHOLD) return;
+        var parentEl = pre.parentNode;
+        var isSourceCode = parentEl.classList && parentEl.classList.contains('sourceCode');
+        var shell = isSourceCode ? parentEl : createPlainCodeShell(pre);
 
-        // pre の外枠スタイルを取得してから DOM を変更する
-        var preStyle = window.getComputedStyle(pre);
-        var outerBorder       = preStyle.border;
-        var outerBorderRadius = preStyle.borderRadius;
-        var outerMarginTop    = preStyle.marginTop;
-        var outerMarginBottom = preStyle.marginBottom;
+        // 上段の共通ツールバーを先に作る。短いコードでもコピーだけは常に残す。
+        var toolbar = document.createElement('div');
+        toolbar.className = 'code-expander-toolbar';
+
+        var toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'code-expander-btn';
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        toggleBtn.innerHTML =
+          '<span class="code-expander-arrow">▶</span>' +
+          '<span class="code-expander-label">&nbsp;開く</span>';
+
+        if (lineCount <= LINE_THRESHOLD) {
+          toggleBtn.className += ' code-expander-btn--ghost';
+          toggleBtn.setAttribute('aria-hidden', 'true');
+          toggleBtn.setAttribute('tabindex', '-1');
+        }
+
+        var copyBtn = createCopyButton(text);
+        toolbar.appendChild(toggleBtn);
+        toolbar.appendChild(copyBtn);
+        shell.insertBefore(toolbar, pre);
 
         // HTML を先頭5行と残りに分割
         var targetEl = codeEl || pre;
         var split = splitHtmlAtLine(targetEl.innerHTML, LINE_THRESHOLD);
-        if (!split) return;
+        var restPre = null;
+        var hintEl = null;
+        var restCount = 0;
 
-        // 後半用 <pre><code> を複製 (属性のみ)
-        var restPre = pre.cloneNode(false);
-        restPre.className = (restPre.className ? restPre.className + ' ' : '') + 'code-rest';
-        restPre.style.display = 'none';
-        if (codeEl) {
-          var restCode = codeEl.cloneNode(false);
-          restCode.innerHTML = split.rest;
-          restPre.appendChild(restCode);
-        } else {
-          restPre.innerHTML = split.rest;
+        if (lineCount > LINE_THRESHOLD && split) {
+          // 後半用 <pre><code> を複製 (属性のみ)
+          restPre = pre.cloneNode(false);
+          restPre.className = (restPre.className ? restPre.className + ' ' : '') + 'code-rest';
+          restPre.style.display = 'none';
+          if (codeEl) {
+            var restCode = codeEl.cloneNode(false);
+            restCode.innerHTML = split.rest;
+            restPre.appendChild(restCode);
+          } else {
+            restPre.innerHTML = split.rest;
+          }
+
+          // 前半を元の <pre> に残す
+          targetEl.innerHTML = split.first;
+          pre.className = (pre.className ? pre.className + ' ' : '') + 'code-first';
+
+          restCount = lineCount - LINE_THRESHOLD;
+
+          // 縮小時に先頭ブロック末尾へ表示する「続きあり」ヒント行
+          hintEl = document.createElement('div');
+          hintEl.className = 'code-expander-hint';
+          hintEl.textContent = 'さらに ' + restCount + ' 行 (全 ' + lineCount + ' 行)';
+          hintEl.style.cursor = 'pointer';
+          hintEl.addEventListener('click', function() {
+            // 「開く」と同じ動作（縮小時のみ）
+            if (restPre.style.display === 'none') {
+              restPre.style.display = '';
+              hintEl.style.display  = 'none';
+              toggleBtn.setAttribute('aria-expanded', 'true');
+              toggleBtn.querySelector('.code-expander-label').textContent = ' 閉じる';
+            }
+          });
+
+          toggleBtn.addEventListener('click', function() {
+            var opening = restPre.style.display === 'none';
+            restPre.style.display = opening ? '' : 'none';
+            hintEl.style.display  = opening ? 'none' : '';
+            toggleBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            toggleBtn.querySelector('.code-expander-label').textContent =
+              opening ? ' 閉じる' : ' 開く';
+          });
         }
 
-        // 前半を元の <pre> に残す
-        targetEl.innerHTML = split.first;
-        pre.className = (pre.className ? pre.className + ' ' : '') + 'code-first';
-
-        // トグルバー (ボタン) を作成
-        var restCount = lineCount - LINE_THRESHOLD;
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'code-expander-btn';
-        btn.setAttribute('aria-expanded', 'false');
-        btn.innerHTML =
-          '<span class="code-expander-arrow">▶</span>' +
-          '<span class="code-expander-label">&nbsp;開く</span>';
-
-        // 縮小時に先頭ブロック末尾へ表示する「続きあり」ヒント行
-        var hintEl = document.createElement('div');
-        hintEl.className = 'code-expander-hint';
-        hintEl.textContent = 'さらに ' + restCount + ' 行 (全 ' + lineCount + ' 行)';
-        hintEl.style.cursor = 'pointer';
-        hintEl.addEventListener('click', function() {
-          // 「開く」と同じ動作（縮小時のみ）
-          if (restPre.style.display === 'none') {
-            restPre.style.display = '';
-            hintEl.style.display  = 'none';
-            btn.setAttribute('aria-expanded', 'true');
-            btn.querySelector('.code-expander-label').textContent = ' 閉じる';
-          }
-        });
-
-        btn.addEventListener('click', function() {
-          var opening = restPre.style.display === 'none';
-          restPre.style.display = opening ? '' : 'none';
-          hintEl.style.display  = opening ? 'none' : '';
-          btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
-          btn.querySelector('.code-expander-label').textContent =
-            opening ? ' 閉じる' : ' 開く';
-        });
-
-        // wrapper: ボタン → scroll コンテナ (前半 <pre> + ヒント行 + 後半 <pre>)
+        // wrapper: 上段ツールバー → scroll コンテナ (前半 <pre> [+ 後半 <pre>] + ヒント行)
         var wrapper = document.createElement('div');
         wrapper.className = 'code-expander-wrapper';
+        wrapper.style.overflow = 'hidden';
         var scrollEl = document.createElement('div');
         scrollEl.className = 'code-expander-scroll';
 
-        // wrapper に pre の外枠スタイルを継承させる
-        wrapper.style.border        = outerBorder;
-        wrapper.style.borderRadius  = outerBorderRadius;
-        wrapper.style.marginTop     = outerMarginTop;
-        wrapper.style.marginBottom  = outerMarginBottom;
-
-        var parentEl = pre.parentNode;
-        parentEl.insertBefore(wrapper, pre);
-        // 親 div.sourceCode の padding を除去して横幅を拡縮なしと揃える
-        if (parentEl.classList && parentEl.classList.contains('sourceCode')) {
-          parentEl.style.padding = '0';
+        if (isSourceCode) {
+          shell.style.padding = '0';
         }
+
+        shell.insertBefore(wrapper, pre);
         scrollEl.appendChild(pre);
-        scrollEl.appendChild(restPre);
-        wrapper.appendChild(btn);
+        if (restPre) {
+          scrollEl.appendChild(restPre);
+        }
         wrapper.appendChild(scrollEl);
-        wrapper.appendChild(hintEl);
+        if (hintEl) {
+          wrapper.appendChild(hintEl);
+        }
       });
     });
   })();
