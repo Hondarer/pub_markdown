@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Japanese text styling CLI for Markdown and source comments."""
 
+import sys
 from typing import List, Optional, Sequence, Tuple
+
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
 
 from text_style_jp_engine import apply_ms_style, style_prose, validate_text
 from text_style_jp_frontends import (

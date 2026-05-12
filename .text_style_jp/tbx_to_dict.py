@@ -32,6 +32,9 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
+
 # カタカナ Unicode 範囲: U+30A0–U+30FF (ー U+30FC を含む)
 _KATAKANA_MIN = 0x30A0
 _KATAKANA_MAX = 0x30FF
