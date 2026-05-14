@@ -27,15 +27,15 @@ EXCLUDE="$4"
 BASEDIR="$5"
 EXCLUDE_BASEDIR="${6:-false}"
 
-# 環境変数からサブモジュールドキュメントマージ設定を取得
+# 環境変数から追加ドキュメントサブフォルダー設定を取得
 # 値はスペース区切りの alias=path リスト (空の場合は機能無効)
-MERGE_SUBMODULE_DOCS="${MERGE_SUBMODULE_DOCS:-}"
+MERGE_SUBFOLDER_DOCS="${MERGE_SUBFOLDER_DOCS:-}"
 # 改行区切りの文字列を配列に変換
-declare -a submodule_entries=()
-if [[ -n "$SUBMODULE_DOCS_PATHS" ]]; then
+declare -a subfolder_entries=()
+if [[ -n "$SUBFOLDER_DOCS_PATHS" ]]; then
     while IFS= read -r entry; do
-        [[ -n "$entry" ]] && submodule_entries+=("$entry")
-    done <<< "$SUBMODULE_DOCS_PATHS"
+        [[ -n "$entry" ]] && subfolder_entries+=("$entry")
+    done <<< "$SUBFOLDER_DOCS_PATHS"
 fi
 
 # デバッグ用: 引数をエコー
@@ -45,17 +45,17 @@ fi
 #echo "DOCUMENT_LANG: $DOCUMENT_LANG" >&2
 #echo "EXCLUDE: $EXCLUDE" >&2
 #echo "BASEDIR: $BASEDIR" >&2
-#echo "MERGE_SUBMODULE_DOCS: $MERGE_SUBMODULE_DOCS" >&2
-#echo "SUBMODULE_DOCS_PATHS: $SUBMODULE_DOCS_PATHS" >&2
+#echo "MERGE_SUBFOLDER_DOCS: $MERGE_SUBFOLDER_DOCS" >&2
+#echo "SUBFOLDER_DOCS_PATHS: $SUBFOLDER_DOCS_PATHS" >&2
 
-parse_submodule_entry() {
+parse_subfolder_entry() {
     local entry="$1"
     local rest
 
-    submodule_alias="${entry%%|*}"
+    subfolder_alias="${entry%%|*}"
     rest="${entry#*|}"
-    submodule_path="${rest%%|*}"
-    submodule_docs_src="${rest#*|}"
+    subfolder_path="${rest%%|*}"
+    subfolder_docs_src="${rest#*|}"
 }
 
 # ========================================
@@ -792,21 +792,21 @@ fi
 # ディレクトリ探索実行
 scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
 
-# サブモジュールドキュメントルートの探索 (mergeSubmoduleDocs が指定されている場合)
+# 追加ドキュメントサブフォルダーの探索 (mergeSubfolderDocs が指定されている場合)
 # 注意: この機能は current_dir が mdRoot の場合のみ有効
-if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
-    #echo "# サブモジュールドキュメント探索開始" >&2
+if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 ]]; then
+    #echo "# 追加ドキュメントサブフォルダー探索開始" >&2
 
-    for entry in "${submodule_entries[@]}"; do
-        parse_submodule_entry "$entry"
+    for entry in "${subfolder_entries[@]}"; do
+        parse_subfolder_entry "$entry"
 
-        #echo "# サブモジュール探索: $submodule_alias -> $submodule_docs_src" >&2
+        #echo "# 追加ドキュメントサブフォルダー探索: $subfolder_alias -> $subfolder_docs_src" >&2
 
-        # サブモジュールドキュメントルート配下のファイルを探索
-        # 仮想パスとしてキャッシュに追加(current_dir/submodule/... として)
-        if [[ -d "$submodule_docs_src" ]]; then
+        # 追加ドキュメントサブフォルダー配下のファイルを探索
+        # 仮想パスとしてキャッシュに追加(current_dir/subfolder/... として)
+        if [[ -d "$subfolder_docs_src" ]]; then
             # find コマンドで探索
-            _find_args=("$submodule_docs_src")
+            _find_args=("$subfolder_docs_src")
             if [[ "$DEPTH" -ge 0 ]]; then
                 _find_args+=(-maxdepth $((DEPTH + 1)))
             fi
@@ -814,32 +814,32 @@ if [[ -n "$MERGE_SUBMODULE_DOCS" && ${#submodule_entries[@]} -gt 0 ]]; then
             while read -r path; do
                 # 実パスから仮想パスを計算
                 # 実パス: {docs_src}/path/to/file.md
-                # 仮想パス: {current_dir}/{submodule}/path/to/file.md
-                _relative_to_docs_src="${path#$submodule_docs_src}"
+                # 仮想パス: {current_dir}/{alias}/path/to/file.md
+                _relative_to_docs_src="${path#$subfolder_docs_src}"
                 _relative_to_docs_src="${_relative_to_docs_src#/}"  # 先頭スラッシュ除去
 
                 if [[ -z "$_relative_to_docs_src" ]]; then
-                    _virtual_abs_path="${current_dir}/${submodule_alias}"
+                    _virtual_abs_path="${current_dir}/${subfolder_alias}"
                 else
-                    _virtual_abs_path="${current_dir}/${submodule_alias}/${_relative_to_docs_src}"
+                    _virtual_abs_path="${current_dir}/${subfolder_alias}/${_relative_to_docs_src}"
                 fi
 
                 # ファイル名取得
-                # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を使用
+                # 追加ドキュメントサブフォルダーのルートディレクトリの場合は alias の最後の部分を使用
                 # 例: testfw/gtest -> gtest
-                if [[ "$path" == "$submodule_docs_src" ]]; then
-                    _filename="${submodule_alias##*/}"
+                if [[ "$path" == "$subfolder_docs_src" ]]; then
+                    _filename="${subfolder_alias##*/}"
                 else
                     _filename="${path##*/}"
                 fi
 
-                #echo "# サブモジュールファイル: $path -> $_virtual_abs_path" >&2
+                #echo "# 追加ドキュメントサブフォルダーファイル: $path -> $_virtual_abs_path" >&2
 
                 if [[ -d "$path" ]]; then
                     # ディレクトリの場合
-                    # サブモジュールのルートディレクトリの場合はサブモジュール名の最後の部分を base_title に使用
-                    if [[ "$path" == "$submodule_docs_src" ]]; then
-                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${submodule_alias##*/}" ""
+                    # 追加ドキュメントサブフォルダーのルートディレクトリの場合は alias の最後の部分を base_title に使用
+                    if [[ "$path" == "$subfolder_docs_src" ]]; then
+                        add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${subfolder_alias##*/}" ""
                     else
                         add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "$_filename" ""
                     fi

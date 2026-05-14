@@ -1,4 +1,4 @@
-# サブモジュールドキュメントマージ機能
+# 追加ドキュメントサブフォルダー機能
 
 ## 概要
 
@@ -6,20 +6,20 @@
 
 ### 背景
 
-サブモジュール構成や補助ディレクトリを採用したプロジェクトでは、各領域 (`doxyfw`, `testfw`, `makefw`, `.claude/skills` 等) ごとに独自のドキュメントルートを持つ場合があります。  
+補助ディレクトリや外部フレームワークを含むプロジェクトでは、各領域 (`doxyfw`, `testfw`, `makefw`, `.claude/skills` 等) ごとに独自のドキュメントルートを持つ場合があります。  
 これらを統合的に発行するために、各ドキュメントルートをメインプロジェクトの `docs` 配下にあるかのように扱います。
 
 ## 設定
 
 ### 設定ファイル
 
-`pub_markdown.config.yaml` で対象ドキュメントルートを指定します。
+`pub_markdown.config.yaml` で追加ドキュメントサブフォルダーを指定します。
 
 ```yaml
-# サブモジュールドキュメントマージ機能
-# マージ対象のドキュメントルートをスペース区切りで指定
+# 追加ドキュメントサブフォルダー機能
+# alias=path 形式で追加ドキュメントサブフォルダーをスペース区切りで指定
 # 空または未指定の場合は機能無効、値には $VAR または ${VAR} 形式の環境変数を使用可能
-mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs docsfw=${DOCSFW_HOME}/docs skills=.claude/skills
+mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs docsfw=${DOCSFW_HOME}/docs skills=.claude/skills
 ```
 
 ### 設定値
@@ -39,7 +39,7 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 | 種類 | 実パス | 仮想パス |
 |------|--------|----------|
-| マージ対象ドキュメント | `{configuredPath}/{path}` | `{mdRoot}/{alias}/{path}` |
+| 追加ドキュメントサブフォルダー配下のドキュメント | `{configuredPath}/{path}` | `{mdRoot}/{alias}/{path}` |
 | メインドキュメント | `{mdRoot}/{path}` | `{mdRoot}/{path}` |
 
 ### パス変換の具体例
@@ -64,7 +64,7 @@ alias を使う例:
 
 ### 受け入れ可能なパス形式
 
-`mergeSubmoduleDocs` が指定されている場合、`relativeFile` に以下のパス形式を受け入れます。
+`mergeSubfolderDocs` が指定されている場合、`relativeFile` に以下のパス形式を受け入れます。
 
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
@@ -102,7 +102,7 @@ alias を使う例:
 
 ```yaml
 # 例: testfw/gtest も対象にする場合
-mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs testfw/gtest=framework/testfw/gtest/docs docsfw=framework/docsfw/docs
+mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs testfw=framework/testfw/docs testfw/gtest=framework/testfw/gtest/docs docsfw=framework/docsfw/docs
 ```
 
 この場合のパス変換:
@@ -113,7 +113,7 @@ mergeSubmoduleDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 ## 制約事項
 
-1. **エントリ形式**: `mergeSubmoduleDocs` は `alias=path` 形式のみ受け付けます。旧形式や alias 省略記法はエラーです。
+1. **エントリ形式**: `mergeSubfolderDocs` は `alias=path` 形式のみ受け付けます。旧形式や alias 省略記法はエラーです。
 2. **親ディレクトリ指定の禁止**: 指定した `path` の直下に `mdRoot` ディレクトリが存在する場合は、旧形式とみなしてエラーにします。`framework/makefw` ではなく `framework/makefw/docs` を指定してください。
 3. **サブディレクトリ名の衝突**: メイン `mdRoot` 配下に同名のディレクトリが存在する場合は、メイン側を優先します。
 4. **相対パスリンク**: マージ対象ドキュメント間の相対パスリンクは、正しく解決されない可能性があります。
