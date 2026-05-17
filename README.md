@@ -35,6 +35,15 @@ Markdown to html and docx with Pandoc.
 + Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
 + 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
 
+### 進捗ログ
+
+長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行する。
+共有ブラウザの起動待機、対象ファイル収集、各出力形式の生成、TOC 生成の段階が stderr に出力される。
+
+```bash
+PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
+```
+
 ## ビルド結果公開 Pages
 
 - [https://hondarer.github.io/pub_markdown/](https://hondarer.github.io/pub_markdown/)

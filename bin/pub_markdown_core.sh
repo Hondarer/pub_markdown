@@ -6,6 +6,16 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダを選択させる
 cd $HOME_DIR
 
+# 並列ジョブ内では stdout / stderr を一時ファイルへ集約するため、
+# 進捗ログだけは元の stderr を保持した FD 3 へ直接出力する。
+exec 3>&2
+
+# PUB_MARKDOWN_PROGRESS_LOG=1 のときだけ、長時間処理の進行状況を stderr に出力する。
+progress_log() {
+    [[ "${PUB_MARKDOWN_PROGRESS_LOG:-0}" == "1" ]] || return 0
+    printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
+}
+
 # Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
 cleanup() {
     #echo >&2 "スクリプトが中断されました。"
@@ -21,6 +31,7 @@ cleanup() {
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
     rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
+    rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
@@ -123,6 +134,8 @@ export NODE_NO_WARNINGS=1
 # WebSocket エンドポイントファイルを設定
 export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
 BROWSER_SERVER_PID=""
+export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder:-}/docs"
+export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
 # 共有ブラウザサーバーをバックグラウンドで起動
 # NOTE: browser-server.js は Puppeteer のデフォルトブラウザ検出を使用する。
@@ -131,6 +144,7 @@ BROWSER_SERVER_PID=""
 #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
 node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" &
 BROWSER_SERVER_PID=$!
+progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID}"
 
 # WebSocket エンドポイントファイルが作成されるまで待機 (最大 30 秒)
 for _i in $(seq 1 300); do
@@ -144,6 +158,9 @@ if [[ ! -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
     echo "Warning: Shared browser server failed to start. Falling back to per-process browser instances."
     BROWSER_SERVER_PID=""
     export -n PUB_MARKDOWN_BROWSER_WS_FILE
+    progress_log "共有ブラウザ起動待機を終了しました result=fallback"
+else
+    progress_log "共有ブラウザ起動待機を終了しました result=ready"
 fi
 
 #-------------------------------------------------------------------
@@ -305,6 +322,7 @@ fi
 if [[ "$mdRoot" == "" ]]; then
     mdRoot="docs"
 fi
+export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder}/${mdRoot}"
 
 # 設定ファイルに pubRoot が指定されなかった場合の値を "pages" にする
 if [[ "$pubRoot" == "" ]]; then
@@ -835,6 +853,7 @@ echo "*** pub_markdown_core start $(date -Is)"
 if [ "${MAX_PARALLEL:-0}" -ge 2 ]; then
     echo "Parallelism: ${MAX_PARALLEL}"
 fi
+progress_log "発行処理を開始しました"
 
 #-------------------------------------------------------------------
 
@@ -844,6 +863,7 @@ rm -f /tmp/insert-toc-cache.tsv > /dev/null
 #-------------------------------------------------------------------
 
 echo -n "Correcting target files..."
+progress_log "対象ファイルの収集を開始しました"
 
 # ── (A) relativeFile を使って初期リストを NUL 区切りで作成 ──
 if [ -n "$relativeFile" ]; then
@@ -978,6 +998,7 @@ fi
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 echo " done."
+progress_log "対象ファイルの収集を終了しました count=${#files[@]}"
 
 #-------------------------------------------------------------------
 
@@ -1252,6 +1273,7 @@ for file in "${files[@]}"; do
         _pm_tmpout=$(mktemp)
         {
         # .md ファイルの処理
+        progress_log "Markdown 処理を開始しました file=${file#${workspaceFolder}/}"
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
         # html (仮想パスベースで出力パスを計算)
@@ -1339,14 +1361,18 @@ for file in "${files[@]}"; do
 
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
+            progress_log "文書日付の取得を開始しました file=${file#${workspaceFolder}/}"
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+            progress_log "文書日付の取得を終了しました file=${file#${workspaceFolder}/}"
         else
             export -n DOCUMENT_DATE
         fi
 
         if [[ "$autoSetAuthor" == "true" ]]; then
             # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            progress_log "文書著者の取得を開始しました file=${file#${workspaceFolder}/}"
             export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+            progress_log "文書著者の取得を終了しました file=${file#${workspaceFolder}/}"
         else
             export -n DOCUMENT_AUTHOR
         fi
@@ -1400,6 +1426,7 @@ for file in "${files[@]}"; do
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 _pm_pandoc_stderr=$(mktemp)
+                progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 echo "${md_body}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1417,6 +1444,7 @@ for file in "${files[@]}"; do
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                         2>"$_pm_pandoc_stderr"
+                progress_log "HTML 生成を終了しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 if [[ -s "$_pm_pandoc_stderr" ]]; then
                     printf "\e[33m"
                     cat "$_pm_pandoc_stderr"
@@ -1455,6 +1483,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
+                    progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
                         ${PANDOC} -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1475,6 +1504,7 @@ for file in "${files[@]}"; do
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             2>"$_pm_pandoc_stderr"
+                    progress_log "DOCX 生成を終了しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then
                         printf "\e[33m"
                         cat "$_pm_pandoc_stderr"
@@ -1489,6 +1519,7 @@ for file in "${files[@]}"; do
         done
         } >"$_pm_tmpout" 2>&1
         _pm_exit=$?
+        progress_log "Markdown 処理を終了しました file=${file#${workspaceFolder}/} exit=${_pm_exit}"
         # mkdir をアトミックロックとして使い、バッファリングした出力を表示する
         # (mkdir は Linux/MSYS2/Windows いずれでもアトミック操作)
         while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
@@ -1538,6 +1569,7 @@ if [[ -n "$BROWSER_SERVER_PID" ]]; then
     wait "$BROWSER_SERVER_PID" 2>/dev/null
     rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
 fi
+rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
 
 echo "*** pub_markdown_core end   $(date -Is)"
 

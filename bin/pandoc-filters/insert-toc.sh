@@ -18,6 +18,7 @@ declare -a sorted_keys
 
 # キャッシュ変更フラグ
 cache_modified=false
+scan_output_base_dir=""
 
 # 引数の取得
 DEPTH="$1"
@@ -26,6 +27,16 @@ DOCUMENT_LANG="${3:-neutral}" # 指定がない場合はニュートラル言語
 EXCLUDE="$4"
 BASEDIR="$5"
 EXCLUDE_BASEDIR="${6:-false}"
+
+# PUB_MARKDOWN_PROGRESS_LOG=1 のときだけ、長時間処理の進行状況を stderr に出力する。
+progress_log() {
+    [[ "${PUB_MARKDOWN_PROGRESS_LOG:-0}" == "1" ]] || return 0
+    if { true >&3; } 2>/dev/null; then
+        printf '[insert-toc %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
+    else
+        printf '[insert-toc %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&2
+    fi
+}
 
 # 環境変数から追加ドキュメントサブフォルダー設定を取得
 # 値はスペース区切りの alias=path リスト (空の場合は機能無効)
@@ -56,6 +67,49 @@ parse_subfolder_entry() {
     rest="${entry#*|}"
     subfolder_path="${rest%%|*}"
     subfolder_docs_src="${rest#*|}"
+}
+
+resolve_current_context() {
+    local source_dir
+    local relative_to_subfolder
+
+    if [[ -n "$CURRENT_FILE" && "$CURRENT_FILE" != "-" ]]; then
+        source_dir=$(dirname "$CURRENT_FILE")
+        source_dir=$(readlink -f "$source_dir" 2>/dev/null || realpath "$source_dir" 2>/dev/null || echo "$source_dir")
+    else
+        source_dir=$(pwd)
+    fi
+
+    current_scan_dir="$source_dir"
+    current_dir="$source_dir"
+    current_is_subfolder=false
+
+    for entry in "${subfolder_entries[@]}"; do
+        parse_subfolder_entry "$entry"
+        if [[ "$source_dir" == "$subfolder_docs_src" || "$source_dir" == "$subfolder_docs_src"/* ]]; then
+            relative_to_subfolder="${source_dir#$subfolder_docs_src}"
+            relative_to_subfolder="${relative_to_subfolder#/}"
+            if [[ -z "$relative_to_subfolder" ]]; then
+                current_dir="${PUB_MARKDOWN_MAIN_MDROOT}/${subfolder_alias}"
+            else
+                current_dir="${PUB_MARKDOWN_MAIN_MDROOT}/${subfolder_alias}/${relative_to_subfolder}"
+            fi
+            current_is_subfolder=true
+            return 0
+        fi
+    done
+}
+
+toc_output_cache_path() {
+    [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]] || return 1
+    local cache_key
+    cache_key=$(
+        printf '%s\0' \
+            "$CURRENT_FILE" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE" "$BASEDIR" "$EXCLUDE_BASEDIR" \
+            "$MERGE_SUBFOLDER_DOCS" "${PUB_MARKDOWN_MAIN_MDROOT:-}" \
+            | sha256sum | awk '{print $1}'
+    )
+    printf '%s/%s.md\n' "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" "$cache_key"
 }
 
 # ========================================
@@ -387,6 +441,8 @@ generate_toc() {
     # PROGRESS
     #printf '%s' " -> filter" >&2
 
+    progress_log "目次対象の絞り込みを開始しました entries=${#sorted_keys[@]}"
+
     # 第1段階: 基本的なフィルタリング
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
@@ -441,6 +497,23 @@ generate_toc() {
 
     # 第2段階: 空ディレクトリの除去
     local final_keys=()
+    declare -A directory_has_files=()
+
+    # 有効なファイルの祖先ディレクトリを一度だけ記録する。
+    for abs_path in "${filtered_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        local type
+        IFS=$'\t' read -r _ type _ _ <<< "$entry"
+        [[ "$type" == "file" ]] || continue
+
+        local parent_dir
+        parent_dir=$(dirname "$abs_path")
+        while [[ "$parent_dir" == "$base_dir" || "$parent_dir" == "$base_dir"/* ]]; do
+            directory_has_files["$parent_dir"]=true
+            [[ "$parent_dir" == "$base_dir" ]] && break
+            parent_dir=$(dirname "$parent_dir")
+        done
+    done
 
     for abs_path in "${filtered_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
@@ -449,25 +522,7 @@ generate_toc() {
         #echo "entry, type: ${entry}, ${type}" >&2
 
         if [[ "$type" == "directory" ]]; then
-            # ディレクトリの場合、配下に有効なファイルがあるかチェック
-            local has_files=false
-
-            # 効率的なアルゴリズム: filtered_keys をループして前方一致チェック
-            for check_path in "${filtered_keys[@]}"; do
-                # チェックするディレクトリ配下のパスかどうかを前方一致で確認
-                if [[ "$check_path" == "$abs_path"/* ]]; then
-                    # ディレクトリ名部分を削除して残りの文字列を取得
-                    local remaining_path="${check_path#$abs_path/}"
-
-                    # 残った文字列にピリオドが含まれていればファイルと判断
-                    if [[ "$remaining_path" == *.* ]]; then
-                        has_files=true
-                        break
-                    fi
-                fi
-            done
-
-            if [[ "$has_files" == "true" ]]; then
+            if [[ "${directory_has_files[$abs_path]:-false}" == "true" ]]; then
                 final_keys+=("$abs_path")
                 #echo "# 保持 (配下にファイルあり): $abs_path" >&2
             #else
@@ -484,6 +539,7 @@ generate_toc() {
 
     # フィルタリング結果を sorted_keys に反映
     sorted_keys=("${final_keys[@]}")
+    progress_log "目次対象の絞り込みを終了しました entries=${#sorted_keys[@]}"
 
     # フィルター後のエントリを表示
     #echo "# フィルター後のエントリ" >&2
@@ -503,6 +559,26 @@ generate_toc() {
 
     local depth=0
     local indent=""
+    declare -A direct_index_path=()
+    declare -A direct_readme_path=()
+
+    for abs_path in "${sorted_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        local filename type
+        IFS=$'\t' read -r filename type _ _ <<< "$entry"
+        [[ "$type" == "file" ]] || continue
+
+        local parent_dir
+        local filename_lower="${filename,,}"
+        parent_dir=$(dirname "$abs_path")
+        if [[ "$filename_lower" == "index.md" ]]; then
+            direct_index_path["$parent_dir"]="$abs_path"
+        elif [[ "$filename_lower" == "readme.md" ]]; then
+            direct_readme_path["$parent_dir"]="$abs_path"
+        fi
+    done
+
+    progress_log "目次 Markdown の生成を開始しました entries=${#sorted_keys[@]}"
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
         local filename type base_title lang_titles
@@ -531,7 +607,7 @@ generate_toc() {
 
         if [[ "$type" == "file" ]]; then
             local file_basename_only="${filename}"
-            local file_basename_lower=$(echo "$file_basename_only" | tr '[:upper:]' '[:lower:]')
+            local file_basename_lower="${file_basename_only,,}"
 
             # index.md はディレクトリインデックスとして扱われるため、通常のファイルとしては表示しない
             if [[ "$file_basename_lower" == "index.md" ]]; then
@@ -541,17 +617,10 @@ generate_toc() {
             # README.md は、同じディレクトリに index.md が存在しない場合のみディレクトリインデックスとして扱われる
             if [[ "$file_basename_lower" == "readme.md" ]]; then
                 # 同じディレクトリに index.md が存在するかチェック
-                local file_dir_path=$(dirname "$abs_path")
+                local file_dir_path
+                file_dir_path=$(dirname "$abs_path")
                 local has_index_md=false
-                for sibling_path in "${sorted_keys[@]}"; do
-                    if [[ $(dirname "$sibling_path") == "$file_dir_path" ]]; then
-                        local sibling_basename=$(basename "$sibling_path" | tr '[:upper:]' '[:lower:]')
-                        if [[ "$sibling_basename" == "index.md" ]]; then
-                            has_index_md=true
-                            break
-                        fi
-                    fi
-                done
+                [[ -n "${direct_index_path[$file_dir_path]:-}" ]] && has_index_md=true
 
                 # index.md が存在しない場合は、README.md をディレクトリインデックスとして扱う
                 if [[ "$has_index_md" == "false" ]]; then
@@ -590,96 +659,48 @@ generate_toc() {
             local index_display_title=""
             local index_relative_path=""
 
-            # ディレクトリ配下のインデックスファイルを検索 (ケース揺らぎ許容)
-            local dir_prefix="$abs_path/"
-            for check_path in "${sorted_keys[@]}"; do
-                # 前方一致チェック: abs_path 配下でない場合は即座にスキップ
-                [[ "$check_path" != "$dir_prefix"* ]] && continue
-
-                # check_path から abs_path を取り除いてファイル名部分を取得
-                local remaining_path="${check_path#$dir_prefix}"
-
-                # スラッシュが含まれていれば直下のファイルではない
-                [[ "$remaining_path" == */* ]] && continue
-
-                # type チェック
+            local check_path="${direct_index_path[$abs_path]:-}"
+            if [[ -n "$check_path" ]]; then
+                index_file_found="$check_path"
                 local check_entry="${memory_cache[$check_path]}"
-                [[ -z "$check_entry" ]] && continue
-                [[ "$check_entry" != *$'\t'file$'\t'* ]] && continue
+                local file_base_title file_lang_titles
+                IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
+                index_display_title="$file_base_title"
+                if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                    index_display_title="${BASH_REMATCH[1]}"
+                fi
+                index_relative_path="${check_path#$base_dir/}"
+                if [[ -n "$basedir_prefix" ]]; then
+                    index_relative_path="$basedir_prefix/$index_relative_path"
+                fi
+            fi
 
-                # index.md かチェック (ケース揺らぎ許容)
-                if [[ "$remaining_path" =~ ^[Ii][Nn][Dd][Ee][Xx]\.[Mm][Dd]$ ]]; then
+            # index.md が見つからなかった場合、README.md を探す
+            if [[ -z "$index_file_found" ]]; then
+                check_path="${direct_readme_path[$abs_path]:-}"
+                if [[ -n "$check_path" ]]; then
                     index_file_found="$check_path"
-
-                    # ファイルの情報を取得
+                    local check_entry="${memory_cache[$check_path]}"
                     local file_base_title file_lang_titles
                     IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
-
-                    # 表示タイトルを決定
                     index_display_title="$file_base_title"
                     if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
                         index_display_title="${BASH_REMATCH[1]}"
                     fi
 
-                    # 基準ディレクトリからの相対パスを計算
-                    index_relative_path="${check_path#$base_dir/}"
-
-                    # basedir_prefix を追加
+                    local readme_dir
+                    readme_dir=$(dirname "$check_path")
+                    local readme_dir_relative="${readme_dir#$base_dir}"
+                    readme_dir_relative="${readme_dir_relative#/}"
+                    if [[ -z "$readme_dir_relative" ]]; then
+                        index_relative_path="index.md"
+                    else
+                        index_relative_path="$readme_dir_relative/index.md"
+                    fi
                     if [[ -n "$basedir_prefix" ]]; then
                         index_relative_path="$basedir_prefix/$index_relative_path"
                     fi
-
-                    break  # index.md が見つかったので終了
                 fi
-            done
-
-            # index.md が見つからなかった場合、README.md を探す
-            if [[ -z "$index_file_found" ]]; then
-                for check_path in "${sorted_keys[@]}"; do
-                    [[ "$check_path" != "$dir_prefix"* ]] && continue
-                    local remaining_path="${check_path#$dir_prefix}"
-                    [[ "$remaining_path" == */* ]] && continue
-
-                    local check_entry="${memory_cache[$check_path]}"
-                    [[ -z "$check_entry" ]] && continue
-                    [[ "$check_entry" != *$'\t'file$'\t'* ]] && continue
-
-                    # README.md かチェック (ケース揺らぎ許容)
-                    if [[ "$remaining_path" =~ ^[Rr][Ee][Aa][Dd][Mm][Ee]\.[Mm][Dd]$ ]]; then
-                        index_file_found="$check_path"
-
-                        # ファイルの情報を取得
-                        local file_base_title file_lang_titles
-                        IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
-
-                        # 表示タイトルを決定
-                        index_display_title="$file_base_title"
-                        if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
-                            index_display_title="${BASH_REMATCH[1]}"
-                        fi
-
-                        # 基準ディレクトリからの相対パスを計算 (README.md を index.md に読み替え)
-                        # README.md の親ディレクトリを取得
-                        local readme_dir="$(dirname "$check_path")"
-                        local readme_dir_relative="${readme_dir#$base_dir}"
-                        readme_dir_relative="${readme_dir_relative#/}"  # 先頭スラッシュ除去
-
-                        if [[ -z "$readme_dir_relative" ]]; then
-                            # ルートディレクトリの README.md
-                            index_relative_path="index.md"
-                        else
-                            # サブディレクトリの README.md
-                            index_relative_path="$readme_dir_relative/index.md"
-                        fi
-
-                        # basedir_prefix を追加
-                        if [[ -n "$basedir_prefix" ]]; then
-                            index_relative_path="$basedir_prefix/$index_relative_path"
-                        fi
-
-                        break  # README.md が見つかったので終了
-                    fi
-                done
             fi
 
             # インデックスファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
@@ -692,6 +713,7 @@ generate_toc() {
     done
 
     #echo "# 目次生成完了" >&2
+    progress_log "目次 Markdown の生成を終了しました"
 }
 
 # ========================================
@@ -704,11 +726,14 @@ scan_directory() {
     local start_dir="$1"
     local max_depth="$2"
     local lang_code="$3"
+    local virtual_base_dir="${4:-$start_dir}"
 
     #echo "# ディレクトリ探索開始: $start_dir (depth=$max_depth)" >&2
 
     # PROGRESS
     #printf '%s' " scan" >&2
+
+    progress_log "ディレクトリ走査を開始しました dir=${start_dir} depth=${max_depth}"
 
     # find コマンドで探索
     local find_args=("$start_dir")
@@ -719,7 +744,17 @@ scan_directory() {
     while read -r path; do
         # 絶対パス取得
         local abs_path
-        abs_path="$path"
+        if [[ "$virtual_base_dir" == "$start_dir" ]]; then
+            abs_path="$path"
+        else
+            local relative_path="${path#$start_dir}"
+            relative_path="${relative_path#/}"
+            if [[ -z "$relative_path" ]]; then
+                abs_path="$virtual_base_dir"
+            else
+                abs_path="${virtual_base_dir}/${relative_path}"
+            fi
+        fi
 
         # ファイル名取得
         local filename
@@ -754,7 +789,7 @@ scan_directory() {
             if ! has_lang_title_in_memory_cache "$abs_path" "$lang_code"; then
                 #echo "# Markdownタイトル抽出実行: $abs_path" >&2
                 local lang_title
-                if lang_title=$(extract_markdown_title "$abs_path" "$lang_code"); then
+                if lang_title=$(extract_markdown_title "$path" "$lang_code"); then
                     local title
                     title="${lang_title#*:}"
                     update_memory_cache_title "$abs_path" "$lang_code" "$title"
@@ -768,6 +803,7 @@ scan_directory() {
     done < <(find -L "${find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
 
     #echo "# ディレクトリ探索完了: $start_dir" >&2
+    progress_log "ディレクトリ走査を終了しました dir=${start_dir}"
 }
 
 # ========================================
@@ -775,26 +811,29 @@ scan_directory() {
 # ========================================
 
 # キャッシュをメモリに読み込み
-load_cache
+progress_log "TOC 生成を開始しました current_file=${CURRENT_FILE} depth=${DEPTH} lang=${DOCUMENT_LANG}"
 
-# CURRENT_FILE のディレクトリを基準に探索
-if [[ -n "$CURRENT_FILE" && "$CURRENT_FILE" != "-" ]]; then
-    # CURRENT_FILE からディレクトリパスを取得
-    current_dir=$(dirname "$CURRENT_FILE")
-    # 絶対パスに変換
-    current_dir=$(readlink -f "$current_dir" 2>/dev/null || realpath "$current_dir" 2>/dev/null || echo "$current_dir")
-else
-    # CURRENT_FILE が指定されていない場合は現在のディレクトリを使用
-    current_dir=$(pwd)
+resolve_current_context
+progress_log "TOC 基準を解決しました base=${current_dir} scan=${current_scan_dir} subfolder=${current_is_subfolder}"
+
+_toc_output_cache_file=$(toc_output_cache_path || true)
+if [[ -n "$_toc_output_cache_file" && -f "$_toc_output_cache_file" ]]; then
+    progress_log "TOC 出力キャッシュを使用しました result=hit"
+    cat "$_toc_output_cache_file"
+    exit 0
 fi
-#echo "# 探索基準ディレクトリ: $current_dir" >&2
+progress_log "TOC 出力キャッシュを確認しました result=miss"
+
+progress_log "キャッシュ読み込みを開始しました"
+load_cache
+progress_log "キャッシュ読み込みを終了しました entries=${#memory_cache[@]}"
 
 # ディレクトリ探索実行
-scan_directory "$current_dir" "$DEPTH" "$DOCUMENT_LANG"
+scan_directory "$current_scan_dir" "$DEPTH" "$DOCUMENT_LANG" "$current_dir"
 
 # 追加ドキュメントサブフォルダーの探索 (mergeSubfolderDocs が指定されている場合)
 # 注意: この機能は current_dir が mdRoot の場合のみ有効
-if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 ]]; then
+if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_dir" == "${PUB_MARKDOWN_MAIN_MDROOT}" ]]; then
     #echo "# 追加ドキュメントサブフォルダー探索開始" >&2
 
     for entry in "${subfolder_entries[@]}"; do
@@ -806,6 +845,7 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 ]]; then
         # 仮想パスとしてキャッシュに追加(current_dir/subfolder/... として)
         if [[ -d "$subfolder_docs_src" ]]; then
             # find コマンドで探索
+            progress_log "追加 docs の走査を開始しました alias=${subfolder_alias} dir=${subfolder_docs_src}"
             _find_args=("$subfolder_docs_src")
             if [[ "$DEPTH" -ge 0 ]]; then
                 _find_args+=(-maxdepth $((DEPTH + 1)))
@@ -865,14 +905,18 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 ]]; then
                     fi
                 fi
             done < <(find -L "${_find_args[@]}" \( -type f -iname "*.md" \) -o \( -type f -iname "*.markdown" \) -o -type d)
+            progress_log "追加 docs の走査を終了しました alias=${subfolder_alias}"
         fi
     done
 
     #echo "# サブモジュール docs 探索完了" >&2
 fi
+progress_log "追加 docs の結合判定を終了しました enabled=$([[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_dir" == "${PUB_MARKDOWN_MAIN_MDROOT}" ]] && echo true || echo false)"
 
 # キャッシュを永続化ファイルに保存
+progress_log "キャッシュ保存を開始しました changed=${cache_modified}"
 save_cache
+progress_log "キャッシュ保存を終了しました"
 
 # unsorted_keys をソートして sorted_keys に設定
 # カスタムソート: 各階層でディレクトリ→ファイルの順にソート
@@ -916,6 +960,7 @@ mapfile -t sorted_keys < <(
         printf '%s\t%s\n' "$sort_key" "$path"
     done | sort -t$'\t' -k1 | cut -f2
 )
+progress_log "ソートを終了しました entries=${#sorted_keys[@]}"
 
 # メモリキャッシュ内容を表示
 #echo "# キャッシュ内容" >&2
@@ -928,7 +973,15 @@ mapfile -t sorted_keys < <(
 #echo '```' >&2
 
 # 実際の目次生成
-generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE" "$BASEDIR"
+if [[ -n "$_toc_output_cache_file" ]]; then
+    _toc_output_tmp=$(mktemp)
+    generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE" "$BASEDIR" > "$_toc_output_tmp"
+    cat "$_toc_output_tmp"
+    mv "$_toc_output_tmp" "$_toc_output_cache_file"
+else
+    generate_toc "$current_dir" "$DEPTH" "$DOCUMENT_LANG" "$EXCLUDE" "$BASEDIR"
+fi
+progress_log "TOC 生成を終了しました"
 
 # PROGRESS
 #printf '%s\n' " -> done" >&2
