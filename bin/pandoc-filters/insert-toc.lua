@@ -415,7 +415,10 @@ function Para(elem)
                     -- 詳細は docs/collapsible-list.md を参照してください。
                     return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
-                    debug_print("Failed to parse markdown")
+                    --debug_print("Failed to parse markdown")
+                    -- exclude 指定などにより TOC 対象が空になった場合のフォールバック。
+                    -- 元の Para (RawInline \toc を含む) を残さないために空 Para を返す。
+                    return pandoc.Para({})
                 end
             else
                 --debug_print("Returning empty Para from Para")
@@ -463,20 +466,10 @@ function RawBlock(elem)
                     -- 詳細は docs/collapsible-list.md を参照してください。
                     return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
                 else
-                    --debug_print("Failed to parse markdown, falling back to manual construction")
-                    -- フォールバック: 手動でリスト項目を構築
-                    local list_items = {}
-                    for _, line in ipairs(index_lines) do
-                        local content_text = line:gsub("^%s*[-*]%s*", ""):gsub("^%s*%d+%.%s*", "")
-                        -- リンクパターンを解析
-                        local link_text, link_url = content_text:match("%[(.-)%]%((.-)%)")
-                        if link_text and link_url then
-                            table.insert(list_items, {pandoc.Plain({pandoc.Link(link_text, link_url)})})
-                        else
-                            table.insert(list_items, {pandoc.Plain({pandoc.Str(content_text)})})
-                        end
-                    end
-                    return pandoc.BulletList(list_items)
+                    --debug_print("Failed to parse markdown")
+                    -- exclude 指定などにより TOC 対象が空になった場合のフォールバック。
+                    -- 元の RawBlock \toc を残さないために空 Para を返す。
+                    return pandoc.Para({})
                 end
             else
                 --debug_print("Returning empty Para from RawBlock")
