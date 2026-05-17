@@ -207,20 +207,20 @@ local defaults = {
 
 実行結果。
 
-index.md または index.markdown が存在する場合は、階層名に index.md または index.markdown へのリンクが生成される。そうでない場合は、階層名はリンクなし項目となる。
+ディレクトリ索引として扱える Markdown が存在する場合は、階層名に `index.md` へのリンクが生成される。そうでない場合は、階層名はリンクなし項目となる。
 
 **ファイル優先順位**：
 
-- `index.md` > `index.markdown`
+- `index.md` > `README.md` > `SKILL.md`
 - 大文字小文字は正規化 (`INDEX.md` → `index.md`として処理)
 
 **階層名の表示ロジック**：
 
-1. index.md が存在する場合：
+1. ディレクトリ索引が存在する場合：
    - フォルダ名をリンクテキストとして表示
-   - index.md 内の最初の `# タイトル` を説明文として表示
+   - 採用された Markdown 内の最初の `# タイトル` を説明文として表示
    - タイトルがない場合 → 説明文は表示されない
-2. index.md が存在しない場合：
+2. ディレクトリ索引が存在しない場合：
    - フォルダ名のみ (リンクなし、説明文なし)
 
 ```markdown
@@ -325,7 +325,7 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ディレクトリのタイトルは以下の優先順位で解決されます。
 
-1. `index.md` > `index.markdown` の順で検索
+1. `index.md` > `README.md` > `SKILL.md` の順で検索
 2. 大文字小文字を正規化（`INDEX.md` → `index.md`）
 3. 見つかった場合、そのファイルの言語別タイトルを使用
 4. 見つからない場合、ディレクトリ名を使用

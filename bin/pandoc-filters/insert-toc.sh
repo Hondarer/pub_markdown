@@ -561,6 +561,7 @@ generate_toc() {
     local indent=""
     declare -A direct_index_path=()
     declare -A direct_readme_path=()
+    declare -A direct_skill_path=()
 
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
@@ -575,6 +576,8 @@ generate_toc() {
             direct_index_path["$parent_dir"]="$abs_path"
         elif [[ "$filename_lower" == "readme.md" ]]; then
             direct_readme_path["$parent_dir"]="$abs_path"
+        elif [[ "$filename_lower" == "skill.md" ]]; then
+            direct_skill_path["$parent_dir"]="$abs_path"
         fi
     done
 
@@ -614,16 +617,17 @@ generate_toc() {
                 continue
             fi
 
-            # README.md は、同じディレクトリに index.md が存在しない場合のみディレクトリインデックスとして扱われる
-            if [[ "$file_basename_lower" == "readme.md" ]]; then
-                # 同じディレクトリに index.md が存在するかチェック
+            # README.md / SKILL.md は、上位候補がない場合のみディレクトリインデックスとして扱われる
+            if [[ "$file_basename_lower" == "readme.md" || "$file_basename_lower" == "skill.md" ]]; then
                 local file_dir_path
                 file_dir_path=$(dirname "$abs_path")
                 local has_index_md=false
+                local has_readme_md=false
                 [[ -n "${direct_index_path[$file_dir_path]:-}" ]] && has_index_md=true
+                [[ -n "${direct_readme_path[$file_dir_path]:-}" ]] && has_readme_md=true
 
-                # index.md が存在しない場合は、README.md をディレクトリインデックスとして扱う
-                if [[ "$has_index_md" == "false" ]]; then
+                if [[ "$file_basename_lower" == "readme.md" && "$has_index_md" == "false" ]] ||
+                   [[ "$file_basename_lower" == "skill.md" && "$has_index_md" == "false" && "$has_readme_md" == "false" ]]; then
                     continue
                 fi
             fi
@@ -654,7 +658,7 @@ generate_toc() {
             #printf '%s' "." >&2
 
             # ディレクトリインデックスを探す
-            # 優先順位: 1. index.md, 2. README.md (index.md に読み替え)
+            # 優先順位: 1. index.md, 2. README.md, 3. SKILL.md (後者 2 つは index.md に読み替え)
             local index_file_found=""
             local index_display_title=""
             local index_relative_path=""
@@ -696,6 +700,34 @@ generate_toc() {
                         index_relative_path="index.md"
                     else
                         index_relative_path="$readme_dir_relative/index.md"
+                    fi
+                    if [[ -n "$basedir_prefix" ]]; then
+                        index_relative_path="$basedir_prefix/$index_relative_path"
+                    fi
+                fi
+            fi
+
+            # README.md も見つからなかった場合、SKILL.md を探す
+            if [[ -z "$index_file_found" ]]; then
+                check_path="${direct_skill_path[$abs_path]:-}"
+                if [[ -n "$check_path" ]]; then
+                    index_file_found="$check_path"
+                    local check_entry="${memory_cache[$check_path]}"
+                    local file_base_title file_lang_titles
+                    IFS=$'\t' read -r _ _ file_base_title file_lang_titles <<< "$check_entry"
+                    index_display_title="$file_base_title"
+                    if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
+                        index_display_title="${BASH_REMATCH[1]}"
+                    fi
+
+                    local skill_dir
+                    skill_dir=$(dirname "$check_path")
+                    local skill_dir_relative="${skill_dir#$base_dir}"
+                    skill_dir_relative="${skill_dir_relative#/}"
+                    if [[ -z "$skill_dir_relative" ]]; then
+                        index_relative_path="index.md"
+                    else
+                        index_relative_path="$skill_dir_relative/index.md"
                     fi
                     if [[ -n "$basedir_prefix" ]]; then
                         index_relative_path="$basedir_prefix/$index_relative_path"

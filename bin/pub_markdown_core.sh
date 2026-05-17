@@ -1317,29 +1317,32 @@ for file in "${files[@]}"; do
         fi
         publish_file_docx=docx/${virtual_file#${workspaceFolder}/${mdRoot}/}
 
-        # README.md を index.html に変換するロジック
-        # index.md が存在しない場合のみ、README.md を index.html として出力
+        # README.md / SKILL.md を index.* に変換するロジック
+        # 優先順位は index.md > README.md > SKILL.md
         file_basename=$(basename "$file")
         file_basename_lower=$(echo "$file_basename" | tr '[:upper:]' '[:lower:]')
         file_dirname=$(dirname "$file")
 
-        if [[ "$file_basename_lower" == "readme.md" ]]; then
-            # 同じディレクトリに index.md が存在するかチェック (大文字小文字を無視)
+        if [[ "$file_basename_lower" == "readme.md" || "$file_basename_lower" == "skill.md" ]]; then
+            # 同じディレクトリに上位候補が存在するかチェック (大文字小文字を無視)
             index_md_exists=false
+            readme_md_exists=false
             if [ -d "$file_dirname" ]; then
                 for potential_index in "$file_dirname"/*; do
                     if [[ -f "$potential_index" ]]; then
                         potential_basename=$(basename "$potential_index" | tr '[:upper:]' '[:lower:]')
                         if [[ "$potential_basename" == "index.md" ]]; then
                             index_md_exists=true
-                            break
+                        elif [[ "$potential_basename" == "readme.md" ]]; then
+                            readme_md_exists=true
                         fi
                     fi
                 done
             fi
 
-            # index.md が存在しない場合のみ、README.md を index.html として出力
-            if [[ "$index_md_exists" == "false" ]]; then
+            # README.md は index.md がない場合、SKILL.md は index.md / README.md がない場合のみ索引にする
+            if [[ "$file_basename_lower" == "readme.md" && "$index_md_exists" == "false" ]] ||
+               [[ "$file_basename_lower" == "skill.md" && "$index_md_exists" == "false" && "$readme_md_exists" == "false" ]]; then
                 publish_file="${publish_file%/*}/index.md"
                 publish_file_self_contain="${publish_file_self_contain%/*}/index.md"
                 publish_file_docx="${publish_file_docx%/*}/index.md"
