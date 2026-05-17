@@ -110,6 +110,26 @@ local function real_to_virtual_path(real_path)
   return nil
 end
 
+local function virtual_to_real_path(virtual_path)
+  virtual_path = normalize_path(virtual_path)
+  if main_mdroot == "" or not starts_with_path(virtual_path, main_mdroot) then
+    return virtual_path
+  end
+
+  local relative = virtual_path:sub(#main_mdroot + 1):gsub("^/", "")
+  for _, entry in ipairs(subfolder_entries) do
+    if relative == entry.alias then
+      return entry.root
+    end
+    if starts_with_path(relative, entry.alias) then
+      local subfolder_relative = relative:sub(#entry.alias + 1):gsub("^/", "")
+      return entry.root .. "/" .. subfolder_relative
+    end
+  end
+
+  return virtual_path
+end
+
 local function same_dir_has(path, filename)
   local dir = dirname(path)
   local ok, entries = pcall(pandoc.system.list_directory, dir)
@@ -148,14 +168,22 @@ local function rewrite_document_path(target)
     return target
   end
 
-  local real_target = normalize_path(dirname(source_file) .. "/" .. path)
-  if not file_exists(real_target) then
+  local source_virtual = real_to_virtual_path(source_file)
+  if source_virtual == nil then
     return target
   end
 
-  local source_virtual = real_to_virtual_path(source_file)
+  local real_target = normalize_path(dirname(source_file) .. "/" .. path)
+  if not file_exists(real_target) then
+    local virtual_target = normalize_path(dirname(source_virtual) .. "/" .. path)
+    real_target = virtual_to_real_path(virtual_target)
+    if not file_exists(real_target) then
+      return target
+    end
+  end
+
   local target_virtual = real_to_virtual_path(real_target)
-  if source_virtual == nil or target_virtual == nil then
+  if target_virtual == nil then
     return target
   end
 
