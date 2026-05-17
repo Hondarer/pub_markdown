@@ -12,6 +12,10 @@ local function dirname(path)
   return path:match("^(.*)/[^/]*$") or "."
 end
 
+local function basename(path)
+  return path:match("([^/]+)$") or path
+end
+
 local function split_suffix(target)
   local path, suffix = target:match("^([^#?]*)(.*)$")
   return path or target, suffix or ""
@@ -38,6 +42,74 @@ local function normalize_path(path)
   return normalized
 end
 
+local function split_path(path)
+  local parts = {}
+  for part in normalize_path(path):gmatch("[^/]+") do
+    table.insert(parts, part)
+  end
+  return parts
+end
+
+local function make_relative(path, base_dir)
+  local target_parts = split_path(path)
+  local base_parts = split_path(base_dir)
+  local common = 0
+  while target_parts[common + 1] ~= nil and target_parts[common + 1] == base_parts[common + 1] do
+    common = common + 1
+  end
+
+  local relative_parts = {}
+  for _ = common + 1, #base_parts do
+    table.insert(relative_parts, "..")
+  end
+  for i = common + 1, #target_parts do
+    table.insert(relative_parts, target_parts[i])
+  end
+  if #relative_parts == 0 then
+    return "."
+  end
+  return table.concat(relative_parts, "/")
+end
+
+local function starts_with_path(path, prefix)
+  return path == prefix or path:sub(1, #prefix + 1) == prefix .. "/"
+end
+
+local function parse_subfolder_entries()
+  local entries = {}
+  local raw = os.getenv("SUBFOLDER_DOCS_PATHS") or ""
+  for line in raw:gmatch("[^\r\n]+") do
+    local alias, _, root = line:match("^([^|]+)|([^|]+)|(.+)$")
+    if alias ~= nil and root ~= nil then
+      table.insert(entries, { alias = alias, root = normalize_path(root) })
+    end
+  end
+  return entries
+end
+
+local main_mdroot = normalize_path(os.getenv("PUB_MARKDOWN_MAIN_MDROOT") or "")
+local subfolder_entries = parse_subfolder_entries()
+
+local function real_to_virtual_path(real_path)
+  real_path = normalize_path(real_path)
+  if main_mdroot == "" then
+    return nil
+  end
+  for _, entry in ipairs(subfolder_entries) do
+    if starts_with_path(real_path, entry.root) then
+      local relative = real_path:sub(#entry.root + 1):gsub("^/", "")
+      if relative == "" then
+        return main_mdroot .. "/" .. entry.alias
+      end
+      return main_mdroot .. "/" .. entry.alias .. "/" .. relative
+    end
+  end
+  if starts_with_path(real_path, main_mdroot) then
+    return real_path
+  end
+  return nil
+end
+
 local function same_dir_has(path, filename)
   local dir = dirname(path)
   local ok, entries = pcall(pandoc.system.list_directory, dir)
@@ -52,13 +124,22 @@ local function same_dir_has(path, filename)
   return false
 end
 
-local function rewrite_skill_index(target)
-  local path, suffix = split_suffix(target)
+local function is_relative_local_path(path)
+  return path ~= ""
+    and path:sub(1, 1) ~= "/"
+    and path:match("^[%a][%w+.-]*:") == nil
+end
+
+local function is_published_document(path)
   local lower_path = path:lower()
-  if lower_path ~= "skill.md" and lower_path:match("/skill%.md$") == nil then
-    return target
-  end
-  if path:match("^/") or path:match("^[%a][%w+.-]*:") then
+  return lower_path:match("%.md$") ~= nil
+    or lower_path:match("%.yaml$") ~= nil
+    or lower_path:match("%.json$") ~= nil
+end
+
+local function rewrite_document_path(target)
+  local path, suffix = split_suffix(target)
+  if not is_relative_local_path(path) or not is_published_document(path) then
     return target
   end
 
@@ -67,22 +148,34 @@ local function rewrite_skill_index(target)
     return target
   end
 
-  local resolved_path = normalize_path(dirname(source_file) .. "/" .. path)
-  if not file_exists(resolved_path) then
-    return target
-  end
-  if same_dir_has(resolved_path, "index.md") or same_dir_has(resolved_path, "readme.md") then
+  local real_target = normalize_path(dirname(source_file) .. "/" .. path)
+  if not file_exists(real_target) then
     return target
   end
 
-  return path:gsub("([^/]+)$", "index.md") .. suffix
+  local source_virtual = real_to_virtual_path(source_file)
+  local target_virtual = real_to_virtual_path(real_target)
+  if source_virtual == nil or target_virtual == nil then
+    return target
+  end
+
+  local target_name = basename(real_target):lower()
+  if target_name == "readme.md" then
+    target_virtual = dirname(target_virtual) .. "/index.md"
+  elseif target_name == "skill.md"
+    and not same_dir_has(real_target, "index.md")
+    and not same_dir_has(real_target, "readme.md") then
+    target_virtual = dirname(target_virtual) .. "/index.md"
+  end
+
+  return make_relative(target_virtual, dirname(source_virtual)) .. suffix
 end
 
 function Link(el)
-  -- README.md を index.md に置換 (ケース非依存、パス内またはファイル名単体)
-  el.target = string.gsub(el.target, "/[Rr][Ee][Aa][Dd][Mm][Ee]%.md", "/index.md")
-  el.target = string.gsub(el.target, "^[Rr][Ee][Aa][Dd][Mm][Ee]%.md", "index.md")
-  el.target = rewrite_skill_index(el.target)
+  if el.target:match("^[%a][%w+.-]*:") ~= nil then
+    return el
+  end
+  el.target = rewrite_document_path(el.target)
   el.target = string.gsub(el.target, "%.md", ".docx")
   el.target = string.gsub(el.target, "%.Rmd", ".docx")
   el.target = string.gsub(el.target, "%.Tmd", ".docx")

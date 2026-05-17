@@ -113,9 +113,21 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 |--------|----------|-----------|
 | `framework/testfw/gtest/docs/MANUAL_BUILD.md` | `docs/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
 
+## 相対リンクの読み替え
+
+追加ドキュメント サブフォルダー配下の文書に含まれる相対リンクは、実パスで解決したあと、発行時の仮想パス間の相対リンクへ読み替えます。
+この処理は、メイン `mdRoot` と追加ドキュメント サブフォルダーの間、追加ドキュメント サブフォルダー同士の間でも適用されます。
+
+例:
+
+| 元文書の実パス | 元リンク | 仮想配置でのリンク |
+|---|---|---|
+| `.agents/skills/README.md` | `../../docs/c-modernization-kit/sync-skills.md` | `../c-modernization-kit/sync-skills.md` |
+
+外部 URL、アンカーのみのリンク、公開対象外ファイルへのリンクは読み替えません。
+
 ## 制約事項
 
 1. **エントリ形式**: `mergeSubfolderDocs` は `alias=path` 形式のみ受け付けます。旧形式や alias 省略記法はエラーです。
 2. **親ディレクトリ指定の禁止**: 指定した `path` の直下に `mdRoot` ディレクトリが存在する場合は、旧形式とみなしてエラーにします。`framework/makefw` ではなく `framework/makefw/docs` を指定してください。
 3. **サブディレクトリ名の衝突**: メイン `mdRoot` 配下に同名のディレクトリが存在する場合は、メイン側を優先します。
-4. **相対パスリンク**: マージ対象ドキュメント間の相対パスリンクは、正しく解決されない可能性があります。
