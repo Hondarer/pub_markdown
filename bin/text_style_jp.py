@@ -116,6 +116,10 @@ def run_tests() -> bool:
         ("- item\n  detail\n- next", "- item\n  detail\n- next"),
         ("paragraph\n# heading", "paragraph\n# heading"),
         ("   cont1\n   cont2", "   cont1  \n   cont2"),
+        ("変更に", "変更に"),
+        ("更に詳しく", "さらに詳しく"),
+        ("また更に", "またさらに"),
+        ("変更に加えて更に", "変更に加えてさらに"),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [

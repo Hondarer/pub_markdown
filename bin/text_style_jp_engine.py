@@ -372,11 +372,16 @@ def style_prose(text: str) -> str:
 apply_ms_style = style_prose
 
 
+def _has_kanji_prev_char(text: str, i: int) -> bool:
+    return i > 0 and get_char_type(text[i - 1]) == CharType.KANJI
+
+
 def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
     if from_word == to_word:
         return text
 
     require_boundary = _is_full_katakana_text(from_word) and _is_full_katakana_text(to_word)
+    from_starts_with_kanji = bool(from_word) and get_char_type(from_word[0]) == CharType.KANJI
     result = []
     i = 0
     flen = len(from_word)
@@ -386,7 +391,7 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
         if flen >= tlen:
             if text[i:i + flen] == from_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
-            ):
+            ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
                 result.append(to_word)
                 i += flen
                 continue
@@ -405,7 +410,7 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
                 continue
             if text[i:i + flen] == from_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
-            ):
+            ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
                 result.append(to_word)
                 i += flen
                 continue
