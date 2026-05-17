@@ -10,6 +10,7 @@
 const puppeteer = require('puppeteer');
 const minimist  = require('minimist');
 const fs        = require('fs');
+const crypto    = require('crypto');
 
 /* ── 1. オプション解析 ─────────────────────────────────────────────── */
 const argv  = minimist(process.argv.slice(2), {
@@ -21,6 +22,7 @@ const dpiX = +argv['dpi-x'] || 96;
 const dpiY = +argv['dpi-y'] || 96;
 /* 指定 DPI を 3 倍して描画 */
 const scale = Math.max(dpiX, dpiY) * 3 / 96;
+const RETRY_DELAY_MS = 3000;
 
 /* ── 2. STDIN 取得 ────────────────────────────────────────────────── */
 const readStdin = () => new Promise(res => {
@@ -28,6 +30,32 @@ const readStdin = () => new Promise(res => {
   process.stdin.on('data', c=>d+=c);
   process.stdin.on('end', ()=>res(d));
 });
+
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function summarizeSvg(svgText) {
+  const sha1 = crypto.createHash('sha1').update(svgText).digest('hex');
+  const titleMatch = svgText.match(/<title[^>]*>(.*?)<\/title>/is);
+  const rootIdMatch = svgText.match(/<svg\b[^>]*\bid="([^"]+)"/i);
+  return {
+    sha1,
+    title: titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : '',
+    rootId: rootIdMatch ? rootIdMatch[1] : '',
+  };
+}
+
+function describeFailure({ sourceFile, svgSummary, width, height, scaleValue }) {
+  const parts = [
+    `[rsvg-convert] screenshot failed`,
+    `source=${sourceFile || '(unknown)'}`,
+    `svg_sha1=${svgSummary.sha1}`,
+    `size=${width}x${height}`,
+    `scale=${scaleValue}`,
+  ];
+  if (svgSummary.title) parts.push(`title=${JSON.stringify(svgSummary.title)}`);
+  if (svgSummary.rootId) parts.push(`svg_id=${JSON.stringify(svgSummary.rootId)}`);
+  return parts.join(' ');
+}
 
 /* ── 共有ブラウザ接続 or 新規起動 ────────────────────────────────── */
 async function getBrowser() {
@@ -50,6 +78,8 @@ async function getBrowser() {
 (async () => {
   const svgText = (await readStdin()).trim();
   if (!svgText) { console.error('STDIN が空です'); process.exit(2); }
+  const sourceFile = process.env.SOURCE_FILE || '';
+  const svgSummary = summarizeSvg(svgText);
 
   /* ── 3. Puppeteer 起動 or 共有ブラウザ接続 ─────────────────────── */
   const { browser, shared } = await getBrowser();
@@ -101,7 +131,27 @@ async function getBrowser() {
     await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
 
     /* ── 6. PNG 出力 → STDOUT ──────────────────────────────────────── */
-    const buf = await page.screenshot({type:'png', omitBackground:true});
+    let buf;
+    try {
+      buf = await page.screenshot({type:'png', omitBackground:true});
+    } catch (firstError) {
+      // 一過性の CDP 失敗を想定し、ユーザーへ通知せず 1 回だけ再試行する。
+      await sleep(RETRY_DELAY_MS);
+      await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
+      try {
+        buf = await page.screenshot({type:'png', omitBackground:true});
+      } catch (retryError) {
+        console.error(describeFailure({
+          sourceFile,
+          svgSummary,
+          width,
+          height,
+          scaleValue: scale,
+        }));
+        retryError.cause = firstError;
+        throw retryError;
+      }
+    }
     process.stdout.write(buf);
   } finally {
     /* 共有ブラウザの場合はページを閉じて切断。専用ブラウザの場合はブラウザごと閉じる */
