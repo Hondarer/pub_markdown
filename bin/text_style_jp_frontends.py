@@ -13,6 +13,7 @@ _DOXYGEN_MATH_PATTERN = re.compile(r"@f\$.*?@f\$")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
+_TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _HEADING_RE = re.compile(r"^#{1,6} ")
 _BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
@@ -170,7 +171,10 @@ def style_markdown(text: str) -> str:
             code_block_flags.append(True)
             continue
 
-        result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
+        if _TABLE_SEPARATOR_RE.match(line):
+            result_lines.append(line)
+        else:
+            result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
         code_block_flags.append(False)
 
     result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)

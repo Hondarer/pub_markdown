@@ -114,6 +114,8 @@ def run_tests() -> bool:
         ("1. item1\n2. item2", "1. item1\n2. item2"),
         ("- item\n\n本文", "- item\n\n本文"),
         ("| A | B |\n| C | D |", "| A | B |\n| C | D |"),
+        ("| :--: | :-- | --: |", "| :--: | :-- | --: |"),
+        ("| 第3章 |", "| 第 3 章 |"),
         ("|---|---|\n| C | D |", "|---|---|\n| C | D |"),
         ("1. first\n   continuation\n2. second", "1. first\n   continuation\n2. second"),
         ("- item\n  detail\n- next", "- item\n  detail\n- next"),
