@@ -2,4 +2,4 @@
 
 Markdown to html and docx with Pandoc.
 
-\toc depth=-1
+\toc depth=-1 exclude-basedir=true
