@@ -22,6 +22,8 @@ _dict_loaded = False
 _sudachi_state: Optional[bool] = None
 _sudachi_tok = None
 _KATAKANA_RUN_RE = re.compile(r"[ァ-ヺー]+")
+_KATAKANA_RUN_WITH_SPACES_RE = re.compile(r"[ァ-ヺー]+(?: [ァ-ヺー]+)+")
+_no_space_set: set = set()
 
 
 class CharType(Enum):
@@ -167,6 +169,8 @@ def load_dictionaries() -> None:
                 pass
 
     _no_space_words[:] = no_space_set
+    _no_space_set.clear()
+    _no_space_set.update(no_space_set)
     _replace_pairs[:] = list(replace_map.items())
     _add_space_pairs[:] = _expand_add_space_pairs(list(add_space_map.items()), _replace_pairs)
 
@@ -475,11 +479,18 @@ def _restore_replacements(text: str, replacements: Sequence[Tuple[str, str]]) ->
     return restored
 
 
+_NON_WORD_BOUNDARY_KATAKANA = frozenset("ー・")
+
+
 def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]) -> str:
     """no_space_words のプレースホルダーを復元し、カタカナ境界にスペースを補う。
 
     SudachiPy が保護語の隣接部分を分割した後、復元時に境界スペースが失われる
     ケースを補正する。例: \x00NOSP\x00パフォーマンス → トラブルシューティング パフォーマンス
+
+    長音記号 (ー) と中黒 (・) は Unicode カタカナ範囲に含まれるが、単独で語境界を
+    構成しないため、境界判定では除外する (例: 「カテゴリ」+「ー」を「カテゴリ ー」に
+    分離しない、「ビルド」+「・」を「ビルド ・」に分離しない)。
     """
     restored = text
     for placeholder, original in replacements:
@@ -489,14 +500,18 @@ def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]
             space_before = (
                 idx > 0
                 and _is_full_katakana_char(restored[idx - 1])
+                and restored[idx - 1] not in _NON_WORD_BOUNDARY_KATAKANA
                 and original
                 and _is_full_katakana_char(original[0])
+                and original[0] not in _NON_WORD_BOUNDARY_KATAKANA
             )
             space_after = (
                 end < len(restored)
                 and original
                 and _is_full_katakana_char(original[-1])
+                and original[-1] not in _NON_WORD_BOUNDARY_KATAKANA
                 and _is_full_katakana_char(restored[end])
+                and restored[end] not in _NON_WORD_BOUNDARY_KATAKANA
             )
             restored = (
                 restored[:idx]
@@ -543,6 +558,26 @@ def _init_sudachi() -> bool:
         return False
 
 
+def _join_katakana_split_by_no_space(text: str) -> str:
+    """カタカナ列 + 半角スペース + カタカナ列 を、連結形が no_space に登録されていれば結合する。
+
+    ユーザーが誤って「ワークス ペース」「サブ ディレクトリ」のようにスペース入りで
+    書いた場合に、no_space 登録された単独カタカナ語へ復元する。
+    no_space リストに登録された語が tbx 単独語または社内独自語であれば
+    自動的に補正されるため、個別の replace 定義が不要になる。
+    """
+    if not _no_space_set:
+        return text
+
+    def _replace(match: re.Match) -> str:
+        merged = match.group(0).replace(" ", "")
+        if merged in _no_space_set:
+            return merged
+        return match.group(0)
+
+    return _KATAKANA_RUN_WITH_SPACES_RE.sub(_replace, text)
+
+
 def _split_katakana_with_sudachi(text: str) -> str:
     """SudachiPy モード B でカタカナ連続部分を分割する。"""
     if not _init_sudachi():
@@ -570,6 +605,15 @@ def style_text(
         protected, pattern_replacements = _protect_patterns(protected, protected_patterns)
 
     protected, url_replacements = _protect_urls(protected)
+
+    protected = _join_katakana_split_by_no_space(protected)
+
+    # Sudachi B 分割や no_space 保護で対象文字列が分断される前に、
+    # カタカナ replace を先行適用する。「カテゴリー → カテゴリ」のような逆方向 ー 削除や
+    # 「スライドショ → スライドショー」のような順方向 ー 付与は、分割後に走らせると
+    # from word の連続性が失われて適用されないため、前段で処理しておく。
+    for from_word, to_word in _replace_pairs:
+        protected = _replace_skip_existing(protected, from_word, to_word)
 
     sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
     nosp_replacements = []
