@@ -142,37 +142,61 @@ def load_dictionaries() -> None:
             seen_paths.add(abs_path)
             search_paths.append(abs_path)
 
-    no_space_set = []
-    add_space_map = {}
+    # word -> "no_space" or "add_space" の最終分類。ファイル名昇順で後ファイルが勝つ。
+    # 同一ファイル内では add_space が no_space に勝つ。
+    word_kind = {}
+    add_space_to = {}   # add_space として確定した語の変換先
+    no_space_order = []  # no_space として初めて登場した語の挿入順
     replace_map = {}
 
-    for dict_dir in search_paths:
+    file_entries = []  # (fname, dir_index, abs_path)
+    for di, dict_dir in enumerate(search_paths):
         if not os.path.isdir(dict_dir):
             continue
-        for fname in sorted(os.listdir(dict_dir)):
+        for fname in os.listdir(dict_dir):
             if not fname.endswith(".json"):
                 continue
-            fpath = os.path.join(dict_dir, fname)
-            try:
-                with open(fpath, encoding="utf-8") as handle:
-                    data = json.load(handle)
-                for word in data.get("no_space", []):
-                    if isinstance(word, str) and word not in no_space_set:
-                        no_space_set.append(word)
-                for pair in data.get("add_space", []):
-                    if isinstance(pair, dict) and "from" in pair and "to" in pair:
-                        add_space_map[pair["from"]] = pair["to"]
-                for pair in data.get("replace", []):
-                    if isinstance(pair, dict) and "from" in pair and "to" in pair:
-                        replace_map[pair["from"]] = pair["to"]
-            except Exception:
-                pass
+            file_entries.append((fname, di, os.path.join(dict_dir, fname)))
+    file_entries.sort(key=lambda e: (e[0], e[1]))
 
-    _no_space_words[:] = no_space_set
+    for _fname, _di, fpath in file_entries:
+        try:
+            with open(fpath, encoding="utf-8") as handle:
+                data = json.load(handle)
+        except Exception:
+            continue
+
+        file_ns = set()
+        file_as = {}
+        for word in data.get("no_space", []):
+            if isinstance(word, str):
+                file_ns.add(word)
+        for pair in data.get("add_space", []):
+            if isinstance(pair, dict) and "from" in pair and "to" in pair:
+                file_as[pair["from"]] = pair["to"]
+        for pair in data.get("replace", []):
+            if isinstance(pair, dict) and "from" in pair and "to" in pair:
+                replace_map[pair["from"]] = pair["to"]
+
+        for word in file_ns:
+            if word not in file_as:
+                word_kind[word] = "no_space"
+                add_space_to.pop(word, None)
+                if word not in no_space_order:
+                    no_space_order.append(word)
+        for word, to in file_as.items():
+            word_kind[word] = "add_space"
+            add_space_to[word] = to
+
+    final_no_space = [w for w in no_space_order if word_kind.get(w) == "no_space"]
+    final_add_space = [(w, t) for w, t in add_space_to.items() if word_kind.get(w) == "add_space"]
+
+    _no_space_words[:] = final_no_space
     _no_space_set.clear()
-    _no_space_set.update(no_space_set)
+    _no_space_set.update(final_no_space)
     _replace_pairs[:] = list(replace_map.items())
-    _add_space_pairs[:] = _expand_add_space_pairs(list(add_space_map.items()), _replace_pairs)
+    expanded = _expand_add_space_pairs(final_add_space, _replace_pairs)
+    _add_space_pairs[:] = [(f, t) for f, t in expanded if f not in _no_space_set]
 
 
 def get_char_type(char: str) -> CharType:
