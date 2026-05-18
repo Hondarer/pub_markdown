@@ -31,6 +31,7 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 `path` はワークスペースルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。
 `path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。
+`path` が存在しない、またはディレクトリではない場合は warning を出してその項目だけを対象外にし、残りの項目で処理を継続します。
 `alias` 省略記法はサポートしません。
 
 ## パス変換ルール
@@ -131,3 +132,4 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 1. **エントリ形式**: `mergeSubfolderDocs` は `alias=path` 形式のみ受け付けます。旧形式や alias 省略記法はエラーです。
 2. **親ディレクトリ指定の禁止**: 指定した `path` の直下に `mdRoot` ディレクトリが存在する場合は、旧形式とみなしてエラーにします。`framework/makefw` ではなく `framework/makefw/docs` を指定してください。
 3. **サブディレクトリ名の衝突**: メイン `mdRoot` 配下に同名のディレクトリが存在する場合は、メイン側を優先します。
+4. **欠損パスの扱い**: 存在しない `path` は warning を出して対象外にし、パス変換と目次生成には実在して検出された項目だけを使用します。

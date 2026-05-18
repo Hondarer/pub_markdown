@@ -16,27 +16,54 @@ progress_log() {
     printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
 }
 
-# Ctrl+C (SIGINT) や SIGTERM を捕まえて実行するクリーンアップ処理
-cleanup() {
-    #echo >&2 "スクリプトが中断されました。"
-    # バックグラウンドジョブを停止
+# 終了時に実行する共通クリーンアップ処理
+cleanup_resources() {
+    if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
+        return 0
+    fi
+    CLEANUP_DONE=1
+
+    # 共有ブラウザサーバーを停止
+    if [[ -n "${BROWSER_SERVER_PID:-}" ]]; then
+        kill "$BROWSER_SERVER_PID" 2>/dev/null
+        wait "$BROWSER_SERVER_PID" 2>/dev/null
+    fi
+    if [[ -n "${PUB_MARKDOWN_BROWSER_WS_FILE:-}" ]]; then
+        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+    fi
+
+    # そのほかのバックグラウンドジョブを停止
     local _bg_jobs
     _bg_jobs=$(jobs -rp 2>/dev/null)
     [[ -n "$_bg_jobs" ]] && kill $_bg_jobs 2>/dev/null
     wait 2>/dev/null
-    # 共有ブラウザサーバーを停止
-    if [[ -n "$BROWSER_SERVER_PID" ]]; then
-        kill "$BROWSER_SERVER_PID" 2>/dev/null
-        wait "$BROWSER_SERVER_PID" 2>/dev/null
-        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
+
+    if [[ -n "${OUTPUT_LOCK:-}" ]]; then
+        rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
     fi
-    rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
-    rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
+    if [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]]; then
+        rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
+    fi
+}
+
+# Ctrl+C (SIGINT) や SIGTERM を捕まえて実行する処理
+cleanup_on_signal() {
+    #echo >&2 "スクリプトが中断されました。"
+    cleanup_resources
     printf "\e[0m" # 文字色を通常に設定
     exit 1
 }
-# SIGINT (Ctrl+C) と SIGTERM (kill コマンドなど) を捕捉
-trap 'cleanup' INT TERM
+
+# 途中終了を含むすべての終了経路でリソースを解放する
+cleanup_on_exit() {
+    local exit_status=$?
+    cleanup_resources
+    exit "$exit_status"
+}
+
+# SIGINT (Ctrl+C)、SIGTERM (kill コマンドなど)、通常終了を捕捉
+trap 'cleanup_on_signal' INT TERM
+trap 'cleanup_on_exit' EXIT
 
 #-------------------------------------------------------------------
 # マルチプラットフォーム対応
@@ -603,8 +630,8 @@ detect_subfolder_docs() {
         parse_subfolder_path_entry "$entry"
         local subfolder_mdroot_path="${workspaceFolder}/${subfolder_path}"
         if [[ ! -d "$subfolder_mdroot_path" ]]; then
-            echo "Error: mergeSubfolderDocs path does not exist or is not a directory: ${subfolder_path}"
-            return 1
+            echo "Warning: mergeSubfolderDocs path does not exist or is not a directory; skipping: ${subfolder_path}"
+            continue
         fi
         if [[ "${subfolder_path##*/}" != "$mdRoot" && -d "${subfolder_mdroot_path}/${mdRoot}" ]]; then
             echo "Error: mergeSubfolderDocs path must point to the document root itself, not its parent directory: ${subfolder_path}"
@@ -1552,27 +1579,10 @@ for _i in "${!_file_pids[@]}"; do
 done
 
 if [[ $_overall_exit -ne 0 ]]; then
-    # 共有ブラウザサーバーを停止してから終了
-    if [[ -n "$BROWSER_SERVER_PID" ]]; then
-        kill "$BROWSER_SERVER_PID" 2>/dev/null
-        wait "$BROWSER_SERVER_PID" 2>/dev/null
-        rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
-    fi
     exit 1
 fi
 
 #-------------------------------------------------------------------
-
-#-------------------------------------------------------------------
-# 共有ブラウザサーバーの停止
-#-------------------------------------------------------------------
-
-if [[ -n "$BROWSER_SERVER_PID" ]]; then
-    kill "$BROWSER_SERVER_PID" 2>/dev/null
-    wait "$BROWSER_SERVER_PID" 2>/dev/null
-    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
-fi
-rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
 
 echo "*** pub_markdown_core end   $(date -Is)"
 
