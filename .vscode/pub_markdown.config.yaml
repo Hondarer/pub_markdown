@@ -1,38 +1,62 @@
 # markdown が格納されているフォルダ名 (ワークスペースフォルダからの相対パス)
 #mdRoot: docs
+
 # 発行先のフォルダ名 (ワークスペースフォルダからの相対パス)
 #pubRoot: pages
+
 # 言語の指定 (スペース区切りで複数言語の指定可)
 #lang: ja en
+
+# details 版の出力有無 (false / true / both)
+# CLI: --details=false|true|both
+# デフォルト: false
+#details: false
+
 # html スタイルシートの指定
 #htmlTemplate: styles/html/html-style.css
+
 # html テンプレートの指定
 #htmlTemplate: styles/html/html-template.html
+
 # html (self-contain) テンプレートの指定
 #htmlSelfContainTemplate: styles/html/html-template.html
+
 # html (self-contain) の出力有無 (true / false)
+# CLI: --htmlSelfContainOutput=true|false
 # デフォルト: false
 #htmlSelfContainOutput: false
+
 # html における toc 出力要否 (false / true)
 #htmlTocEnable: true
+
 # html における toc の深さ
 #htmlTocDepth: 3
+
 # ナビゲーションリンクの表示有無 (true / false)
 # デフォルト: true
 #htmlNavigationLinkEnable: true
+
 # 数式 (LaTeX 書式) サポートの有無 (true / false)
 # true にすると \[...\] \(...\) 書式の数式が HTML (MathJax) および docx (OMML) で有効になる
 # デフォルト: true
 #mathLatexEnable: true
+
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
+
 # docx の出力有無 (true / false)
+# CLI: --docxOutput=true|false
 # デフォルト: false
 #docxOutput: false
+
 # date 自動設定の有無 (false / true)
+# デフォルト: true
 #autoSetDate: true
+
 # author 自動設定の有無 (false / true)
+# デフォルト: true
 #autoSetAuthor: true
+
 # 追加ドキュメント サブフォルダー機能
 # alias=path 形式で追加ドキュメント サブフォルダーをスペース区切りで指定
 # 空または未指定の場合は機能無効、値には $VAR または ${VAR} 形式の環境変数を使用可能

@@ -277,12 +277,12 @@ while [[ $# -gt 0 ]]; do
             #echo lang=${lang}
             shift
         ;;
-        --docx=*)
+        --docxOutput=*)
             docxOutput="${1#*=}"
             #echo docxOutput=${docxOutput}
             shift
         ;;
-        --htmlSelfContain=*)
+        --htmlSelfContainOutput=*)
             htmlSelfContainOutput="${1#*=}"
             #echo htmlSelfContainOutput=${htmlSelfContainOutput}
             shift
