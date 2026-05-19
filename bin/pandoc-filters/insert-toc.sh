@@ -284,7 +284,9 @@ extract_markdown_title() {
     local title=""
     local line_count=0
 
-    while IFS= read -r line && ((line_count < 100)); do
+    # || [[ -n "$line" ]] で末尾改行なし最終行も読み取る
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if ((line_count >= 100)); then break; fi
         # 言語コードブロックの開始コメント: <!--ja: または <!--ja:--> 形式
         if [[ "$line" =~ ^[[:space:]]*\<!--${lang_code}:([[:space:]]*--\>)?[[:space:]]*$ ]]; then
             in_target_lang_block=true
@@ -323,7 +325,9 @@ extract_markdown_title() {
 
     # 対象言語のタイトルが見つからない場合、従来の処理 (最初の # 見出し) を実行
     line_count=0
-    while IFS= read -r line && ((line_count < 50)); do
+    # || [[ -n "$line" ]] で末尾改行なし最終行も読み取る
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        if ((line_count >= 50)); then break; fi
         if [[ "$line" =~ ^#[[:space:]](.*)$ ]]; then
             title="${BASH_REMATCH[1]}"
             # bash parameter expansion でトリム処理
@@ -797,7 +801,7 @@ scan_directory() {
         if [[ -d "$path" ]]; then
             # ディレクトリの場合
             #echo "# ディレクトリとして処理: $abs_path" >&2
-            
+
             # PROGRESS
             #printf '%s' "." >&2
 
