@@ -100,6 +100,9 @@ local function file_exists(name)
     end
 end
 
+-- NOTE: Microsoft Word では、最初のフォント以外は評価されない
+local mermaid_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+
 return {
     {
         CodeBlock = function(el) 
@@ -230,9 +233,10 @@ return {
                         :gsub('(<svg)', '%1 width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"', 1)
                 end
 
-                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、html-style.css の body font-family に準じたフォントスタックに置換する。
-                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応、および iPhone 等 iOS 環境でゴシック体が適用されるようにする対応)
-                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:"Segoe UI", "メイリオ", "UDEV Gothic HSRFJPDOC", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN", "Noto Sans JP", "Helvetica Neue", Helvetica, Arial, sans-serif;')
+                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、
+                -- Word で日本語フォントとして解釈されやすいフォントスタックに置換する。
+                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
 
                 -- 上書き保存
                 local f = io.open(_image_file_path, "w")

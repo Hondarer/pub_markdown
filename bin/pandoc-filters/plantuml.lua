@@ -60,7 +60,7 @@ local function append3(c1, c2, c3)
     local b4 = c3 & 0x3f
 
     return table.concat({
-        encode6(b1 & 0x3f), encode6(b2 & 0x3f), encode6(b3 & 0x3f), encode6(b4), 
+        encode6(b1 & 0x3f), encode6(b2 & 0x3f), encode6(b3 & 0x3f), encode6(b4),
     })
 end
 
@@ -75,7 +75,7 @@ local function encode(text)
             table.insert(buf, append3(string.byte(ctext, i), 0, 0))
         elseif i + 2 > len then
             table.insert(buf, append3(string.byte(ctext, i), string.byte(ctext, i+1), 0))
-        else 
+        else
             table.insert(buf, append3(string.byte(ctext, i), string.byte(ctext, i+1), string.byte(ctext, i+2)))
         end
     end
@@ -98,12 +98,12 @@ function create_temp_file()
 
     -- Windows
     local temp_dir = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("USERPROFILE") or "."
-    
+
     -- 一意なファイル名を生成
     local timestamp = os.time()
     local random_num = math.random(1000, 9999)
     local temp_file = temp_dir .. "\\pandoc_temp_" .. timestamp .. "_" .. random_num .. ".txt"
-    
+
     --io.stderr:write("DBG_TEMP_FILE: " .. temp_file .. "\n")
     return temp_file
 end
@@ -180,6 +180,89 @@ local function file_exists(name)
     end
 end
 
+local function move_root_processing_instructions_after_svg(content)
+    local svg_start, svg_end = content:find("<svg[%s>][^>]*>")
+    if not svg_start then
+        return content
+    end
+
+    local prefix = content:sub(1, svg_start - 1)
+    local moved_processing_instructions = {}
+    local kept_prefix_parts = {}
+    local pos = 1
+
+    while pos <= #prefix do
+        local pi_start, pi_end, target = prefix:find("<%?([%w_:%-%.]+)%s.-%?>", pos)
+        if not pi_start then
+            table.insert(kept_prefix_parts, prefix:sub(pos))
+            break
+        end
+
+        table.insert(kept_prefix_parts, prefix:sub(pos, pi_start - 1))
+        local processing_instruction = prefix:sub(pi_start, pi_end)
+        if target:lower() == "xml" then
+            table.insert(kept_prefix_parts, processing_instruction)
+        else
+            table.insert(moved_processing_instructions, processing_instruction)
+        end
+        pos = pi_end + 1
+    end
+
+    if #moved_processing_instructions == 0 then
+        return content
+    end
+
+    local kept_prefix = table.concat(kept_prefix_parts)
+    if not kept_prefix:match("<%?xml%s") then
+        kept_prefix = ""
+    end
+
+    return kept_prefix
+        .. content:sub(svg_start, svg_end)
+        .. table.concat(moved_processing_instructions)
+        .. content:sub(svg_end + 1)
+end
+
+-- NOTE: Microsoft Word では、最初のフォント以外は評価されない
+local plantuml_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+
+local function patch_svg_font_family(content)
+    content = string.gsub(content, 'font%-family%s*=%s*"[^"]*"', 'font-family="' .. plantuml_svg_font_family .. '"')
+    content = string.gsub(content, "font%-family%s*=%s*'[^']*'", 'font-family="' .. plantuml_svg_font_family .. '"')
+    content = string.gsub(content, 'font%-family%s*:%s*&quot;.-&quot;', 'font-family: ' .. plantuml_svg_font_family)
+    content = string.gsub(content, 'font%-family%s*:%s*"[^"]*"', 'font-family: "' .. plantuml_svg_font_family .. '"')
+    content = string.gsub(content, "font%-family%s*:%s*'[^']*'", "font-family: '" .. plantuml_svg_font_family .. "'")
+    content = string.gsub(content, 'font%-family%s*:%s*[^;&"\']+', 'font-family: ' .. plantuml_svg_font_family)
+    return content
+end
+
+local function patch_svg_content(content)
+    content = move_root_processing_instructions_after_svg(content)
+    return patch_svg_font_family(content)
+end
+
+local function patch_svg_file(path)
+    local _path = utf8_to_active_cp(path)
+    local f = io.open(_path, "r")
+    if not f then
+        return
+    end
+
+    local content = f:read("*a")
+    f:close()
+
+    local patched_content = patch_svg_content(content)
+    if patched_content == content then
+        return
+    end
+
+    f = io.open(_path, "w")
+    if f then
+        f:write(patched_content)
+        f:close()
+    end
+end
+
 -- PATH に plantuml コマンドがあるかチェック
 local function check_local_plantuml()
     local os_name = os.getenv("OS")
@@ -189,7 +272,7 @@ local function check_local_plantuml()
     else
         cmd = "which plantuml >/dev/null 2>&1"
     end
-    
+
     local result = os.execute(cmd)
     return result == true
 end
@@ -242,7 +325,7 @@ end
 
 return {
     {
-        CodeBlock = function(el) 
+        CodeBlock = function(el)
 
             ---------------------------------------------------------------------
 
@@ -428,22 +511,12 @@ return {
                 end
 
                 -- pu_config.format が "svg" の場合は、
-                -- font-family="sans-serif" (デフォルトの場合のフォント名) を、html-style.css の body font-family に準じたフォントスタックに置換する。
-                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応、および iPhone 等 iOS 環境でゴシック体が適用されるようにする対応)
+                -- font-family を、Word で日本語フォントとして解釈されやすい "Segoe UI, メイリオ" に置換する。
+                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                -- PlantUML v1.2026.0 以降の SVG 先頭処理命令は、Pandoc の docx 画像サイズ解析を妨げるため <svg> 開始タグの直後へ移動する。
                 -- フォント置換は仮ファイルに対して実施してからアトミックにリネームする
                 if temp_output and pu_config.format == "svg" then
-                    local _temp_output = utf8_to_active_cp(temp_output)
-                    local f = io.open(_temp_output, "r")
-                    if f then
-                        local content = f:read("*a")
-                        f:close()
-                        content = string.gsub(content, 'font%-family="sans%-serif"', "font-family=\"'Segoe UI', 'メイリオ', 'UDEV Gothic HSRFJPDOC', 'Hiragino Kaku Gothic ProN', 'ヒラギノ角ゴ ProN', 'Noto Sans JP', 'Helvetica Neue', Helvetica, Arial, sans-serif\"")
-                        f = io.open(_temp_output, "w")
-                        if f then
-                            f:write(content)
-                            f:close()
-                        end
-                    end
+                    patch_svg_file(temp_output)
                 end
 
                 -- 仮ファイルを最終ファイル名にアトミックにリネーム
@@ -453,12 +526,16 @@ return {
                     os.rename(_temp_output, _image_file_path)
                 end
             end
-            
+
+            if pu_config.format == "svg" then
+                patch_svg_file(image_file_path)
+            end
+
             local image_src = image_file_path
 
             -- output relative
             if PANDOC_STATE.output_file ~= nil then
-                if string.match(FORMAT, "html") then 
+                if string.match(FORMAT, "html") then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
                 else
