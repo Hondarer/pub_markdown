@@ -38,10 +38,42 @@ _DOXYGEN_LITERAL_LINE_PREFIXES = (
     "\\endhtmlonly",
 )
 
-_PARAM_COMMAND_RE = re.compile(
-    r"^([@\\](?:param|tparam|retval)(?:\[[^\]]+\])?)(\s+)(\S+)(.*)$"
+_ONE_ARG_DESCRIPTION_COMMANDS = frozenset(
+    {
+        "param",
+        "tparam",
+        "retval",
+        "def",
+        "file",
+        "section",
+        "subsection",
+        "subsubsection",
+        "page",
+        "defgroup",
+        "enum",
+        "struct",
+        "class",
+        "union",
+        "typedef",
+        "fn",
+        "var",
+    }
 )
-_IDENTIFIER_COMMAND_RE = re.compile(r"^([@\\](?:def|file))(\s+)(\S+)(.*)$")
+_REFERENCE_COMMANDS = frozenset(
+    {
+        "ingroup",
+        "copydoc",
+        "copybrief",
+        "copydetails",
+        "anchor",
+        "addtogroup",
+        "weakgroup",
+    }
+)
+_ONE_ARG_DESCRIPTION_COMMAND_RE = re.compile(
+    r"^([@\\]([A-Za-z_]+)(?:\[[^\]]+\])?)(\s+)(\S+)(.*)$"
+)
+_REFERENCE_COMMAND_RE = re.compile(r"^([@\\]([A-Za-z_]+)(?:\[[^\]]+\])?)(\s*)(.*)$")
 _GENERIC_COMMAND_RE = re.compile(r"^([@\\][A-Za-z_]+(?:\[[^\]]+\])?)(\s*)(.*)$")
 
 
@@ -243,15 +275,14 @@ def _style_doxygen_line(content: str, in_code_block: bool) -> Tuple[str, bool]:
     if _is_doxygen_table_line(content):
         return content, in_code_block
 
-    match = _PARAM_COMMAND_RE.match(content)
-    if match:
-        desc = _style_doxygen_description(match.group(4))
-        return match.group(1) + match.group(2) + match.group(3) + desc, in_code_block
+    match = _ONE_ARG_DESCRIPTION_COMMAND_RE.match(content)
+    if match and match.group(2) in _ONE_ARG_DESCRIPTION_COMMANDS:
+        desc = _style_doxygen_description(match.group(5))
+        return match.group(1) + match.group(3) + match.group(4) + desc, in_code_block
 
-    match = _IDENTIFIER_COMMAND_RE.match(content)
-    if match:
-        desc = _style_doxygen_description(match.group(4))
-        return match.group(1) + match.group(2) + match.group(3) + desc, in_code_block
+    match = _REFERENCE_COMMAND_RE.match(content)
+    if match and match.group(2) in _REFERENCE_COMMANDS:
+        return content, in_code_block
 
     match = _GENERIC_COMMAND_RE.match(content)
     if match:

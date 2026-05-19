@@ -151,6 +151,36 @@ def run_tests() -> bool:
             "/** `(タイトル)` */\n",
         ),
         (
+            "c",
+            "/** @retval          0以外 第3章の失敗。 */\n",
+            "/** @retval          0以外 第 3 章の失敗。 */\n",
+        ),
+        (
+            "c",
+            "/** @retval          CALC_SUCCESS以外 第3章の失敗。 */\n",
+            "/** @retval          CALC_SUCCESS以外 第 3 章の失敗。 */\n",
+        ),
+        (
+            "c",
+            "/** @param[in]      value 第3章の入力。 */\n",
+            "/** @param[in]      value 第 3 章の入力。 */\n",
+        ),
+        (
+            "c",
+            "/** @section        section1 第3章。 */\n",
+            "/** @section        section1 第 3 章。 */\n",
+        ),
+        (
+            "c",
+            "/** @defgroup       GROUP1 第3章。 */\n",
+            "/** @defgroup       GROUP1 第 3 章。 */\n",
+        ),
+        (
+            "c",
+            "/** @copydoc processData(const char*, int) */\n",
+            "/** @copydoc processData(const char*, int) */\n",
+        ),
+        (
             "csharp",
             "    /// <summary>\n    /// 第3章の説明と <see cref=\"CalcResult\"/> の参照。\n    /// </summary>\n",
             "    /// <summary>\n    /// 第 3 章の説明と <see cref=\"CalcResult\"/> の参照。\n    /// </summary>\n",
