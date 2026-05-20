@@ -120,6 +120,64 @@ local function unquote(str)
     return str
 end
 
+-- Pandoc インライン要素のリストからパラメータ文字列を再構築する関数。
+-- Pandoc が Markdown 解析時にスマートクォートや強調 (Emph/Strong) に変換した
+-- 要素を元のテキストに戻す。
+--
+-- 背景: `exclude="dir/*"` を複数並べると、Pandoc が 1つ目の `*` を強調の開始、
+-- 2つ目の `*` を強調の終了と解釈し、2つ目の `exclude=` ごと Emph 内に吸収する。
+-- 現状の Quoted ハンドラーが Emph を無視するため、2つ目以降の exclude が失われる。
+-- この関数は Emph/Strong を `*...*` / `**...**` に復元し、スマートクォートを
+-- ASCII ダブルクォートに正規化することで元の params 文字列を再構成する。
+--
+-- 対応要素:
+--   Str   : スマートクォート (U+201C/U+201D/U+2018/U+2019) を ASCII に変換
+--   Space : スペース
+--   Emph  : `*` + 再帰展開 + `*`
+--   Strong: `**` + 再帰展開 + `**`
+--   Quoted: `"` + 再帰展開 + `"`
+local function inline_to_text(elements)
+    local parts = {}
+    for _, elem in ipairs(elements) do
+        if elem.t == "Str" then
+            local s = elem.text or elem.c
+            if s then
+                -- スマートクォート (U+201C/U+201D) を ASCII ダブルクォートに変換
+                s = s:gsub("\xE2\x80\x9C", '"')
+                s = s:gsub("\xE2\x80\x9D", '"')
+                -- スマートシングルクォート (U+2018/U+2019) を ASCII シングルクォートに変換
+                s = s:gsub("\xE2\x80\x98", "'")
+                s = s:gsub("\xE2\x80\x99", "'")
+                table.insert(parts, s)
+            end
+        elseif elem.t == "Space" then
+            table.insert(parts, " ")
+        elseif elem.t == "Emph" then
+            -- Emph は `*` で囲んで復元する
+            table.insert(parts, "*")
+            if elem.content then
+                table.insert(parts, inline_to_text(elem.content))
+            end
+            table.insert(parts, "*")
+        elseif elem.t == "Strong" then
+            -- Strong は `**` で囲んで復元する
+            table.insert(parts, "**")
+            if elem.content then
+                table.insert(parts, inline_to_text(elem.content))
+            end
+            table.insert(parts, "**")
+        elseif elem.t == "Quoted" then
+            -- Quoted はダブルクォートで囲んで復元する
+            table.insert(parts, '"')
+            if elem.content then
+                table.insert(parts, inline_to_text(elem.content))
+            end
+            table.insert(parts, '"')
+        end
+    end
+    return table.concat(parts)
+end
+
 local function parse_toc_params(params_str)
     --debug_print("Parsing params:", params_str)
     local params = {exclude = {}}
@@ -354,41 +412,14 @@ function Para(elem)
         if raw_inline.format == "tex" and raw_inline.text:match("^\\toc") then
             --debug_print("Found \\toc in RawInline")
             
-            -- RawInline には "\\toc " が含まれ、パラメータは後続の Str 要素に含まれる
-            local params_parts = {}
+            -- RawInline には "\\toc " が含まれ、パラメータは後続の要素に含まれる
+            -- inline_to_text で Emph/Strong/スマートクォートを復元しながら params 文字列を再構築する
+            local remaining = {}
             for i = 2, #elem.content do
-                local element = elem.content[i]
-                --debug_print("Processing element", i, ":", element.t)
-
-                if element.t == "Str" then
-                    -- Pandoc 3.x API では .text を使用
-                    local str_content = element.text or element.c
-                    if str_content then
-                        table.insert(params_parts, str_content)
-                    end
-                elseif element.t == "Space" then
-                    table.insert(params_parts, " ")
-                elseif element.t == "Quoted" then
-                    -- Quoted ノードの処理（例: basedir="doxybook2/calc"）
-                    table.insert(params_parts, '"')
-                    -- Quoted ノードの中身を展開
-                    if element.content then
-                        for _, quoted_elem in ipairs(element.content) do
-                            if quoted_elem.t == "Str" then
-                                local quoted_str = quoted_elem.text or quoted_elem.c
-                                if quoted_str then
-                                    table.insert(params_parts, quoted_str)
-                                end
-                            elseif quoted_elem.t == "Space" then
-                                table.insert(params_parts, " ")
-                            end
-                        end
-                    end
-                    table.insert(params_parts, '"')
-                end
+                table.insert(remaining, elem.content[i])
             end
-            
-            local params_str = table.concat(params_parts, ""):gsub("^%s+", ""):gsub("%s+$", "")
+            local params_str = inline_to_text(remaining):gsub("^%s+", ""):gsub("%s+$", "")
+            --debug_print("inline_to_text result:", params_str)
             --debug_print("Para params:", params_str or "(empty)")
             
             local current_file = active_cp_to_utf8(os.getenv("SOURCE_FILE"))
