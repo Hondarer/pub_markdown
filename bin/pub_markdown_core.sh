@@ -257,9 +257,9 @@ OUTPUT_LOCK=$(mktemp -u)
 # 1つ完了するまで待機する関数
 wait_for_parallel_slot() {
     while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
-        # wait -n はいずれか1つのジョブ完了まで待機 (bash 4.3+)
-        # 未対応環境では 1 秒ポーリングにフォールバック
-        wait -n 2>/dev/null || sleep 1
+        # 一部環境では wait -n 実行後に PID を個別 wait できず
+        # "not a child of this shell" になるため、ここでは状態監視のみにする。
+        sleep 0.1
     done
 }
 
