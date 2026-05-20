@@ -307,6 +307,25 @@ def convert_halfwidth_katakana_to_fullwidth(text: str) -> str:
     return "".join(result)
 
 
+def _needs_space_between(prev_char: str, curr_char: str) -> bool:
+    """Return True if a space should be inserted between prev_char and curr_char.
+
+    Mirrors the boundary detection logic in insert_space_between_fullwidth_and_halfwidth,
+    and is used to restore correct spacing at no_space_words placeholder boundaries.
+    """
+    if not prev_char or prev_char in " \t　" or curr_char == " ":
+        return False
+    prev_is_fullwidth = is_fullwidth(prev_char)
+    curr_is_fullwidth = is_fullwidth(curr_char)
+    curr_needs_space_left = is_halfwidth_alnum(curr_char) or curr_char in _HALFWIDTH_BRACKETS_OPEN
+    prev_needs_space_right = is_halfwidth_alnum(prev_char) or prev_char in _HALFWIDTH_BRACKETS_CLOSE
+    return (
+        ((prev_is_fullwidth and curr_needs_space_left) or (prev_needs_space_right and curr_is_fullwidth))
+        and prev_char not in _FULLWIDTH_NO_SPACE
+        and curr_char not in _FULLWIDTH_NO_SPACE
+    )
+
+
 def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
     result = []
     prev_char = ""
@@ -371,7 +390,7 @@ def add_space_before_supplemental_bracket(text: str) -> str:
             return match.group(1) + " (" + content + ")"
         return match.group(0)
 
-    return re.sub(r"([A-Za-z0-9_])\(([^)]*)\)", _replace, text)
+    return re.sub(r"([A-Za-z0-9_*])\(([^)]*)\)", _replace, text)
 
 
 def normalize_spaces(text: str) -> str:
@@ -507,10 +526,14 @@ _NON_WORD_BOUNDARY_KATAKANA = frozenset("ー・")
 
 
 def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]) -> str:
-    """no_space_words のプレースホルダーを復元し、カタカナ境界にスペースを補う。
+    """no_space_words のプレースホルダーを復元し、境界にスペースを補う。
 
     SudachiPy が保護語の隣接部分を分割した後、復元時に境界スペースが失われる
     ケースを補正する。例: \x00NOSP\x00パフォーマンス → トラブルシューティング パフォーマンス
+
+    また、no_space_words 保護によってプレースホルダー境界で全角↔半角ブラケットの
+    スペース挿入が阻害されるケースも補正する。
+    例: ジョブ\x00→\x00(スクリプト...) → ジョブ (スクリプト...)
 
     長音記号 (ー) と中黒 (・) は Unicode カタカナ範囲に含まれるが、単独で語境界を
     構成しないため、境界判定では除外する (例: 「カテゴリ」+「ー」を「カテゴリ ー」に
@@ -523,19 +546,32 @@ def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]
             end = idx + len(placeholder)
             space_before = (
                 idx > 0
-                and _is_full_katakana_char(restored[idx - 1])
-                and restored[idx - 1] not in _NON_WORD_BOUNDARY_KATAKANA
-                and original
-                and _is_full_katakana_char(original[0])
-                and original[0] not in _NON_WORD_BOUNDARY_KATAKANA
+                and (
+                    (
+                        _is_full_katakana_char(restored[idx - 1])
+                        and restored[idx - 1] not in _NON_WORD_BOUNDARY_KATAKANA
+                        and original
+                        and _is_full_katakana_char(original[0])
+                        and original[0] not in _NON_WORD_BOUNDARY_KATAKANA
+                    )
+                    or (
+                        bool(original)
+                        and _needs_space_between(restored[idx - 1], original[0])
+                    )
+                )
             )
             space_after = (
                 end < len(restored)
                 and original
-                and _is_full_katakana_char(original[-1])
-                and original[-1] not in _NON_WORD_BOUNDARY_KATAKANA
-                and _is_full_katakana_char(restored[end])
-                and restored[end] not in _NON_WORD_BOUNDARY_KATAKANA
+                and (
+                    (
+                        _is_full_katakana_char(original[-1])
+                        and original[-1] not in _NON_WORD_BOUNDARY_KATAKANA
+                        and _is_full_katakana_char(restored[end])
+                        and restored[end] not in _NON_WORD_BOUNDARY_KATAKANA
+                    )
+                    or _needs_space_between(original[-1], restored[end])
+                )
             )
             restored = (
                 restored[:idx]
