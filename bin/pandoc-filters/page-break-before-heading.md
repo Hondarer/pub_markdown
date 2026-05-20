@@ -99,21 +99,24 @@ current_page_chars + section_chars > chars_per_page
 
 あふれチェックにより、見出しがページ上部にあっても続くセクションが 1 ページを超えるなら先行して改ページする。`section_chars` は実行前の事前スキャンで計算する。
 
-**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しない。
+**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しない。この抑制は**親直後の最初の子セクション 1 回限り**で適用される。最初の子セクションが (改ページせずに) 通過した時点で `last_break_effective_level` は `nil` にリセットされるため、2 番目以降の兄弟セクションでは通常通りあふれチェックが機能する。
 
 ```
 あふれチェック BREAK 条件:
   current_page_chars + section_chars > chars_per_page
   AND NOT (last_break_effective_level == effective_level - 1)
+
+最初の兄弟が no-break で通過後: last_break_effective_level ← nil (1 回限り)
 ```
 
 `last_break_effective_level` は以下のタイミングで更新される:
 
 - **always-break 対象の見出し** (effective level ≤ `heading-level-always`): 実際に改ページを挿入するかどうかにかかわらず記録する。ページ先頭 (`current_page_chars == 0`) で改ページを挿入しない場合も同様。
 - **threshold / overflow による改ページ**: 改ページを挿入した場合のみ記録する。
+- **最初の子セクションの通過**: 親直後の最初の子セクションが改ページせずに通過した時点で `nil` にリセットされる。
 - **外部由来の改ページ** (OpenXML `w:type="page"`): `nil` にリセットされる。ただし、その直後に always-break 対象の見出しが来れば、ページ先頭でも記録されるため抑制条件が再び成立する。
 
-親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計とする。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしない。
+親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計とする。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしない。ただし、2 番目以降の兄弟 (例: `### com_csgpno`) ではあふれチェックが通常通り動作する。
 
 ### `--shift-heading-level-by` との関係
 
@@ -143,7 +146,7 @@ effective_level = raw_level + shift_heading_level_by
 
 その後に always-break 対象の見出し (eff H1 など) がページ先頭に続く場合、改ページは挿入されないが `last_break_effective_level` は記録される。これにより、その子見出し (eff H2 など) に対するあふれチェックの抑制条件が正しく成立する。
 
-**例**: `toc: true` の文書で `## ファイル` (eff H1) → `### foo` (eff H2) の構造がある場合、目次改ページ後に `## ファイル` はページ先頭に来るため改ページしないが、`last_break_effective_level = 1` は記録される。`### foo` のセクションが 1 ページを超えてもあふれ改ページが抑制される。
+**例**: `toc: true` の文書で `## ファイル` (eff H1) → `### foo` (eff H2) の構造がある場合、目次改ページ後に `## ファイル` はページ先頭に来るため改ページしないが、`last_break_effective_level = 1` は記録される。`### foo` のセクションが 1 ページを超えてもあふれ改ページが抑制される (親直後の最初の子のみ)。2 番目以降の兄弟セクションでは通常通りあふれチェックが機能する。
 
 ### 要素ごとの文字数換算
 

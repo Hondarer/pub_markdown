@@ -414,17 +414,19 @@ function Meta(meta)
   elseif pbh.t == "MetaBool" then
     CONFIG.enabled = pbh.c
 
-  elseif pbh.t == "MetaMap" then
-    local m = pbh.c
+  elseif pbh.t == "MetaMap" or (type(pbh) == "table" and pbh.t == nil) then
+    -- MetaMap (Pandoc 2.x) または plain table (Pandoc 3.x) のいずれにも対応
+    local m = pbh.c or pbh
     local function read_bool(key)
       if m[key] == nil then return nil end
       if type(m[key]) == "boolean" then return m[key] end
-      if m[key].t == "MetaBool" then return m[key].c end
+      if type(m[key]) == "table" and m[key].t == "MetaBool" then return m[key].c end
       local s = pandoc.utils.stringify(m[key]):lower()
       return s ~= "false" and s ~= "0" and s ~= "no"
     end
     local function read_num(key)
       if m[key] == nil then return nil end
+      if type(m[key]) == "number" then return m[key] end
       return tonumber(pandoc.utils.stringify(m[key]))
     end
 
@@ -560,6 +562,11 @@ function Blocks(blocks)
           current_page_chars = 0
           last_break_effective_level = effective_level
         else
+          -- 親直後の保護は最初の兄弟セクションが通過した時点で消費する。
+          -- これにより 2 番目以降の兄弟では通常のあふれチェックが機能する。
+          if last_break_effective_level ~= nil and last_break_effective_level == effective_level - 1 then
+            last_break_effective_level = nil
+          end
           dbg("[pbh] H%d(raw)->H%d(eff) \"%s\" current=%d page_pos=%.1f%% threshold=%.1f%% section=%d -> no-break\n",
             raw_level, effective_level, heading_text, current_page_chars, page_position, CONFIG.threshold,
             section_chars_map[idx] or 0)
