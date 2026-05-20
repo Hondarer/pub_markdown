@@ -416,6 +416,8 @@ abstract: "概要"           <- 「概要」プロパティ
 ---
 ```
 
+YAML front matter に `marp: true` を定義した Markdown は Marp スライドとして扱われるため、通常の HTML/docx 発行対象および `\toc` の目次生成対象から除外される。
+
 ## 改ページ
 
 docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入する。

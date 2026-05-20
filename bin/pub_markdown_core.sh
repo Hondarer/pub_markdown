@@ -16,6 +16,50 @@ progress_log() {
     printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
 }
 
+is_marp_markdown() {
+    local file="$1"
+    local line
+    local key
+    local value
+    local marp_metadata_found=false
+
+    [[ "$file" == *.md ]] || return 1
+    [[ -f "$file" ]] || return 1
+
+    IFS= read -r line < "$file" || return 1
+    line="${line%$'\r'}"
+    [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]] || return 1
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
+            [[ "$marp_metadata_found" == "true" ]]
+            return
+        fi
+
+        if [[ "$line" == *:* ]]; then
+            key="${line%%:*}"
+            value="${line#*:}"
+            key="${key#"${key%%[![:space:]]*}"}"
+            key="${key%"${key##*[![:space:]]}"}"
+            value="${value%%#*}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            value="${value%\"}"
+            value="${value#\"}"
+            value="${value%\'}"
+            value="${value#\'}"
+            value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+
+            if [[ "$key" == "marp" && "$value" == "true" ]]; then
+                marp_metadata_found=true
+            fi
+        fi
+    done < <(tail -n +2 "$file")
+
+    return 1
+}
+
 # 終了時に実行する共通クリーンアップ処理
 cleanup_resources() {
     if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
@@ -1024,6 +1068,16 @@ fi
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
+files_without_marp=()
+for file in "${files[@]}"; do
+    if is_marp_markdown "$file"; then
+        progress_log "Marp Markdown を発行対象から除外しました file=${file#${workspaceFolder}/}"
+        continue
+    fi
+    files_without_marp+=("$file")
+done
+files=("${files_without_marp[@]}")
+
 echo " done."
 progress_log "対象ファイルの収集を終了しました count=${#files[@]}"
 
@@ -1070,6 +1124,7 @@ done
 # CSS の配置
 for langElement in ${lang}; do
     for details_suffix in "${details_suffixes[@]}"; do
+        mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
     done
 done

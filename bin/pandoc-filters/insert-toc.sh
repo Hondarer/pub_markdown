@@ -100,6 +100,50 @@ resolve_current_context() {
     done
 }
 
+is_marp_markdown() {
+    local file="$1"
+    local line
+    local key
+    local value
+    local marp_metadata_found=false
+
+    [[ "$file" == *.md || "$file" == *.markdown ]] || return 1
+    [[ -f "$file" ]] || return 1
+
+    IFS= read -r line < "$file" || return 1
+    line="${line%$'\r'}"
+    [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]] || return 1
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
+            [[ "$marp_metadata_found" == "true" ]]
+            return
+        fi
+
+        if [[ "$line" == *:* ]]; then
+            key="${line%%:*}"
+            value="${line#*:}"
+            key="${key#"${key%%[![:space:]]*}"}"
+            key="${key%"${key##*[![:space:]]}"}"
+            value="${value%%#*}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%"${value##*[![:space:]]}"}"
+            value="${value%\"}"
+            value="${value#\"}"
+            value="${value%\'}"
+            value="${value#\'}"
+            value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
+
+            if [[ "$key" == "marp" && "$value" == "true" ]]; then
+                marp_metadata_found=true
+            fi
+        fi
+    done < <(tail -n +2 "$file")
+
+    return 1
+}
+
 toc_output_cache_path() {
     [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]] || return 1
     local cache_key
@@ -808,6 +852,10 @@ scan_directory() {
             add_to_memory_cache "$abs_path" "$filename" "directory" "$filename" ""
             unsorted_keys+=("$abs_path")
         elif [[ -f "$path" ]]; then
+            if is_marp_markdown "$path"; then
+                continue
+            fi
+
             # ファイルの場合
             #echo "# ファイルとして処理: $abs_path" >&2
             local base_title="$filename"
@@ -921,6 +969,10 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                     fi
                     unsorted_keys+=("$_virtual_abs_path")
                 elif [[ -f "$path" ]]; then
+                    if is_marp_markdown "$path"; then
+                        continue
+                    fi
+
                     # ファイルの場合
                     _base_title="$_filename"
                     if [[ "$_base_title" == *.md ]]; then
