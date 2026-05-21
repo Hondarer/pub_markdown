@@ -132,6 +132,11 @@ def run_tests() -> bool:
         ("**bold**(ascii)", "**bold**(ascii)"),
         ("ジョブ（スクリプト記述）サンプル", "ジョブ (スクリプト記述) サンプル"),
         ("フリースタイル ジョブ（スクリプト記述）サンプル", "フリースタイル ジョブ (スクリプト記述) サンプル"),
+        # YAML frontmatter
+        ("---\nname: foo\n---\n本文", "---\nname: foo\n---\n本文"),
+        ("---\ndescription: |\n  line1\n  line2\n---", "---\ndescription: |\n  line1\n  line2\n---"),
+        ("---\ntitle: 第3章\n---\n# heading", "---\ntitle: 第 3 章\n---\n# heading"),
+        ("---\nname: foo\n---\n行1\n行2", "---\nname: foo\n---\n行 1  \n行 2"),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [

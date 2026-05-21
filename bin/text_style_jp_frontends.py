@@ -172,9 +172,18 @@ def style_markdown(text: str) -> str:
     fence_char = "`"
     fence_len = 0
     fence_nest = 0
+    in_frontmatter = len(lines) > 0 and lines[0].strip() == "---"
 
-    for line in lines:
+    for idx, line in enumerate(lines):
         stripped = line.strip()
+
+        if in_frontmatter:
+            result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
+            code_block_flags.append(True)
+            if idx > 0 and (stripped == "---" or stripped == "..."):
+                in_frontmatter = False
+            continue
+
         if not in_code_block:
             match = re.match(r"^(`{3,}|~{3,})", stripped)
             if match:
