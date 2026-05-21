@@ -8,7 +8,8 @@ from typing import Callable, List, Optional, Sequence, Tuple
 from text_style_jp_engine import style_text
 
 
-_BACKTICK_PATTERN = re.compile(r"``+.+?``+|`[^`]+`")
+_BACKTICK_PATTERN = re.compile(r"`{2,}.+?`{2,}|`[^`]+`")
+_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("、。，．.!?！？)]}）］｝」』】〕〉》*_~")
 _DOXYGEN_MATH_PATTERN = re.compile(r"@f\$.*?@f\$")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
@@ -101,6 +102,38 @@ def detect_mode_from_path(path: str) -> str:
     raise ValueError(f"unsupported file type for auto mode: {path}")
 
 
+def _restore_inline_code_spacing(text: str) -> str:
+    output: List[str] = []
+    last = 0
+
+    for match in _BACKTICK_PATTERN.finditer(text):
+        output.append(text[last:match.end()])
+        last = match.end()
+
+        if last >= len(text):
+            continue
+
+        next_char = text[last]
+        if next_char.isspace() or next_char in _INLINE_CODE_NO_SPACE_FOLLOWERS:
+            continue
+
+        output.append(" ")
+
+    output.append(text[last:])
+    return "".join(output)
+
+
+def _style_text_with_inline_code_spacing(
+    text: str,
+    protected_patterns: Sequence[re.Pattern],
+) -> str:
+    return style_text(
+        text,
+        protected_patterns=protected_patterns,
+        postprocess=_restore_inline_code_spacing,
+    )
+
+
 def _insert_blank_before_fence_after_bold(
     result_lines: List[str],
     code_block_flags: List[bool],
@@ -178,7 +211,7 @@ def style_markdown(text: str) -> str:
         stripped = line.strip()
 
         if in_frontmatter:
-            result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
+            result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
             code_block_flags.append(True)
             if idx > 0 and (stripped == "---" or stripped == "..."):
                 in_frontmatter = False
@@ -215,7 +248,7 @@ def style_markdown(text: str) -> str:
         if _TABLE_SEPARATOR_RE.match(line):
             result_lines.append(line)
         else:
-            result_lines.append(style_text(line, protected_patterns=[_BACKTICK_PATTERN]))
+            result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
         code_block_flags.append(False)
 
     result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
@@ -252,15 +285,15 @@ def _split_line_ending(line: str) -> Tuple[str, str]:
 def _style_general_comment_text(text: str) -> str:
     if not text.strip():
         return text
-    return style_text(text, protected_patterns=_INLINE_PROTECTED_PATTERNS)
+    return _style_text_with_inline_code_spacing(text, _INLINE_PROTECTED_PATTERNS)
 
 
 def _style_doxygen_description(text: str) -> str:
     if not text.strip():
         return text
-    return style_text(
+    return _style_text_with_inline_code_spacing(
         text,
-        protected_patterns=[_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN, _DOXYGEN_INLINE_COMMAND_PATTERN],
+        [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN, _DOXYGEN_INLINE_COMMAND_PATTERN],
     )
 
 
@@ -400,7 +433,7 @@ def _style_xml_doc_text(content: str, in_code_block: bool) -> Tuple[str, bool]:
         if code_block or inline_code_depth > 0:
             output.append(part)
         else:
-            output.append(style_text(part, protected_patterns=[_BACKTICK_PATTERN]))
+            output.append(_style_text_with_inline_code_spacing(part, [_BACKTICK_PATTERN]))
 
     return "".join(output), code_block
 
