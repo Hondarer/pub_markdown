@@ -85,6 +85,9 @@ cleanup_resources() {
     if [[ -n "${OUTPUT_LOCK:-}" ]]; then
         rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
     fi
+    if [[ -n "${_PM_STATUS_DIR:-}" ]]; then
+        rm -rf "${_PM_STATUS_DIR}" 2>/dev/null
+    fi
     if [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]]; then
         rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
     fi
@@ -252,6 +255,7 @@ MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_
 # flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
 # MSYS2 (Windows) 環境でも動作する
 OUTPUT_LOCK=$(mktemp -u)
+_PM_STATUS_DIR=$(mktemp -d)
 
 # 実行中のバックグラウンドジョブ数が MAX_PARALLEL に達している場合、
 # 1つ完了するまで待機する関数
@@ -1132,6 +1136,8 @@ done
 # ファイルレベルの並列処理用追跡配列
 declare -a _file_pids=()
 declare -a _file_names=()
+declare -a _file_status_files=()
+_pm_job_index=0
 
 for file in "${files[@]}"; do
     # 追加ドキュメントサブフォルダー使用時は仮想パスに変換して出力パスを計算
@@ -1348,8 +1354,13 @@ for file in "${files[@]}"; do
     elif [[ "$file" == *.md ]]; then
         # .md ファイルを並列処理する
         # 空きスロットが生じるまで待ってからバックグラウンドで起動する
+        _pm_job_index=$((_pm_job_index + 1))
+        # 親シェルで確定させる: サブシェル exit 後に親側から読み取る
+        _pm_statusfile="${_PM_STATUS_DIR}/job-${_pm_job_index}"
         wait_for_parallel_slot
         (
+        # サブシェルがどの経路で終了してもステータスを書き込む
+        trap 'echo "$?" > "$_pm_statusfile"' EXIT
         # このサブシェル内の出力を一時ファイルにバッファリングし、
         # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
         _pm_tmpout=$(mktemp)
@@ -1615,6 +1626,7 @@ for file in "${files[@]}"; do
         ) &
         _file_pids+=($!)
         _file_names+=("$file")
+        _file_status_files+=("$_pm_statusfile")
     fi
 done
 
@@ -1626,8 +1638,12 @@ done
 
 _overall_exit=0
 for _i in "${!_file_pids[@]}"; do
-    wait "${_file_pids[$_i]}"
-    if [[ $? -ne 0 ]]; then
+    wait "${_file_pids[$_i]}" 2>/dev/null
+    # bash の cleanup_dead_jobs で PID が既に回収されていても、
+    # サブシェル EXIT trap が書き込んだステータスを参照する
+    _pm_job_exit=$(cat "${_file_status_files[$_i]}" 2>/dev/null || echo "127")
+    rm -f "${_file_status_files[$_i]}"
+    if [[ "${_pm_job_exit}" -ne 0 ]]; then
         echo >&2 "Error: Failed to process ${_file_names[$_i]}"
         _overall_exit=1
     fi
