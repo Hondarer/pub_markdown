@@ -15,11 +15,20 @@ warn_file="$2"
 tmpfile=$(mktemp)
 trap 'rm -f "$tmpfile"' EXIT
 
-# 各行末の CR のみを除去し、ANSI エスケープを除去して warning 行を抽出しやすくする。
-sed $'s/\r$//' "$log_file" | sed 's/\x1b\[[0-9;]*[mK]//g' > "$tmpfile"
+# 各行末の CR を除去する
+sed $'s/\r$//' "$log_file" > "$tmpfile"
 
-grep -Ei '(: warning:?|: 警告:|\[warning\]|^warning:|^警告:)' "$tmpfile" \
-    > "$warn_file" 2>/dev/null || true
+# 黄色で囲まれた行（ESC[33m ... ESC[0m）を抽出し、ANSI コードを除去して保存
+sed -n 's/.*\x1b\[33m\(.*\)\x1b\[0m.*/\1/p' "$tmpfile" > "$warn_file" 2>/dev/null || true
+
+# 既存の warning キーワードも併せて抽出（互換性維持）
+sed 's/\x1b\[[0-9;]*[mK]//g' "$tmpfile" | \
+    grep -Ei '(: warning:?|: 警告:|\[warning\]|^warning:|^警告:)' >> "$warn_file" 2>/dev/null || true
+
+# 重複を削除してソート
+if [ -s "$warn_file" ]; then
+    sort -u "$warn_file" -o "$warn_file"
+fi
 
 if [ ! -s "$warn_file" ]; then
     rm -f "$warn_file"
