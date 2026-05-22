@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Japanese text styling CLI for Markdown and source comments."""
 
+import os
 import sys
+import tempfile
 from typing import List, Optional, Sequence, Tuple
 
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-from text_style_jp_engine import apply_ms_style, style_prose, validate_text
+from text_style_jp_engine import _loads_jsonc, apply_ms_style, style_prose, validate_text
 from text_style_jp_frontends import (
     detect_mode_from_path,
     style_by_mode,
@@ -128,6 +130,15 @@ def run_tests() -> bool:
         ("1. first\n   continuation\n2. second", "1. first\n   continuation\n2. second"),
         ("- item\n  detail\n- next", "- item\n  detail\n- next"),
         ("paragraph\n# heading", "paragraph\n# heading"),
+        ("## 1. 段落の説明", "## 段落の説明"),
+        ("## 1 段落の説明", "## 段落の説明"),
+        ("## 1.2 段落の説明", "## 段落の説明"),
+        ("## 1.2. 段落の説明", "## 段落の説明"),
+        ("# 1. タイトル", "# タイトル"),
+        ("###### 1.2.3. タイトル", "###### タイトル"),
+        ("1. 段落の説明", "1. 段落の説明"),
+        ("```\n## 1. コード\n```", "```\n## 1. コード\n```"),
+        ("---\nname: foo\n---\n## 1. タイトル", "---\nname: foo\n---\n## タイトル"),
         ("   cont1\n   cont2", "   cont1  \n   cont2"),
         ("変更に", "変更に"),
         ("更に詳しく", "さらに詳しく"),
@@ -238,6 +249,15 @@ def run_tests() -> bool:
         ),
     ]
 
+    mode_style_test_cases: List[Tuple[str, str, str]] = [
+        ("markdown", "行1\n\n\n行2", "行 1\n\n行 2\n"),
+        ("markdown", "```\nline1\n\n\nline2\n```", "```\nline1\n\nline2\n```\n"),
+        ("python", "value = 1\n\n\n# 第3章", "value = 1\n\n# 第 3 章\n"),
+        ("text", "line1\n \t \n\nline2", "line1\n\nline2\n"),
+        ("text", "line1", "line1\n"),
+        ("text", "", "\n"),
+    ]
+
     mode_test_cases: List[Tuple[str, str]] = [
         ("README.md", "markdown"),
         ("sample.c", "c"),
@@ -246,6 +266,7 @@ def run_tests() -> bool:
         ("sample.py", "python"),
         ("sample.sh", "shell"),
         ("Makefile", "make"),
+        ("sample.txt", "text"),
     ]
 
     print("日本語テキスト スタイリング 変換テスト")
@@ -263,6 +284,57 @@ def run_tests() -> bool:
         if not passed:
             all_passed = False
 
+    jsonc_text = r'''
+    {
+      // 行コメントを許容する
+      "no_space": [
+        "JSONC辞書テスト", // 末尾コメントを許容する
+      ],
+      "replace": [
+        {
+          "from": "https://example.com/a//b",
+          "to": "/* string literal */",
+        },
+      ],
+    }
+    '''
+    try:
+        data = _loads_jsonc(jsonc_text)
+        passed = (
+            data["no_space"] == ["JSONC辞書テスト"]
+            and data["replace"][0]["from"] == "https://example.com/a//b"
+            and data["replace"][0]["to"] == "/* string literal */"
+        )
+    except Exception:
+        passed = False
+    status = "✓" if passed else "✗"
+    print(f"\n{status} dictionary JSONC parse")
+    if not passed:
+        all_passed = False
+
+    original_cwd = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dict_dir = os.path.join(tmp_dir, ".text_style_jp")
+            os.mkdir(dict_dir)
+            dict_path = os.path.join(dict_dir, "99_jsonc-test.json")
+            with open(dict_path, "w", encoding="utf-8") as handle:
+                handle.write(jsonc_text)
+            os.chdir(tmp_dir)
+            result = style_markdown("JSONC辞書テスト")
+        passed = result == "JSONC辞書テスト"
+    except Exception:
+        passed = False
+        result = ""
+    finally:
+        os.chdir(original_cwd)
+    status = "✓" if passed else "✗"
+    print("\n{} dictionary JSONC load 入力: {!r}".format(status, "JSONC辞書テスト"))
+    print("  期待: {!r}".format("JSONC辞書テスト"))
+    print(f"  結果: {result!r}")
+    if not passed:
+        all_passed = False
+
     for original, expected in markdown_test_cases:
         result = style_markdown(original)
         passed = result == expected
@@ -278,6 +350,16 @@ def run_tests() -> bool:
         passed = result == expected
         status = "✓" if passed else "✗"
         print(f"\n{status} {language} 入力: {original!r}")
+        print(f"  期待: {expected!r}")
+        print(f"  結果: {result!r}")
+        if not passed:
+            all_passed = False
+
+    for mode, original, expected in mode_style_test_cases:
+        result = style_by_mode(original, mode)
+        passed = result == expected
+        status = "✓" if passed else "✗"
+        print(f"\n{status} mode style {mode} 入力: {original!r}")
         print(f"  期待: {expected!r}")
         print(f"  結果: {result!r}")
         if not passed:
@@ -311,7 +393,7 @@ def _build_parser(prog: str, description: str, allow_mode_option: bool):
         parser.add_argument(
             "--mode",
             default="auto",
-            choices=["auto", "markdown", "c", "cpp", "csharp", "python", "shell", "make"],
+            choices=["auto", "markdown", "c", "cpp", "csharp", "python", "shell", "make", "text"],
             help="入力の構文モード。auto の場合はファイル名から推定する",
         )
     return parser

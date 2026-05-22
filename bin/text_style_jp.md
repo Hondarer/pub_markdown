@@ -5,6 +5,7 @@
 `text_style_jp` は、Microsoft 日本語スタイルガイドに基づき、日本語技術文書とソースコードコメントの表記を統一するコマンドです。全角・半角の変換、単語間スペースの挿入・削除を自動で行い、一貫性と可読性を向上させます。
 
 Markdown に加えて、C/C++、C#、Python、Shell、Makefile のソースコードコメントも扱えます。
+また、全モード共通の後処理として、連続する複数の空行を 1 つの空行に圧縮し、出力末尾には必ず改行を付与します。
 
 ## 背景
 
@@ -227,20 +228,23 @@ Markdown では行末の半角スペース 2 つ以上がソフト改行 (line b
 
 ### フォーマット
 
+辞書ファイルは `.json` 拡張子のまま、JSONC 形式の `//` コメント、`/* ... */` コメント、末尾カンマを使用できます。
+
 ```json
 {
+  // スペースを挿入しない語
   "no_space": [
     "Pre-Assert確認",
-    "CI/CD環境"
+    "CI/CD環境",
   ],
   "add_space": [
     {"from": "タスクマネージャー", "to": "タスク マネージャー"},
-    {"from": "ダイアログボックス", "to": "ダイアログ ボックス"}
+    {"from": "ダイアログボックス", "to": "ダイアログ ボックス"},
   ],
   "replace": [
     {"from": "コンピュータ", "to": "コンピューター"},
-    {"from": "プリンタ", "to": "プリンター"}
-  ]
+    {"from": "プリンタ", "to": "プリンター"},
+  ],
 }
 ```
 
@@ -250,7 +254,21 @@ Markdown では行末の半角スペース 2 つ以上がソフト改行 (line b
 | `add_space` | スペースを挿入する変換ペアのリスト。SudachiPy が対応できない語 (`replace` 適用後に初めて分割できる語など) を補います |
 | `replace` | 汎用文字列置換の変換ペアのリスト (長音記号の付与・削除、かな化など) |
 
-`_comment` など未知のキーは無視されます (コメント代わりに使用可)。
+`_comment` など未知のキーは無視されます (コメント代わりに使用可)。説明だけを書く場合は JSONC コメントも使用できます。
+
+#### VS Code での定義
+
+VS Code の files.associations は glob 風のパターンを指定できるので、.text_style_jp 配下の .json を JSONC として扱えます。
+
+例:
+
+```json
+"files.associations": {
+    "**/.text_style_jp/*.json": "jsonc",
+}
+```
+
+`**/.text_style_jp/*.json` なら、ホーム・docsfw・カレントディレクトリなど、どの階層の .text_style_jp 配下でも .json が JSONC として扱われます。
 
 #### no_space と add_space の衝突時の優先順位
 
@@ -312,6 +330,9 @@ cat input.md | python text_style_jp.py --mode markdown > output.md
 # モードを明示して処理
 python text_style_jp.py input.cs --mode csharp -o output.cs
 
+# 未対応拡張子など、空行圧縮と末尾改行付与だけを行う
+python text_style_jp.py input.txt --mode text -o output.txt
+
 # チェックのみ (CI 向け)
 python text_style_jp.py --mode auto --check input.py
 
@@ -359,6 +380,7 @@ styled = style_prose("第3章")  # "第 3 章"
 19. `add_space` を適用
 20. URL・保護パターンを復元
 21. ソフト改行と見なせない行末の不要な trailing spaces を除去 (Markdown 固有)
+22. 連続する複数の空行を 1 つの空行に圧縮し、出力末尾に改行を付与 (全モード共通)
 
 ## 対応モード
 
@@ -370,8 +392,9 @@ styled = style_prose("第3章")  # "第 3 章"
 | `python` | `#` コメント |
 | `shell` | `#` コメント |
 | `make` | `#` コメント |
+| `text` | 空行圧縮と末尾改行付与のみ |
 
-`--mode auto` を指定した場合は、ファイル名と拡張子からモードを推定します。
+`--mode auto` を指定した場合は、ファイル名と拡張子からモードを推定します。未対応拡張子は `text` として扱います。
 
 ## 制限事項
 

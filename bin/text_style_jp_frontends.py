@@ -16,6 +16,7 @@ _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _HEADING_RE = re.compile(r"^#{1,6} ")
+_HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+\d+(?:\.\d+)*\.?\s+(.+)$")
 _BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 
@@ -99,7 +100,7 @@ def detect_mode_from_path(path: str) -> str:
         return "shell"
     if ext in {".mk", ".make"}:
         return "make"
-    raise ValueError(f"unsupported file type for auto mode: {path}")
+    return "text"
 
 
 def _restore_inline_code_spacing(text: str) -> str:
@@ -197,6 +198,30 @@ def _remove_unnecessary_trailing_spaces(
     return output
 
 
+def _remove_markdown_heading_number(line: str) -> str:
+    match = _HEADING_NUMBER_RE.match(line)
+    if not match:
+        return line
+    return match.group(1) + " " + match.group(2)
+
+
+def normalize_blank_lines(text: str) -> str:
+    output: List[str] = []
+    blank_count = 0
+
+    for line in text.split("\n"):
+        if line.strip():
+            blank_count = 0
+            output.append(line)
+            continue
+
+        blank_count += 1
+        if blank_count == 1:
+            output.append("")
+
+    return "\n".join(output).rstrip("\n") + "\n"
+
+
 def style_markdown(text: str) -> str:
     lines = text.split("\n")
     result_lines: List[str] = []
@@ -248,6 +273,7 @@ def style_markdown(text: str) -> str:
         if _TABLE_SEPARATOR_RE.match(line):
             result_lines.append(line)
         else:
+            line = _remove_markdown_heading_number(line)
             result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
         code_block_flags.append(False)
 
@@ -266,9 +292,11 @@ def style_source_comments(text: str, language: str) -> str:
 
 def style_by_mode(text: str, mode: str) -> str:
     if mode == "markdown":
-        return style_markdown(text)
+        return normalize_blank_lines(style_markdown(text))
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:
-        return style_source_comments(text, mode)
+        return normalize_blank_lines(style_source_comments(text, mode))
+    if mode == "text":
+        return normalize_blank_lines(text)
     raise ValueError(f"unsupported mode: {mode}")
 
 

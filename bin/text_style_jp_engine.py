@@ -63,6 +63,111 @@ class ValidationResult:
 StylePostProcess = Optional[Callable[[str], str]]
 
 
+def _strip_jsonc(text: str) -> str:
+    """Strip JSONC comments and trailing commas while preserving strings."""
+
+    chars = []
+    in_string = False
+    escape = False
+    line_comment = False
+    block_comment = False
+    i = 0
+
+    while i < len(text):
+        char = text[i]
+        next_char = text[i + 1] if i + 1 < len(text) else ""
+
+        if line_comment:
+            if char == "\n":
+                line_comment = False
+                chars.append(char)
+            i += 1
+            continue
+
+        if block_comment:
+            if char == "*" and next_char == "/":
+                block_comment = False
+                i += 2
+                continue
+            if char == "\n":
+                chars.append(char)
+            i += 1
+            continue
+
+        if in_string:
+            chars.append(char)
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == "\"":
+                in_string = False
+            i += 1
+            continue
+
+        if char == "\"":
+            in_string = True
+            chars.append(char)
+            i += 1
+            continue
+
+        if char == "/" and next_char == "/":
+            line_comment = True
+            i += 2
+            continue
+
+        if char == "/" and next_char == "*":
+            block_comment = True
+            i += 2
+            continue
+
+        chars.append(char)
+        i += 1
+
+    without_comments = "".join(chars)
+    chars = []
+    in_string = False
+    escape = False
+    i = 0
+
+    while i < len(without_comments):
+        char = without_comments[i]
+
+        if in_string:
+            chars.append(char)
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == "\"":
+                in_string = False
+            i += 1
+            continue
+
+        if char == "\"":
+            in_string = True
+            chars.append(char)
+            i += 1
+            continue
+
+        if char == ",":
+            j = i + 1
+            while j < len(without_comments) and without_comments[j].isspace():
+                j += 1
+            if j < len(without_comments) and without_comments[j] in "}]":
+                i += 1
+                continue
+
+        chars.append(char)
+        i += 1
+
+    return "".join(chars)
+
+
+def _loads_jsonc(text: str):
+    return json.loads(_strip_jsonc(text))
+
+
 def _is_full_katakana_text(text: str) -> bool:
     return bool(text) and _FULL_KATAKANA_RE.fullmatch(text) is not None
 
@@ -162,7 +267,7 @@ def load_dictionaries() -> None:
     for _fname, _di, fpath in file_entries:
         try:
             with open(fpath, encoding="utf-8") as handle:
-                data = json.load(handle)
+                data = _loads_jsonc(handle.read())
         except Exception:
             continue
 
