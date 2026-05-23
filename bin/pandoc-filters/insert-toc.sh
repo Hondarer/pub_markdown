@@ -100,12 +100,12 @@ resolve_current_context() {
     done
 }
 
-is_marp_markdown() {
+is_skip() {
     local file="$1"
     local line
     local key
     local value
-    local marp_metadata_found=false
+    local skip_flag_found=false
 
     [[ "$file" == *.md || "$file" == *.markdown ]] || return 1
     [[ -f "$file" ]] || return 1
@@ -117,7 +117,7 @@ is_marp_markdown() {
     while IFS= read -r line || [[ -n "$line" ]]; do
         line="${line%$'\r'}"
         if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
-            [[ "$marp_metadata_found" == "true" ]]
+            [[ "$skip_flag_found" == "true" ]]
             return
         fi
 
@@ -135,8 +135,8 @@ is_marp_markdown() {
             value="${value#\'}"
             value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
 
-            if [[ "$key" == "marp" && "$value" == "true" ]]; then
-                marp_metadata_found=true
+            if [[ "$key" == "pub_markdown.skip" && "$value" == "true" ]]; then
+                skip_flag_found=true
             fi
         fi
     done < <(tail -n +2 "$file")
@@ -852,7 +852,7 @@ scan_directory() {
             add_to_memory_cache "$abs_path" "$filename" "directory" "$filename" ""
             unsorted_keys+=("$abs_path")
         elif [[ -f "$path" ]]; then
-            if is_marp_markdown "$path"; then
+            if is_skip "$path"; then
                 continue
             fi
 
@@ -969,7 +969,7 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                     fi
                     unsorted_keys+=("$_virtual_abs_path")
                 elif [[ -f "$path" ]]; then
-                    if is_marp_markdown "$path"; then
+                    if is_skip "$path"; then
                         continue
                     fi
 

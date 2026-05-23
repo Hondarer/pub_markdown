@@ -416,7 +416,7 @@ abstract: "概要"           <- 「概要」プロパティ
 ---
 ```
 
-YAML front matter に `marp: true` を定義した Markdown は Marp スライドとして扱われるため、通常の HTML/docx 発行対象および `\toc` の目次生成対象から除外される。
+YAML front matter に `pub_markdown.skip: true` を定義した Markdown は通常の HTML/docx 発行対象および `\toc` の目次生成対象から除外される。
 
 ## 改ページ
 

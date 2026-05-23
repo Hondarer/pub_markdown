@@ -34,7 +34,7 @@ Markdown to html and docx with Pandoc.
 
 + Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
 + 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
-+ YAML front matter に `marp: true` を定義した Markdown は Marp スライドとして扱い、HTML/docx の発行対象および目次生成対象から除外する。
++ YAML front matter に `pub_markdown.skip: true` を定義した Markdown は HTML/docx の発行対象および目次生成対象から除外する。
 
 ### 進捗ログ
 

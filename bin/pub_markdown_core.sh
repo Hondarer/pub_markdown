@@ -16,12 +16,12 @@ progress_log() {
     printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
 }
 
-is_marp_markdown() {
+is_skip() {
     local file="$1"
     local line
     local key
     local value
-    local marp_metadata_found=false
+    local skip_flag_found=false
 
     [[ "$file" == *.md ]] || return 1
     [[ -f "$file" ]] || return 1
@@ -33,7 +33,7 @@ is_marp_markdown() {
     while IFS= read -r line || [[ -n "$line" ]]; do
         line="${line%$'\r'}"
         if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
-            [[ "$marp_metadata_found" == "true" ]]
+            [[ "$skip_flag_found" == "true" ]]
             return
         fi
 
@@ -51,8 +51,8 @@ is_marp_markdown() {
             value="${value#\'}"
             value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
 
-            if [[ "$key" == "marp" && "$value" == "true" ]]; then
-                marp_metadata_found=true
+            if [[ "$key" == "pub_markdown.skip" && "$value" == "true" ]]; then
+                skip_flag_found=true
             fi
         fi
     done < <(tail -n +2 "$file")
@@ -1072,15 +1072,15 @@ fi
 # 配列に格納
 IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
-files_without_marp=()
+files_without_skip=()
 for file in "${files[@]}"; do
-    if is_marp_markdown "$file"; then
-        progress_log "Marp Markdown を発行対象から除外しました file=${file#${workspaceFolder}/}"
+    if is_skip "$file"; then
+        progress_log "pub_markdown.skip により発行対象から除外しました file=${file#${workspaceFolder}/}"
         continue
     fi
-    files_without_marp+=("$file")
+    files_without_skip+=("$file")
 done
-files=("${files_without_marp[@]}")
+files=("${files_without_skip[@]}")
 
 echo " done."
 progress_log "対象ファイルの収集を終了しました count=${#files[@]}"
