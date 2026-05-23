@@ -1,4 +1,4 @@
-# Windows における PlantUML の `dot.exe` 自動展開 (同梱 Graphviz) 仕様
+# Windows における PlantUML の dot.exe 自動展開 (同梱 Graphviz) 仕様
 
 ## 何が起きているか
 

@@ -162,6 +162,14 @@ def run_tests() -> bool:
         ("---\ndescription: |\n  line1\n  line2\n---", "---\ndescription: |\n  line1\n  line2\n---"),
         ("---\ntitle: 第3章\n---\n# heading", "---\ntitle: 第 3 章\n---\n# heading"),
         ("---\nname: foo\n---\n行1\n行2", "---\nname: foo\n---\n行 1  \n行 2"),
+        # 見出し行のインラインコード除去
+        ("## `com_util_tracer_create`", "## com_util_tracer_create"),
+        ("### `#ifdef` / `#ifndef`", "### #ifdef / #ifndef"),
+        ("# VS Code と `c_cpp_properties.json` の手順", "# VS Code と c_cpp_properties.json の手順"),
+        ("#### `.vscode/.env.linux` / `.vscode/.env.windows`", "#### .vscode/.env.linux / .vscode/.env.windows"),
+        ("## ``double`` backtick", "## double backtick"),
+        ("通常文の `inline code` はそのまま", "通常文の `inline code` はそのまま"),
+        ("```\n## `コードブロック内` はそのまま\n```", "```\n## `コードブロック内` はそのまま\n```"),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [

@@ -17,6 +17,7 @@ _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _HEADING_RE = re.compile(r"^#{1,6} ")
 _HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
+_HEADING_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
 _BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 
@@ -205,6 +206,12 @@ def _remove_markdown_heading_number(line: str) -> str:
     return match.group(1) + " " + match.group(2)
 
 
+def _remove_heading_inline_code(line: str) -> str:
+    if not _HEADING_RE.match(line):
+        return line
+    return _HEADING_INLINE_CODE_RE.sub(r"\1", line)
+
+
 def normalize_blank_lines(text: str) -> str:
     output: List[str] = []
     blank_count = 0
@@ -274,6 +281,7 @@ def style_markdown(text: str) -> str:
             result_lines.append(line)
         else:
             line = _remove_markdown_heading_number(line)
+            line = _remove_heading_inline_code(line)
             result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
         code_block_flags.append(False)
 

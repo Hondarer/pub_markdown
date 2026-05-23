@@ -118,7 +118,7 @@ current_page_chars + section_chars > chars_per_page
 
 親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計とする。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしない。ただし、2 番目以降の兄弟 (例: `### com_csgpno`) ではあふれチェックが通常通り動作する。
 
-### `--shift-heading-level-by` との関係
+### --shift-heading-level-by との関係
 
 Pandoc の `--shift-heading-level-by` は **Lua フィルター実行後**に AST へ適用される。そのため、このフィルターが見る見出しレベルはソース上のレベル (例: `###` = H3) であり、出力上のレベル (H2) とは異なる。
 
@@ -136,7 +136,7 @@ effective_level = raw_level + shift_heading_level_by
 >
 > `--shift-heading-level-by` は Pandoc 内部の `WriterOptions` ではなく、CLI オプション集合の `Opt` 型フィールド (`optShiftHeadingLevelBy`) として保持される。`PANDOC_WRITER_OPTIONS` は `WriterOptions` を直接マッピングしたものであり、`Opt` 由来のフィールドは含まれない。
 
-### `pub_markdown_core.sh` との連携
+### pub_markdown_core.sh との連携
 
 `pub_markdown_core.sh` の docx 変換コマンドでは `--shift-heading-level-by=-1` と組み合わせて `--metadata shift-heading-level-by=-1` を自動付与するため、文書側での `shift-heading-level-by` 指定は不要。
 
@@ -248,7 +248,7 @@ page-break-before-heading:
 ---
 ```
 
-### `--shift-heading-level-by=-1` と組み合わせる
+### --shift-heading-level-by=-1 と組み合わせる
 
 `--shift-heading-level-by=-1` を使用する場合、`###` (ソース H3) が出力上 H2 になる。`heading-level-always` と `heading-level-to` を**出力レベル**で指定すると意図通りに動作する。
 
