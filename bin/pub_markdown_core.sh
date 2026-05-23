@@ -1442,6 +1442,49 @@ for file in "${files[@]}"; do
             fi
         fi
 
+        # \toc の早期検出 (タイムスタンプスキップ判定で使用)
+        _has_toc=false
+        if grep -qF '\toc' "$file" 2>/dev/null; then
+            _has_toc=true
+        fi
+
+        # タイムスタンプベーススキップ判定 (\toc を含まないファイルのみ)
+        _skip_generation=false
+        if [[ "$_has_toc" == "false" ]]; then
+            _all_outputs_fresh=true
+            for _chk_lang in ${lang}; do
+                for _chk_suffix in "${details_suffixes[@]}"; do
+                    _chk_out="${workspaceFolder}/${pubRoot}/${_chk_lang}${_chk_suffix}/${publish_file%.*}.html"
+                    if [[ ! -f "$_chk_out" ]] || [[ "$file" -nt "$_chk_out" ]]; then
+                        _all_outputs_fresh=false
+                        break 2
+                    fi
+                    if [[ "$htmlSelfContainOutput" == "true" ]]; then
+                        _chk_out="${workspaceFolder}/${pubRoot}/${_chk_lang}${_chk_suffix}/${publish_file_self_contain%.*}.html"
+                        if [[ ! -f "$_chk_out" ]] || [[ "$file" -nt "$_chk_out" ]]; then
+                            _all_outputs_fresh=false
+                            break 2
+                        fi
+                    fi
+                    if [[ "$docxOutput" == "true" ]]; then
+                        _chk_out="${workspaceFolder}/${pubRoot}/${_chk_lang}${_chk_suffix}/${publish_file_docx%.*}.docx"
+                        if [[ ! -f "$_chk_out" ]] || [[ "$file" -nt "$_chk_out" ]]; then
+                            _all_outputs_fresh=false
+                            break 2
+                        fi
+                    fi
+                done
+            done
+            if [[ "$_all_outputs_fresh" == "true" ]]; then
+                _skip_generation=true
+            fi
+        fi
+
+        if [[ "$_skip_generation" == "true" ]]; then
+            echo "  (up-to-date)"
+            progress_log "出力が最新のためスキップしました file=${file#${workspaceFolder}/}"
+        else
+
         # path to css
         nest_count=$(echo "$publish_file" | grep -o '/' | wc -l)
         up_dir=""
@@ -1500,16 +1543,12 @@ for file in "${files[@]}"; do
         # バリアント不変性の検出
         _has_lang_tags=false
         _has_details_tags=false
-        _has_toc=false
         if grep -qE '^<!--details:(-->)?$|^(<!--)?:details-->$' "$file" 2>/dev/null; then
             _has_details_tags=true
         fi
         if grep -E '^<!--[a-z]+:(-->)?$|^(<!--)?:[a-z]+-->$' "$file" 2>/dev/null \
            | grep -qvF 'details'; then
             _has_lang_tags=true
-        fi
-        if grep -qF '\toc' "$file" 2>/dev/null; then
-            _has_toc=true
         fi
         _lang_invariant=false
         _details_invariant=false
@@ -1684,6 +1723,7 @@ for file in "${files[@]}"; do
                 fi
             done
         done
+        fi
         } >"$_pm_tmpout" 2>&1
         _pm_exit=$?
         progress_log "Markdown 処理を終了しました file=${file#${workspaceFolder}/} exit=${_pm_exit}"
