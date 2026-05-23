@@ -482,7 +482,6 @@ generate_toc() {
     #echo "# 目次生成開始" >&2
 
     # sorted_keys をフィルタリングして目次生成対象を絞り込み
-    local filtered_keys=()
 
     #echo "# フィルタリング開始 (基準ディレクトリ: $base_dir, 最大深度: $max_depth)" >&2
 
@@ -491,13 +490,11 @@ generate_toc() {
 
     progress_log "目次対象の絞り込みを開始しました entries=${#sorted_keys[@]}"
 
-    # 第1段階: 基本的なフィルタリング
+    # 第1段階-a: 基準ディレクトリ外・除外パターンによるフィルタ (depth チェックなし)
+    local stage1_keys=()
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
         [[ -z "$entry" ]] && continue
-
-        local type
-        IFS=$'\t' read -r _ type _ _ <<< "$entry"
 
         # 1. 基準ディレクトリより上位のエントリを除外
         if [[ "$abs_path" != "$base_dir"/* && "$abs_path" != "$base_dir" ]]; then
@@ -511,30 +508,67 @@ generate_toc() {
             continue
         fi
 
-        # 3. 深度制限チェック
+        # 3. 除外パターンチェック
+        if is_excluded "$abs_path" "$exclude_patterns"; then
+            #echo "# 除外 (パターンマッチ): $abs_path" >&2
+            continue
+        fi
+
+        stage1_keys+=("$abs_path")
+    done
+
+    # 第1段階-b: stage1_keys のファイルから空ディレクトリ判定用マップと
+    # ディレクトリ index リンク用マップを構築する (depth フィルタ前に行うことで、
+    # depth 制限で落ちたファイルの親ディレクトリが空扱いにならないよう保全し、
+    # depth で落ちた index.md 等もフォルダ行のリンク先として参照できるようにする)
+    declare -A directory_has_files=()
+    declare -A direct_index_path=()
+    declare -A direct_readme_path=()
+    declare -A direct_skill_path=()
+
+    for abs_path in "${stage1_keys[@]}"; do
+        local entry="${memory_cache[$abs_path]}"
+        local filename type
+        IFS=$'\t' read -r filename type _ _ <<< "$entry"
+        [[ "$type" == "file" ]] || continue
+
+        # 祖先ディレクトリに has_files フラグを設定
+        local parent_dir
+        parent_dir=$(dirname "$abs_path")
+        while [[ "$parent_dir" == "$base_dir" || "$parent_dir" == "$base_dir"/* ]]; do
+            directory_has_files["$parent_dir"]=true
+            [[ "$parent_dir" == "$base_dir" ]] && break
+            parent_dir=$(dirname "$parent_dir")
+        done
+
+        # index 系ファイルのマッピング
+        local filename_lower="${filename,,}"
+        local file_parent_dir
+        file_parent_dir=$(dirname "$abs_path")
+        if [[ "$filename_lower" == "index.md" ]]; then
+            direct_index_path["$file_parent_dir"]="$abs_path"
+        elif [[ "$filename_lower" == "readme.md" ]]; then
+            direct_readme_path["$file_parent_dir"]="$abs_path"
+        elif [[ "$filename_lower" == "skill.md" ]]; then
+            direct_skill_path["$file_parent_dir"]="$abs_path"
+        fi
+    done
+
+    # 第1段階-c: depth 制限フィルタ
+    # ファイル・ディレクトリとも abs_path 自身の相対スラッシュ数で判定する。
+    # これにより depth=N は「basedir からの相対パスのスラッシュ数 ≤ N のエントリを表示」
+    # という一貫した意味になる。
+    local filtered_keys=()
+    for abs_path in "${stage1_keys[@]}"; do
         if [[ "$max_depth" -ge 0 ]]; then
             local depth
-            if [[ "$type" == "file" ]]; then
-                # ファイルの場合は親ディレクトリの深度をチェック
-                depth=$(get_depth_level "$base_dir" "$(dirname "$abs_path")")
-            else
-                # ディレクトリの場合はそのディレクトリの深度をチェック
-                depth=$(get_depth_level "$base_dir" "$abs_path")
-            fi
-
+            depth=$(get_depth_level "$base_dir" "$abs_path")
             if [[ $depth -gt $max_depth ]]; then
                 #echo "# 除外 (深度超過 $depth > $max_depth): $abs_path" >&2
                 continue
             fi
         fi
 
-        # 4. 除外パターンチェック
-        if is_excluded "$abs_path" "$exclude_patterns"; then
-            #echo "# 除外 (パターンマッチ): $abs_path" >&2
-            continue
-        fi
-
-        # フィルタを通過
         filtered_keys+=("$abs_path")
     done
 
@@ -544,24 +578,10 @@ generate_toc() {
     #printf '%s' "." >&2
 
     # 第2段階: 空ディレクトリの除去
+    # directory_has_files は depth フィルタ前の stage1_keys から構築済み。
+    # depth 制限で配下ファイルが全て落ちてもディレクトリ自体は保持される。
+    # exclude パターンで全ファイルが除外されたディレクトリは未登録のため除去される。
     local final_keys=()
-    declare -A directory_has_files=()
-
-    # 有効なファイルの祖先ディレクトリを一度だけ記録する。
-    for abs_path in "${filtered_keys[@]}"; do
-        local entry="${memory_cache[$abs_path]}"
-        local type
-        IFS=$'\t' read -r _ type _ _ <<< "$entry"
-        [[ "$type" == "file" ]] || continue
-
-        local parent_dir
-        parent_dir=$(dirname "$abs_path")
-        while [[ "$parent_dir" == "$base_dir" || "$parent_dir" == "$base_dir"/* ]]; do
-            directory_has_files["$parent_dir"]=true
-            [[ "$parent_dir" == "$base_dir" ]] && break
-            parent_dir=$(dirname "$parent_dir")
-        done
-    done
 
     for abs_path in "${filtered_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
@@ -607,27 +627,8 @@ generate_toc() {
 
     local depth=0
     local indent=""
-    declare -A direct_index_path=()
-    declare -A direct_readme_path=()
-    declare -A direct_skill_path=()
-
-    for abs_path in "${sorted_keys[@]}"; do
-        local entry="${memory_cache[$abs_path]}"
-        local filename type
-        IFS=$'\t' read -r filename type _ _ <<< "$entry"
-        [[ "$type" == "file" ]] || continue
-
-        local parent_dir
-        local filename_lower="${filename,,}"
-        parent_dir=$(dirname "$abs_path")
-        if [[ "$filename_lower" == "index.md" ]]; then
-            direct_index_path["$parent_dir"]="$abs_path"
-        elif [[ "$filename_lower" == "readme.md" ]]; then
-            direct_readme_path["$parent_dir"]="$abs_path"
-        elif [[ "$filename_lower" == "skill.md" ]]; then
-            direct_skill_path["$parent_dir"]="$abs_path"
-        fi
-    done
+    # direct_index_path / direct_readme_path / direct_skill_path は
+    # 第1段階-b で stage1_keys (depth フィルタ前) から構築済み。
 
     progress_log "目次 Markdown の生成を開始しました entries=${#sorted_keys[@]}"
     for abs_path in "${sorted_keys[@]}"; do
