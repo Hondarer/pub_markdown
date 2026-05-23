@@ -16,7 +16,7 @@ _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _HEADING_RE = re.compile(r"^#{1,6} ")
-_HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+\d+(?:\.\d+)*\.?\s+(.+)$")
+_HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
 _BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 
