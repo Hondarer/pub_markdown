@@ -1541,13 +1541,13 @@ for file in "${files[@]}"; do
                         _copy_source_suffix="$_first_generated_suffix"
                     fi
                 elif [[ "$_lang_invariant" == "true" && "$_details_invariant" == "false" ]]; then
-                    if [[ -n "${_generated_for_details[$details_suffix]:-}" ]]; then
+                    if [[ -v _generated_for_details[${details_suffix:-__normal__}] ]]; then
                         _need_generate=false
-                        _copy_source_lang="${_generated_for_details[$details_suffix]}"
+                        _copy_source_lang="${_generated_for_details[${details_suffix:-__normal__}]}"
                         _copy_source_suffix="$details_suffix"
                     fi
                 elif [[ "$_lang_invariant" == "false" && "$_details_invariant" == "true" ]]; then
-                    if [[ -n "${_generated_for_lang[$langElement]:-}" ]]; then
+                    if [[ -v _generated_for_lang[$langElement] ]]; then
                         _need_generate=false
                         _copy_source_lang="$langElement"
                         _copy_source_suffix="${_generated_for_lang[$langElement]}"
@@ -1666,7 +1666,7 @@ for file in "${files[@]}"; do
                     _first_generated_suffix="$details_suffix"
                 fi
                 _generated_for_lang["$langElement"]="$details_suffix"
-                _generated_for_details["$details_suffix"]="$langElement"
+                _generated_for_details["${details_suffix:-__normal__}"]="$langElement"
                 else
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html (copy)"
                 cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file%.*}.html" \
