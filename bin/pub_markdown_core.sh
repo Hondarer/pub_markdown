@@ -1497,6 +1497,30 @@ for file in "${files[@]}"; do
             | sed 's/.*(\(.*\))/\1/' \
             | grep -Ev '^https?://')
 
+        # バリアント不変性の検出
+        _has_lang_tags=false
+        _has_details_tags=false
+        _has_toc=false
+        if grep -qE '^<!--details:(-->)?$|^(<!--)?:details-->$' "$file" 2>/dev/null; then
+            _has_details_tags=true
+        fi
+        if grep -E '^<!--[a-z]+:(-->)?$|^(<!--)?:[a-z]+-->$' "$file" 2>/dev/null \
+           | grep -qvF 'details'; then
+            _has_lang_tags=true
+        fi
+        if grep -qF '\toc' "$file" 2>/dev/null; then
+            _has_toc=true
+        fi
+        _lang_invariant=false
+        _details_invariant=false
+        [[ "$_has_lang_tags" == "false" && "$_has_toc" == "false" ]] && _lang_invariant=true
+        [[ "$_has_details_tags" == "false" ]] && _details_invariant=true
+
+        declare -A _generated_for_lang=()
+        declare -A _generated_for_details=()
+        _first_generated_lang=""
+        _first_generated_suffix=""
+
         for details_suffix in "${details_suffixes[@]}"; do
             # details_suffix から details 値を決定
             if [[ "$details_suffix" == "-details" ]]; then
@@ -1506,6 +1530,31 @@ for file in "${files[@]}"; do
             fi
 
             for langElement in ${lang}; do
+                # コピーで済むかどうかの判定
+                _need_generate=true
+                _copy_source_lang=""
+                _copy_source_suffix=""
+                if [[ "$_lang_invariant" == "true" && "$_details_invariant" == "true" ]]; then
+                    if [[ -n "$_first_generated_lang" ]]; then
+                        _need_generate=false
+                        _copy_source_lang="$_first_generated_lang"
+                        _copy_source_suffix="$_first_generated_suffix"
+                    fi
+                elif [[ "$_lang_invariant" == "true" && "$_details_invariant" == "false" ]]; then
+                    if [[ -n "${_generated_for_details[$details_suffix]:-}" ]]; then
+                        _need_generate=false
+                        _copy_source_lang="${_generated_for_details[$details_suffix]}"
+                        _copy_source_suffix="$details_suffix"
+                    fi
+                elif [[ "$_lang_invariant" == "false" && "$_details_invariant" == "true" ]]; then
+                    if [[ -n "${_generated_for_lang[$langElement]:-}" ]]; then
+                        _need_generate=false
+                        _copy_source_lang="$langElement"
+                        _copy_source_suffix="${_generated_for_lang[$langElement]}"
+                    fi
+                fi
+
+                if [[ "$_need_generate" == "true" ]]; then
                 # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
                 # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
                 replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${current_details})
@@ -1610,6 +1659,28 @@ for file in "${files[@]}"; do
                     python3 "${SCRIPT_DIR}/pandoc-filters/inject-toc-placeholder.py" \
                         "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                         2>/dev/null || true
+                fi
+                # 生成済みとして記録
+                if [[ -z "$_first_generated_lang" ]]; then
+                    _first_generated_lang="$langElement"
+                    _first_generated_suffix="$details_suffix"
+                fi
+                _generated_for_lang["$langElement"]="$details_suffix"
+                _generated_for_details["$details_suffix"]="$langElement"
+                else
+                echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html (copy)"
+                cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file%.*}.html" \
+                      "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                if [[ "$htmlSelfContainOutput" == "true" ]]; then
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html (copy)"
+                    cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file_self_contain%.*}.html" \
+                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                fi
+                if [[ "$docxOutput" == "true" ]]; then
+                    echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx (copy)"
+                    cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file_docx%.*}.docx" \
+                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                fi
                 fi
             done
         done
