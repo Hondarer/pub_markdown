@@ -845,17 +845,30 @@ if [ -n "$relativeFile" ]; then
         # $relativeFile がフォルダ名の場合は、そのフォルダを基準とする
         base_dir="${workspaceFolder}/${relativeFile}"
 
-        # 当該フォルダ限定の clean
+        # 当該フォルダ配下の clean (再帰)
         if [[ "$base_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
-            publish_dir=html/${base_dir#${workspaceFolder}/${mdRoot}/}
+            publish_dir_rel=${base_dir#${workspaceFolder}/${mdRoot}/}
         else
-            publish_dir=html
+            publish_dir_rel=""
         fi
 
         for langElement in ${lang}; do
             for details_suffix in "${details_suffixes[@]}"; do
-                mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir"
-                find "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" -maxdepth 1 -type f -exec rm -f {} +
+                for _out_type in html html-self-contain docx; do
+                    if [[ -n "$publish_dir_rel" ]]; then
+                        _target="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${_out_type}/${publish_dir_rel}"
+                    else
+                        _target="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${_out_type}"
+                    fi
+                    if [[ -d "$_target" ]]; then
+                        rm -rf "$_target"
+                    fi
+                done
+                if [[ -n "$publish_dir_rel" ]]; then
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/${publish_dir_rel}"
+                else
+                    mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
+                fi
             done
         done
     else
@@ -948,15 +961,15 @@ if [ -n "$relativeFile" ]; then
     real_relativeFile="$resolved_relativeFile"
 
     if [ -d "${workspaceFolder}/$real_relativeFile" ]; then
-        # relativeFile がディレクトリの場合: そのディレクトリ直下の対象ファイルを収集
+        # relativeFile がディレクトリの場合: そのディレクトリ配下の対象ファイルを再帰的に収集
         # base_dir は実パスを使用 (ファイル探索用)
         real_base_dir="${workspaceFolder}/${real_relativeFile}"
         # 仮想パスの base_dir も設定 (出力パス計算用)
         base_dir="${workspaceFolder}/${relativeFile}"
 
-        # ディレクトリ直下の対象ファイル (.md / .yaml / .json) を追加
+        # ディレクトリ配下の対象ファイル (.md / .yaml / .json) を再帰的に収集
         mapfile -d '' -t files_raw_initial < <(
-            find "${real_base_dir}" -maxdepth 1 -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0
+            find -L "${real_base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
         )
     else
         # relativeFile が単一ファイルの場合: そのファイルを対象とする
