@@ -10,7 +10,7 @@ from text_style_jp_engine import style_text
 
 _BACKTICK_PATTERN = re.compile(r"`{2,}.+?`{2,}|`[^`]+`")
 _ADMONITION_MARKER_PATTERN = re.compile(r"\[![A-Za-z][A-Za-z0-9_-]*\]")
-_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("、。，．.!?！？)]}）］｝」』】〕〉》*_~")
+_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("、。，．,.!?！？)]}）］｝」』】〕〉》*_~")
 _DOXYGEN_MATH_PATTERN = re.compile(r"@f\$.*?@f\$")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
