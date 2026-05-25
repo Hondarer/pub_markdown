@@ -19,7 +19,7 @@ Input:
 
 Output:
     10_microsoft.json  - md_style_jp 用辞書ファイル
-                         no_space:  tbx 単独カタカナ語の許可リスト (長さ ≥ 3)
+                         no_space:  tbx カタカナ語の許可リスト (長さ ≥ 3)
                                     Sudachi B モードの過剰分割を抑制するために使う
                          replace:   末尾 ー 省略形 → Microsoft 標準形 (順方向)
                                     + ー 付き形が tbx 未登録の場合に ー 削除形へ正規化 (逆方向)
@@ -146,8 +146,9 @@ def is_safe_replace(from_word, to_word, all_words):
     """この replace エントリが誤変換を起こさないかを確認する。
 
     _replace_skip_existing は「from_word の位置に to_word が既存すればスキップ」する。
-    したがって from_word の直後が ー で始まる語（例: メンバーシップ）は安全に処理できる。
-    一方、from_word の直後が ー 以外の語（例: モニタリング）は誤変換となるため除外する。
+    また、置換前後が全カタカナの場合は実行時に前後の非カタカナ境界を要求する。
+    そのため、全カタカナ同士の置換は接頭辞衝突をここでは除外しない。
+    全カタカナ以外では、from_word の直後が ー 以外の語の接頭辞になる場合を除外する。
 
     Args:
         from_word: 置換前の文字列
@@ -157,6 +158,9 @@ def is_safe_replace(from_word, to_word, all_words):
     Returns:
         bool: True = 安全（辞書に含めてよい）、False = 危険（除外すべき）
     """
+    if is_pure_katakana(from_word) and is_pure_katakana(to_word):
+        return True
+
     flen = len(from_word)
     for word in all_words:
         if word == to_word:
@@ -175,8 +179,9 @@ def is_safe_replace(from_word, to_word, all_words):
 def is_safe_reverse_replace(from_word, to_word, all_words):
     """逆方向 (ー 付き → ー なし) replace の安全性を確認する。
 
-    順方向と同様、from_word の直後が ー 以外で始まる別の語の接頭辞になっている場合は
-    誤変換になるため除外する。
+    順方向と同様、置換前後が全カタカナの場合は実行時の非カタカナ境界判定に任せる。
+    全カタカナ以外では、from_word の直後が ー 以外で始まる別の語の接頭辞に
+    なっている場合を除外する。
 
     Args:
         from_word: 置換前の文字列（末尾が ー）
@@ -186,6 +191,9 @@ def is_safe_reverse_replace(from_word, to_word, all_words):
     Returns:
         bool: True = 安全（辞書に含めてよい）、False = 危険（除外すべき）
     """
+    if is_pure_katakana(from_word) and is_pure_katakana(to_word):
+        return True
+
     flen = len(from_word)
     for word in all_words:
         if word == from_word:
@@ -253,23 +261,23 @@ def build_reverse_replace_pairs(singletons, all_words, eer_words):
     return pairs, skipped
 
 
-def build_no_space_words(singletons, all_words, min_length=3):
-    """tbx 単独カタカナ語から no_space リストを生成する。
+def build_no_space_words(words_source, all_words, min_length=3):
+    """tbx カタカナ語から no_space リストを生成する。
 
     SudachiPy モード B の過剰分割 (例: ワークスペース → ワーク スペース) を
-    抑制するため、tbx 単独語のうち長さ min_length 以上を登録する。
+    抑制するため、tbx 単独語と複合語構成要素のうち長さ min_length 以上を登録する。
 
     除外条件:
       - 長さ < min_length (短い語は他の合成語の接頭辞になりやすく誤マッチリスク大)
-      - ー で終わらない単独語のうち、ー 付き形 (w + "ー") も tbx に存在するもの
-        例: 「スライドショ」は singleton だが「スライドショー」も singleton
+      - ー で終わらない語のうち、ー 付き形 (w + "ー") も tbx に存在するもの
+        例: 「スライドショ」は tbx にあるが「スライドショー」も tbx にある
         ⇒ no_space に登録すると forward replace の ー 付与が阻害されるため除外
 
     Returns:
         list[str]: 長さ降順でソートされた no_space リスト
     """
     words = []
-    for w in singletons:
+    for w in words_source:
         if len(w) < min_length:
             continue
         if not w.endswith("ー") and (w + "ー") in all_words:
@@ -363,8 +371,8 @@ def main():
     # 順方向と逆方向を結合（順方向を先に置く: ー 付与は ー 削除より頻度が高く一般的）
     replace_pairs = forward_replace_pairs + reverse_replace_pairs
 
-    no_space_words = build_no_space_words(singletons, all_words, min_length=3)
-    print(f"  no_space 単独語 (長さ ≥ 3): {len(no_space_words)} 件")
+    no_space_words = build_no_space_words(all_words, all_words, min_length=3)
+    print(f"  no_space カタカナ語 (長さ ≥ 3): {len(no_space_words)} 件")
 
     add_space_pairs = build_add_space_pairs(compounds)
     print(f"  add_space ペア: {len(add_space_pairs)} 件 (長さ降順でソート済み)")
@@ -386,7 +394,7 @@ def main():
             "Web ベースの用語検索は "
             "https://msit.powerbi.com/view?r=eyJrIjoiODJmYjU4Y2YtM2M0ZC00YzYxLWE1YTktNzFjYmYxNTAxNjQ0IiwidCI6IjcyZjk4OGJmLTg2ZjEtNDFhZi05MWFiLTJkN2NkMDExZGI0NyIsImMiOjV9 "
             "(Microsoft Terminology Search)。"
-            "no_space: tbx に単独語として登録されたカタカナ語 (長さ ≥ 3) の許可リスト。"
+            "no_space: tbx に登録されたカタカナ語 (長さ ≥ 3) の許可リスト。"
             "Sudachi B モードの過剰分割を抑制する。"
             "replace: 順方向 (ー 付与) は末尾 ー が省略された語を Microsoft 標準形に変換する。"
             "逆方向 (ー 削除) は ー 付き形が tbx 未登録の語 (例: カテゴリー → カテゴリ) を正規化する。"

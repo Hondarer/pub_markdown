@@ -9,18 +9,21 @@ from text_style_jp_engine import style_text
 
 
 _BACKTICK_PATTERN = re.compile(r"`{2,}.+?`{2,}|`[^`]+`")
+_ADMONITION_MARKER_PATTERN = re.compile(r"\[![A-Za-z][A-Za-z0-9_-]*\]")
 _INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("、。，．.!?！？)]}）］｝」』】〕〉》*_~")
 _DOXYGEN_MATH_PATTERN = re.compile(r"@f\$.*?@f\$")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
+_BLOCKQUOTE_RE = re.compile(r"^\s*>")
 _HEADING_RE = re.compile(r"^#{1,6} ")
 _HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
 _HEADING_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
 _BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 
+_MARKDOWN_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _ADMONITION_MARKER_PATTERN]
 _INLINE_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
 
@@ -182,16 +185,22 @@ def _remove_unnecessary_trailing_spaces(
             output.append(stripped_line)
             continue
 
+        has_explicit_line_break = len(line) - len(stripped_line) >= 2
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
-        curr_is_block = _LIST_ITEM_RE.match(stripped_line) or _TABLE_ROW_RE.match(stripped_line)
+        curr_is_block = (
+            _LIST_ITEM_RE.match(stripped_line)
+            or _TABLE_ROW_RE.match(stripped_line)
+            or _BLOCKQUOTE_RE.match(stripped_line)
+        )
         next_is_block = (
             _LIST_ITEM_RE.match(next_stripped)
             or _TABLE_ROW_RE.match(next_stripped)
+            or _BLOCKQUOTE_RE.match(next_stripped)
             or _HEADING_RE.match(next_stripped)
             or _CODE_FENCE_RE.match(next_stripped)
         )
 
-        if next_stripped and not curr_is_block and not next_is_block:
+        if next_stripped and (has_explicit_line_break or (not curr_is_block and not next_is_block)):
             output.append(stripped_line + "  ")
         else:
             output.append(stripped_line)
@@ -282,7 +291,7 @@ def style_markdown(text: str) -> str:
         else:
             line = _remove_markdown_heading_number(line)
             line = _remove_heading_inline_code(line)
-            result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
+            result_lines.append(_style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS))
         code_block_flags.append(False)
 
     result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
