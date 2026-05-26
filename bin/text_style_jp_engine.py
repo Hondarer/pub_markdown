@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Japanese text styling engine shared by multiple frontends."""
 
+import difflib
 import json
 import os
 import re
@@ -18,6 +19,8 @@ _no_space_words: List[str] = []
 _replace_pairs: List[Tuple[str, str]] = []
 _add_space_pairs: List[Tuple[str, str]] = []
 _dict_loaded = False
+_replace_sources: dict = {}    # from_word → 辞書ファイルパス
+_add_space_sources: dict = {}  # from_word → 辞書ファイルパス
 
 _sudachi_state: Optional[bool] = None
 _sudachi_tok = None
@@ -61,6 +64,75 @@ class ValidationResult:
 
 
 StylePostProcess = Optional[Callable[[str], str]]
+
+
+class Finding:
+    """dry-run モードで検出された個別の変更。"""
+
+    def __init__(
+        self,
+        line: int,
+        column: int,
+        original: str,
+        corrected: str,
+        rule: str,
+        source: str = "",
+        message: str = "",
+    ) -> None:
+        self.line = line          # 1-based 行番号
+        self.column = column      # 1-based 列番号
+        self.original = original  # 変更前テキスト断片
+        self.corrected = corrected  # 変更後テキスト断片
+        self.rule = rule          # ルール ID
+        self.source = source      # 辞書ファイルパス (辞書ルールのみ)
+        self.message = message    # ルールの説明
+
+
+class DiagnosticCollector:
+    """dry-run モードで Finding を収集する。"""
+
+    def __init__(self) -> None:
+        self.findings: List[Finding] = []
+        self._line: int = 0
+
+    def set_line(self, line: int) -> None:
+        self._line = line
+
+    def add(
+        self,
+        column: int,
+        original: str,
+        corrected: str,
+        rule: str,
+        source: str = "",
+        message: str = "",
+    ) -> None:
+        self.findings.append(
+            Finding(self._line, column, original, corrected, rule, source, message)
+        )
+
+
+def _record_step_changes(
+    before: str,
+    after: str,
+    rule: str,
+    collector: "DiagnosticCollector",
+    source: str = "",
+    message: str = "",
+) -> None:
+    """before→after の差分を Finding として collector に追加する。"""
+    if before == after:
+        return
+    matcher = difflib.SequenceMatcher(None, before, after, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        original_fragment = before[i1:i2]
+        corrected_fragment = after[j1:j2]
+        # NUL 文字を含む断片はプレースホルダー由来のため除外する
+        if "\x00" in original_fragment or "\x00" in corrected_fragment:
+            continue
+        collector.add(i1 + 1, original_fragment, corrected_fragment, rule, source, message)
 
 
 def _strip_jsonc(text: str) -> str:
@@ -250,9 +322,11 @@ def load_dictionaries() -> None:
     # word -> "no_space" or "add_space" の最終分類。ファイル名昇順で後ファイルが勝つ。
     # 同一ファイル内では add_space が no_space に勝つ。
     word_kind = {}
-    add_space_to = {}   # add_space として確定した語の変換先
+    add_space_to = {}    # add_space として確定した語の変換先
     no_space_order = []  # no_space として初めて登場した語の挿入順
     replace_map = {}
+    replace_source: dict = {}     # from_word → ファイルパス (出典追跡用)
+    add_space_source: dict = {}   # from_word → ファイルパス (出典追跡用)
 
     file_entries = []  # (fname, dir_index, abs_path)
     for di, dict_dir in enumerate(search_paths):
@@ -279,9 +353,11 @@ def load_dictionaries() -> None:
         for pair in data.get("add_space", []):
             if isinstance(pair, dict) and "from" in pair and "to" in pair:
                 file_as[pair["from"]] = pair["to"]
+                add_space_source[pair["from"]] = fpath
         for pair in data.get("replace", []):
             if isinstance(pair, dict) and "from" in pair and "to" in pair:
                 replace_map[pair["from"]] = pair["to"]
+                replace_source[pair["from"]] = fpath
 
         for word in file_ns:
             if word not in file_as:
@@ -300,8 +376,23 @@ def load_dictionaries() -> None:
     _no_space_set.clear()
     _no_space_set.update(final_no_space)
     _replace_pairs[:] = list(replace_map.items())
+    _replace_sources.clear()
+    _replace_sources.update(replace_source)
+
     expanded = _expand_add_space_pairs(final_add_space, _replace_pairs)
-    _add_space_pairs[:] = [(f, t) for f, t in expanded if f not in _no_space_set]
+    final_expanded = [(f, t) for f, t in expanded if f not in _no_space_set]
+    _add_space_pairs[:] = final_expanded
+    _add_space_sources.clear()
+    # エイリアス展開されたペアは元の add_space エントリの出典を継承する
+    for from_word, _to_word in final_expanded:
+        if from_word in add_space_source:
+            _add_space_sources[from_word] = add_space_source[from_word]
+        else:
+            # エイリアス: 同じ to_word を持つ元エントリの出典を探す
+            for orig_from, orig_src in add_space_source.items():
+                if add_space_to.get(orig_from) == _to_word:
+                    _add_space_sources[from_word] = orig_src
+                    break
 
 
 def get_char_type(char: str) -> CharType:
@@ -504,20 +595,32 @@ def normalize_spaces(text: str) -> str:
     return text
 
 
-def style_prose(text: str) -> str:
-    text = convert_fullwidth_alnum_to_halfwidth(text)
-    text = convert_halfwidth_katakana_to_fullwidth(text)
-    text = normalize_spaces(text)
-    text = insert_space_between_fullwidth_and_halfwidth(text)
-    text = remove_space_before_punctuation(text)
-    text = remove_space_around_middle_dot_between_katakana(text)
-    text = remove_space_inside_brackets(text)
-    text = remove_space_before_unit_no_space(text)
-    text = remove_space_before_mm_unit(text)
-    text = add_space_after_punctuation_before_alnum(text)
-    text = add_space_after_number_before_bracket(text)
-    text = add_space_before_supplemental_bracket(text)
-    text = normalize_spaces(text)
+_STYLE_PROSE_STEPS = [
+    ("fullwidth-alnum",          convert_fullwidth_alnum_to_halfwidth,                   "全角英数字を半角に変換"),
+    ("halfwidth-katakana",       convert_halfwidth_katakana_to_fullwidth,                "半角カタカナを全角に変換"),
+    ("normalize-spaces",         normalize_spaces,                                       "スペースを正規化"),
+    ("fullwidth-halfwidth-space", insert_space_between_fullwidth_and_halfwidth,          "全角/半角境界にスペースを挿入"),
+    ("space-before-punctuation", remove_space_before_punctuation,                        "句読点前のスペースを削除"),
+    ("space-around-middledot",   remove_space_around_middle_dot_between_katakana,        "中黒前後のスペースを削除"),
+    ("space-inside-brackets",    remove_space_inside_brackets,                           "括弧内のスペースを削除"),
+    ("space-before-unit",        remove_space_before_unit_no_space,                      "単位記号前のスペースを削除"),
+    ("space-before-mm",          remove_space_before_mm_unit,                            "mm 前のスペースを削除"),
+    ("space-after-punctuation",  add_space_after_punctuation_before_alnum,               "句読点後にスペースを挿入"),
+    ("space-after-number-bracket", add_space_after_number_before_bracket,               "数字/括弧間にスペースを挿入"),
+    ("supplemental-bracket",     add_space_before_supplemental_bracket,                  "補足括弧前にスペースを挿入"),
+    ("normalize-spaces",         normalize_spaces,                                       "スペースを正規化"),
+]
+
+
+def style_prose(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
+    for rule_id, func, message in _STYLE_PROSE_STEPS:
+        before = text
+        text = func(text)
+        if collector is not None:
+            _record_step_changes(before, text, rule_id, collector, message=message)
     return text
 
 
@@ -528,7 +631,13 @@ def _has_kanji_prev_char(text: str, i: int) -> bool:
     return i > 0 and get_char_type(text[i - 1]) == CharType.KANJI
 
 
-def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
+def _replace_skip_existing(
+    text: str,
+    from_word: str,
+    to_word: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    source: str = "",
+) -> str:
     if from_word == to_word:
         return text
 
@@ -538,19 +647,25 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
     i = 0
     flen = len(from_word)
     tlen = len(to_word)
+    # result 側での現在位置 (列番号計算に使う)
+    result_pos = 0
 
     while i < len(text):
         if flen >= tlen:
             if text[i:i + flen] == from_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
             ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
+                if collector is not None and "\x00" not in from_word:
+                    collector.add(result_pos + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
                 result.append(to_word)
+                result_pos += len(to_word)
                 i += flen
                 continue
             if text[i:i + tlen] == to_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, tlen)
             ):
                 result.append(to_word)
+                result_pos += tlen
                 i += tlen
                 continue
         else:
@@ -558,24 +673,41 @@ def _replace_skip_existing(text: str, from_word: str, to_word: str) -> str:
                 not require_boundary or _has_non_katakana_boundaries(text, i, tlen)
             ):
                 result.append(to_word)
+                result_pos += tlen
                 i += tlen
                 continue
             if text[i:i + flen] == from_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
             ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
+                if collector is not None and "\x00" not in from_word:
+                    collector.add(result_pos + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
                 result.append(to_word)
+                result_pos += len(to_word)
                 i += flen
                 continue
 
         result.append(text[i])
+        result_pos += 1
         i += 1
 
     return "".join(result)
 
 
-def _apply_add_space_pairs(text: str) -> str:
+def _apply_add_space_pairs(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     for from_word, to_word in sorted(_add_space_pairs, key=lambda pair: len(pair[0]), reverse=True):
+        if from_word not in text:
+            continue
+        before = text
         text = text.replace(from_word, to_word)
+        if collector is not None and before != text:
+            _record_step_changes(
+                before, text, "dict-add-space", collector,
+                source=_add_space_sources.get(from_word, ""),
+                message="辞書 add_space",
+            )
     return text
 
 
@@ -761,6 +893,7 @@ def style_text(
     text: str,
     protected_patterns: Optional[Sequence[Union[str, Pattern[str]]]] = None,
     postprocess: StylePostProcess = None,
+    collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
     load_dictionaries()
 
@@ -771,14 +904,21 @@ def style_text(
 
     protected, url_replacements = _protect_urls(protected)
 
+    before = protected
     protected = _join_katakana_split_by_no_space(protected)
+    if collector is not None:
+        _record_step_changes(before, protected, "dict-no-space-join", collector, message="no_space 語のスペースを結合")
 
     # Sudachi B 分割や no_space 保護で対象文字列が分断される前に、
     # カタカナ replace を先行適用する。「カテゴリー → カテゴリ」のような逆方向 ー 削除や
     # 「スライドショ → スライドショー」のような順方向 ー 付与は、分割後に走らせると
     # from word の連続性が失われて適用されないため、前段で処理しておく。
     for from_word, to_word in _replace_pairs:
-        protected = _replace_skip_existing(protected, from_word, to_word)
+        protected = _replace_skip_existing(
+            protected, from_word, to_word,
+            collector=collector,
+            source=_replace_sources.get(from_word, ""),
+        )
 
     sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
     nosp_replacements = []
@@ -787,16 +927,25 @@ def style_text(
         protected = protected.replace(word, placeholder)
         nosp_replacements.append((placeholder, word))
 
-    styled = style_prose(protected)
+    styled = style_prose(protected, collector=collector)
+
+    before = styled
     styled = _split_katakana_with_sudachi(styled)
+    if collector is not None:
+        _record_step_changes(before, styled, "sudachi-split", collector, message="SudachiPy でカタカナを分割")
+
     styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
 
     for placeholder, word in nosp_replacements:
         styled = styled.replace(word, placeholder)
     for from_word, to_word in _replace_pairs:
-        styled = _replace_skip_existing(styled, from_word, to_word)
+        styled = _replace_skip_existing(
+            styled, from_word, to_word,
+            collector=collector,
+            source=_replace_sources.get(from_word, ""),
+        )
     styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
-    styled = _apply_add_space_pairs(styled)
+    styled = _apply_add_space_pairs(styled, collector=collector)
 
     styled = _restore_replacements(styled, url_replacements)
     styled = _restore_replacements(styled, pattern_replacements)
@@ -808,6 +957,7 @@ def style_text(
 
 
 def validate_text(text: str) -> ValidationResult:
+    # Deprecated: DiagnosticCollector を style_text() に渡す方式を推奨する。
     corrected = style_prose(text)
     is_valid = text == corrected
 

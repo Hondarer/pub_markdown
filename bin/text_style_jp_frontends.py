@@ -5,7 +5,7 @@ import os
 import re
 from typing import Callable, List, Optional, Sequence, Tuple
 
-from text_style_jp_engine import style_text
+from text_style_jp_engine import DiagnosticCollector, _record_step_changes, style_text
 
 
 _BACKTICK_PATTERN = re.compile(r"`{2,}.+?`{2,}|`[^`]+`")
@@ -131,11 +131,13 @@ def _restore_inline_code_spacing(text: str) -> str:
 def _style_text_with_inline_code_spacing(
     text: str,
     protected_patterns: Sequence[re.Pattern],
+    collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
     return style_text(
         text,
         protected_patterns=protected_patterns,
         postprocess=_restore_inline_code_spacing,
+        collector=collector,
     )
 
 
@@ -238,7 +240,10 @@ def normalize_blank_lines(text: str) -> str:
     return "\n".join(output).rstrip("\n") + "\n"
 
 
-def style_markdown(text: str) -> str:
+def style_markdown(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     lines = text.split("\n")
     result_lines: List[str] = []
     code_block_flags: List[bool] = []
@@ -249,10 +254,12 @@ def style_markdown(text: str) -> str:
     in_frontmatter = len(lines) > 0 and lines[0].strip() == "---"
 
     for idx, line in enumerate(lines):
+        if collector is not None:
+            collector.set_line(idx + 1)
         stripped = line.strip()
 
         if in_frontmatter:
-            result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN]))
+            result_lines.append(_style_text_with_inline_code_spacing(line, [_BACKTICK_PATTERN], collector=collector))
             code_block_flags.append(True)
             if idx > 0 and (stripped == "---" or stripped == "..."):
                 in_frontmatter = False
@@ -289,9 +296,15 @@ def style_markdown(text: str) -> str:
         if _TABLE_SEPARATOR_RE.match(line):
             result_lines.append(line)
         else:
+            before = line
             line = _remove_markdown_heading_number(line)
+            if collector is not None:
+                _record_step_changes(before, line, "heading-number", collector, message="見出し番号を除去")
+            before = line
             line = _remove_heading_inline_code(line)
-            result_lines.append(_style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS))
+            if collector is not None:
+                _record_step_changes(before, line, "heading-inline-code", collector, message="見出しのインライン コードを除去")
+            result_lines.append(_style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS, collector=collector))
         code_block_flags.append(False)
 
     result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
@@ -299,19 +312,27 @@ def style_markdown(text: str) -> str:
     return "\n".join(result_lines)
 
 
-def style_source_comments(text: str, language: str) -> str:
+def style_source_comments(
+    text: str,
+    language: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     if language in {"c", "cpp", "csharp"}:
-        return _style_c_like_comments(text, language)
+        return _style_c_like_comments(text, language, collector=collector)
     if language in {"python", "shell", "make"}:
-        return _style_hash_comments(text, language)
+        return _style_hash_comments(text, language, collector=collector)
     raise ValueError(f"unsupported source comment mode: {language}")
 
 
-def style_by_mode(text: str, mode: str) -> str:
+def style_by_mode(
+    text: str,
+    mode: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     if mode == "markdown":
-        return normalize_blank_lines(style_markdown(text))
+        return normalize_blank_lines(style_markdown(text, collector=collector))
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:
-        return normalize_blank_lines(style_source_comments(text, mode))
+        return normalize_blank_lines(style_source_comments(text, mode, collector=collector))
     if mode == "text":
         return normalize_blank_lines(text)
     raise ValueError(f"unsupported mode: {mode}")
@@ -327,18 +348,25 @@ def _split_line_ending(line: str) -> Tuple[str, str]:
     return line, ""
 
 
-def _style_general_comment_text(text: str) -> str:
+def _style_general_comment_text(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     if not text.strip():
         return text
-    return _style_text_with_inline_code_spacing(text, _INLINE_PROTECTED_PATTERNS)
+    return _style_text_with_inline_code_spacing(text, _INLINE_PROTECTED_PATTERNS, collector=collector)
 
 
-def _style_doxygen_description(text: str) -> str:
+def _style_doxygen_description(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     if not text.strip():
         return text
     return _style_text_with_inline_code_spacing(
         text,
         [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN, _DOXYGEN_INLINE_COMMAND_PATTERN],
+        collector=collector,
     )
 
 
@@ -347,7 +375,11 @@ def _is_doxygen_table_line(content: str) -> bool:
     return stripped.startswith("|") or stripped.startswith("Table:")
 
 
-def _style_doxygen_line(content: str, in_code_block: bool) -> Tuple[str, bool]:
+def _style_doxygen_line(
+    content: str,
+    in_code_block: bool,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> Tuple[str, bool]:
     stripped = content.strip()
     if not stripped:
         return content, in_code_block
@@ -364,7 +396,7 @@ def _style_doxygen_line(content: str, in_code_block: bool) -> Tuple[str, bool]:
 
     match = _ONE_ARG_DESCRIPTION_COMMAND_RE.match(content)
     if match and match.group(2) in _ONE_ARG_DESCRIPTION_COMMANDS:
-        desc = _style_doxygen_description(match.group(5))
+        desc = _style_doxygen_description(match.group(5), collector=collector)
         return match.group(1) + match.group(3) + match.group(4) + desc, in_code_block
 
     match = _REFERENCE_COMMAND_RE.match(content)
@@ -373,21 +405,25 @@ def _style_doxygen_line(content: str, in_code_block: bool) -> Tuple[str, bool]:
 
     match = _GENERIC_COMMAND_RE.match(content)
     if match:
-        desc = _style_doxygen_description(match.group(3))
+        desc = _style_doxygen_description(match.group(3), collector=collector)
         return match.group(1) + match.group(2) + desc, in_code_block
 
-    return _style_doxygen_description(content), in_code_block
+    return _style_doxygen_description(content, collector=collector), in_code_block
 
 
 def _style_block_comment(
     comment: str,
     line_styler: Callable[[str, bool], Tuple[str, bool]],
+    collector: Optional["DiagnosticCollector"] = None,
+    start_line: int = 0,
 ) -> str:
     lines = comment.splitlines(keepends=True)
     if not lines:
         return comment
 
     if len(lines) == 1:
+        if collector is not None:
+            collector.set_line(start_line)
         body, ending = _split_line_ending(lines[0])
         match = re.match(r"^(\s*/\*+!?<?\s*)(.*?)(\s*\*/\s*)$", body)
         if not match:
@@ -399,6 +435,8 @@ def _style_block_comment(
     in_code_block = False
 
     for idx, line in enumerate(lines):
+        if collector is not None:
+            collector.set_line(start_line + idx)
         body, ending = _split_line_ending(line)
 
         if idx == 0:
@@ -434,22 +472,43 @@ def _split_star_prefix(line: str) -> Tuple[str, str]:
     return "", line
 
 
-def _style_doxygen_block_comment(comment: str) -> str:
-    return _style_block_comment(comment, _style_doxygen_line)
+def _style_doxygen_block_comment(
+    comment: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    start_line: int = 0,
+) -> str:
+    def _styler(content: str, state: bool) -> Tuple[str, bool]:
+        return _style_doxygen_line(content, state, collector)
+
+    return _style_block_comment(comment, _styler, collector=collector, start_line=start_line)
 
 
-def _style_general_block_comment(comment: str) -> str:
-    return _style_block_comment(comment, lambda content, state: (_style_general_comment_text(content), state))
+def _style_general_block_comment(
+    comment: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    start_line: int = 0,
+) -> str:
+    def _styler(content: str, state: bool) -> Tuple[str, bool]:
+        return _style_general_comment_text(content, collector), state
+
+    return _style_block_comment(comment, _styler, collector=collector, start_line=start_line)
 
 
-def _style_general_line_comment(comment: str) -> str:
+def _style_general_line_comment(
+    comment: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     match = re.match(r"^(//[!/<>]*\s*)(.*)$", comment)
     if not match:
         return comment
-    return match.group(1) + _style_general_comment_text(match.group(2))
+    return match.group(1) + _style_general_comment_text(match.group(2), collector=collector)
 
 
-def _style_xml_doc_text(content: str, in_code_block: bool) -> Tuple[str, bool]:
+def _style_xml_doc_text(
+    content: str,
+    in_code_block: bool,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> Tuple[str, bool]:
     parts = _XML_TAG_RE.split(content)
     output: List[str] = []
     inline_code_depth = 0
@@ -478,17 +537,23 @@ def _style_xml_doc_text(content: str, in_code_block: bool) -> Tuple[str, bool]:
         if code_block or inline_code_depth > 0:
             output.append(part)
         else:
-            output.append(_style_text_with_inline_code_spacing(part, [_BACKTICK_PATTERN]))
+            output.append(_style_text_with_inline_code_spacing(part, [_BACKTICK_PATTERN], collector=collector))
 
     return "".join(output), code_block
 
 
-def _style_xml_doc_block(comment_block: str) -> str:
+def _style_xml_doc_block(
+    comment_block: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    start_line: int = 0,
+) -> str:
     lines = comment_block.splitlines(keepends=True)
     output: List[str] = []
     in_code_block = False
 
-    for line in lines:
+    for idx, line in enumerate(lines):
+        if collector is not None:
+            collector.set_line(start_line + idx)
         body, ending = _split_line_ending(line)
         match = re.match(r"^(\s*///\s?)(.*)$", body)
         if not match:
@@ -496,18 +561,24 @@ def _style_xml_doc_block(comment_block: str) -> str:
             continue
         prefix = match.group(1)
         content = match.group(2)
-        styled, in_code_block = _style_xml_doc_text(content, in_code_block)
+        styled, in_code_block = _style_xml_doc_text(content, in_code_block, collector=collector)
         output.append(prefix + styled + ending)
 
     return "".join(output)
 
 
-def _style_doxygen_line_block(comment_block: str) -> str:
+def _style_doxygen_line_block(
+    comment_block: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    start_line: int = 0,
+) -> str:
     lines = comment_block.splitlines(keepends=True)
     output: List[str] = []
     in_code_block = False
 
-    for line in lines:
+    for idx, line in enumerate(lines):
+        if collector is not None:
+            collector.set_line(start_line + idx)
         body, ending = _split_line_ending(line)
         match = re.match(r"^(\s*//[!/<>]*\s?)(.*)$", body)
         if not match:
@@ -515,7 +586,7 @@ def _style_doxygen_line_block(comment_block: str) -> str:
             continue
         prefix = match.group(1)
         content = match.group(2)
-        styled, in_code_block = _style_doxygen_line(content, in_code_block)
+        styled, in_code_block = _style_doxygen_line(content, in_code_block, collector=collector)
         output.append(prefix + styled + ending)
 
     return "".join(output)
@@ -601,7 +672,11 @@ def _consume_line_comment_block(text: str, start: int, prefix: str) -> int:
     return cursor
 
 
-def _style_c_like_comments(text: str, language: str) -> str:
+def _style_c_like_comments(
+    text: str,
+    language: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     result: List[str] = []
     last = 0
     i = 0
@@ -622,7 +697,8 @@ def _style_c_like_comments(text: str, language: str) -> str:
         if text.startswith("///", i) and _only_whitespace_since_line_start(text, i):
             result.append(text[last:i])
             end = _consume_line_comment_block(text, i, "///")
-            result.append(_style_xml_doc_block(text[i:end]))
+            line_num = text[:i].count("\n") + 1
+            result.append(_style_xml_doc_block(text[i:end], collector=collector, start_line=line_num))
             i = end
             last = i
             continue
@@ -630,7 +706,8 @@ def _style_c_like_comments(text: str, language: str) -> str:
         if text.startswith("//!", i) and _only_whitespace_since_line_start(text, i):
             result.append(text[last:i])
             end = _consume_line_comment_block(text, i, "//!")
-            result.append(_style_doxygen_line_block(text[i:end]))
+            line_num = text[:i].count("\n") + 1
+            result.append(_style_doxygen_line_block(text[i:end], collector=collector, start_line=line_num))
             i = end
             last = i
             continue
@@ -638,7 +715,9 @@ def _style_c_like_comments(text: str, language: str) -> str:
         if text.startswith("//", i):
             result.append(text[last:i])
             end = _consume_to_line_end(text, i)
-            result.append(_style_general_line_comment(text[i:end]))
+            if collector is not None:
+                collector.set_line(text[:i].count("\n") + 1)
+            result.append(_style_general_line_comment(text[i:end], collector=collector))
             i = end
             last = i
             continue
@@ -651,10 +730,11 @@ def _style_c_like_comments(text: str, language: str) -> str:
             else:
                 end += 2
             comment = text[i:end]
+            line_num = text[:i].count("\n") + 1
             if comment.startswith("/**") or comment.startswith("/*!") or comment.startswith("/**<"):
-                result.append(_style_doxygen_block_comment(comment))
+                result.append(_style_doxygen_block_comment(comment, collector=collector, start_line=line_num))
             else:
-                result.append(_style_general_block_comment(comment))
+                result.append(_style_general_block_comment(comment, collector=collector, start_line=line_num))
             i = end
             last = i
             continue
@@ -699,11 +779,19 @@ def _find_hash_comment_start(line: str, language: str) -> Optional[int]:
     return None
 
 
-def _style_hash_comment_content(prefix: str, content: str) -> str:
-    return prefix + _style_general_comment_text(content)
+def _style_hash_comment_content(
+    prefix: str,
+    content: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
+    return prefix + _style_general_comment_text(content, collector=collector)
 
 
-def _style_hash_comments(text: str, language: str) -> str:
+def _style_hash_comments(
+    text: str,
+    language: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
     output: List[str] = []
     lines = text.splitlines(keepends=True)
 
@@ -718,13 +806,16 @@ def _style_hash_comments(text: str, language: str) -> str:
             output.append(line)
             continue
 
+        if collector is not None:
+            collector.set_line(lineno + 1)
+
         prefix_end = comment_start + 1
         while prefix_end < len(body) and body[prefix_end] == " ":
             prefix_end += 1
 
         output.append(
             body[:comment_start]
-            + _style_hash_comment_content(body[comment_start:prefix_end], body[prefix_end:])
+            + _style_hash_comment_content(body[comment_start:prefix_end], body[prefix_end:], collector=collector)
             + ending
         )
 

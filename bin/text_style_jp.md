@@ -336,9 +336,56 @@ python text_style_jp.py input.txt --mode text -o output.txt
 # チェックのみ (CI 向け)
 python text_style_jp.py --mode auto --check input.py
 
+# 変更内容の確認 (dry-run)
+python text_style_jp.py --dry-run input.md
+
 # テスト実行
 python text_style_jp.py --test
 ```
+
+### dry-run モード
+
+`--dry-run` を指定すると、ファイルを変更せずに「どこが・どのルールで・どの辞書によって変更されるか」を textlint 風フォーマットで表示します。変更が 1 件以上あれば終了コード 1 を返します。
+
+```
+file.md
+  3:5   "第3章" → "第 3 章"   fullwidth-halfwidth-space
+  5:10  "サーバ" → "サーバー"  dict-replace (10_microsoft.json)
+  7:1   " 1." → ""            heading-number
+
+  3 problems found
+```
+
+出力フォーマット:
+
+```
+  {行}:{列}  "{変更前}" → "{変更後}"  {ルール ID}[ ({辞書ファイル名})]
+```
+
+**ルール ID 一覧:**
+
+| ルール ID | 変換内容 |
+|---|---|
+| `fullwidth-alnum` | 全角英数字 → 半角 |
+| `halfwidth-katakana` | 半角カタカナ → 全角 |
+| `normalize-spaces` | 全角スペース → 半角、連続スペース圧縮 |
+| `fullwidth-halfwidth-space` | 全角/半角境界へのスペース挿入 |
+| `space-before-punctuation` | 句読点前スペース削除 |
+| `space-around-middledot` | 中黒前後スペース削除 |
+| `space-inside-brackets` | 括弧内スペース削除 |
+| `space-before-unit` | 単位記号 (°, %) 前スペース削除 |
+| `space-before-mm` | mm 前スペース削除 |
+| `space-after-punctuation` | 句読点後スペース挿入 |
+| `space-after-number-bracket` | 数字/括弧間スペース挿入 |
+| `supplemental-bracket` | 補足括弧前スペース挿入 |
+| `dict-no-space-join` | no_space 語のスペース結合 |
+| `dict-replace` | 辞書 replace ペア適用 |
+| `sudachi-split` | SudachiPy カタカナ分割 |
+| `dict-add-space` | 辞書 add_space ペア適用 |
+| `heading-number` | 見出し番号除去 (Markdown) |
+| `heading-inline-code` | 見出しインラインコード除去 (Markdown) |
+
+辞書ルール (`dict-replace`, `dict-add-space`) の場合は、そのルールが定義された辞書ファイルのベース名が括弧内に表示されます。
 
 ### Python モジュールとして
 

@@ -9,7 +9,16 @@ from typing import List, Optional, Sequence, Tuple
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-from text_style_jp_engine import _loads_jsonc, apply_ms_style, style_prose, validate_text
+from text_style_jp_engine import (
+    DiagnosticCollector,
+    Finding,
+    _loads_jsonc,
+    _record_step_changes,
+    apply_ms_style,
+    style_prose,
+    style_text,
+    validate_text,
+)
 from text_style_jp_frontends import (
     detect_mode_from_path,
     style_by_mode,
@@ -413,9 +422,144 @@ def run_tests() -> bool:
         if not passed:
             all_passed = False
 
+    # --- dry-run / DiagnosticCollector テスト ---
+
+    # _record_step_changes: 変更なし → Finding なし
+    c = DiagnosticCollector()
+    c.set_line(1)
+    _record_step_changes("abc", "abc", "test-rule", c)
+    passed = len(c.findings) == 0
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _record_step_changes 変更なし")
+    if not passed:
+        all_passed = False
+
+    # _record_step_changes: 変更あり → Finding が 1 件以上、line/rule が正しい
+    c = DiagnosticCollector()
+    c.set_line(2)
+    _record_step_changes("第3章", "第 3 章", "test-rule", c)
+    passed = (
+        len(c.findings) >= 1
+        and all(f.line == 2 for f in c.findings)
+        and all(f.rule == "test-rule" for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    fragments = [(f.original, f.corrected) for f in c.findings]
+    print(f"\n{status} _record_step_changes 変更あり: {fragments}")
+    if not passed:
+        all_passed = False
+
+    # _record_step_changes: NUL を含む断片は除外される
+    c = DiagnosticCollector()
+    c.set_line(1)
+    _record_step_changes("abc\x00def", "abc\x00xyz\x00", "test-rule", c)
+    # NUL を含む断片が Finding に含まれないことを確認
+    passed = all("\x00" not in f.original and "\x00" not in f.corrected for f in c.findings)
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _record_step_changes NUL プレースホルダー除外: {[(f.original, f.corrected) for f in c.findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_prose: ルール属性テスト (fullwidth-alnum)
+    c = DiagnosticCollector()
+    c.set_line(5)
+    result = style_prose("ＡＢＣＤ", collector=c)
+    passed = (
+        result == "ABCD"
+        and len(c.findings) >= 1
+        and any(f.rule == "fullwidth-alnum" for f in c.findings)
+        and all(f.line == 5 for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    rules_found = [f.rule for f in c.findings]
+    print(f"\n{status} style_prose fullwidth-alnum: rules={rules_found}")
+    if not passed:
+        all_passed = False
+
+    # style_prose: ルール属性テスト (fullwidth-halfwidth-space)
+    c = DiagnosticCollector()
+    c.set_line(1)
+    result = style_prose("第3章", collector=c)
+    passed = (
+        result == "第 3 章"
+        and any(f.rule == "fullwidth-halfwidth-space" for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    rules_found = [f.rule for f in c.findings]
+    print(f"\n{status} style_prose fullwidth-halfwidth-space: rules={rules_found}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: 行番号テスト
+    c = DiagnosticCollector()
+    result = style_markdown("line1\n第3章\nline3", collector=c)
+    passed = (
+        any(f.line == 2 and f.rule == "fullwidth-halfwidth-space" for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    line2_findings = [(f.line, f.rule) for f in c.findings if f.rule == "fullwidth-halfwidth-space"]
+    print(f"\n{status} style_markdown 行番号追跡: {line2_findings}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: heading-number ルール
+    c = DiagnosticCollector()
+    c.set_line(1)
+    result = style_markdown("## 1. タイトル", collector=c)
+    passed = (
+        result == "## タイトル"
+        and any(f.rule == "heading-number" for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown heading-number: {[(f.rule, f.original, f.corrected) for f in c.findings if f.rule == 'heading-number']}")
+    if not passed:
+        all_passed = False
+
+    # _format_findings_stylish: 出力フォーマットテスト
+    c = DiagnosticCollector()
+    c.set_line(3)
+    c.add(5, "第3章", "第 3 章", "fullwidth-halfwidth-space", "", "全角/半角境界スペース")
+    output = _format_findings_stylish("test.md", c.findings)
+    passed = (
+        "test.md" in output
+        and "3:5" in output
+        and '"第3章"' in output
+        and '"第 3 章"' in output
+        and "fullwidth-halfwidth-space" in output
+        and "1 problem found" in output
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _format_findings_stylish 出力フォーマット")
+    if not passed:
+        all_passed = False
+        print(f"  出力:\n{output}")
+
+    # _format_findings_stylish: 辞書出典あり
+    c = DiagnosticCollector()
+    c.set_line(1)
+    c.add(1, "サーバ", "サーバー", "dict-replace", "/path/to/10_microsoft.json", "辞書 replace")
+    output = _format_findings_stylish("test.md", c.findings)
+    passed = "10_microsoft.json" in output
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _format_findings_stylish 辞書出典表示")
+    if not passed:
+        all_passed = False
+
     print("\n" + "=" * 60)
     print("すべてのテストに合格しました" if all_passed else "一部のテストに失敗しました")
     return all_passed
+
+
+def _format_findings_stylish(filepath: str, findings: List[Finding]) -> str:
+    """textlint 風のフォーマットで Finding 一覧を文字列に変換する。"""
+    lines = [filepath]
+    for f in sorted(findings, key=lambda f: (f.line, f.column)):
+        source_info = f" ({os.path.basename(f.source)})" if f.source else ""
+        lines.append(f'  {f.line}:{f.column}\t"{f.original}" → "{f.corrected}"\t{f.rule}{source_info}')
+    lines.append("")
+    count = len(findings)
+    lines.append(f"  {count} problem{'s' if count != 1 else ''} found")
+    return "\n".join(lines) + "\n"
 
 
 def _build_parser(prog: str, description: str, allow_mode_option: bool):
@@ -426,6 +570,7 @@ def _build_parser(prog: str, description: str, allow_mode_option: bool):
     parser.add_argument("-o", "--output", help="出力ファイル (省略時は標準出力)")
     parser.add_argument("--test", action="store_true", help="テストを実行")
     parser.add_argument("--check", action="store_true", help="変更が必要かチェックのみ (変更が必要な場合は終了コード 1)")
+    parser.add_argument("--dry-run", action="store_true", help="変更を適用せず、検出された変更をルール名付きで表示する")
     parser.add_argument("-i", "--in-place", action="store_true", help="入力ファイルを直接上書きする")
     if allow_mode_option:
         parser.add_argument(
@@ -473,6 +618,15 @@ def main(
 
     requested_mode = getattr(args, "mode", "auto")
     mode = _resolve_mode(args.input, requested_mode, default_mode)
+
+    if args.dry_run:
+        collector = DiagnosticCollector()
+        style_by_mode(text, mode, collector=collector)
+        if collector.findings:
+            sys.stdout.write(_format_findings_stylish(args.input or "(stdin)", collector.findings))
+            return 1
+        return 0
+
     styled = style_by_mode(text, mode)
 
     if args.check:
