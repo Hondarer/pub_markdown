@@ -41,6 +41,17 @@
 # デフォルト: true
 #mathLatexEnable: true
 
+# PlantUML サーバーと出力形式の設定
+#plantuml:
+#  protocol: https
+#  host_name: www.plantuml.com
+#  port: 443
+#  sub_url: plantuml/
+#  format: svg
+#  style: |
+#    <style>
+#    </style>
+
 # docx テンプレートの指定
 #docxTemplate: styles/docx/docx-style.dotx
 

@@ -348,6 +348,7 @@ if [[ -z "$configFile" ]]; then
 else
     configFile=$(resolve_path "$configFile")
 fi
+export PUB_MARKDOWN_CONFIG_FILE="$configFile"
 
 #-------------------------------------------------------------------
 

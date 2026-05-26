@@ -5,26 +5,153 @@ local root_dir = paths.directory(paths.directory(PANDOC_SCRIPT_FILE))
 
 local search_paths = {
     package.path,
-    paths.join({ root_dir, "modules", "LibDeflate", "?.lua" }),
-    paths.join({ root_dir, "config", "?.lua" })
+    paths.join({ root_dir, "modules", "LibDeflate", "?.lua" })
 }
 package.path = table.concat(search_paths, ";")
 
 local libDeflate = require("LibDeflate")
 
--- load plantuml server configurations
-local config_loaded, pu_config = pcall(function() return (require "config-plantuml").config() end)
-if not config_loaded then
-    io.stderr:write("use default settings ...\n")
-    pu_config = { protocol = "http", host_name = "localhost", port = 8080 , sub_url = "", format = "png" }
+local default_pu_config = {
+    protocol = "https",
+    host_name = "www.plantuml.com",
+    port = "443",
+    sub_url = "plantuml/",
+    format = "svg",
+    style = "<style>\n</style>"
+}
+
+local plantuml_config_keys = {
+    protocol = true,
+    host_name = true,
+    port = true,
+    sub_url = true,
+    format = true,
+    style = true
+}
+
+local function trim(text)
+    return (text:gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
-pu_config.protocol = pu_config.protocol or "http"
-pu_config.host_name = pu_config.host_name or "localhost"
-pu_config.port = pu_config.port or "8080"
-pu_config.sub_url = pu_config.sub_url or ""
-pu_config.format = pu_config.format or "png"
-pu_config.style = pu_config.style or ""
+local function unquote_yaml_scalar(value)
+    local trimmed = trim(value:gsub("%s+#.*$", ""))
+    local first = trimmed:sub(1, 1)
+    local last = trimmed:sub(-1)
+    if (first == '"' and last == '"') or (first == "'" and last == "'") then
+        return trimmed:sub(2, -2)
+    end
+    return trimmed
+end
+
+local function read_text_file(path)
+    if path == nil or path == "" then
+        return nil
+    end
+
+    local f = io.open(path, "r")
+    if not f then
+        return nil
+    end
+
+    local content = f:read("*a")
+    f:close()
+    return content:gsub("\r\n", "\n"):gsub("\r", "\n")
+end
+
+local function count_indent(line)
+    return #(line:match("^[ \t]*") or "")
+end
+
+local function split_lines(content)
+    local lines = {}
+    for line in (content .. "\n"):gmatch("([^\n]*)\n") do
+        table.insert(lines, line)
+    end
+    return lines
+end
+
+local function parse_plantuml_yaml_section(content)
+    local parsed = {}
+    local lines = split_lines(content)
+    local i = 1
+    local in_plantuml_section = false
+
+    while i <= #lines do
+        local line = lines[i]
+
+        if not in_plantuml_section then
+            if line:match("^plantuml:%s*$") or line:match("^plantuml:%s*#") then
+                in_plantuml_section = true
+            end
+            i = i + 1
+        else
+            if line:match("^%S") and not line:match("^%s*#") and not line:match("^%s*$") then
+                break
+            end
+
+            local indent = count_indent(line)
+            local key, raw_value = line:match("^%s*([%w_%-]+):%s*(.*)$")
+            if key and plantuml_config_keys[key] then
+                local block_indicator = trim(raw_value)
+                if block_indicator == "|" or block_indicator == "|-" or block_indicator == "|+" then
+                    local block_lines = {}
+                    local block_indent = nil
+                    i = i + 1
+
+                    while i <= #lines do
+                        local block_line = lines[i]
+                        local current_indent = count_indent(block_line)
+                        if block_line:match("^%S") then
+                            break
+                        end
+                        if block_line:match("^%s*$") then
+                            table.insert(block_lines, "")
+                            i = i + 1
+                        elseif current_indent <= indent then
+                            break
+                        else
+                            block_indent = block_indent or current_indent
+                            table.insert(block_lines, block_line:sub(block_indent + 1))
+                            i = i + 1
+                        end
+                    end
+
+                    parsed[key] = table.concat(block_lines, "\n")
+                else
+                    parsed[key] = unquote_yaml_scalar(raw_value)
+                    i = i + 1
+                end
+            else
+                i = i + 1
+            end
+        end
+    end
+
+    return parsed
+end
+
+local function load_plantuml_config()
+    local config = {}
+    for key, value in pairs(default_pu_config) do
+        config[key] = value
+    end
+
+    local config_content = read_text_file(os.getenv("PUB_MARKDOWN_CONFIG_FILE"))
+    if not config_content then
+        return config
+    end
+
+    local parsed = parse_plantuml_yaml_section(config_content)
+    for key in pairs(default_pu_config) do
+        if parsed[key] ~= nil and parsed[key] ~= "" then
+            config[key] = tostring(parsed[key])
+        end
+    end
+
+    return config
+end
+
+local pu_config = load_plantuml_config()
 
 -- @type number -> string
 local function encode6(b)
@@ -474,8 +601,8 @@ return {
                     if local_success then
                         temp_output = temp_path
                     else
-                        io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. ", falling back to server\n")
-                        -- ローカル変換に失敗した場合はサーバー変換にフォールバック
+                        io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. "\n")
+                        return el
                     end
                 end
 
