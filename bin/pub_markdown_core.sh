@@ -1322,6 +1322,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/horizontal-rule.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
@@ -1690,6 +1691,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/horizontal-rule.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/toc-pagebreak.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
