@@ -360,6 +360,19 @@ parse_yaml() {
   echo "$value"
 }
 
+find_mermaid_js() {
+    local candidate
+    for candidate in \
+        "${SCRIPT_DIR}/node_modules/mermaid/dist/mermaid.min.js" \
+        "${SCRIPT_DIR}/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js"; do
+        if [[ -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
 if [ -f "$configFile" ]; then
 
     # ファイルの内容を読み込む
@@ -497,6 +510,12 @@ fi
 # 設定ファイルに htmlSelfContainOutput が指定されなかった場合の値を false にする
 if [[ "$htmlSelfContainOutput" == "" ]]; then
     htmlSelfContainOutput="false"
+fi
+
+mermaidScript=$(find_mermaid_js)
+if [[ "$mermaidScript" == "" ]]; then
+    echo "Error: Mermaid browser bundle does not exist. Please run npm ci in ${SCRIPT_DIR}."
+    exit 1
 fi
 
 # 設定ファイルに docxTemplate が指定されなかった場合の値を "$HOME_DIR/styles/docx/docx-template.dotx" にする
@@ -1144,6 +1163,7 @@ for langElement in ${lang}; do
     for details_suffix in "${details_suffixes[@]}"; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
+        copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
     done
 done
 
@@ -1273,6 +1293,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
+                            --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                             ${PANDOC_CROSSREF} \
                             ${mathJaxOption} \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -1301,6 +1322,7 @@ for file in "${files[@]}"; do
                                 ${PANDOC_CROSSREF} \
                                 ${mathJaxOption} \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
+                                --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                                 2>"$_pm_pandoc_stderr"
@@ -1640,6 +1662,7 @@ for file in "${files[@]}"; do
                         ${PANDOC_CROSSREF} \
                         ${mathJaxOption} \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
+                        --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                         2>"$_pm_pandoc_stderr"
@@ -1668,6 +1691,7 @@ for file in "${files[@]}"; do
                             ${PANDOC_CROSSREF} \
                             ${mathJaxOption} \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
+                            --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                             2>"$_pm_pandoc_stderr"

@@ -100,6 +100,37 @@ local function file_exists(name)
     end
 end
 
+local function is_html_format()
+    return FORMAT and FORMAT:match("html")
+end
+
+local function escape_html(text)
+    text = text:gsub("&", "&amp;")
+    text = text:gsub("<", "&lt;")
+    text = text:gsub(">", "&gt;")
+    text = text:gsub('"', "&quot;")
+    return text
+end
+
+local function caption_to_html(caption)
+    caption = caption:gsub("\\n", "\n")
+    local lines = {}
+    for line in caption:gmatch("[^\n]+") do
+        table.insert(lines, escape_html(line))
+    end
+    return table.concat(lines, "<br />")
+end
+
+local function mermaid_html_block(text, caption)
+    local pre = '<pre class="mermaid">' .. escape_html(text) .. '</pre>'
+    if caption == nil then
+        return pandoc.RawBlock("html", pre)
+    end
+    return pandoc.RawBlock("html",
+        '<figure class="mermaid-figure">' .. pre .. '<figcaption>' ..
+        caption_to_html(caption) .. '</figcaption></figure>')
+end
+
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
 local mermaid_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
 
@@ -192,6 +223,12 @@ return {
                 filename = filename:gsub("%.[mM][mM][dD]$", "")
                 -- ファイル名を caption に
                 caption = filename
+            end
+
+            ---------------------------------------------------------------------
+
+            if is_html_format() then
+                return mermaid_html_block(el.text, caption)
             end
 
             ---------------------------------------------------------------------
@@ -316,7 +353,7 @@ return {
             -- docx 出力時: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
             -- (Pandoc が SVG を検出して rsvg-convert で二重変換するのを防ぐ)
             local display_width, display_height
-            if not string.match(FORMAT, "html") then
+            if not is_html_format() then
                 local png_filename = string.format("mermaid_%s.png", utils.sha1(el.text))
                 local png_file_path = paths.join({resource_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
@@ -329,7 +366,7 @@ return {
 
             -- output relative
             if PANDOC_STATE.output_file ~= nil then
-                if string.match(FORMAT, "html") then
+                if is_html_format() then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
                 else

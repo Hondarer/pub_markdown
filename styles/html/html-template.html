@@ -74,6 +74,9 @@ $endfor$
 $if(math)$
   $math$
 $endif$
+$if(mermaid-js)$
+  <script src="$mermaid-js$"></script>
+$endif$
 $for(header-includes)$
   $header-includes$
 $endfor$
@@ -399,6 +402,9 @@ $body$
 
       var preBlocks = document.querySelectorAll('pre');
       preBlocks.forEach(function(pre) {
+        if (pre.classList && pre.classList.contains('mermaid')) {
+          return;
+        }
         var codeEl = pre.querySelector('code');
         var text = codeEl ? codeEl.textContent : pre.textContent;
         var lines = text.split('\n');
@@ -643,6 +649,52 @@ $body$
     });
   })();
   </script>
+$if(mermaid-js)$
+  <script>
+  if (window.mermaid) {
+    function normalizeMermaidSvgSize() {
+      var multiplySvg = 0.875;
+      var svgs = document.querySelectorAll('.mermaid svg');
+      svgs.forEach(function(svg) {
+        var width = 0;
+        var height = 0;
+        if (svg.viewBox && svg.viewBox.baseVal &&
+            svg.viewBox.baseVal.width > 0 && svg.viewBox.baseVal.height > 0) {
+          width = svg.viewBox.baseVal.width;
+          height = svg.viewBox.baseVal.height;
+        } else {
+          var viewBox = svg.getAttribute('viewBox');
+          var parts = viewBox ? viewBox.trim().split(/\s+/) : [];
+          if (parts.length === 4) {
+            width = parseFloat(parts[2]);
+            height = parseFloat(parts[3]);
+          }
+        }
+        if (!(width > 0) || !(height > 0)) {
+          return;
+        }
+        var displayWidth = width * multiplySvg;
+        var displayHeight = height * multiplySvg;
+        svg.setAttribute('width', displayWidth + 'px');
+        svg.setAttribute('height', displayHeight + 'px');
+        svg.style.width = displayWidth + 'px';
+        svg.style.height = 'auto';
+        svg.style.maxWidth = '100%';
+      });
+    }
+
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: 'default',
+      securityLevel: 'loose'
+    });
+    window.mermaid.run({
+      querySelector: '.mermaid',
+      postRenderCallback: normalizeMermaidSvgSize
+    }).then(normalizeMermaidSvgSize);
+  }
+  </script>
+$endif$
 
 </body>
 </html>

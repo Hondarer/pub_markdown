@@ -2,7 +2,10 @@
 
 ## 概要
 
-この Lua フィルタは、Pandoc 文書内の Mermaid コードブロックを自動的に SVG 画像に変換するためのフィルタです。mermaid-cli (mmdc) を使用して Mermaid 記法をレンダリングし、生成された SVG ファイルを最適化して文書に埋め込みます。
+この Lua フィルタは、Pandoc 文書内の Mermaid コードブロックを出力形式ごとに処理するためのフィルタです。
+
+- HTML / self-contained HTML では Mermaid 記法を `<pre class="mermaid">` として出力し、ブラウザ側の mermaid.js に描画を委譲します。
+- docx など HTML 以外では、従来どおり mermaid-cli (mmdc) で SVG 画像に変換し、必要に応じて PNG へ変換して文書に埋め込みます。
 
 ## 基本的な動作フロー
 
@@ -24,6 +27,7 @@ CodeBlock = function(el)
 - コードブロックのクラス属性を解析
 - `mermaid` または `mermaid:filename` 形式をサポート
 - mermaid 以外のコードブロックはそのまま通過
+- HTML では事前レンダリングせず、Mermaid ソースをブラウザ描画用 HTML として出力
 
 ### キャプション処理
 
@@ -74,6 +78,8 @@ end
 
 ### ファイル生成処理
 
+HTML 以外の出力形式では、従来どおり Mermaid 図をファイルとして生成する。
+
 ```lua
 local image_filename = string.format("mermaid_%s.svg", utils.sha1(el.text))
 local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
@@ -81,6 +87,12 @@ local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
 
 - SHA1 ハッシュを使用してユニークなファイル名を生成
 - 同じ内容の Mermaid コードは同じファイル名になり、重複処理を回避
+
+### HTML 出力
+
+HTML 出力では `.mmd` / `.svg` / `.png` は生成しない。発行処理が `mermaid.min.js` を HTML 出力ディレクトリへコピーし、Pandoc テンプレートに `mermaid-js` メタデータとして渡す。
+
+通常 HTML はコピーした `mermaid.min.js` を相対パスで参照する。self-contained HTML は同じファイルを `--embed-resources --standalone` により HTML 内へ埋め込む。
 
 ### Mermaid-CLI 実行
 
