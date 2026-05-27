@@ -351,7 +351,7 @@ local function move_root_processing_instructions_after_svg(content)
 end
 
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
-local plantuml_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+local plantuml_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
 
 local function patch_svg_font_family(content)
     content = string.gsub(content, 'font%-family%s*=%s*"[^"]*"', 'font-family="' .. plantuml_svg_font_family .. '"')
@@ -365,7 +365,8 @@ end
 
 local function patch_svg_content(content)
     content = move_root_processing_instructions_after_svg(content)
-    return patch_svg_font_family(content)
+    --return patch_svg_font_family(content)
+    return content
 end
 
 local function patch_svg_file(path)

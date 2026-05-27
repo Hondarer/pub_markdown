@@ -18,12 +18,12 @@ function create_temp_file()
 
     -- Windows
     local temp_dir = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("USERPROFILE") or "."
-    
+
     -- 一意なファイル名を生成
     local timestamp = os.time()
     local random_num = math.random(1000, 9999)
     local temp_file = temp_dir .. "\\pandoc_temp_" .. timestamp .. "_" .. random_num .. ".txt"
-    
+
     --io.stderr:write("DBG_TEMP_FILE: " .. temp_file .. "\n")
     return temp_file
 end
@@ -101,11 +101,11 @@ local function file_exists(name)
 end
 
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
-local mermaid_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+local mermaid_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
 
 return {
     {
-        CodeBlock = function(el) 
+        CodeBlock = function(el)
 
             ---------------------------------------------------------------------
 
@@ -215,28 +215,36 @@ return {
                 local multiply_svg = 0.875
 
                 if width and height then
-                    -- ルート svg 要素のみ対象に style 属性を書き換え
-                    patched_svg = patched_svg:gsub('(<svg[^>]-)style="([^"]*)"', function(svg_tag, style)
-                        -- max-width を削除
-                        style = style:gsub("max%-width:[^;]*;? ?", "")
-                        -- width / height を削除
-                        style = style:gsub("width:[^;]*;?", "")
-                        style = style:gsub("height:[^;]*;?", "")
-                        -- 末尾に width / height 追加
-                        return string.format('%sstyle="width:%spx; height:%spx; %s"', svg_tag, width * multiply_svg, height * multiply_svg, style)
-                    end, 1) -- 最初の svg タグのみ置換
+                    -- ルート svg 開始タグを抽出し、その中だけを書き換える
+                    -- (ネストされた svg 要素を誤って変更しないための安全策)
+                    local root_tag_end_pos = patched_svg:find(">", 1, true)
+                    if root_tag_end_pos then
+                        local root_tag = patched_svg:sub(1, root_tag_end_pos)
+                        local rest = patched_svg:sub(root_tag_end_pos + 1)
 
-                    -- svg タグの width / height 属性を上書きまたは追加 (ルート svg 要素のみ対象)
-                    patched_svg = patched_svg
-                        :gsub('(<svg[^>]*)%swidth="[^"]*"', '%1', 1)
-                        :gsub('(<svg[^>]*)%sheight="[^"]*"', '%1', 1)
-                        :gsub('(<svg)', '%1 width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"', 1)
+                        -- style 属性から max-width を削除し、width / height を追加または上書き
+                        root_tag = root_tag:gsub('style="([^"]*)"', function(style)
+                            style = style:gsub("max%-width:[^;]*;? ?", "")
+                            style = style:gsub("width:[^;]*;?", "")
+                            style = style:gsub("height:[^;]*;?", "")
+                            return string.format('style="width:%spx; height:%spx; %s"',
+                                width * multiply_svg, height * multiply_svg, style)
+                        end)
+
+                        -- width / height 属性を削除して新しい値を追加
+                        root_tag = root_tag:gsub('%swidth="[^"]*"', '')
+                        root_tag = root_tag:gsub('%sheight="[^"]*"', '')
+                        root_tag = root_tag:gsub('^<svg',
+                            '<svg width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"')
+
+                        patched_svg = root_tag .. rest
+                    end
                 end
 
                 -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、
                 -- Word で日本語フォントとして解釈されやすいフォントスタックに置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
-                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
+                --patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
 
                 -- 上書き保存
                 local f = io.open(_image_file_path, "w")
@@ -245,12 +253,12 @@ return {
                     f:close()
                 end
             end
-            
+
             local image_src = image_file_path
 
             -- output relative
             if PANDOC_STATE.output_file ~= nil then
-                if string.match(FORMAT, "html") then 
+                if string.match(FORMAT, "html") then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
                 else
