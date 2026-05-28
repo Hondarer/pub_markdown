@@ -256,7 +256,7 @@ local function estimate_image_chars(img)
   -- 高さ [px] を文字数に換算
   -- 基準: ページ高さ (945px) = chars_per_page 文字
   local chars = height_px / PAGE_HEIGHT_PX * CONFIG.chars_per_page
-  return math.max(chars, 50)  -- 最低50文字相当
+  return math.floor(math.max(chars, 50))  -- 最低50文字相当、整数で返す
 end
 
 -- インライン要素の文字数を計算

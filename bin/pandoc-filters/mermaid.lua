@@ -18,12 +18,12 @@ function create_temp_file()
 
     -- Windows
     local temp_dir = os.getenv("TEMP") or os.getenv("TMP") or os.getenv("USERPROFILE") or "."
-    
+
     -- 一意なファイル名を生成
     local timestamp = os.time()
     local random_num = math.random(1000, 9999)
     local temp_file = temp_dir .. "\\pandoc_temp_" .. timestamp .. "_" .. random_num .. ".txt"
-    
+
     --io.stderr:write("DBG_TEMP_FILE: " .. temp_file .. "\n")
     return temp_file
 end
@@ -100,12 +100,102 @@ local function file_exists(name)
     end
 end
 
+local function is_html_format()
+    return FORMAT and FORMAT:match("html")
+end
+
+local function escape_html(text)
+    text = text:gsub("&", "&amp;")
+    text = text:gsub("<", "&lt;")
+    text = text:gsub(">", "&gt;")
+    text = text:gsub('"', "&quot;")
+    return text
+end
+
+local function caption_to_html(caption)
+    caption = caption:gsub("\\n", "\n")
+    local lines = {}
+    for line in caption:gmatch("[^\n]+") do
+        table.insert(lines, escape_html(line))
+    end
+    return table.concat(lines, "<br />")
+end
+
+local function mermaid_html_block(text, caption)
+    local pre = '<pre class="mermaid">' .. escape_html(text) .. '</pre>'
+    if caption == nil then
+        return pandoc.RawBlock("html", pre)
+    end
+    return pandoc.RawBlock("html",
+        '<figure class="mermaid-figure">' .. pre .. '<figcaption>' ..
+        caption_to_html(caption) .. '</figcaption></figure>')
+end
+
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
-local mermaid_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+local mermaid_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+
+-- docx 出力時の SVG → PNG 変換 DPI
+-- rsvg-convert.js の計算式: scale = max(dpiX, dpiY) * 3 / 96
+-- DPI 120 → scale = 3.75 → 実効 360 DPI
+local RSVG_DPI_X = 120
+local RSVG_DPI_Y = 120
+
+--- SVG ファイルのルートタグから表示用の幅と高さ (px) を取得する。
+--- width/height 属性を優先し、なければ viewBox から取得する。
+local function get_svg_display_size(svg_path)
+    local f = io.open(svg_path, "r")
+    if not f then return nil, nil end
+    local content = f:read(4096)
+    f:close()
+    if not content then return nil, nil end
+    local tag_end = content:find(">", 1, true)
+    if not tag_end then return nil, nil end
+    local root_tag = content:sub(1, tag_end)
+    local w = tonumber(root_tag:match('width="([%d%.]+)'))
+    local h = tonumber(root_tag:match('height="([%d%.]+)'))
+    if w and h then return w, h end
+    local vb = root_tag:match('viewBox="([^"]+)"')
+    if vb then
+        local _, _, vw, vh = vb:match("([%-%d%.]+)%s+([%-%d%.]+)%s+([%d%.]+)%s+([%d%.]+)")
+        return tonumber(vw), tonumber(vh)
+    end
+    return nil, nil
+end
+
+--- パッチ済み SVG を rsvg-convert で PNG に変換する。
+--- 既に PNG が存在する場合はスキップする。
+local function convert_svg_to_png(svg_path, png_path)
+    if file_exists(png_path) then
+        return true
+    end
+
+    local _svg_path = utf8_to_active_cp(svg_path)
+    local _png_path = utf8_to_active_cp(png_path)
+
+    local cmd
+    if package.config:sub(1,1) == '\\' then -- Windows
+        cmd = string.format(
+            'type "%s" | "%s" --dpi-x %d --dpi-y %d -f png -a > "%s"',
+            _svg_path, _root_dir .. "\\rsvg-convert.cmd",
+            RSVG_DPI_X, RSVG_DPI_Y, _png_path)
+    else
+        cmd = string.format(
+            'cat "%s" | "%s" --dpi-x %d --dpi-y %d -f png -a > "%s"',
+            svg_path, root_dir .. "/rsvg-convert",
+            RSVG_DPI_X, RSVG_DPI_Y, png_path)
+    end
+
+    local result = os.execute(cmd)
+    if result ~= true then
+        io.stderr:write("[mermaid] Error: rsvg-convert failed for " .. svg_path .. "\n")
+        return false
+    end
+    return true
+end
 
 return {
     {
-        CodeBlock = function(el) 
+        CodeBlock = function(el)
 
             ---------------------------------------------------------------------
 
@@ -133,6 +223,12 @@ return {
                 filename = filename:gsub("%.[mM][mM][dD]$", "")
                 -- ファイル名を caption に
                 caption = filename
+            end
+
+            ---------------------------------------------------------------------
+
+            if is_html_format() then
+                return mermaid_html_block(el.text, caption)
             end
 
             ---------------------------------------------------------------------
@@ -215,28 +311,36 @@ return {
                 local multiply_svg = 0.875
 
                 if width and height then
-                    -- ルート svg 要素のみ対象に style 属性を書き換え
-                    patched_svg = patched_svg:gsub('(<svg[^>]-)style="([^"]*)"', function(svg_tag, style)
-                        -- max-width を削除
-                        style = style:gsub("max%-width:[^;]*;? ?", "")
-                        -- width / height を削除
-                        style = style:gsub("width:[^;]*;?", "")
-                        style = style:gsub("height:[^;]*;?", "")
-                        -- 末尾に width / height 追加
-                        return string.format('%sstyle="width:%spx; height:%spx; %s"', svg_tag, width * multiply_svg, height * multiply_svg, style)
-                    end, 1) -- 最初の svg タグのみ置換
+                    -- ルート svg 開始タグを抽出し、その中だけを書き換える
+                    -- (ネストされた svg 要素を誤って変更しないための安全策)
+                    local root_tag_end_pos = patched_svg:find(">", 1, true)
+                    if root_tag_end_pos then
+                        local root_tag = patched_svg:sub(1, root_tag_end_pos)
+                        local rest = patched_svg:sub(root_tag_end_pos + 1)
 
-                    -- svg タグの width / height 属性を上書きまたは追加 (ルート svg 要素のみ対象)
-                    patched_svg = patched_svg
-                        :gsub('(<svg[^>]*)%swidth="[^"]*"', '%1', 1)
-                        :gsub('(<svg[^>]*)%sheight="[^"]*"', '%1', 1)
-                        :gsub('(<svg)', '%1 width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"', 1)
+                        -- style 属性から max-width を削除し、width / height を追加または上書き
+                        root_tag = root_tag:gsub('style="([^"]*)"', function(style)
+                            style = style:gsub("max%-width:[^;]*;? ?", "")
+                            style = style:gsub("width:[^;]*;?", "")
+                            style = style:gsub("height:[^;]*;?", "")
+                            return string.format('style="width:%spx; height:%spx; %s"',
+                                width * multiply_svg, height * multiply_svg, style)
+                        end)
+
+                        -- width / height 属性を削除して新しい値を追加
+                        root_tag = root_tag:gsub('%swidth="[^"]*"', '')
+                        root_tag = root_tag:gsub('%sheight="[^"]*"', '')
+                        root_tag = root_tag:gsub('^<svg',
+                            '<svg width="' .. width * multiply_svg .. 'px" height="' .. height * multiply_svg .. 'px"')
+
+                        patched_svg = root_tag .. rest
+                    end
                 end
 
                 -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、
                 -- Word で日本語フォントとして解釈されやすいフォントスタックに置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
-                patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
+                --patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
 
                 -- 上書き保存
                 local f = io.open(_image_file_path, "w")
@@ -245,12 +349,24 @@ return {
                     f:close()
                 end
             end
-            
+
+            -- docx 出力時: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
+            -- (Pandoc が SVG を検出して rsvg-convert で二重変換するのを防ぐ)
+            local display_width, display_height
+            if not is_html_format() then
+                local png_filename = string.format("mermaid_%s.png", utils.sha1(el.text))
+                local png_file_path = paths.join({resource_dir, png_filename})
+                display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
+                if convert_svg_to_png(image_file_path, png_file_path) then
+                    image_file_path = png_file_path
+                end
+            end
+
             local image_src = image_file_path
 
             -- output relative
             if PANDOC_STATE.output_file ~= nil then
-                if string.match(FORMAT, "html") then 
+                if is_html_format() then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
                 else
@@ -260,6 +376,11 @@ return {
 
             -- replace tag
             if caption == nil then
+                if display_width and display_height then
+                    return pandoc.Figure(pandoc.Image("mermaid", image_src, "",
+                        pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
+                                            {"height", tostring(display_height) .. "px"}})))
+                end
                 return pandoc.Figure(pandoc.Image("mermaid", image_src, ""))
             end
 
@@ -274,6 +395,11 @@ return {
             -- Remove the last LineBreak
             table.remove(caption_elements)
 
+            if display_width and display_height then
+                return pandoc.Figure(pandoc.Image(caption, image_src, "",
+                    pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
+                                        {"height", tostring(display_height) .. "px"}})), caption_elements)
+            end
             return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
 
         end

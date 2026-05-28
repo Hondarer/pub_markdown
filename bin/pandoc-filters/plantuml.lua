@@ -351,7 +351,66 @@ local function move_root_processing_instructions_after_svg(content)
 end
 
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
-local plantuml_svg_font_family = "Meiryo, \'Segoe UI\', \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+local plantuml_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
+
+-- docx 出力時の SVG → PNG 変換 DPI
+-- rsvg-convert.js の計算式: scale = max(dpiX, dpiY) * 3 / 96
+-- DPI 120 → scale = 3.75 → 実効 360 DPI
+local RSVG_DPI_X = 120
+local RSVG_DPI_Y = 120
+
+--- SVG ファイルのルートタグから表示用の幅と高さ (px) を取得する。
+--- width/height 属性を優先し、なければ viewBox から取得する。
+local function get_svg_display_size(svg_path)
+    local f = io.open(svg_path, "r")
+    if not f then return nil, nil end
+    local content = f:read(4096)
+    f:close()
+    if not content then return nil, nil end
+    local tag_end = content:find(">", 1, true)
+    if not tag_end then return nil, nil end
+    local root_tag = content:sub(1, tag_end)
+    local w = tonumber(root_tag:match('width="([%d%.]+)'))
+    local h = tonumber(root_tag:match('height="([%d%.]+)'))
+    if w and h then return w, h end
+    local vb = root_tag:match('viewBox="([^"]+)"')
+    if vb then
+        local _, _, vw, vh = vb:match("([%-%d%.]+)%s+([%-%d%.]+)%s+([%d%.]+)%s+([%d%.]+)")
+        return tonumber(vw), tonumber(vh)
+    end
+    return nil, nil
+end
+
+--- パッチ済み SVG を rsvg-convert で PNG に変換する。
+--- 既に PNG が存在する場合はスキップする。
+local function convert_svg_to_png(svg_path, png_path)
+    if file_exists(png_path) then
+        return true
+    end
+
+    local _svg_path = utf8_to_active_cp(svg_path)
+    local _png_path = utf8_to_active_cp(png_path)
+
+    local cmd
+    if package.config:sub(1,1) == '\\' then -- Windows
+        cmd = string.format(
+            'type "%s" | "%s" --dpi-x %d --dpi-y %d -f png -a > "%s"',
+            _svg_path, _root_dir .. "\\rsvg-convert.cmd",
+            RSVG_DPI_X, RSVG_DPI_Y, _png_path)
+    else
+        cmd = string.format(
+            'cat "%s" | "%s" --dpi-x %d --dpi-y %d -f png -a > "%s"',
+            svg_path, root_dir .. "/rsvg-convert",
+            RSVG_DPI_X, RSVG_DPI_Y, png_path)
+    end
+
+    local result = os.execute(cmd)
+    if result ~= true then
+        io.stderr:write("[plantuml] Error: rsvg-convert failed for " .. svg_path .. "\n")
+        return false
+    end
+    return true
+end
 
 local function patch_svg_font_family(content)
     content = string.gsub(content, 'font%-family%s*=%s*"[^"]*"', 'font-family="' .. plantuml_svg_font_family .. '"')
@@ -365,7 +424,8 @@ end
 
 local function patch_svg_content(content)
     content = move_root_processing_instructions_after_svg(content)
-    return patch_svg_font_family(content)
+    --return patch_svg_font_family(content)
+    return content
 end
 
 local function patch_svg_file(path)
@@ -658,6 +718,18 @@ return {
                 patch_svg_file(image_file_path)
             end
 
+            -- docx 出力時かつ SVG フォーマットの場合: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
+            -- (Pandoc が SVG を検出して rsvg-convert で二重変換するのを防ぐ)
+            local display_width, display_height
+            if pu_config.format == "svg" and not string.match(FORMAT, "html") then
+                local png_filename = string.format("puml_%s.png", utils.sha1(encoded_text))
+                local png_file_path = paths.join({resource_dir, png_filename})
+                display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
+                if convert_svg_to_png(image_file_path, png_file_path) then
+                    image_file_path = png_file_path
+                end
+            end
+
             local image_src = image_file_path
 
             -- output relative
@@ -672,6 +744,11 @@ return {
 
             -- replace tag
             if caption == nil then
+                if display_width and display_height then
+                    return pandoc.Figure(pandoc.Image("plantuml", image_src, "",
+                        pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
+                                            {"height", tostring(display_height) .. "px"}})))
+                end
                 return pandoc.Figure(pandoc.Image("plantuml", image_src, ""))
             end
 
@@ -686,6 +763,11 @@ return {
             -- Remove the last LineBreak
             table.remove(caption_elements)
 
+            if display_width and display_height then
+                return pandoc.Figure(pandoc.Image(caption, image_src, "",
+                    pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
+                                        {"height", tostring(display_height) .. "px"}})), caption_elements)
+            end
             return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
         end
     }
