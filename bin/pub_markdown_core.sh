@@ -1362,6 +1362,9 @@ for file in "${files[@]}"; do
                             printf "\e[0m"
                         fi
                         rm -f "$_pm_pandoc_stderr"
+                        python3 "${SCRIPT_DIR}/pandoc-filters/fit-docx-images-to-page.py" \
+                            "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                            >/dev/null 2>/dev/null || true
                         python3 "${SCRIPT_DIR}/pandoc-filters/inject-toc-placeholder.py" \
                             "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             2>/dev/null || true
@@ -1735,6 +1738,9 @@ for file in "${files[@]}"; do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    python3 "${SCRIPT_DIR}/pandoc-filters/fit-docx-images-to-page.py" \
+                        "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                        >/dev/null 2>/dev/null || true
                     python3 "${SCRIPT_DIR}/pandoc-filters/inject-toc-placeholder.py" \
                         "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                         2>/dev/null || true
