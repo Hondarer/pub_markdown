@@ -1,12 +1,12 @@
-# Pandoc Mermaid Lua フィルタ (mermaid.lua)
+# Pandoc Mermaid Lua フィルター (mermaid.lua)
 
 ## 概要
 
-この Lua フィルタは、Pandoc 文書内の Mermaid コードブロックを自動的に SVG 画像に変換するためのフィルタです。mermaid-cli (mmdc) を使用して Mermaid 記法をレンダリングし、生成された SVG ファイルを最適化して文書に埋め込みます。
+この Lua フィルターは、Pandoc 文書内の Mermaid コード ブロックを自動的に SVG 画像に変換するためのフィルターです。mermaid-cli (mmdc) を使用して Mermaid 記法をレンダリングし、生成された SVG ファイルを最適化して文書に埋め込みます。
 
 ## 基本的な動作フロー
 
-### コードブロックの検出と処理
+### コード ブロックの検出と処理
 
 ```lua
 CodeBlock = function(el) 
@@ -21,9 +21,9 @@ CodeBlock = function(el)
     end
 ```
 
-- コードブロックのクラス属性を解析
+- コード ブロックのクラス属性を解析
 - `mermaid` または `mermaid:filename` 形式をサポート
-- mermaid 以外のコードブロックはそのまま通過
+- mermaid 以外のコード ブロックはそのまま通過
 
 ### キャプション処理
 
@@ -51,15 +51,15 @@ function utf8_to_active_cp(text)
     if not os_name or not string.match(os_name:lower(), "windows") then
         return text  -- Linux環境ではそのまま
     end
-    
+
     -- PowerShellを使用してUTF-8からアクティブコードページに変換
     local temp_file = create_temp_file()
     -- ... PowerShell経由でのエンコーディング変換処理
 end
 ```
 
-- Windows 環境でのファイルパス文字化け対策
-- PowerShell を使用して UTF-8 文字列をシステムのアクティブコードページに変換
+- Windows 環境でのファイル パス文字化け対策
+- PowerShell を使用して UTF-8 文字列をシステムのアクティブ コード ページに変換
 
 #### 実行コマンドの選択
 
@@ -90,7 +90,7 @@ os.execute(string.format("cd %s && \"%s\" -i %s -o %s -b transparent | grep -v -
 ```
 
 - 一時的な `.mmd` ファイルを作成
-- mmdc (mermaid-cli) を実行してSVGを生成
+- mmdc (mermaid-cli) を実行して SVG を生成
 - 背景を透明に設定 (`-b transparent`)
 - 不要な出力メッセージをフィルタリング
 

@@ -1,19 +1,19 @@
-# 追加ドキュメントサブフォルダー機能
+# 追加ドキュメント サブフォルダー機能
 
 ## 概要
 
-`pub_markdown_core.sh` によるドキュメント発行処理において、指定したドキュメントルートを、メインの `mdRoot` (デフォルト: `docs`) 配下にマージします。
+`pub_markdown_core.sh` によるドキュメント発行処理において、指定したドキュメント ルートを、メインの `mdRoot` (デフォルト: `docs`) 配下にマージします。
 
 ### 背景
 
-補助ディレクトリや外部フレームワークを含むプロジェクトでは、各領域 (`doxyfw`, `testfw`, `makefw`, `.claude/skills` 等) ごとに独自のドキュメントルートを持つ場合があります。  
-これらを統合的に発行するために、各ドキュメントルートをメインプロジェクトの `docs` 配下にあるかのように扱います。
+補助ディレクトリや外部フレームワークを含むプロジェクトでは、各領域 (`doxyfw`, `testfw`, `makefw`, `.claude/skills` 等) ごとに独自のドキュメント ルートを持つ場合があります。  
+これらを統合的に発行するために、各ドキュメント ルートをメイン プロジェクトの `docs` 配下にあるかのように扱います。
 
 ## 設定
 
 ### 設定ファイル
 
-`pub_markdown.config.yaml` で追加ドキュメントサブフォルダーを指定します。
+`pub_markdown.config.yaml` で追加ドキュメント サブフォルダーを指定します。
 
 ```yaml
 # 追加ドキュメントサブフォルダー機能
@@ -29,9 +29,9 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 | 空または未指定 | 機能無効 |
 | `alias=path` | 表示名と実パスを分離して使用 |
 
-`path` はワークスペースルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。
-`path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。
-`path` が存在しない、またはディレクトリではない場合は warning を出してその項目だけを対象外にし、残りの項目で処理を継続します。
+`path` はワークスペース ルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。  
+`path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。  
+`path` が存在しない、またはディレクトリではない場合は warning を出してその項目だけを対象外にし、残りの項目で処理を継続します。  
 `alias` 省略記法はサポートしません。
 
 ## パス変換ルール
@@ -40,8 +40,8 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 | 種類 | 実パス | 仮想パス |
 |------|--------|----------|
-| 追加ドキュメントサブフォルダー配下のドキュメント | `{configuredPath}/{path}` | `{mdRoot}/{alias}/{path}` |
-| メインドキュメント | `{mdRoot}/{path}` | `{mdRoot}/{path}` |
+| 追加ドキュメント サブフォルダー配下のドキュメント | `{configuredPath}/{path}` | `{mdRoot}/{alias}/{path}` |
+| メイン ドキュメント | `{mdRoot}/{path}` | `{mdRoot}/{path}` |
 
 ### パス変換の具体例
 
@@ -61,7 +61,7 @@ alias を使う例:
 | 仮想パス | `docs/docsfw/pipeline.md` |
 | HTML 出力 | `docs/ja/html/docsfw/pipeline.html` |
 
-## relativeFile パラメータ
+## relativeFile パラメーター
 
 ### 受け入れ可能なパス形式
 
@@ -70,16 +70,16 @@ alias を使う例:
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
 | メイン mdRoot パス | `docs/build-design.md` | 従来通り処理 |
-| 実パス(主) | `framework/makefw/docs/make-local.md` / `framework/docsfw/docs/pipeline.md` / `.claude/skills/create-mock/SKILL.md` | 実パスを内部で仮想パスに変換して処理 |
-| 仮想パス(拡張) | `docs/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
+| 実パス (主) | `framework/makefw/docs/make-local.md` / `framework/docsfw/docs/pipeline.md` / `.claude/skills/create-mock/SKILL.md` | 実パスを内部で仮想パスに変換して処理 |
+| 仮想パス (拡張) | `docs/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
-### フォルダ指定時の動作
+### フォルダー指定時の動作
 
 | 指定パス | 処理対象 |
 |----------|----------|
-| `docs` | メイン mdRoot + 指定ドキュメントルート |
-| `docs/makefw` | makefw のドキュメントルート配下のみ |
-| `framework/makefw/docs` | makefw のドキュメントルート配下のみ (実パス指定) |
+| `docs` | メイン mdRoot + 指定ドキュメント ルート |
+| `docs/makefw` | makefw のドキュメント ルート配下のみ |
+| `framework/makefw/docs` | makefw のドキュメント ルート配下のみ (実パス指定) |
 | `docs/docsfw` | `framework/docsfw/docs` 配下のみ |
 | `framework/docsfw/docs` | `framework/docsfw/docs` 配下のみ (実パス指定) |
 | `docs/skills` | `.claude/skills` 配下のみ |
@@ -87,8 +87,8 @@ alias を使う例:
 
 ## 目次生成
 
-`\toc` コマンドによる目次生成時、指定ドキュメントルートの内容も含まれます。
-追加ドキュメント サブフォルダー全体を結合するのは、メイン `mdRoot` 自体を起点とする目次だけです。
+`\toc` コマンドによる目次生成時、指定ドキュメント ルートの内容も含まれます。  
+追加ドキュメント サブフォルダー全体を結合するのは、メイン `mdRoot` 自体を起点とする目次だけです。  
 追加ドキュメント サブフォルダー配下のファイルから生成する目次は、その仮想サブツリーだけを起点にします。
 
 目次リンクの生成例:
@@ -99,9 +99,9 @@ alias を使う例:
   - 📄 [template-auto-selection.md](makefw/template-auto-selection.md)
 ```
 
-## ネストしたドキュメントルート
+## ネストしたドキュメント ルート
 
-ネストしたドキュメントルートも処理可能です。
+ネストしたドキュメント ルートも処理可能です。
 
 ```yaml
 # 例: testfw/gtest も対象にする場合
@@ -116,7 +116,7 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 ## 相対リンクの読み替え
 
-追加ドキュメント サブフォルダー配下の文書に含まれる相対リンクは、実パスで解決したあと、発行時の仮想パス間の相対リンクへ読み替えます。
+追加ドキュメント サブフォルダー配下の文書に含まれる相対リンクは、実パスで解決したあと、発行時の仮想パス間の相対リンクへ読み替えます。  
 この処理は、メイン `mdRoot` と追加ドキュメント サブフォルダーの間、追加ドキュメント サブフォルダー同士の間でも適用されます。
 
 例:

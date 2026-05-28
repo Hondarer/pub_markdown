@@ -444,8 +444,8 @@ def is_halfwidth_alnum(char: str) -> bool:
 FULLWIDTH_TO_HALFWIDTH = str.maketrans(
     "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
     "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ"
-    "０１２３４５６７８９（）［］｛｝",
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()[]{}",
+    "０１２３４５６７８９（）［］｛｝：",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()[]{}:",
 )
 
 
@@ -548,8 +548,9 @@ def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
 
 
 def remove_space_before_punctuation(text: str) -> str:
-    text = re.sub(r" +([、。，．,:;!！?？])", r"\1", text)
-    text = re.sub(r" +\.(?![A-Za-z])", ".", text)
+    text = re.sub(r" +([、。，．,;!！?？])", r"\1", text)
+    text = re.sub(r" +:(?!(?: |=))", ":", text)
+    text = re.sub(r" +\.(?![A-Za-z./\\])", ".", text)
     return text
 
 
@@ -580,13 +581,71 @@ def add_space_after_number_before_bracket(text: str) -> str:
 
 
 def add_space_before_supplemental_bracket(text: str) -> str:
-    def _replace(match: Match[str]) -> str:
-        content = match.group(2)
-        if re.search(r"[^\x00-\x7F]|:", content):
-            return match.group(1) + " (" + content + ")"
-        return match.group(0)
+    def _is_big_o_notation(prefix: str, content: str) -> bool:
+        return prefix == "O" and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 ^_+/#*.,-]*", content) is not None
 
-    return re.sub(r"([A-Za-z0-9_*])\(([^)]*)\)", _replace, text)
+    def _is_symbol_prefix(prefix: str) -> bool:
+        return len(prefix) == 1 and unicodedata.category(prefix).startswith("S")
+
+    def _replace_symbol(content: str, prefix: str, original: str) -> str:
+        if _is_symbol_prefix(prefix):
+            return prefix + " (" + content + ")"
+        return original
+
+    def _replace(content: str, prefix: str, original: str) -> str:
+        if _is_big_o_notation(prefix, content):
+            return original
+        if re.search(r"[^\x00-\x7F]|:", content):
+            return prefix + " (" + content + ")"
+        return original
+
+    def _replace_acronym_suffix(content: str, prefix: str, original: str) -> str:
+        if _is_big_o_notation(prefix, content):
+            return original
+        if re.fullmatch(r"[A-Z0-9][A-Z0-9 ._+/#*-]*", content):
+            return prefix + " (" + content + ")"
+        return original
+
+    def _replace_ascii_slash_list(content: str, prefix: str, original: str) -> str:
+        if _is_big_o_notation(prefix, content):
+            return original
+        if (
+            re.fullmatch(r"[A-Za-z0-9_./-]*[A-Z0-9/][A-Za-z0-9_./-]*", prefix)
+            and re.fullmatch(r"[A-Za-z0-9_./-]+(?:\s*/\s*[A-Za-z0-9_./-]+)+", content)
+        ):
+            return prefix + " (" + content + ")"
+        return original
+
+    def _replace_plain(match: Match[str]) -> str:
+        return _replace(match.group(2), match.group(1), match.group(0))
+
+    def _replace_emphasis(match: Match[str]) -> str:
+        return _replace(match.group(2), match.group(1), match.group(0))
+
+    def _replace_plain_acronym_suffix(match: Match[str]) -> str:
+        return _replace_acronym_suffix(match.group(2), match.group(1), match.group(0))
+
+    def _replace_emphasis_acronym_suffix(match: Match[str]) -> str:
+        return _replace_acronym_suffix(match.group(2), match.group(1), match.group(0))
+
+    def _replace_plain_ascii_slash_list(match: Match[str]) -> str:
+        return _replace_ascii_slash_list(match.group(2), match.group(1), match.group(0))
+
+    text = re.sub(r"([^\s()])\(([^)]*)\)", lambda match: _replace_symbol(match.group(2), match.group(1), match.group(0)), text)
+    text = re.sub(r"([A-Za-z0-9_./-]+)\(([^)]*)\)", _replace_plain_ascii_slash_list, text)
+    text = re.sub(r"([A-Za-z0-9_])\(([^)]*)\)", _replace_plain, text)
+    text = re.sub(r"([+?:]=)\(([^)]*)\)", _replace_plain, text)
+    text = re.sub(r"((?<=[^\s*])\*\*|(?<=[^\s_])__|(?<=[^\s*])\*|(?<=[^\s_])_)\(([^)]*)\)", _replace_emphasis, text)
+    text = re.sub(
+        r"([A-Za-z0-9_])\(([^)]*)\)(?=(?:\s*[^\x00-\x7F])|$)",
+        _replace_plain_acronym_suffix,
+        text,
+    )
+    return re.sub(
+        r"((?<=[^\s*])\*\*|(?<=[^\s_])__|(?<=[^\s*])\*|(?<=[^\s_])_)\(([^)]*)\)(?=(?:\s*[^\x00-\x7F])|$)",
+        _replace_emphasis_acronym_suffix,
+        text,
+    )
 
 
 def normalize_spaces(text: str) -> str:
@@ -946,6 +1005,10 @@ def style_text(
         )
     styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
     styled = _apply_add_space_pairs(styled, collector=collector)
+    before = styled
+    styled = add_space_before_supplemental_bracket(styled)
+    if collector is not None:
+        _record_step_changes(before, styled, "supplemental-bracket", collector, message="補足括弧前にスペースを挿入")
 
     styled = _restore_replacements(styled, url_replacements)
     styled = _restore_replacements(styled, pattern_replacements)

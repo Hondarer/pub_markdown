@@ -16,7 +16,7 @@ pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua
 
 フィルターを有効化するにはメタデータで `page-break-before-heading` を指定する。
 
-**ショートハンド (有効化のみ)**:
+**ショート ハンド (有効化のみ)**:
 
 ```bash
 pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua \
@@ -39,7 +39,7 @@ pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua \
   --metadata-file=pbh-settings.yaml
 ```
 
-**フロントマターで設定**:
+**フロント マターで設定**:
 
 ```yaml
 ---
@@ -154,7 +154,7 @@ effective_level = raw_level + shift_heading_level_by
 |------|----------|
 | 段落 | テキスト文字数 + 20 (余白) |
 | 見出し | テキスト文字数 + 50 (余白) |
-| コードブロック | 行数 × 40 |
+| コード ブロック | 行数 × 40 |
 | 表 | (行数 + 1) × `table-row-chars` |
 | 図 | 画像高さ推定値 + 30 (キャプション) |
 | リスト | 各項目の合計 + 20 |
@@ -173,7 +173,7 @@ effective_level = raw_level + shift_heading_level_by
 
 | 形式 | 取得方法 |
 |------|----------|
-| PNG | ファイルヘッダー (IHDR チャンク) |
+| PNG | ファイル ヘッダー (IHDR チャンク) |
 | JPEG | SOF0/SOF2 マーカー |
 | SVG | `height` 属性 → `viewBox` 属性 |
 | その他 | フォールバック値 |
@@ -195,10 +195,10 @@ Markdown 属性や SVG で指定可能な単位は以下の通り。
 
 AST レベルでの文字数推定のため、実際のページ位置とはずれが生じる。以下の要因で誤差が発生する可能性がある。
 
-- フォントサイズ・行間・余白の設定
+- フォント サイズ・行間・余白の設定
 - 画像の実際の表示サイズ (縮小・拡大)
 - 表のセル内での折り返し
-- ページヘッダー・フッターの有無
+- ページ ヘッダー・フッターの有無
 
 `chars-per-page` を実際の文書設定に合わせて調整することで精度を改善できる。
 
@@ -252,7 +252,7 @@ page-break-before-heading:
 
 `--shift-heading-level-by=-1` を使用する場合、`###` (ソース H3) が出力上 H2 になる。`heading-level-always` と `heading-level-to` を**出力レベル**で指定すると意図通りに動作する。
 
-コマンドライン:
+コマンド ライン:
 
 ```bash
 pandoc input.md -o output.docx \
@@ -261,7 +261,7 @@ pandoc input.md -o output.docx \
   --lua-filter=page-break-before-heading.lua
 ```
 
-フロントマター:
+フロント マター:
 
 ```yaml
 ---
@@ -272,7 +272,7 @@ page-break-before-heading:
 ---
 ```
 
-`pub_markdown_core.sh` 経由の場合は `--metadata shift-heading-level-by=-1` が自動付与されるため、文書のフロントマターへの追記は不要。
+`pub_markdown_core.sh` 経由の場合は `--metadata shift-heading-level-by=-1` が自動付与されるため、文書のフロント マターへの追記は不要。
 
 ### 常に改ページを無効化して閾値判定のみにする
 

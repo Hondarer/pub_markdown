@@ -5,25 +5,52 @@ import os
 import re
 from typing import Callable, List, Optional, Sequence, Tuple
 
-from text_style_jp_engine import DiagnosticCollector, _record_step_changes, style_text
+from text_style_jp_engine import DiagnosticCollector, _needs_space_between, _record_step_changes, style_text
 
 
-_BACKTICK_PATTERN = re.compile(r"`{2,}.+?`{2,}|`[^`]+`")
+_BACKTICK_PATTERN = re.compile(r"(?<!`)(`+)(?!`)[^\n]*?(?<!`)\1(?!`)")
 _ADMONITION_MARKER_PATTERN = re.compile(r"\[![A-Za-z][A-Za-z0-9_-]*\]")
-_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("、。，．,.!?！？)]}）］｝」』】〕〉》*_~")
-_DOXYGEN_MATH_PATTERN = re.compile(r"@f\$.*?@f\$")
+_TASK_LIST_MARKER_PATTERN = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+\[(?: |x|X)\](?=\s|$)")
+_EMPTY_TASK_LIST_MARKER_RE = re.compile(r"^(\s*(?:[-*+]|\d+[.)])\s+)\[(?:\s*)\](?=\s|$)")
+_DOXYGEN_COMMAND_PLACEHOLDER_PATTERN = re.compile(
+    r"[@\\][A-Za-z_]+(?:\[[^\]\n]*\]|\s+\[[^\]\n]*\])?(?:\s+<[^>\n]+>|\s+\[[^\]\n]*\]|\s+\"[^\n\"]*\")*\s+\{[^{}\n]*\}"
+)
+_DOXYGEN_MATH_PATTERN = re.compile(r"@f(?:\[[^\n]*?@f\]|\$.*?@f\$)")
+_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("/・、。，．,.!?！？)]}）］｝」』】〕〉》*_~")
+_INLINE_CODE_NO_SPACE_PREFIX_RE = re.compile(r"(?:==|!=|<=|>=|=|:)")
+_INLINE_CODE_SPACED_SUFFIX_RE = re.compile(r"(?:`{2,}.+?`{2,}|`[^`\n]+`)( +)(?:==|!=|<=|>=|=|:)")
+_INLINE_CODE_WITH_SPACE_BEFORE_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+/(`{2,}.+?`{2,}|`[^`\n]+`)")
+_INLINE_CODE_WITH_SPACE_AFTER_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)/\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
+_INLINE_CODE_WITH_SPACE_BEFORE_MIDDLEDOT_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+・")
+_INLINE_CODE_WITH_SPACE_AFTER_MIDDLEDOT_RE = re.compile(r"・\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _BLOCKQUOTE_RE = re.compile(r"^\s*>")
 _HEADING_RE = re.compile(r"^#{1,6} ")
-_HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
+_HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
+_HEADING_COUNTER_PREFIX_RE = re.compile(
+    r"^(?:回|回目|章|節|項|個|件|人|日|年|月|時|分|秒|本|台|行|列|ページ|頁|つ|か所|ヶ所|箇所)"
+)
+_HEADING_LITERAL_NUMBER_PREFIX_RE = re.compile(r"^(?:階層)")
 _HEADING_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
-_BOLD_HEADING_RE = re.compile(r"^\*\*.+\*\*:?$")
+_EMPHASIS_PATTERN = re.compile(
+    r"(?<!\*)\*\*(?=\S)[^*\n]+?(?<=\S)\*\*(?!\*)"
+    r"|(?<!\*)\*(?=\S)[^*\n]+?(?<=\S)\*(?!\*)"
+    r"|(?<![A-Za-z0-9_])__(?=\S)[^_\n]+?(?<=\S)__(?![A-Za-z0-9_])"
+    r"|(?<![A-Za-z0-9_])_(?=\S)[^_\n]+?(?<=\S)_(?![A-Za-z0-9_])"
+)
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+_LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
 
-_MARKDOWN_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _ADMONITION_MARKER_PATTERN]
+_MARKDOWN_PROTECTED_PATTERNS = [
+    _BACKTICK_PATTERN,
+    _ADMONITION_MARKER_PATTERN,
+    _TASK_LIST_MARKER_PATTERN,
+    _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN,
+    _DOXYGEN_MATH_PATTERN,
+]
 _INLINE_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
 
@@ -107,19 +134,36 @@ def detect_mode_from_path(path: str) -> str:
     return "text"
 
 
-def _restore_inline_code_spacing(text: str) -> str:
+def _restore_inline_code_spacing(text: str, original: Optional[str] = None) -> str:
     output: List[str] = []
     last = 0
+    original_matches = list(_BACKTICK_PATTERN.finditer(original)) if original is not None else []
 
-    for match in _BACKTICK_PATTERN.finditer(text):
+    for index, match in enumerate(_BACKTICK_PATTERN.finditer(text)):
         output.append(text[last:match.end()])
         last = match.end()
 
         if last >= len(text):
             continue
 
+        if index < len(original_matches):
+            original_end = original_matches[index].end()
+            original_suffix = original[original_end:]
+            if (
+                re.match(r"\s+(?:==|!=|<=|>=|=|:)", original_suffix)
+                and _INLINE_CODE_NO_SPACE_PREFIX_RE.match(text[last:])
+            ):
+                whitespace = re.match(r"\s+", original_suffix)
+                if whitespace is not None:
+                    output.append(whitespace.group(0))
+                continue
+
         next_char = text[last]
-        if next_char.isspace() or next_char in _INLINE_CODE_NO_SPACE_FOLLOWERS:
+        if (
+            next_char.isspace()
+            or next_char in _INLINE_CODE_NO_SPACE_FOLLOWERS
+            or _INLINE_CODE_NO_SPACE_PREFIX_RE.match(text[last:])
+        ):
             continue
 
         output.append(" ")
@@ -128,26 +172,212 @@ def _restore_inline_code_spacing(text: str) -> str:
     return "".join(output)
 
 
+def _filter_preserved_inline_code_suffix_findings(
+    original: str,
+    final: str,
+    collector: "DiagnosticCollector",
+    start_index: int,
+) -> None:
+    preserved_columns = []
+    for match in _INLINE_CODE_SPACED_SUFFIX_RE.finditer(original):
+        if match.group(0) in final:
+            preserved_columns.append((match.start(1) + 1, match.end(1) + 1))
+
+    if not preserved_columns:
+        return
+
+    kept = collector.findings[:start_index]
+    for finding in collector.findings[start_index:]:
+        if (
+            finding.rule == "space-before-punctuation"
+            and finding.original == " "
+            and any(start <= finding.column < end for start, end in preserved_columns)
+        ):
+            continue
+        kept.append(finding)
+
+    collector.findings = kept
+
+
+def _normalize_inline_code_middledot_spacing(text: str) -> str:
+    text = _INLINE_CODE_WITH_SPACE_BEFORE_MIDDLEDOT_RE.sub(r"\1・", text)
+    text = _INLINE_CODE_WITH_SPACE_AFTER_MIDDLEDOT_RE.sub(r"・\1", text)
+    return text
+
+
+def _strip_markup_delimiters(span: str) -> str:
+    if not span:
+        return span
+    if span.startswith("`"):
+        match = re.match(r"(`+)", span)
+        if match is None:
+            return span
+        delim = match.group(1)
+        if span.endswith(delim):
+            return span[len(delim):-len(delim)]
+        return span
+    for delim in ("**", "__", "*", "_"):
+        if span.startswith(delim) and span.endswith(delim):
+            return span[len(delim):-len(delim)]
+    return span
+
+
+def _normalize_markup_span_spacing(text: str) -> str:
+    pattern = re.compile(rf"{_BACKTICK_PATTERN.pattern}|{_EMPHASIS_PATTERN.pattern}")
+    output: List[str] = []
+    last = 0
+
+    for match in pattern.finditer(text):
+        start, end = match.span()
+        output.append(text[last:start])
+        span = match.group(0)
+        content = _strip_markup_delimiters(span).strip()
+        first_char = content[0] if content else ""
+        last_char = content[-1] if content else ""
+
+        if output and output[-1]:
+            prev_char = output[-1][-1]
+            if first_char and not prev_char.isspace() and _needs_space_between(prev_char, first_char):
+                output.append(" ")
+
+        output.append(span)
+
+        next_char = text[end] if end < len(text) else ""
+        if last_char and next_char and not next_char.isspace() and _needs_space_between(last_char, next_char):
+            output.append(" ")
+
+        last = end
+
+    output.append(text[last:])
+    return "".join(output)
+
+
+def _normalize_inline_code_slash_spacing(text: str) -> str:
+    text = _INLINE_CODE_WITH_SPACE_BEFORE_SLASH_RE.sub(r"\1 / \2", text)
+    text = _INLINE_CODE_WITH_SPACE_AFTER_SLASH_RE.sub(r"\1 / \2", text)
+    return text
+
+
 def _style_text_with_inline_code_spacing(
     text: str,
     protected_patterns: Sequence[re.Pattern],
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
-    return style_text(
+    start_index = len(collector.findings) if collector is not None else 0
+    styled = style_text(
         text,
         protected_patterns=protected_patterns,
-        postprocess=_restore_inline_code_spacing,
         collector=collector,
     )
+    final = _restore_inline_code_spacing(styled, original=text)
+    normalized = _normalize_inline_code_slash_spacing(final)
+    if collector is not None:
+        if normalized != final:
+            _record_step_changes(
+                final,
+                normalized,
+                "inline-code-slash",
+                collector,
+                message="インライン コード間のスラッシュ前後スペースを補正",
+            )
+    final = normalized
+    normalized = _normalize_inline_code_middledot_spacing(final)
+    if collector is not None:
+        if normalized != final:
+            _record_step_changes(
+                final,
+                normalized,
+                "inline-code-middledot",
+                collector,
+                message="インライン コード間の中黒前後スペースを削除",
+            )
+        final = normalized
+        if final == text:
+            collector.findings = collector.findings[:start_index]
+            return final
+        _filter_preserved_inline_code_suffix_findings(text, final, collector, start_index)
+    return normalized
 
 
-def _insert_blank_before_fence_after_bold(
+def _insert_blank_around_fences(
     result_lines: List[str],
     code_block_flags: List[bool],
 ) -> Tuple[List[str], List[bool]]:
     new_lines: List[str] = []
     new_flags: List[bool] = []
     n = len(result_lines)
+
+    def is_opening_fence(index: int, line: str) -> bool:
+        if not _CODE_FENCE_RE.match(line.lstrip()):
+            return False
+        if line.lstrip().startswith(">"):
+            return False
+        return index == 0 or not code_block_flags[index - 1]
+
+    def is_closing_fence(index: int, line: str) -> bool:
+        if line.lstrip().startswith(">"):
+            return False
+        if not re.match(r"^\s*(`{3,}|~{3,})\s*$", line):
+            return False
+        return index + 1 >= n or not code_block_flags[index + 1]
+
+    for i, line in enumerate(result_lines):
+        if is_opening_fence(i, line) and new_lines and new_lines[-1].strip():
+            new_lines.append("")
+            new_flags.append(False)
+
+        new_lines.append(line)
+        new_flags.append(code_block_flags[i])
+
+        if is_closing_fence(i, line) and i + 1 < n and result_lines[i + 1].strip():
+            new_lines.append("")
+            new_flags.append(False)
+
+    return new_lines, new_flags
+
+
+def _insert_blank_before_top_level_lists(
+    result_lines: List[str],
+    code_block_flags: List[bool],
+) -> Tuple[List[str], List[bool]]:
+    new_lines: List[str] = []
+    new_flags: List[bool] = []
+
+    for i, line in enumerate(result_lines):
+        if (
+            i > 0
+            and not code_block_flags[i]
+            and _LIST_ITEM_RE.match(line)
+            and not line.startswith((" ", "\t"))
+            and new_lines
+            and new_lines[-1].strip()
+            and not new_flags[-1]
+            and not new_lines[-1].startswith((" ", "\t"))
+        ):
+            prev_stripped = new_lines[-1].strip()
+            if (
+                not _LIST_ITEM_RE.match(prev_stripped)
+                and not _TABLE_ROW_RE.match(prev_stripped)
+                and not _BLOCKQUOTE_RE.match(prev_stripped)
+                and not _CODE_FENCE_RE.match(prev_stripped)
+            ):
+                new_lines.append("")
+                new_flags.append(False)
+
+        new_lines.append(line)
+        new_flags.append(code_block_flags[i])
+
+    return new_lines, new_flags
+
+
+def _insert_blank_after_standalone_emphasis_lines(
+    result_lines: List[str],
+    code_block_flags: List[bool],
+) -> Tuple[List[str], List[bool]]:
+    new_lines: List[str] = []
+    new_flags: List[bool] = []
+    n = len(result_lines)
+
     for i, line in enumerate(result_lines):
         new_lines.append(line)
         new_flags.append(code_block_flags[i])
@@ -156,15 +386,10 @@ def _insert_blank_before_fence_after_bold(
             continue
 
         stripped = line.strip()
-        is_bold_heading = (
-            not line.startswith((" ", "\t"))
-            and not _LIST_ITEM_RE.match(line)
-            and _BOLD_HEADING_RE.match(stripped)
-        )
-        if not is_bold_heading:
+        if not stripped or _EMPHASIS_PATTERN.fullmatch(stripped) is None:
             continue
 
-        if i + 1 < n and _CODE_FENCE_RE.match(result_lines[i + 1].lstrip()):
+        if i + 1 < n and result_lines[i + 1].strip():
             new_lines.append("")
             new_flags.append(False)
 
@@ -175,6 +400,32 @@ def _remove_unnecessary_trailing_spaces(
     result_lines: List[str],
     code_block_flags: List[bool],
 ) -> List[str]:
+    def leading_indent_width(line: str) -> int:
+        match = _LEADING_WHITESPACE_RE.match(line)
+        if match is None:
+            return 0
+        return len(match.group(0).expandtabs(4))
+
+    def is_list_continuation_line(line: str, next_line: str) -> bool:
+        match = _LIST_ITEM_RE.match(line)
+        if match is None:
+            return False
+
+        next_stripped = next_line.strip()
+        if not next_stripped:
+            return False
+        if (
+            _LIST_ITEM_RE.match(next_stripped)
+            or _TABLE_ROW_RE.match(next_stripped)
+            or _BLOCKQUOTE_RE.match(next_stripped)
+            or _HEADING_RE.match(next_stripped)
+            or _CODE_FENCE_RE.match(next_stripped)
+        ):
+            return False
+
+        content_indent = len(line[:match.end()].expandtabs(4))
+        return leading_indent_width(next_line) == content_indent
+
     n = len(result_lines)
     output = []
     for i, line in enumerate(result_lines):
@@ -188,11 +439,13 @@ def _remove_unnecessary_trailing_spaces(
             continue
 
         has_explicit_line_break = len(line) - len(stripped_line) >= 2
+        next_line = result_lines[i + 1] if i + 1 < n else ""
         next_stripped = (result_lines[i + 1] if i + 1 < n else "").strip()
+        is_list_continuation = is_list_continuation_line(stripped_line, next_line)
         curr_is_block = (
-            _LIST_ITEM_RE.match(stripped_line)
-            or _TABLE_ROW_RE.match(stripped_line)
+            _TABLE_ROW_RE.match(stripped_line)
             or _BLOCKQUOTE_RE.match(stripped_line)
+            or (_LIST_ITEM_RE.match(stripped_line) and not is_list_continuation)
         )
         next_is_block = (
             _LIST_ITEM_RE.match(next_stripped)
@@ -202,7 +455,11 @@ def _remove_unnecessary_trailing_spaces(
             or _CODE_FENCE_RE.match(next_stripped)
         )
 
-        if next_stripped and (has_explicit_line_break or (not curr_is_block and not next_is_block)):
+        if next_stripped and (
+            has_explicit_line_break
+            or is_list_continuation
+            or (not curr_is_block and not next_is_block)
+        ):
             output.append(stripped_line + "  ")
         else:
             output.append(stripped_line)
@@ -210,17 +467,54 @@ def _remove_unnecessary_trailing_spaces(
     return output
 
 
+def _normalize_task_list_marker(line: str) -> str:
+    return _EMPTY_TASK_LIST_MARKER_RE.sub(r"\1[ ]", line)
+
+
 def _remove_markdown_heading_number(line: str) -> str:
     match = _HEADING_NUMBER_RE.match(line)
     if not match:
         return line
-    return match.group(1) + " " + match.group(2)
+    token = match.group(2)
+    rest = match.group(3)
+    if _should_preserve_markdown_heading_number(token, rest):
+        return line
+    return match.group(1) + " " + rest
+
+
+def _has_plain_heading_number_token(token: str) -> bool:
+    return not token.endswith((".", ")"))
+
+
+def _preserve_counter_heading_number(token: str, rest: str) -> bool:
+    return _has_plain_heading_number_token(token) and _HEADING_COUNTER_PREFIX_RE.match(rest) is not None
+
+
+def _preserve_literal_number_heading(token: str, rest: str) -> bool:
+    return _has_plain_heading_number_token(token) and _HEADING_LITERAL_NUMBER_PREFIX_RE.match(rest) is not None
+
+
+_HEADING_NUMBER_PRESERVE_RULES: Sequence[Callable[[str, str], bool]] = (
+    _preserve_counter_heading_number,
+    _preserve_literal_number_heading,
+)
+
+
+def _should_preserve_markdown_heading_number(token: str, rest: str) -> bool:
+    return any(rule(token, rest) for rule in _HEADING_NUMBER_PRESERVE_RULES)
 
 
 def _remove_heading_inline_code(line: str) -> str:
     if not _HEADING_RE.match(line):
         return line
     return _HEADING_INLINE_CODE_RE.sub(r"\1", line)
+
+
+def _ensure_heading_marker_space(line: str) -> str:
+    match = re.match(r"^(#{1,6})([^\s#].*)$", line)
+    if match is None:
+        return line
+    return match.group(1) + " " + match.group(2)
 
 
 def normalize_blank_lines(text: str) -> str:
@@ -297,6 +591,10 @@ def style_markdown(
             result_lines.append(line)
         else:
             before = line
+            line = _normalize_task_list_marker(line)
+            if collector is not None:
+                _record_step_changes(before, line, "task-list-marker", collector, message="task list マーカーを正規化")
+            before = line
             line = _remove_markdown_heading_number(line)
             if collector is not None:
                 _record_step_changes(before, line, "heading-number", collector, message="見出し番号を除去")
@@ -304,10 +602,18 @@ def style_markdown(
             line = _remove_heading_inline_code(line)
             if collector is not None:
                 _record_step_changes(before, line, "heading-inline-code", collector, message="見出しのインライン コードを除去")
-            result_lines.append(_style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS, collector=collector))
+            before = line
+            line = _style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS, collector=collector)
+            normalized = _normalize_markup_span_spacing(line)
+            normalized = _ensure_heading_marker_space(normalized)
+            if collector is not None:
+                _record_step_changes(before, normalized, "markup-span-spacing", collector, message="強調/インライン コード前後のスペースを補正")
+            result_lines.append(normalized)
         code_block_flags.append(False)
 
-    result_lines, code_block_flags = _insert_blank_before_fence_after_bold(result_lines, code_block_flags)
+    result_lines, code_block_flags = _insert_blank_around_fences(result_lines, code_block_flags)
+    result_lines, code_block_flags = _insert_blank_before_top_level_lists(result_lines, code_block_flags)
+    result_lines, code_block_flags = _insert_blank_after_standalone_emphasis_lines(result_lines, code_block_flags)
     result_lines = _remove_unnecessary_trailing_spaces(result_lines, code_block_flags)
     return "\n".join(result_lines)
 

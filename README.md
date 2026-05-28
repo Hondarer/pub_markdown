@@ -27,7 +27,7 @@ Markdown to html and docx with Pandoc.
 + pandoc に PATH を通す。
 + pandoc-crossref に PATH を通す。
   + pandoc-crossref はオプション。存在しなくても動作する。
-+ node.exe に PATH を通す。Linux では nodejs モジュールパッケージに含まれる。
++ node.exe に PATH を通す。Linux では nodejs モジュール パッケージに含まれる。
 + bin 配下で、`npm ci` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
 
 ### Markdown の発行方法
@@ -38,8 +38,8 @@ Markdown to html and docx with Pandoc.
 
 ### 進捗ログ
 
-長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行する。
-共有ブラウザの起動待機、対象ファイル収集、各出力形式の生成、TOC 生成の段階が stderr に出力される。
+長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行する。  
+共有ブラウザーの起動待機、対象ファイル収集、各出力形式の生成、TOC 生成の段階が stderr に出力される。
 
 ```bash
 PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
@@ -59,9 +59,9 @@ This project uses the following third-party libraries:
 
 ### 多言語対応時に title を得られない問題
 
-以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。
-Pandoc に渡す前に、第 1 レベルの内容を取得して設定した。
-(lua フィルタの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
+以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。  
+Pandoc に渡す前に、第 1 レベルの内容を取得して設定した。  
+(lua フィルターの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
 
 ```html
 <!--ja:-->
@@ -80,7 +80,7 @@ This document format requires a nonempty <title> element.
 
 ### PlantUML を docx に取り込んだ際のフォント名
 
-svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。
+svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。  
 `pub_markdown.config.yaml` の `plantuml.format` が svg の場合は、font-family を、Word で日本語フォントとして解釈されやすい font-family="Segoe UI, メイリオ" に置換するように改修。
 
 ## 既知の問題

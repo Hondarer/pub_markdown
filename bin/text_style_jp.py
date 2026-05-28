@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Japanese text styling CLI for Markdown and source comments."""
 
+import contextlib
+import io
 import os
 import sys
 import tempfile
@@ -37,6 +39,10 @@ def run_tests() -> bool:
         ("Windows10を起動", "Windows10 を起動"),
         ("ABCあいう", "ABC あいう"),
         ("ボタンをクリックして 、閉じます 。", "ボタンをクリックして、閉じます。"),
+        ("フォント :", "フォント:"),
+        ("送信者 1 : 受信者 1", "送信者 1 : 受信者 1"),
+        ("path, ...", "path, ..."),
+        ("文末 .", "文末."),
         ("列 A ( タイトル )", "列 A (タイトル)"),
         ("[ 新規 ] をクリック", "[新規] をクリック"),
         ("「 test 」と入力", "「test」と入力"),
@@ -52,6 +58,8 @@ def run_tests() -> bool:
         ("hoge(key:value)", "hoge (key:value)"),
         ("hoge(説明:値)", "hoge (説明:値)"),
         ("hoge (説明)", "hoge (説明)"),
+        ("GNU Make(スキルガイド)", "GNU Make (スキルガイド)"),
+        ("Markdown(GFM)仕様", "Markdown (GFM) 仕様"),
     ]
 
     markdown_test_cases: List[Tuple[str, str]] = [
@@ -94,7 +102,9 @@ def run_tests() -> bool:
         ("ソースコードコメント", "ソース コード コメント"),
         ("スライドショ", "スライド ショー"),
         ("メールフロ", "メール フロー"),
-        ("データフロ", "データ フロー"),
+        ("データフロ", "データフロー"),
+        ("ファイルディスクリプタ", "ファイル記述子"),
+        ("ファイルディスクリプター", "ファイル記述子"),
         ("フィルタ", "フィルター"),
         ("フィルタリング", "フィルタリング"),
         ("モニタ", "モニター"),
@@ -119,8 +129,62 @@ def run_tests() -> bool:
         ("**LTO (`-flto`, Release ビルド)**:", "**LTO (`-flto`, Release ビルド)**:"),
         ("`cmd`, `arg`", "`cmd`, `arg`"),
         ("単語, 単語", "単語, 単語"),
+        ("先頭の ./ は中間一致を防くために明示したほうがベターです。", "先頭の ./ は中間一致を防くために明示したほうがベターです。"),
+        ("全角コロン：サンプル", "全角コロン:サンプル"),
+        ("## @brief { brief description }", "## @brief { brief description }"),
+        (
+            "## @param[<dir>] <parameter-name> { parameter description }",
+            "## @param[<dir>] <parameter-name> { parameter description }",
+        ),
+        ("## @f[ ~ @f], @f$ ~ @f$", "## @f[ ~ @f], @f$ ~ @f$"),
+        (
+            "## @exception <exception-object> { exception description }",
+            "## @exception <exception-object> { exception description }",
+        ),
+        ("## @tparam <template-parameter-name> { description }", "## @tparam <template-parameter-name> { description }"),
+        ("## @par [(paragraph title)] { paragraph }", "## @par [(paragraph title)] { paragraph }"),
+        ("- item\n  detail", "- item  \n  detail"),
         ("- item  \n  detail", "- item  \n  detail"),
-        ("1. item\n   detail", "1. item\n   detail"),
+        ("- item\n  - child", "- item\n  - child"),
+        ("説明文\n- item", "説明文\n\n- item"),
+        ("説明文:\n- item", "説明文:\n\n- item"),
+        ("説明文\n\n- item", "説明文\n\n- item"),
+        ("### 非侵襲的\n- テスト対象の C コードを一切変更する必要がない", "### 非侵襲的\n\n- テスト対象の C コードを一切変更する必要がない"),
+        ("1. item\n   detail", "1. item  \n   detail"),
+        ("1. item  \n   detail", "1. item  \n   detail"),
+        ("1. item\n   1. child", "1. item\n   1. child"),
+        ("- [] task", "- [ ] task"),
+        ("- [ ] task", "- [ ] task"),
+        ("- [x] task", "- [x] task"),
+        ("1. [] task", "1. [ ] task"),
+        ("1. [ ] task", "1. [ ] task"),
+        ("1. [X] task", "1. [X] task"),
+        ("`init`・`clone`・`commit`・`log`", "`init`・`clone`・`commit`・`log`"),
+        ("`init` ・`clone` ・`commit` ・`log`", "`init`・`clone`・`commit`・`log`"),
+        (
+            "1:1 (ユニキャスト) 通信では送信者 1 : 受信者 1 の構成となります。",
+            "1:1 (ユニキャスト) 通信では送信者 1 : 受信者 1 の構成となります。",
+        ),
+        (
+            "世代管理は `path`, `path.1`, `path.2`, ... の形式です。",
+            "世代管理は `path`, `path.1`, `path.2`, ... の形式です。",
+        ),
+        (
+            "- [GNU Make(スキルガイド)](../04-build-system/gnu-make.md)",
+            "- [GNU Make (スキル ガイド)](../04-build-system/gnu-make.md)",
+        ),
+        (
+            "- [GNU Make(スキル ガイド)](../04-build-system/gnu-make.md)",
+            "- [GNU Make (スキル ガイド)](../04-build-system/gnu-make.md)",
+        ),
+        (
+            "- [GitHub Flavored Markdown(GFM)仕様]",
+            "- [GitHub Flavored Markdown (GFM) 仕様]",
+        ),
+        (
+            "- [第 2 章 Git の基本](https://git-scm.com/book/ja/v2/Git-の基本-Git-リポジトリの取得) - `init`・`clone`・`commit`・`log`",
+            "- [第 2 章 Git の基本](https://git-scm.com/book/ja/v2/Git-の基本-Git-リポジトリの取得) - `init`・`clone`・`commit`・`log`",
+        ),
         ("> 引用\n> 続き", "> 引用\n> 続き"),
         ("> 引用  \n> 続き", "> 引用  \n> 続き"),
         ("> [!NOTE]\n> 補足情報です。", "> [!NOTE]\n> 補足情報です。"),
@@ -135,16 +199,35 @@ def run_tests() -> bool:
         ("> [!WARNING]\n> 注意が必要です。", "> [!WARNING]\n> 注意が必要です。"),
         ("> [!CAUTION]\n> 危険な操作です。", "> [!CAUTION]\n> 危険な操作です。"),
         ("> [!TODO]\n> 未対応タイプです。", "> [!TODO]\n> 未対応タイプです。"),
-        ("```\ncode  \n```\n本文", "```\ncode  \n```\n本文"),
+        ("```\ncode  \n```\n本文", "```\ncode  \n```\n\n本文"),
         ("**変更前:**\n```python\ncode\n```", "**変更前:**\n\n```python\ncode\n```"),
         ("**変更前 (makefile):**\n```makefile\ncode\n```", "**変更前 (makefile):**\n\n```makefile\ncode\n```"),
         ("**変更前:**\n\n```python\ncode\n```", "**変更前:**\n\n```python\ncode\n```"),
         ("**変更前**:\n```makefile\ncode\n```", "**変更前**:\n\n```makefile\ncode\n```"),
-        ("1. **変更前:**\n```python\ncode\n```", "1. **変更前:**\n```python\ncode\n```"),
-        ("  **変更前:**\n```python\ncode\n```", "  **変更前:**\n```python\ncode\n```"),
+        ("1. **変更前:**\n```python\ncode\n```", "1. **変更前:**\n\n```python\ncode\n```"),
+        ("  **変更前:**\n```python\ncode\n```", "  **変更前:**\n\n```python\ncode\n```"),
         ("`(タイトル)`", "`(タイトル)`"),
+        ("` ```text `", "` ```text `"),
         ("`<com_util/base/shared_lib_lifecycle.h>` :", "`<com_util/base/shared_lib_lifecycle.h>` :"),
         (" *  - `<com_util/base/shared_lib_lifecycle.h>` :", " * - `<com_util/base/shared_lib_lifecycle.h>` :"),
+        ("`1`=あり", "`1`=あり"),
+        ("`0`=なし", "`0`=なし"),
+        ("`FLAG`==1", "`FLAG`==1"),
+        ("`value`!=0", "`value`!=0"),
+        ("`x`<=10", "`x`<=10"),
+        ("`y`>=1", "`y`>=1"),
+        ("`1` =あり", "`1` =あり"),
+        ("`ref`/`out`", "`ref`/`out`"),
+        ("`ref` / `out`", "`ref` / `out`"),
+        ("`ref` /`out`", "`ref` / `out`"),
+        ("`ref`/ `out`", "`ref` / `out`"),
+        ("`sscanf` / `vsscanf`: `0`", "`sscanf` / `vsscanf`: `0`"),
+        ("`void`: `Return()`", "`void`: `Return()`"),
+        ("`void` : `Return()`", "`void` : `Return()`"),
+        (
+            "Linux Kernel は**Sphinx**をドキュメンテーションの中核として採用し、reStructuredText 形式で`make htmldocs` または`make pdfdocs` によって生成する。",
+            "Linux Kernel は **Sphinx** をドキュメンテーションの中核として採用し、reStructuredText 形式で `make htmldocs` または `make pdfdocs` によって生成する。",
+        ),
         ("`makechild.mk`(親階層から継承)", "`makechild.mk` (親階層から継承)"),
         ("`foo`(bar)", "`foo` (bar)"),
         ("`foo`()", "`foo` ()"),
@@ -163,14 +246,18 @@ def run_tests() -> bool:
         ("| :--: | :-- | --: |", "| :--: | :-- | --: |"),
         ("| 第3章 |", "| 第 3 章 |"),
         ("|---|---|\n| C | D |", "|---|---|\n| C | D |"),
-        ("1. first\n   continuation\n2. second", "1. first\n   continuation\n2. second"),
-        ("- item\n  detail\n- next", "- item\n  detail\n- next"),
+        ("1. first\n   continuation\n2. second", "1. first  \n   continuation\n2. second"),
+        ("- item\n  detail\n- next", "- item  \n  detail\n- next"),
         ("paragraph\n# heading", "paragraph\n# heading"),
         ("## 1. 段落の説明", "## 段落の説明"),
         ("## 1 段落の説明", "## 段落の説明"),
         ("## 1.2 段落の説明", "## 段落の説明"),
         ("## 1.2. 段落の説明", "## 段落の説明"),
         ("## (1) 段落の説明", "## 段落の説明"),
+        ("### 2回以上の制限", "### 2 回以上の制限"),
+        ("### 2 回以上の制限", "### 2 回以上の制限"),
+        ("#### 1 階層下まで指定", "#### 1 階層下まで指定"),
+        ("#### 2 階層下まで指定", "#### 2 階層下まで指定"),
         ("# 1. タイトル", "# タイトル"),
         ("# (1) タイトル", "# タイトル"),
         ("###### 1.2.3. タイトル", "###### タイトル"),
@@ -189,7 +276,43 @@ def run_tests() -> bool:
         ("- AIフレンドリー", "- AI フレンドリー"),
         ("AI フレンド リー", "AI フレンドリー"),
         ("**強調**（補足）", "**強調** (補足)"),
+        ("**強調**(補足)", "**強調** (補足)"),
         ("**固定エージェント**（物理マシン・固定 VM）を対象に", "**固定エージェント** (物理マシン・固定 VM) を対象に"),
+        ("LD_PRELOAD に追加するライブラリの絶対パス **(Linux のみ)**", "LD_PRELOAD に追加するライブラリの絶対パス **(Linux のみ)**"),
+        ("**リンク補完の配置先：**\n`/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。", "**リンク補完の配置先:**\n\n`/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。"),
+        ("○(RECEIVER → SENDER)", "○ (RECEIVER → SENDER)"),
+        ("○(双方向)", "○ (双方向)"),
+        ("✅(複数 path からの重複排除)", "✅ (複数 path からの重複排除)"),
+        ("O(1)", "O(1)"),
+        ("O(log n)", "O(log n)"),
+        ("O(V+E)", "O(V+E)"),
+        ("リオーダーバッファ", "リオーダー バッファー"),
+        ("リオーダーバッファー", "リオーダー バッファー"),
+        ("リオーダバッファ", "リオーダー バッファー"),
+        ("リオーダバッファー", "リオーダー バッファー"),
+        ("リオーダーバッファタイムアウト", "リオーダー バッファー タイムアウト"),
+        ("リオーダーバッファータイムアウト", "リオーダー バッファー タイムアウト"),
+        ("リオーダバッファタイムアウト", "リオーダー バッファー タイムアウト"),
+        ("リオーダバッファータイムアウト", "リオーダー バッファー タイムアウト"),
+        ("シグナルハンドラ", "シグナル ハンドラー"),
+        ("シグナル ハンドラ", "シグナル ハンドラー"),
+        ("フィルタファイル", "フィルター ファイル"),
+        ("フィルタ ファイル", "フィルター ファイル"),
+        ("フィルターファイル", "フィルター ファイル"),
+        ("フィルタルール", "フィルター ルール"),
+        ("フィルタ ルール", "フィルター ルール"),
+        ("フィルタールール", "フィルター ルール"),
+        ("フィルタ・セッション", "フィルター・セッション"),
+        ("フィル タ・セッション", "フィルター・セッション"),
+        ("接続元アドレス フィルタ", "接続元アドレス フィルター"),
+        ("接続元アドレス フィル タ", "接続元アドレス フィルター"),
+        ("送信元ポート フィル タ", "送信元ポート フィルター"),
+        ("Lua フィル タ", "Lua フィルター"),
+        ('# makefile の変数代入 "= と :=" の違い', '# makefile の変数代入 "= と :=" の違い'),
+        ("## +=（追記）の挙動", "## += (追記) の挙動"),
+        ("## ?=（条件付き代入）", "## ?= (条件付き代入)"),
+        ("##?=(条件付き代入)", "## ?= (条件付き代入)"),
+        ("- **トランスポート**: UDP/IPv4（unicast / multicast / broadcast / unicast_bidir）または TCP/IPv4（tcp / tcp_bidir）", "- **トランスポート**: UDP/IPv4 (unicast / multicast / broadcast / unicast_bidir) または TCP/IPv4 (tcp / tcp_bidir)"),
         ("**bold**(ascii)", "**bold**(ascii)"),
         ("ジョブ（スクリプト記述）サンプル", "ジョブ (スクリプト記述) サンプル"),
         ("フリースタイル ジョブ（スクリプト記述）サンプル", "フリースタイル ジョブ (スクリプト記述) サンプル"),
@@ -206,6 +329,13 @@ def run_tests() -> bool:
         ("## ``double`` backtick", "## double backtick"),
         ("通常文の `inline code` はそのまま", "通常文の `inline code` はそのまま"),
         ("```\n## `コードブロック内` はそのまま\n```", "```\n## `コードブロック内` はそのまま\n```"),
+        ("例:\n```makefile\nLIBS += mock_calcbase mock_libc\n```", "例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```"),
+        (
+            "例:\n```makefile\nLIBS += mock_calcbase mock_libc\n```\n補足",
+            "例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```\n\n補足",
+        ),
+        ("```makefile\nLIBS += mock_calcbase mock_libc\n```\n補足", "```makefile\nLIBS += mock_calcbase mock_libc\n```\n\n補足"),
+        ("例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```", "例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```"),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [
@@ -263,6 +393,16 @@ def run_tests() -> bool:
             "c",
             "/** @copydoc processData(const char*, int) */\n",
             "/** @copydoc processData(const char*, int) */\n",
+        ),
+        (
+            "c",
+            "/** ファイル ディスクリプタを確認する。 */\n",
+            "/** ファイル記述子を確認する。 */\n",
+        ),
+        (
+            "c",
+            "/** ファイル ディスクリプターを確認する。 */\n",
+            "/** ファイル記述子を確認する。 */\n",
         ),
         (
             "csharp",
@@ -367,8 +507,11 @@ def run_tests() -> bool:
             dict_path = os.path.join(dict_dir, "99_jsonc-test.json")
             with open(dict_path, "w", encoding="utf-8") as handle:
                 handle.write(jsonc_text)
-            os.chdir(tmp_dir)
-            result = style_markdown("JSONC辞書テスト")
+            try:
+                os.chdir(tmp_dir)
+                result = style_markdown("JSONC辞書テスト")
+            finally:
+                os.chdir(original_cwd)
         passed = result == "JSONC辞書テスト"
     except Exception:
         passed = False
@@ -545,6 +688,43 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # CLI in-place: 着手時メッセージを先に出力する
+    original_cwd = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = os.path.join(tmp_dir, "sample.md")
+            with open(input_path, "w", encoding="utf-8") as handle:
+                handle.write("ファイルディスクリプタ")
+            stdout_buffer = io.StringIO()
+            try:
+                os.chdir(tmp_dir)
+                with contextlib.redirect_stdout(stdout_buffer):
+                    exit_code = main([input_path, "--mode", "markdown", "--in-place"])
+            finally:
+                os.chdir(original_cwd)
+            with open(input_path, "r", encoding="utf-8") as handle:
+                updated = handle.read()
+        output = stdout_buffer.getvalue()
+        passed = (
+            exit_code == 0
+            and f"Processing: {input_path}" in output
+            and f"Modified: {input_path}" in output
+            and output.index(f"Processing: {input_path}") < output.index(f"Modified: {input_path}")
+            and updated == "ファイル記述子\n"
+        )
+    except Exception:
+        passed = False
+        output = ""
+        updated = ""
+    finally:
+        os.chdir(original_cwd)
+    status = "✓" if passed else "✗"
+    print(f"\n{status} CLI in-place progress output")
+    if not passed:
+        all_passed = False
+        print(f"  出力: {output!r}")
+        print(f"  更新後: {updated!r}")
+
     print("\n" + "=" * 60)
     print("すべてのテストに合格しました" if all_passed else "一部のテストに失敗しました")
     return all_passed
@@ -609,6 +789,9 @@ def main(
 
     if args.in_place and not args.input:
         parser.error("--in-place を使用する場合は入力ファイルを指定してください")
+
+    if args.in_place:
+        print(f"Processing: {args.input}", flush=True)
 
     if args.input:
         with open(args.input, "r", encoding="utf-8") as handle:
