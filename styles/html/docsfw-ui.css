@@ -1,0 +1,210 @@
+/* ============================================================
+   docsfw-ui.css
+   Styles for the full-text search input, results overlay, and
+   global navigation tree injected by docsfw-search.js / docsfw-nav.js.
+   Loaded by html-template.html when search-enable metadata is set.
+   ============================================================ */
+
+/* --- Search container ------------------------------------------------- */
+
+#docsfw-search-container {
+  margin: 6px 0 4px;
+}
+
+#docsfw-search-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: inherit;
+  line-height: 1.4;
+  background: #fff;
+  color: #333;
+  outline: none;
+}
+
+#docsfw-search-input:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
+}
+
+/* --- Search results overlay ------------------------------------------- */
+
+#docsfw-search-results {
+  display: none;
+  position: fixed;
+  top: 50px;
+  /* Align with the content area: roughly beyond the .span3 sidebar.
+     Adjusted via JS for small screens in the responsive block below. */
+  left: 260px;
+  right: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+  padding: 4px 0;
+}
+
+#docsfw-search-results.visible {
+  display: block;
+}
+
+.docsfw-result-item {
+  padding: 7px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  outline: none;
+}
+
+.docsfw-result-item:last-child {
+  border-bottom: none;
+}
+
+.docsfw-result-item:hover,
+.docsfw-result-item:focus {
+  background: #f0f5ff;
+}
+
+.docsfw-result-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #1a5faa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docsfw-result-url {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.docsfw-result-empty,
+.docsfw-result-loading {
+  padding: 10px 14px;
+  color: #888;
+  font-size: 13px;
+}
+
+/* --- Navigation tree -------------------------------------------------- */
+
+#docsfw-tree {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  line-height: 1.55;
+  border-top: 1px solid #ddd;
+  padding-top: 6px;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+/* Home link at top of tree */
+.docsfw-home-link {
+  margin-bottom: 4px;
+}
+
+#docsfw-tree a,
+.docsfw-home-link a {
+  color: #444;
+  text-decoration: none;
+  display: block;
+  padding: 1px 0;
+}
+
+#docsfw-tree a:hover,
+.docsfw-home-link a:hover {
+  color: #1a5faa;
+  text-decoration: underline;
+}
+
+/* Highlight current page */
+#docsfw-tree a.docsfw-current,
+.docsfw-home-link a.docsfw-current {
+  color: #1a5faa;
+  font-weight: bold;
+  pointer-events: none; /* not clickable - already here */
+}
+
+/* Directory nodes */
+#docsfw-tree details {
+  margin: 0;
+  padding: 0;
+}
+
+#docsfw-tree details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+/* Remove default triangle marker */
+#docsfw-tree details > summary::-webkit-details-marker { display: none; }
+#docsfw-tree details > summary::marker             { display: none; }
+
+/* Custom arrow */
+#docsfw-tree details > summary::before {
+  content: '▶';
+  font-size: 7px;
+  color: #999;
+  flex-shrink: 0;
+  display: inline-block;
+  transition: transform 0.12s;
+  margin-top: 1px;
+}
+
+#docsfw-tree details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+#docsfw-tree details > summary a {
+  display: inline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Indentation for child items */
+#docsfw-tree details > div {
+  padding-left: 11px;
+}
+
+/* Direct leaf node wrapper */
+#docsfw-tree > div {
+  /* top-level leaf items need no extra indent */
+}
+
+/* --- Separator before page-local TOC ---------------------------------- */
+
+.docsfw-toc-separator {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 8px 0 4px;
+}
+
+/* --- Responsive adjustments ------------------------------------------- */
+
+@media (max-width: 767px) {
+  #docsfw-search-results {
+    left: 10px;
+    right: 10px;
+    top: 100px;
+    max-height: 60vh;
+  }
+  #docsfw-tree {
+    display: none; /* Hidden on small screens; sidebar collapses */
+  }
+}
