@@ -122,7 +122,13 @@ $endif$
         $endif$
 
         $if(toc)$
+        $if(search-enable)$
+        <div id="docsfw-page-toc" hidden>
         $toc$
+        </div>
+        $else$
+        $toc$
+        $endif$
         $endif$
 
         </div>
@@ -136,9 +142,12 @@ $endif$
         <div id="docsfw-search-container"></div>
         <nav id="docsfw-tree"></nav>
         <hr class="docsfw-toc-separator" />
-        $endif$
-
+        <div id="docsfw-page-toc" hidden>
         $toc$
+        </div>
+        $else$
+        $toc$
+        $endif$
 
         </div>
       </div>
@@ -715,6 +724,9 @@ $endif$
 $if(search-enable)$
   <!-- Search results overlay (positioned by docsfw-ui.css) -->
   <div id="docsfw-search-results"></div>
+  <!-- Hamburger button and backdrop for mobile off-canvas nav drawer -->
+  <button id="docsfw-hamburger" aria-label="ナビゲーション" aria-expanded="false">&#9776;</button>
+  <div id="docsfw-nav-backdrop"></div>
   <!-- Pass context to client-side scripts -->
   <script>
     window.__DOCSFW_BASE__    = "$search-base$";

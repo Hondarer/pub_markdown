@@ -1,7 +1,7 @@
 /* ============================================================
    docsfw-ui.css
-   Styles for the full-text search input, results overlay, and
-   global navigation tree injected by docsfw-search.js / docsfw-nav.js.
+   Styles for the full-text search input, results overlay,
+   global navigation tree, merged page TOC, and mobile drawer.
    Loaded by html-template.html when search-enable metadata is set.
    ============================================================ */
 
@@ -37,8 +37,6 @@
   display: none;
   position: fixed;
   top: 50px;
-  /* Align with the content area: roughly beyond the .span3 sidebar.
-     Adjusted via JS for small screens in the responsive block below. */
   left: 260px;
   right: 20px;
   max-height: 70vh;
@@ -127,12 +125,19 @@
   text-decoration: underline;
 }
 
-/* Highlight current page */
+/* Highlight current page link */
 #docsfw-tree a.docsfw-current,
 .docsfw-home-link a.docsfw-current {
   color: #1a5faa;
   font-weight: bold;
-  pointer-events: none; /* not clickable - already here */
+  pointer-events: none;
+}
+
+/* Current page node: subtle left accent */
+#docsfw-current-node {
+  border-left: 2px solid #4a90d9;
+  padding-left: 4px;
+  margin-left: -4px;
 }
 
 /* Directory nodes */
@@ -182,11 +187,6 @@
   padding-left: 11px;
 }
 
-/* Direct leaf node wrapper */
-#docsfw-tree > div {
-  /* top-level leaf items need no extra indent */
-}
-
 /* --- Separator before page-local TOC ---------------------------------- */
 
 .docsfw-toc-separator {
@@ -195,16 +195,148 @@
   margin: 8px 0 4px;
 }
 
-/* --- Responsive adjustments ------------------------------------------- */
+/* --- Merged page-local TOC (injected into the current node) ----------- */
+
+.docsfw-page-toc {
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px dotted #ccc;
+}
+
+.docsfw-page-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docsfw-page-toc li {
+  margin: 0;
+  padding: 0;
+}
+
+/* Nested TOC levels */
+.docsfw-page-toc ul ul {
+  padding-left: 10px;
+}
+
+.docsfw-page-toc a {
+  color: #555;
+  text-decoration: none;
+  display: block;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 1px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docsfw-page-toc a:hover {
+  color: #1a5faa;
+  text-decoration: underline;
+}
+
+/* Section numbers: muted */
+.docsfw-page-toc .toc-section-number {
+  color: #aaa;
+  font-size: 0.9em;
+  margin-right: 2px;
+}
+
+/* --- Hamburger button (mobile only) ----------------------------------- */
+
+#docsfw-hamburger {
+  display: none; /* hidden on desktop; overridden in mobile block below */
+}
+
+/* --- Off-canvas nav drawer (mobile) ----------------------------------- */
+
+/* Backdrop */
+#docsfw-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1040;
+}
+
+body.docsfw-nav-open #docsfw-nav-backdrop {
+  display: block;
+}
+
+/* ---- Mobile-only overrides (≤ 767px) --------------------------------- */
 
 @media (max-width: 767px) {
+
+  /* Hamburger button: fixed at top-left */
+  #docsfw-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    z-index: 1050;
+    padding: 0;
+  }
+
+  /* Off-canvas sidebar: slide in from left */
+  #TOC.span3 {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    /* 100dvh for browsers that support it (mobile address-bar-aware),
+       with 100vh fallback for older browsers */
+    height: 100vh;
+    height: 100dvh;
+    width: min(80vw, 320px);
+    overflow-y: auto !important; /* override template inline overflow-y:hidden */
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 1045;
+    background: #fff;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    margin: 0 !important;
+    padding-top: 8px;
+  }
+
+  body.docsfw-nav-open #TOC.span3 {
+    transform: translateX(0);
+  }
+
+  /* Make the .well inside the drawer flush */
+  #TOC.span3 .well {
+    margin-bottom: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Show the nav tree inside the drawer */
+  #docsfw-tree {
+    display: block;
+  }
+
+  /* Search results: above the drawer */
   #docsfw-search-results {
     left: 10px;
     right: 10px;
-    top: 100px;
+    top: 80px;
     max-height: 60vh;
+    z-index: 1060; /* above drawer (1045) */
   }
-  #docsfw-tree {
-    display: none; /* Hidden on small screens; sidebar collapses */
-  }
+}
+
+/* Desktop: hide hamburger and backdrop */
+@media (min-width: 768px) {
+  #docsfw-hamburger    { display: none !important; }
+  #docsfw-nav-backdrop { display: none !important; }
 }
