@@ -3,6 +3,7 @@
 
 import os
 import re
+import unicodedata
 from typing import Callable, List, Optional, Sequence, Tuple
 
 from text_style_jp_engine import DiagnosticCollector, _needs_space_between, _record_step_changes, style_text
@@ -619,10 +620,28 @@ def normalize_blank_lines(text: str) -> str:
     return "\n".join(output).rstrip("\n") + "\n"
 
 
+def _find_east_asian_ambiguous(text: str, collector: "DiagnosticCollector") -> None:
+    """East Asian Ambiguous 幅文字を検出して collector に警告として追加する。
+    インライン コード スパン (バックティック) 内は対象外。ブロッククォートは対象。
+    """
+    for line_idx, line in enumerate(text.split("\n"), start=1):
+        protected: set = set()
+        for match in _BACKTICK_PATTERN.finditer(line):
+            protected.update(range(match.start(), match.end()))
+        collector.set_line(line_idx)
+        for col_idx, ch in enumerate(line, start=1):
+            if (col_idx - 1) in protected:
+                continue
+            if unicodedata.east_asian_width(ch) == "A":
+                collector.add(col_idx, ch, ch, "east-asian-ambiguous")
+
+
 def style_markdown(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
+    if collector is not None:
+        _find_east_asian_ambiguous(text, collector)
     lines = text.split("\n")
     result_lines: List[str] = []
     code_block_flags: List[bool] = []

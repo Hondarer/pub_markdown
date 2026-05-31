@@ -749,6 +749,39 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # style_markdown: east-asian-ambiguous 検出テスト (インラインコード外は警告)
+    c = DiagnosticCollector()
+    style_markdown("# 見出し\n罫線文字: ─\n本文", collector=c)
+    eaa_findings = [f for f in c.findings if f.rule == "east-asian-ambiguous"]
+    passed = (
+        len(eaa_findings) >= 1
+        and any(f.line == 2 and f.original == "─" and f.corrected == "─" for f in eaa_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown east-asian-ambiguous 検出: {[(f.line, f.column, f.original) for f in eaa_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: east-asian-ambiguous インラインコード内は除外
+    c = DiagnosticCollector()
+    style_markdown("# 見出し\n罫線文字: `─`\n本文", collector=c)
+    eaa_findings = [f for f in c.findings if f.rule == "east-asian-ambiguous"]
+    passed = len(eaa_findings) == 0
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown east-asian-ambiguous インラインコード除外: {[(f.line, f.column, f.original) for f in eaa_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: east-asian-ambiguous ブロッククォート内は警告対象
+    c = DiagnosticCollector()
+    style_markdown("> ─", collector=c)
+    eaa_findings = [f for f in c.findings if f.rule == "east-asian-ambiguous"]
+    passed = any(f.original == "─" for f in eaa_findings)
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown east-asian-ambiguous ブロッククォート検出: {[(f.line, f.column, f.original) for f in eaa_findings]}")
+    if not passed:
+        all_passed = False
+
     # _format_findings_stylish: 出力フォーマットテスト
     c = DiagnosticCollector()
     c.set_line(3)
