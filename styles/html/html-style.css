@@ -581,7 +581,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 .admonition-note {
   border-left-color: #1f6feb;
-  background-color: #ddf4ff;
+  background-color: #f0faff;
 }
 .admonition-note .admonition-title {
   color: #1f6feb;
@@ -589,7 +589,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 .admonition-tip {
   border-left-color: #238636;
-  background-color: #dafbe1;
+  background-color: #effdf2;
 }
 .admonition-tip .admonition-title {
   color: #238636;
@@ -597,7 +597,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 .admonition-important {
   border-left-color: #8957e5;
-  background-color: #eddeff;
+  background-color: #f8f2ff;
 }
 .admonition-important .admonition-title {
   color: #8957e5;
@@ -605,7 +605,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 .admonition-warning {
   border-left-color: #9a6700;
-  background-color: #fff8c5;
+  background-color: #fffce5;
 }
 .admonition-warning .admonition-title {
   color: #9a6700;
@@ -613,7 +613,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 .admonition-caution {
   border-left-color: #da3633;
-  background-color: #ffebe9;
+  background-color: #fff6f5;
 }
 .admonition-caution .admonition-title {
   color: #da3633;

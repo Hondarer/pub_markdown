@@ -6,11 +6,11 @@
 local stringify = pandoc.utils.stringify
 
 local TYPES = {
-  NOTE      = { class = "note",      title = "Note",       color = "1F6FEB" },
-  TIP       = { class = "tip",       title = "Tip",        color = "238636" },
-  IMPORTANT = { class = "important", title = "Important",  color = "8957E5" },
-  WARNING   = { class = "warning",   title = "Warning",    color = "9A6700" },
-  CAUTION   = { class = "caution",   title = "Caution",    color = "DA3633" },
+  NOTE      = { class = "note",      title = "Note",       mark = "ℹ️", color = "1F6FEB" },
+  TIP       = { class = "tip",       title = "Tip",        mark = "💡", color = "238636" },
+  IMPORTANT = { class = "important", title = "Important",  mark = "❗", color = "8957E5" },
+  WARNING   = { class = "warning",   title = "Warning",    mark = "⚠️", color = "9A6700" },
+  CAUTION   = { class = "caution",   title = "Caution",    mark = "🛑", color = "DA3633" },
 }
 
 --- BlockQuote の先頭 Para/Plain から [!TYPE] を検出し、タイプ名を返す。
@@ -60,11 +60,12 @@ function BlockQuote(bq)
   if not adm_type then return nil end
 
   local info = TYPES[adm_type]
+  local display_title = info.mark .. " " .. info.title
   local content = strip_marker(bq, adm_type)
 
   if FORMAT:match("html") then
     local title_span = pandoc.Span(
-      { pandoc.Str(info.title) },
+      { pandoc.Str(display_title) },
       pandoc.Attr("", { "admonition-title" }, {})
     )
     local title_para = pandoc.Para({ title_span })
@@ -76,9 +77,9 @@ function BlockQuote(bq)
     local style_id = style_name:gsub(" ", "")
     local title_raw = string.format(
       '<w:p><w:pPr><w:pStyle w:val="%s"/></w:pPr>' ..
-      '<w:r><w:rPr><w:b/><w:color w:val="%s"/></w:rPr>' ..
+      '<w:r><w:rPr><w:color w:val="%s"/></w:rPr>' ..
       '<w:t>%s</w:t></w:r></w:p>',
-      style_id, info.color, info.title
+      style_id, info.color, display_title
     )
     content:insert(1, pandoc.RawBlock("openxml", title_raw))
     return pandoc.Div(content, pandoc.Attr("", {}, { { "custom-style", style_name } }))
