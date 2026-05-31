@@ -159,11 +159,18 @@ details#docsfw-current-node > .docsfw-page-toc {
   padding-left: 8px;
 }
 
+/* Inactive leaf nodes reserve the same text offset as the active leaf accent. */
+#docsfw-tree > div:not(#docsfw-current-node),
+#docsfw-tree details > div > div:not(#docsfw-current-node) {
+  padding-left: 8px;
+}
+
 /* Leaf node: inset bar via background-image (avoids overflow clipping issues).
    padding-left overrides the shared 4px to widen the gap between bar and text,
    matching the visual spacing of directory nodes (which have arrow + gap). */
 div#docsfw-current-node {
   padding-left: 10px;
+  margin-left: -2px;
   background-image: linear-gradient(#4a90d9, #4a90d9);
   background-repeat: no-repeat;
   background-position: left 3px;
