@@ -109,6 +109,8 @@
 /* Home link at top of tree */
 .docsfw-home-link {
   margin-bottom: 4px;
+  padding-left: 10px;
+  margin-left: -4px;
 }
 
 #docsfw-tree a,
