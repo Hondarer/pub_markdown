@@ -306,6 +306,9 @@ def run_tests() -> bool:
         ("フィル タ・セッション", "フィルター・セッション"),
         ("接続元アドレス フィルタ", "接続元アドレス フィルター"),
         ("接続元アドレス フィル タ", "接続元アドレス フィルター"),
+        ("セキュリティー", "セキュリティ"),
+        ("セキュリティー設定", "セキュリティ設定"),
+        ("文書のセキュリティー チェック", "文書のセキュリティ チェック"),
         ("送信元ポート フィル タ", "送信元ポート フィルター"),
         ("Lua フィル タ", "Lua フィルター"),
         ('# makefile の変数代入 "= と :=" の違い', '# makefile の変数代入 "= と :=" の違い'),
@@ -321,6 +324,14 @@ def run_tests() -> bool:
         ("---\ndescription: |\n  line1\n  line2\n---", "---\ndescription: |\n  line1\n  line2\n---"),
         ("---\ntitle: 第3章\n---\n# heading", "---\ntitle: 第 3 章\n---\n# heading"),
         ("---\nname: foo\n---\n行1\n行2", "---\nname: foo\n---\n行 1  \n行 2"),
+        (
+            "<!--ja:-->\n# トップレベルの index\n<!--:ja-->\n<!--en:\n# index of top level\n:en-->",
+            "<!--ja:-->\n# トップレベルの index\n<!--:ja-->\n<!--en:\n# index of top level\n:en-->",
+        ),
+        (
+            "<!--\n## C4\n\n```{.mermaid caption=\"C4 のサンプル\"}\nC4Context\n    title C4 Context のサンプル\n    Person(user, \"利用者\")\n    System(pub, \"pub_markdown\", \"Markdown を発行する\")\n    Rel(user, pub, \"Markdown を発行\")\n```\n\n-->",
+            "<!--\n## C4\n\n```{.mermaid caption=\"C4 のサンプル\"}\nC4Context\n    title C4 Context のサンプル\n    Person(user, \"利用者\")\n    System(pub, \"pub_markdown\", \"Markdown を発行する\")\n    Rel(user, pub, \"Markdown を発行\")\n```\n\n-->",
+        ),
         # 見出し行のインラインコード除去
         ("## `com_util_tracer_create`", "## com_util_tracer_create"),
         ("### `#ifdef` / `#ifndef`", "### #ifdef / #ifndef"),

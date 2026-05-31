@@ -122,7 +122,7 @@ echo "<svg>...</svg>" | node rsvg-convert.js --dpi-x 300 --dpi-y 300
 
 ### 最適化ポイント
 
-- `--no-sandbox` フラグでセキュリティー オーバーヘッドを削減
+- `--no-sandbox` フラグでセキュリティ オーバーヘッドを削減
 - `waitUntil:'load'` で外部リソースの完全読み込みを保証
 - `omitBackground:true` で透明背景を維持
 

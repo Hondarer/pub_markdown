@@ -30,6 +30,7 @@ _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _BLOCKQUOTE_RE = re.compile(r"^\s*>")
 _HEADING_RE = re.compile(r"^#{1,6} ")
 _HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
+_COMMENT_TAG_START_RE = re.compile(r"^\s*<!--([A-Za-z0-9_-]+):(?:-->)?\s*$")
 _HEADING_COUNTER_PREFIX_RE = re.compile(
     r"^(?:回|回目|章|節|項|個|件|人|日|年|月|時|分|秒|本|台|行|列|ページ|頁|つ|か所|ヶ所|箇所)"
 )
@@ -517,6 +518,19 @@ def _ensure_heading_marker_space(line: str) -> str:
     return match.group(1) + " " + match.group(2)
 
 
+def _match_comment_tag_start(line: str) -> Optional[re.Match[str]]:
+    return _COMMENT_TAG_START_RE.match(line)
+
+
+def _is_comment_tag_end(line: str, tag: str) -> bool:
+    escaped_tag = re.escape(tag)
+    return re.match(rf"^\s*(?:<!--:{escaped_tag}-->|:{escaped_tag}-->)\s*$", line) is not None
+
+
+def _starts_html_comment_block(line: str) -> bool:
+    return line.lstrip().startswith("<!--")
+
+
 def normalize_blank_lines(text: str) -> str:
     output: List[str] = []
     blank_count = 0
@@ -546,6 +560,8 @@ def style_markdown(
     fence_len = 0
     fence_nest = 0
     in_frontmatter = len(lines) > 0 and lines[0].strip() == "---"
+    comment_tag: Optional[str] = None
+    in_html_comment_block = False
 
     for idx, line in enumerate(lines):
         if collector is not None:
@@ -559,17 +575,21 @@ def style_markdown(
                 in_frontmatter = False
             continue
 
-        if not in_code_block:
-            match = re.match(r"^(`{3,}|~{3,})", stripped)
-            if match:
-                in_code_block = True
-                fence_char = match.group(1)[0]
-                fence_len = len(match.group(1))
-                fence_nest = 0
-                result_lines.append(line)
-                code_block_flags.append(True)
-                continue
-        else:
+        if comment_tag is not None:
+            result_lines.append(line)
+            code_block_flags.append(True)
+            if _is_comment_tag_end(line, comment_tag):
+                comment_tag = None
+            continue
+
+        if in_html_comment_block:
+            result_lines.append(line)
+            code_block_flags.append(True)
+            if "-->" in line:
+                in_html_comment_block = False
+            continue
+
+        if in_code_block:
             close_pat = r"^(" + re.escape(fence_char) + r"{" + str(fence_len) + r",})\s*$"
             open_pat = r"^(" + re.escape(fence_char) + r"{" + str(fence_len) + r",})\S"
             if re.match(close_pat, stripped):
@@ -583,6 +603,30 @@ def style_markdown(
                 continue
             if re.match(open_pat, stripped):
                 fence_nest += 1
+            result_lines.append(line)
+            code_block_flags.append(True)
+            continue
+
+        comment_tag_match = _match_comment_tag_start(line)
+        if comment_tag_match is not None:
+            comment_tag = comment_tag_match.group(1)
+            result_lines.append(line)
+            code_block_flags.append(True)
+            continue
+
+        if _starts_html_comment_block(line):
+            result_lines.append(line)
+            code_block_flags.append(True)
+            if "-->" not in line:
+                in_html_comment_block = True
+            continue
+
+        match = re.match(r"^(`{3,}|~{3,})", stripped)
+        if match:
+            in_code_block = True
+            fence_char = match.group(1)[0]
+            fence_len = len(match.group(1))
+            fence_nest = 0
             result_lines.append(line)
             code_block_flags.append(True)
             continue

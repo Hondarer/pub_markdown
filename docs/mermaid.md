@@ -4,7 +4,7 @@
 
 この Lua フィルターは、Pandoc 文書内の Mermaid コード ブロックを出力形式ごとに処理するためのフィルターです。
 
-- HTML / self-contained HTML では Mermaid 記法を `<pre class="mermaid">` として出力し、ブラウザ側の mermaid.js に描画を委譲します。
+- HTML / self-contained HTML では Mermaid 記法を `<pre class="mermaid">` として出力し、ブラウザー側の mermaid.js に描画を委譲します。
 - docx など HTML 以外では、従来どおり mermaid-cli (mmdc) で SVG 画像に変換し、必要に応じて PNG へ変換して文書に埋め込みます。
 - SVG 出力では生成結果を補正し、文書へ安定して埋め込めるようにします。
 
@@ -28,7 +28,7 @@ CodeBlock = function(el)
 - コード ブロックのクラス属性を解析
 - `mermaid` または `mermaid:filename` 形式をサポート
 - mermaid 以外のコード ブロックはそのまま通過
-- HTML では事前レンダリングせず、Mermaid ソースをブラウザ描画用 HTML として出力
+- HTML では事前レンダリングせず、Mermaid ソースをブラウザー描画用 HTML として出力
 
 ### キャプション処理
 

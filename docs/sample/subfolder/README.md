@@ -3,7 +3,7 @@ subject: "subject"
 description: "description"
 ---
 
-# サブフォルダの index
+# サブフォルダーの index
 
 ## Plantuml テスト
 
