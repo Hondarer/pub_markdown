@@ -15,10 +15,10 @@ PlantUML は **v1.2020.21 以降**、Windows 環境で外部 Graphviz (`dot.exe`
 PlantUML が Graphviz を探す順序・優先ルールは次のとおりです。
 
 1. **環境変数 `GRAPHVIZ_DOT`** が指す `dot.exe` があればそれを使用。 ([PlantUML.com][1])
-2. Windows の **既知パスの走査** (旧来互換)：`c:\*\graphviz*\bin\dot.exe` または `c:\*\graphviz*\release\bin\dot.exe` をルート直下からスキャン (再帰しない)。 ([PlantUML.com][1])
+2. Windows の **既知パスの走査** (旧来互換): `c:\*\graphviz*\bin\dot.exe` または `c:\*\graphviz*\release\bin\dot.exe` をルート直下からスキャン (再帰しない)。 ([PlantUML.com][1])
 3. 上記で見つからない場合、**同梱の graphviz-lite を `%LOCALAPPDATA%\Temp\_graphviz` に自動展開**して使用。 ([PlantUML.com][1])
 
-> 補足：同梱 `dot.exe` は **PlantUML 用に必要最小限のモジュールだけ**を含む「最小構成」ビルドです (`gvplugin_core.dll` と `gvplugin_dot_layout.dll` など)。 ([GitHub][2])
+> 補足: 同梱 `dot.exe` は **PlantUML 用に必要最小限のモジュールだけ**を含む「最小構成」ビルドです (`gvplugin_core.dll` と `gvplugin_dot_layout.dll` など)。 ([GitHub][2])
 
 ## 動作確認と切り替え
 

@@ -16,17 +16,23 @@ _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN = re.compile(
     r"[@\\][A-Za-z_]+(?:\[[^\]\n]*\]|\s+\[[^\]\n]*\])?(?:\s+<[^>\n]+>|\s+\[[^\]\n]*\]|\s+\"[^\n\"]*\")*\s+\{[^{}\n]*\}"
 )
 _DOXYGEN_MATH_PATTERN = re.compile(r"@f(?:\[[^\n]*?@f\]|\$.*?@f\$)")
-_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("/・、。，．,.!?！？)]}）］｝」』】〕〉》*_~")
+_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("/・、。，．,.!?！？)]}）］｝」』】〕〉》*_~〜～")
 _INLINE_CODE_NO_SPACE_PREFIX_RE = re.compile(r"(?:==|!=|<=|>=|=|:)")
 _INLINE_CODE_SPACED_SUFFIX_RE = re.compile(r"(?:`{2,}.+?`{2,}|`[^`\n]+`)( +)(?:==|!=|<=|>=|=|:)")
 _INLINE_CODE_WITH_SPACE_BEFORE_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+/(`{2,}.+?`{2,}|`[^`\n]+`)")
 _INLINE_CODE_WITH_SPACE_AFTER_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)/\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
 _INLINE_CODE_WITH_SPACE_BEFORE_MIDDLEDOT_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+・")
 _INLINE_CODE_WITH_SPACE_AFTER_MIDDLEDOT_RE = re.compile(r"・\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
+_INLINE_CODE_WITH_SPACE_BEFORE_WAVE_DASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+([〜～])")
+_INLINE_CODE_WITH_SPACE_AFTER_WAVE_DASH_RE = re.compile(r"([〜～])\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
+_INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
+_SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
+_GRID_TABLE_BORDER_RE = re.compile(r"^\s*\+(?:[-=:]+\+)+\s*$")
+_GRID_TABLE_ROW_RE = re.compile(r"^\s*\|")
 _BLOCKQUOTE_RE = re.compile(r"^\s*>")
 _HEADING_RE = re.compile(r"^#{1,6} ")
 _HEADING_NUMBER_RE = re.compile(r"^(#{1,6})\s+(\d+(?:\.\d+)*\.?|\(\d+(?:\.\d+)*\))\s+(.+)$")
@@ -206,6 +212,30 @@ def _normalize_inline_code_middledot_spacing(text: str) -> str:
     return text
 
 
+def _normalize_inline_code_wave_dash_spacing(text: str) -> str:
+    text = _INLINE_CODE_WITH_SPACE_BEFORE_WAVE_DASH_RE.sub(r"\1\2", text)
+    text = _INLINE_CODE_WITH_SPACE_AFTER_WAVE_DASH_RE.sub(r"\1\2", text)
+    return text
+
+
+def _normalize_inline_code_after_colon_spacing(text: str) -> str:
+    output: List[str] = []
+    last = 0
+    for match in _BACKTICK_PATTERN.finditer(text):
+        segment = _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE.sub(": ", text[last:match.start()])
+        if segment.endswith(":"):
+            segment += " "
+        output.append(segment)
+        output.append(match.group(0))
+        last = match.end()
+    output.append(_INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE.sub(": ", text[last:]))
+    return "".join(output)
+
+
+def _normalize_supplemental_label_after_colon_spacing(text: str) -> str:
+    return _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE.sub(r"\1: ", text)
+
+
 def _strip_markup_delimiters(span: str) -> str:
     if not span:
         return span
@@ -223,6 +253,10 @@ def _strip_markup_delimiters(span: str) -> str:
     return span
 
 
+def _is_emphasis_span(span: str) -> bool:
+    return _EMPHASIS_PATTERN.fullmatch(span) is not None
+
+
 def _normalize_markup_span_spacing(text: str) -> str:
     pattern = re.compile(rf"{_BACKTICK_PATTERN.pattern}|{_EMPHASIS_PATTERN.pattern}")
     output: List[str] = []
@@ -233,8 +267,12 @@ def _normalize_markup_span_spacing(text: str) -> str:
         output.append(text[last:start])
         span = match.group(0)
         content = _strip_markup_delimiters(span).strip()
-        first_char = content[0] if content else ""
-        last_char = content[-1] if content else ""
+        if _is_emphasis_span(span) and content:
+            first_char = "A"
+            last_char = "A"
+        else:
+            first_char = content[0] if content else ""
+            last_char = content[-1] if content else ""
 
         if output and output[-1]:
             prev_char = output[-1][-1]
@@ -291,6 +329,39 @@ def _style_text_with_inline_code_spacing(
                 "inline-code-middledot",
                 collector,
                 message="インライン コード間の中黒前後スペースを削除",
+            )
+    final = normalized
+    normalized = _normalize_inline_code_wave_dash_spacing(final)
+    if collector is not None:
+        if normalized != final:
+            _record_step_changes(
+                final,
+                normalized,
+                "inline-code-wave-dash",
+                collector,
+                message="インライン コードと波ダッシュ間のスペースを削除",
+            )
+    final = normalized
+    normalized = _normalize_inline_code_after_colon_spacing(final)
+    if collector is not None:
+        if normalized != final:
+            _record_step_changes(
+                final,
+                normalized,
+                "markup-colon-spacing",
+                collector,
+                message="コロン後のインライン コード前スペースを補正",
+            )
+    final = normalized
+    normalized = _normalize_supplemental_label_after_colon_spacing(final)
+    if collector is not None:
+        if normalized != final:
+            _record_step_changes(
+                final,
+                normalized,
+                "supplemental-label-colon-spacing",
+                collector,
+                message="補足ラベルのコロン後スペースを補正",
             )
         final = normalized
         if final == text:
@@ -562,6 +633,7 @@ def style_markdown(
     in_frontmatter = len(lines) > 0 and lines[0].strip() == "---"
     comment_tag: Optional[str] = None
     in_html_comment_block = False
+    in_grid_table = False
 
     for idx, line in enumerate(lines):
         if collector is not None:
@@ -627,6 +699,19 @@ def style_markdown(
             fence_char = match.group(1)[0]
             fence_len = len(match.group(1))
             fence_nest = 0
+            result_lines.append(line)
+            code_block_flags.append(True)
+            continue
+
+        if in_grid_table:
+            if _GRID_TABLE_BORDER_RE.match(line) or _GRID_TABLE_ROW_RE.match(line):
+                result_lines.append(line)
+                code_block_flags.append(True)
+                continue
+            in_grid_table = False
+
+        if _GRID_TABLE_BORDER_RE.match(line):
+            in_grid_table = True
             result_lines.append(line)
             code_block_flags.append(True)
             continue

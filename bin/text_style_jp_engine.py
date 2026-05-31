@@ -444,8 +444,8 @@ def is_halfwidth_alnum(char: str) -> bool:
 FULLWIDTH_TO_HALFWIDTH = str.maketrans(
     "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
     "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ"
-    "０１２３４５６７８９（）［］｛｝：",
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()[]{}:",
+    "０１２３４５６７８９（）［］｛｝",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789()[]{}",
 )
 
 
@@ -477,11 +477,31 @@ DAKUTEN_COMBINATIONS = {
 
 _HALFWIDTH_BRACKETS_OPEN = set("([{")
 _HALFWIDTH_BRACKETS_CLOSE = set(")]}")
-_FULLWIDTH_NO_SPACE = set("・。、，．！？…‥")
+_FULLWIDTH_NO_SPACE = set("・。、，．！？…‥〜～")
+_FULLWIDTH_COLON_NO_SPACE_FOLLOWERS = set("、。，．,;:!！?？)]}）］｝」』】〕〉》*_~")
 
 
 def convert_fullwidth_alnum_to_halfwidth(text: str) -> str:
     return text.translate(FULLWIDTH_TO_HALFWIDTH)
+
+
+def convert_fullwidth_colon_to_halfwidth(text: str) -> str:
+    result = []
+    for index, char in enumerate(text):
+        if char != "：":
+            result.append(char)
+            continue
+
+        result.append(":")
+        next_char = text[index + 1] if index + 1 < len(text) else ""
+        if (
+            next_char
+            and not next_char.isspace()
+            and next_char not in _FULLWIDTH_COLON_NO_SPACE_FOLLOWERS
+        ):
+            result.append(" ")
+
+    return "".join(result)
 
 
 def convert_halfwidth_katakana_to_fullwidth(text: str) -> str:
@@ -587,7 +607,20 @@ def add_space_before_supplemental_bracket(text: str) -> str:
     def _is_symbol_prefix(prefix: str) -> bool:
         return len(prefix) == 1 and unicodedata.category(prefix).startswith("S")
 
-    def _replace_symbol(content: str, prefix: str, original: str) -> str:
+    def _is_expression_operator(prefix: str, previous_char: str) -> bool:
+        return prefix in "+-*/%&|^" and (
+            previous_char == ")"
+            or previous_char == "]"
+            or previous_char == "}"
+            or previous_char == "`"
+            or bool(re.fullmatch(r"[A-Za-z0-9_]", previous_char))
+        )
+
+    def _replace_symbol(content: str, prefix: str, previous_char: str, original: str) -> str:
+        if prefix == "$":
+            return original
+        if _is_expression_operator(prefix, previous_char):
+            return original
         if _is_symbol_prefix(prefix):
             return prefix + " (" + content + ")"
         return original
@@ -631,7 +664,16 @@ def add_space_before_supplemental_bracket(text: str) -> str:
     def _replace_plain_ascii_slash_list(match: Match[str]) -> str:
         return _replace_ascii_slash_list(match.group(2), match.group(1), match.group(0))
 
-    text = re.sub(r"([^\s()])\(([^)]*)\)", lambda match: _replace_symbol(match.group(2), match.group(1), match.group(0)), text)
+    text = re.sub(
+        r"([^\s()])\(([^)]*)\)",
+        lambda match: _replace_symbol(
+            match.group(2),
+            match.group(1),
+            text[match.start(1) - 1] if match.start(1) > 0 else "",
+            match.group(0),
+        ),
+        text,
+    )
     text = re.sub(r"([A-Za-z0-9_./-]+)\(([^)]*)\)", _replace_plain_ascii_slash_list, text)
     text = re.sub(r"([A-Za-z0-9_])\(([^)]*)\)", _replace_plain, text)
     text = re.sub(r"([+?:]=)\(([^)]*)\)", _replace_plain, text)
@@ -656,6 +698,7 @@ def normalize_spaces(text: str) -> str:
 
 _STYLE_PROSE_STEPS = [
     ("fullwidth-alnum",          convert_fullwidth_alnum_to_halfwidth,                   "全角英数字を半角に変換"),
+    ("fullwidth-colon",          convert_fullwidth_colon_to_halfwidth,                   "全角コロンを半角に変換"),
     ("halfwidth-katakana",       convert_halfwidth_katakana_to_fullwidth,                "半角カタカナを全角に変換"),
     ("normalize-spaces",         normalize_spaces,                                       "スペースを正規化"),
     ("fullwidth-halfwidth-space", insert_space_between_fullwidth_and_halfwidth,          "全角/半角境界にスペースを挿入"),
