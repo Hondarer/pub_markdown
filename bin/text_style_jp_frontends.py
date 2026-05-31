@@ -23,8 +23,8 @@ _INLINE_CODE_WITH_SPACE_BEFORE_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)
 _INLINE_CODE_WITH_SPACE_AFTER_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)/\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
 _INLINE_CODE_WITH_SPACE_BEFORE_MIDDLEDOT_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+・")
 _INLINE_CODE_WITH_SPACE_AFTER_MIDDLEDOT_RE = re.compile(r"・\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
-_INLINE_CODE_WITH_SPACE_BEFORE_WAVE_DASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+([〜～])")
-_INLINE_CODE_WITH_SPACE_AFTER_WAVE_DASH_RE = re.compile(r"([〜～])\s+(`{2,}.+?`{2,}|`[^`\n]+`)")
+_WAVE_DASH_SPACE_BEFORE_ONLY_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`) +([〜～])(`)")
+_WAVE_DASH_SPACE_AFTER_ONLY_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)([〜～]) +(`)")
 _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
 _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
@@ -212,9 +212,9 @@ def _normalize_inline_code_middledot_spacing(text: str) -> str:
     return text
 
 
-def _normalize_inline_code_wave_dash_spacing(text: str) -> str:
-    text = _INLINE_CODE_WITH_SPACE_BEFORE_WAVE_DASH_RE.sub(r"\1\2", text)
-    text = _INLINE_CODE_WITH_SPACE_AFTER_WAVE_DASH_RE.sub(r"\1\2", text)
+def _normalize_wave_dash_spacing_between_inline_codes(text: str) -> str:
+    text = _WAVE_DASH_SPACE_BEFORE_ONLY_RE.sub(r"\1 \2 \3", text)
+    text = _WAVE_DASH_SPACE_AFTER_ONLY_RE.sub(r"\1 \2 \3", text)
     return text
 
 
@@ -331,7 +331,7 @@ def _style_text_with_inline_code_spacing(
                 message="インライン コード間の中黒前後スペースを削除",
             )
     final = normalized
-    normalized = _normalize_inline_code_wave_dash_spacing(final)
+    normalized = _normalize_wave_dash_spacing_between_inline_codes(final)
     if collector is not None:
         if normalized != final:
             _record_step_changes(
@@ -339,7 +339,7 @@ def _style_text_with_inline_code_spacing(
                 normalized,
                 "inline-code-wave-dash",
                 collector,
-                message="インライン コードと波ダッシュ間のスペースを削除",
+                message="インライン コード間の波ダッシュ前後スペースを補正",
             )
     final = normalized
     normalized = _normalize_inline_code_after_colon_spacing(final)
