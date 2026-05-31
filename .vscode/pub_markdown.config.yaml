@@ -36,6 +36,16 @@
 # デフォルト: true
 #htmlNavigationLinkEnable: true
 
+# 全文検索機能の有無 (true / false)
+# true にすると各ページに検索ボックスを表示し、発行後に search-index.js を生成する
+# デフォルト: true
+#htmlSearchEnable: true
+
+# 全体ナビゲーションツリーの表示有無 (true / false)
+# true にすると各ページのサイドバーに全ページを一覧するナビツリーを表示し、nav-tree.js を生成する
+# デフォルト: true
+#htmlNavTreeEnable: true
+
 # 数式 (LaTeX 書式) サポートの有無 (true / false)
 # true にすると \[...\] \(...\) 書式の数式が HTML (MathJax) および docx (OMML) で有効になる
 # デフォルト: true

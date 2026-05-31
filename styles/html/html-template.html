@@ -38,7 +38,7 @@
                 position: sticky;
                 top: 0;
                 height: 100vh;
-                overflow-y: auto;
+                overflow-y: scroll;
                 box-sizing: border-box;
             }
             /* navbar の下マージンを除去してスクロール高を .row 範囲に収める */
@@ -80,6 +80,9 @@ $endif$
 $for(header-includes)$
   $header-includes$
 $endfor$
+$if(search-enable)$
+  <link rel="stylesheet" href="${search-base}docsfw-ui.css" />
+$endif$
 </head>
 <body>
 
@@ -107,13 +110,20 @@ $endfor$
       <div id="$idprefix$TOC" class="span3">
         <div class="well toc">
 
-        <div class="toc-navi">
-          <a href="javascript:history.back()">BACK</a>&nbsp;
-          <a href="$homelink$">HOME</a>
-        </div>
+        $if(search-enable)$
+        <div id="docsfw-search-container"></div>
+        <nav id="docsfw-tree"></nav>
+        <hr class="docsfw-toc-separator" />
+        $endif$
 
         $if(toc)$
+        $if(search-enable)$
+        <div id="docsfw-page-toc" hidden>
         $toc$
+        </div>
+        $else$
+        $toc$
+        $endif$
         $endif$
 
         </div>
@@ -123,7 +133,16 @@ $endfor$
       <div id="$idprefix$TOC" class="span3">
         <div class="well toc">
 
+        $if(search-enable)$
+        <div id="docsfw-search-container"></div>
+        <nav id="docsfw-tree"></nav>
+        <hr class="docsfw-toc-separator" />
+        <div id="docsfw-page-toc" hidden>
         $toc$
+        </div>
+        $else$
+        $toc$
+        $endif$
 
         </div>
       </div>
@@ -145,7 +164,9 @@ $endfor$
       $for(include-before)$
       $include-before$
       $endfor$
+      <main id="docsfw-content">
 $body$
+      </main>
       $for(include-after)$
       $include-after$
       $endfor$
@@ -694,6 +715,23 @@ $if(mermaid-js)$
     }).then(normalizeMermaidSvgSize);
   }
   </script>
+$endif$
+$if(search-enable)$
+  <!-- Search results overlay (positioned by docsfw-ui.css) -->
+  <div id="docsfw-search-results"></div>
+  <!-- Hamburger button and backdrop for mobile off-canvas nav drawer -->
+  <button id="docsfw-hamburger" aria-label="ナビゲーション" aria-expanded="false">&#8250;</button>
+  <div id="docsfw-nav-backdrop"></div>
+  <!-- Pass context to client-side scripts -->
+  <script>
+    window.__DOCSFW_BASE__    = "$search-base$";
+    window.__DOCSFW_CURRENT__ = "$search-current$";
+  </script>
+  <!-- nav-tree.js sets __DOCSFW_NAV__; docsfw-nav.js renders it -->
+  <script defer src="${search-base}nav-tree.js"></script>
+  <script defer src="${search-base}docsfw-nav.js"></script>
+  <!-- docsfw-search.js lazy-loads the heavy index on first user interaction -->
+  <script defer src="${search-base}docsfw-search.js"></script>
 $endif$
 
 </body>

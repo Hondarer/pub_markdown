@@ -1,0 +1,374 @@
+/* ============================================================
+   docsfw-ui.css
+   Styles for the full-text search input, results overlay,
+   global navigation tree, merged page TOC, and mobile drawer.
+   Loaded by html-template.html when search-enable metadata is set.
+   ============================================================ */
+
+/* --- Search container ------------------------------------------------- */
+
+#docsfw-search-container {
+  margin: 6px 4px 4px;
+}
+
+#docsfw-search-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.4;
+  background: #fff;
+  color: #333;
+  outline: none;
+}
+
+#docsfw-search-input:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
+}
+
+/* --- Search results overlay ------------------------------------------- */
+
+#docsfw-search-results {
+  display: none;
+  position: fixed;
+  top: 50px;
+  left: 260px;
+  right: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 4px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+  z-index: 1000;
+  padding: 4px 0;
+}
+
+#docsfw-search-results.visible {
+  display: block;
+}
+
+.docsfw-result-item {
+  padding: 7px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  outline: none;
+}
+
+.docsfw-result-item:last-child {
+  border-bottom: none;
+}
+
+.docsfw-result-item:hover,
+.docsfw-result-item:focus {
+  background: #f0f5ff;
+}
+
+.docsfw-result-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #1a5faa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docsfw-result-url {
+  font-size: 11px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.docsfw-result-empty,
+.docsfw-result-loading {
+  padding: 10px 14px;
+  color: #888;
+  font-size: 13px;
+}
+
+/* --- Navigation tree -------------------------------------------------- */
+
+#docsfw-tree {
+  margin: 6px 0 2px;
+  font-size: 14px;
+  line-height: 1.55;
+  border-top: 1px solid #ddd;
+  padding: 6px 4px 0;
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+/* Home link at top of tree */
+.docsfw-home-link {
+  margin-bottom: 4px;
+}
+
+#docsfw-tree a,
+.docsfw-home-link a {
+  color: #444;
+  text-decoration: none;
+  display: block;
+  padding: 1px 0;
+}
+
+#docsfw-tree a:hover,
+.docsfw-home-link a:hover {
+  color: #1a5faa;
+  text-decoration: underline;
+}
+
+/* Highlight current page link */
+#docsfw-tree a.docsfw-current,
+.docsfw-home-link a.docsfw-current {
+  color: #1a5faa;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+/* Current page node: subtle left accent.
+   For directory nodes (<details>), the page TOC is inserted as a direct child
+   of <details> (before the child-pages <div>), so it shares the same margin
+   calculation as <summary>. Child page links that follow are not accented. */
+details#docsfw-current-node > summary,
+details#docsfw-current-node > .docsfw-page-toc,
+div#docsfw-current-node {
+  padding-left: 4px;
+  margin-left: -4px;
+}
+
+/* Directory node: full-height border on summary and page-toc */
+details#docsfw-current-node > summary,
+details#docsfw-current-node > .docsfw-page-toc {
+  border-left: 2px solid #4a90d9;
+}
+
+/* Leaf node: inset bar via background-image (avoids overflow clipping issues).
+   padding-left overrides the shared 4px to widen the gap between bar and text,
+   matching the visual spacing of directory nodes (which have arrow + gap). */
+div#docsfw-current-node {
+  padding-left: 10px;
+  background-image: linear-gradient(#4a90d9, #4a90d9);
+  background-repeat: no-repeat;
+  background-position: left 3px;
+  background-size: 2px calc(100% - 6px);
+}
+
+/* Directory nodes */
+#docsfw-tree details {
+  margin: 0;
+  padding: 0;
+}
+
+#docsfw-tree details > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
+/* Remove default triangle marker */
+#docsfw-tree details > summary::-webkit-details-marker { display: none; }
+#docsfw-tree details > summary::marker             { display: none; }
+
+/* Custom arrow */
+#docsfw-tree details > summary::before {
+  content: '▶';
+  font-size: 10px;
+  color: #999;
+  flex-shrink: 0;
+  display: inline-block;
+  transition: transform 0.12s;
+  margin-top: 1px;
+  margin-left: 3px;
+}
+
+#docsfw-tree details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+#docsfw-tree details > summary a {
+  display: inline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Indentation for child items */
+#docsfw-tree details > div {
+  padding-left: 11px;
+}
+
+/* --- Separator before page-local TOC ---------------------------------- */
+
+.docsfw-toc-separator {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 8px 0 4px;
+}
+
+/* --- Merged page-local TOC (injected into the current node) ----------- */
+
+.docsfw-page-toc {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.docsfw-page-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docsfw-page-toc li {
+  margin: 0;
+  padding: 0;
+}
+
+/* Nested TOC levels */
+.docsfw-page-toc ul ul {
+  padding-left: 10px;
+}
+
+.docsfw-page-toc a {
+  color: #555;
+  text-decoration: none;
+  display: block;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 1px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.docsfw-page-toc a:hover {
+  color: #1a5faa;
+  text-decoration: underline;
+}
+
+/* Section numbers: muted */
+.docsfw-page-toc .toc-section-number {
+  color: #aaa;
+  font-size: 0.9em;
+  margin-right: 2px;
+}
+
+/* --- Hamburger button (mobile only) ----------------------------------- */
+
+#docsfw-hamburger {
+  display: none; /* hidden on desktop; overridden in mobile block below */
+}
+
+/* --- Off-canvas nav drawer (mobile) ----------------------------------- */
+
+/* Backdrop */
+#docsfw-nav-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1040;
+}
+
+body.docsfw-nav-open #docsfw-nav-backdrop {
+  display: block;
+}
+
+/* ---- Mobile-only overrides (≤ 767px) --------------------------------- */
+
+@media (max-width: 767px) {
+
+  /* Hamburger button: fixed expander, slides to drawer's right edge when open */
+  #docsfw-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    width: 28px;
+    height: 36px;
+    font-size: 20px;
+    font-weight: bold;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+    z-index: 1050;
+    padding: 0;
+    transition: left 0.2s ease, border-radius 0.2s ease;
+  }
+
+  /* When drawer is open: move button to drawer's right edge */
+  body.docsfw-nav-open #docsfw-hamburger {
+    left: min(80vw, 320px);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: none;
+    box-shadow: 2px 1px 4px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Off-canvas sidebar: slide in from left */
+  #TOC.span3 {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    /* 100dvh for browsers that support it (mobile address-bar-aware),
+       with 100vh fallback for older browsers */
+    height: 100vh;
+    height: 100dvh;
+    width: min(80vw, 320px);
+    overflow-y: auto !important; /* override template inline overflow-y:hidden */
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 1045;
+    background: #fff;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    margin: 0 !important;
+    padding-top: 8px;
+  }
+
+  body.docsfw-nav-open #TOC.span3 {
+    transform: translateX(0);
+  }
+
+  /* Make the .well inside the drawer flush */
+  #TOC.span3 .well {
+    margin-bottom: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  /* Show the nav tree inside the drawer */
+  #docsfw-tree {
+    display: block;
+  }
+
+  /* Search results: above the drawer */
+  #docsfw-search-results {
+    left: 10px;
+    right: 10px;
+    top: 80px;
+    max-height: 60vh;
+    z-index: 1060; /* above drawer (1045) */
+  }
+}
+
+/* Desktop: hide hamburger and backdrop */
+@media (min-width: 768px) {
+  #docsfw-hamburger    { display: none !important; }
+  #docsfw-nav-backdrop { display: none !important; }
+}

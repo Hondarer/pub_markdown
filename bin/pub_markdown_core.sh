@@ -471,6 +471,16 @@ if [[ "$htmlNavigationLinkEnable" == "" ]]; then
     htmlNavigationLinkEnable="true"
 fi
 
+# 設定ファイルに htmlSearchEnable (全文検索・グローバルナビゲーション) が指定されなかった場合の値を true にする
+if [[ "$htmlSearchEnable" == "" ]]; then
+    htmlSearchEnable="true"
+fi
+
+# 設定ファイルに htmlNavTreeEnable (全体ナビゲーションツリー) が指定されなかった場合の値を true にする
+if [[ "$htmlNavTreeEnable" == "" ]]; then
+    htmlNavTreeEnable="true"
+fi
+
 #-------------------------------------------------------------------
 
 # 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-style.css" にする
@@ -516,6 +526,34 @@ mermaidScript=$(find_mermaid_js)
 if [[ "$mermaidScript" == "" ]]; then
     echo "Error: Mermaid browser bundle does not exist. Please run npm ci in ${SCRIPT_DIR}."
     exit 1
+fi
+
+# 検索・ナビゲーション用アセットのパス解決
+# MiniSearch UMD ブラウザバンドル (npm ci で node_modules/minisearch/dist/umd/ 以下に配置)
+miniSearchScript=""
+for _ms_candidate in \
+    "${SCRIPT_DIR}/node_modules/minisearch/dist/umd/index.min.js" \
+    "${SCRIPT_DIR}/node_modules/minisearch/dist/umd/index.js"; do
+    if [[ -f "$_ms_candidate" ]]; then
+        miniSearchScript="$_ms_candidate"
+        break
+    fi
+done
+
+htmlSearchUiCss="${HOME_DIR}/styles/html/docsfw-ui.css"
+htmlSearchScript="${HOME_DIR}/styles/html/docsfw-search.js"
+htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
+htmlTokenizeScript="${SCRIPT_DIR}/docsfw-tokenize.js"
+htmlBuildSearchScript="${SCRIPT_DIR}/build-search-index.mjs"
+htmlNavTreeScript="${SCRIPT_DIR}/generate-nav-tree.py"
+
+if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+    if [[ "$miniSearchScript" == "" ]]; then
+        echo "Warning: MiniSearch bundle not found. Please run npm ci in ${SCRIPT_DIR}."
+        echo "         Disabling htmlSearchEnable and htmlNavTreeEnable."
+        htmlSearchEnable="false"
+        htmlNavTreeEnable="false"
+    fi
 fi
 
 # 設定ファイルに docxTemplate が指定されなかった場合の値を "$HOME_DIR/styles/docx/docx-template.dotx" にする
@@ -1164,6 +1202,14 @@ for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
         copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
+        # 検索・ナビゲーション用静的アセットの配置
+        if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            copy_if_different_timestamp "${miniSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/minisearch.min.js"
+            copy_if_different_timestamp "${htmlTokenizeScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-tokenize.js"
+            copy_if_different_timestamp "${htmlSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-search.js"
+            copy_if_different_timestamp "${htmlNavScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-nav.js"
+            copy_if_different_timestamp "${htmlSearchUiCss}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-ui.css"
+        fi
     done
 done
 
@@ -1245,6 +1291,15 @@ for file in "${files[@]}"; do
             navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
         fi
 
+        # 検索・ナビゲーションメタデータの構築
+        # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        searchMetadata=""
+        if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            _search_current="${publish_file%.*}.html"
+            _search_current="${_search_current#html/}"
+            searchMetadata="--metadata search-enable=true --metadata search-base=${up_dir} --metadata search-current=${_search_current}"
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
@@ -1282,7 +1337,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1309,7 +1364,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1538,6 +1593,15 @@ for file in "${files[@]}"; do
             navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
         fi
 
+        # 検索・ナビゲーションメタデータの構築
+        # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        searchMetadata=""
+        if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            _search_current="${publish_file%.*}.html"
+            _search_current="${_search_current#html/}"
+            searchMetadata="--metadata search-enable=true --metadata search-base=${up_dir} --metadata search-current=${_search_current}"
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             progress_log "文書日付の取得を開始しました file=${file#${workspaceFolder}/}"
@@ -1652,7 +1716,7 @@ for file in "${files[@]}"; do
                 _pm_pandoc_stderr=$(mktemp)
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1681,7 +1745,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1809,6 +1873,28 @@ done
 if [[ $_overall_exit -ne 0 ]]; then
     exit 1
 fi
+
+#-------------------------------------------------------------------
+# 検索インデックス・ナビゲーションツリーの後処理生成
+# (全 HTML ファイルの生成完了後にバリアントごとに 1 回実行)
+#-------------------------------------------------------------------
+
+for langElement in ${lang}; do
+    for details_suffix in "${details_suffixes[@]}"; do
+        _html_root="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
+        if [[ ! -d "${_html_root}" ]]; then
+            continue
+        fi
+        if [[ "$htmlNavTreeEnable" == "true" ]]; then
+            echo "Generating nav tree: ${pubRoot}/${langElement}${details_suffix}/html/"
+            python3 "${htmlNavTreeScript}" "${_html_root}"
+        fi
+        if [[ "$htmlSearchEnable" == "true" ]]; then
+            echo "Generating search index: ${pubRoot}/${langElement}${details_suffix}/html/"
+            node "${htmlBuildSearchScript}" "${_html_root}"
+        fi
+    done
+done
 
 #-------------------------------------------------------------------
 
