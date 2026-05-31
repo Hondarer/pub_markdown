@@ -284,7 +284,9 @@
       );
     }
 
-    container.innerHTML = homeHtml + renderNode(nav, current, true);
+    var homeContainer = document.getElementById('docsfw-home-container');
+    if (homeContainer) { homeContainer.innerHTML = homeHtml; }
+    container.innerHTML = renderNode(nav, current, true);
 
     // Merge the page-local TOC into the current node.
     mergeTocIntoCurrentNode();
