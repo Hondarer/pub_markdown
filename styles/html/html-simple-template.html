@@ -128,6 +128,11 @@ if (window.mermaid) {
     var multiplySvg = 0.875;
     var svgs = document.querySelectorAll('.mermaid svg');
     svgs.forEach(function(svg) {
+      // ネストされたアイコン svg (architecture 図の group / service アイコン等) は
+      // mermaid が個別に width / height を設定済みのため補正対象から除外する
+      if (svg.parentNode && svg.parentNode.closest && svg.parentNode.closest('svg')) {
+        return;
+      }
       var width = 0;
       var height = 0;
       if (svg.viewBox && svg.viewBox.baseVal &&
