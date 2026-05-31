@@ -441,6 +441,7 @@ file.md
 | `dict-add-space` | 辞書 add_space ペア適用 |
 | `heading-number` | 見出し番号除去 (Markdown) |
 | `heading-inline-code` | 見出しインライン コード除去 (Markdown) |
+| `box-drawing` | 罫線文字 (U+2500-U+257F) の検出警告 (Markdown、自動修正なし) |
 
 辞書ルール (`dict-replace`, `dict-add-space`) の場合は、そのルールが定義された辞書ファイルのベース名が括弧内に表示されます。
 

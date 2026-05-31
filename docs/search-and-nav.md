@@ -17,11 +17,11 @@ HTML 出力に外部ネットワーク不要の全文検索と、全ページ常
 全 HTML ファイルの生成完了後、バリアント (`pages/<lang>[-details]/html/`) ごとに後処理として 2 つのスクリプトを実行します。
 
 ```
-make docs → pub_markdown_core.sh
-  ├─ [既存] 各 .md → pandoc → .html (テンプレートに検索/ナビ UI を注入)
-  └─ [後処理] html ルートごとに:
-       generate-nav-tree.py   → nav-tree.js      (ナビツリーデータ)
-       build-search-index.mjs → search-index.js  (全文検索インデックス)
+make docs -> pub_markdown_core.sh
+  +- [既存] 各 .md -> pandoc -> .html (テンプレートに検索/ナビ UI を注入)
+  +- [後処理] html ルートごとに:
+       generate-nav-tree.py   -> nav-tree.js      (ナビツリーデータ)
+       build-search-index.mjs -> search-index.js  (全文検索インデックス)
 ```
 
 ### 実行時 (ブラウザー)
@@ -69,14 +69,14 @@ make docs → pub_markdown_core.sh
 
 ```
 framework/docsfw/
-├── bin/
-│   ├── docsfw-tokenize.js          bigram tokenizer (Node / ブラウザ共有)
-│   ├── build-search-index.mjs      Node: 検索インデックス生成
-│   └── generate-nav-tree.py        Python: ナビツリー生成
-└── styles/html/
-    ├── docsfw-search.js            ブラウザ: 検索 UI
-    ├── docsfw-nav.js               ブラウザ: ナビツリー描画
-    └── docsfw-ui.css               ブラウザ: スタイル
++-- bin/
+|   +-- docsfw-tokenize.js          # bigram tokenizer (Node / ブラウザ共有)
+|   +-- build-search-index.mjs      # Node: 検索インデックス生成
+|   +-- generate-nav-tree.py        # Python: ナビツリー生成
++-- styles/html/
+    +-- docsfw-search.js            # ブラウザ: 検索 UI
+    +-- docsfw-nav.js               # ブラウザ: ナビツリー描画
+    +-- docsfw-ui.css               # ブラウザ: スタイル
 ```
 
 ## 設定
