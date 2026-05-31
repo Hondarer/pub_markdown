@@ -101,7 +101,7 @@
   font-size: 14px;
   line-height: 1.55;
   border-top: 1px solid #ddd;
-  padding: 6px 4px 0;
+  padding: 6px 4px 0 8px;
   overflow-wrap: break-word;
   word-break: break-all;
 }
@@ -146,10 +146,17 @@ div#docsfw-current-node {
   margin-left: -4px;
 }
 
-/* Directory node: full-height border on summary and page-toc */
+/* Directory node: full-height border on summary and page-toc.
+   Use a -2px offset so active root directories align with inactive root items,
+   and widen only the TOC inner gap to match the leaf page spacing. */
 details#docsfw-current-node > summary,
 details#docsfw-current-node > .docsfw-page-toc {
+  margin-left: -2px;
   border-left: 2px solid #4a90d9;
+}
+
+details#docsfw-current-node > .docsfw-page-toc {
+  padding-left: 8px;
 }
 
 /* Leaf node: inset bar via background-image (avoids overflow clipping issues).
