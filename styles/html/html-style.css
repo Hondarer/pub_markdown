@@ -22,6 +22,26 @@ body {
   .navbar .nav.pull-right {
     margin-right: 0; } }
 
+/* LL 幅では TOC を広げる。
+   本文 .span9 は Bootstrap の L 幅 (870px) のまま維持する。 */
+@media (min-width: 1400px) {
+  body {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .container,
+  .navbar-static-top .container,
+  .navbar-fixed-top .container,
+  .navbar-fixed-bottom .container {
+    width: 1370px;
+  }
+
+  .span3 {
+    width: 470px;
+  }
+}
+
 header > hr {
   border: 0 none;
   height: 2px;

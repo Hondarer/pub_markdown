@@ -32,14 +32,27 @@
     return base + url;
   }
 
-  function isAncestorOrEqual(nodeUrl, currentUrl) {
-    if (!nodeUrl || !currentUrl) { return false; }
-    if (nodeUrl === currentUrl) { return true; }
-    var dirPrefix = nodeUrl.replace(/\/index\.html$/, '/');
-    if (dirPrefix !== nodeUrl) {
-      return currentUrl.indexOf(dirPrefix) === 0;
+  /**
+   * Return true if *node* is an ancestor of (or equal to) the current page.
+   * For directories with url=null (no index.html), falls back to node.path.
+   */
+  function isAncestorOrEqual(node, currentUrl) {
+    if (!currentUrl) { return false; }
+    var url = node.url;
+    // Exact match
+    if (url && url === currentUrl) { return true; }
+    // Derive directory prefix from URL (strip /index.html suffix)
+    var dirPrefix = null;
+    if (url) {
+      var stripped = url.replace(/\/index\.html$/, '/');
+      if (stripped !== url) { dirPrefix = stripped; }
     }
-    return false;
+    // Fallback: use explicit path field (set for all directory nodes by generate-nav-tree.py)
+    if (!dirPrefix) {
+      var p = node.path;
+      if (p != null && p !== '') { dirPrefix = p; }
+    }
+    return dirPrefix ? currentUrl.indexOf(dirPrefix) === 0 : false;
   }
 
   // ---------------------------------------------------------------------------
@@ -59,7 +72,7 @@
     var children   = node.children  || [];
     var hasKids    = children.length > 0;
     var isCurrent  = !!(node.url && node.url === current);
-    var isAncestor = hasKids && isAncestorOrEqual(node.url, current);
+    var isAncestor = hasKids && isAncestorOrEqual(node, current);
 
     if (isRoot) {
       var parts = [];
@@ -148,10 +161,12 @@
     }
 
     if (currentNode.tagName === 'DETAILS') {
-      // Directory node: prepend before other children inside the inner <div>.
+      // Directory node: insert as a direct child of <details>, immediately
+      // before the child-pages <div>. This keeps the page-toc outside the
+      // 11px-padded wrapper, so the indicator border aligns with <summary>.
       var inner = currentNode.querySelector(':scope > div');
       if (inner) {
-        inner.insertBefore(wrapper, inner.firstChild);
+        currentNode.insertBefore(wrapper, inner);
       } else {
         currentNode.appendChild(wrapper);
       }
@@ -181,6 +196,7 @@
     function openDrawer() {
       document.body.classList.add('docsfw-nav-open');
       btn.setAttribute('aria-expanded', 'true');
+      btn.textContent = '‹'; // ‹
       // Scroll current node into view inside the drawer.
       var cn = document.getElementById('docsfw-current-node');
       if (cn) {
@@ -194,6 +210,7 @@
     function closeDrawer() {
       document.body.classList.remove('docsfw-nav-open');
       btn.setAttribute('aria-expanded', 'false');
+      btn.textContent = '›'; // ›
     }
 
     btn.addEventListener('click', function () {

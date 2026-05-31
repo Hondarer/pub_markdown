@@ -136,6 +136,7 @@ def build_tree(pages, prefix=''):
     node = {
         'title':    dir_title,
         'url':      index_url,
+        'path':     prefix,     # directory path for ancestry check (e.g. "calc/doxybook2_public/")
         'children': children,
     }
     return node
