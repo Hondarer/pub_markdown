@@ -175,6 +175,13 @@
       currentNode.appendChild(wrapper);
     }
 
+    // Strip inline formatting (<code>, <em>, <strong>, etc.) from TOC links
+    // so the nav tree shows plain text regardless of heading markup.
+    var tocLinks = wrapper.querySelectorAll('a');
+    for (var li = 0; li < tocLinks.length; li++) {
+      tocLinks[li].textContent = tocLinks[li].textContent;
+    }
+
     pageToc.remove();
   }
 
