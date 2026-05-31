@@ -65,7 +65,7 @@ page-break-before-heading:
 | `table-row-chars` | 80 | 表の 1 行あたりの推定文字数 |
 | `debug` | false | デバッグ情報を stderr に出力する |
 
-`heading-level-always` と `heading-level-to` は、`shift-heading-level-by` を設定した場合は**出力上のレベル**で指定する。設定しない場合は Markdown ソース上のレベルで指定する。
+`heading-level-always` と `heading-level-to` は、`shift-heading-level-by` を設定した場合は **出力上のレベル** で指定する。設定しない場合は Markdown ソース上のレベルで指定する。
 
 ## 動作原理
 
@@ -95,11 +95,11 @@ page_position >= threshold
 current_page_chars + section_chars > chars_per_page
 ```
 
-`section_chars` は当該見出しから**次の改ページ候補**直前までのブロック文字数の合計。次の改ページ候補とは、明示的な改ページ (OpenXML `w:type="page"`) または改ページ対象レベルの見出し (effective level 1〜N)。
+`section_chars` は当該見出しから **次の改ページ候補** 直前までのブロック文字数の合計。次の改ページ候補とは、明示的な改ページ (OpenXML `w:type="page"`) または改ページ対象レベルの見出し (effective level 1〜N)。
 
 あふれチェックにより、見出しがページ上部にあっても続くセクションが 1 ページを超えるなら先行して改ページする。`section_chars` は実行前の事前スキャンで計算する。
 
-**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しない。この抑制は**親直後の最初の子セクション 1 回限り**で適用される。最初の子セクションが (改ページせずに) 通過した時点で `last_break_effective_level` は `nil` にリセットされるため、2 番目以降の兄弟セクションでは通常通りあふれチェックが機能する。
+**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しない。この抑制は **親直後の最初の子セクション 1 回限り** で適用される。最初の子セクションが (改ページせずに) 通過した時点で `last_break_effective_level` は `nil` にリセットされるため、2 番目以降の兄弟セクションでは通常通りあふれチェックが機能する。
 
 ```
 あふれチェック BREAK 条件:
@@ -120,9 +120,9 @@ current_page_chars + section_chars > chars_per_page
 
 ### --shift-heading-level-by との関係
 
-Pandoc の `--shift-heading-level-by` は **Lua フィルター実行後**に AST へ適用される。そのため、このフィルターが見る見出しレベルはソース上のレベル (例: `###` = H3) であり、出力上のレベル (H2) とは異なる。
+Pandoc の `--shift-heading-level-by` は **Lua フィルター実行後** に AST へ適用される。そのため、このフィルターが見る見出しレベルはソース上のレベル (例: `###` = H3) であり、出力上のレベル (H2) とは異なる。
 
-`shift-heading-level-by` を設定すると、各見出しの**実効レベル**を次式で算出し、出力上のレベルで判定できる:
+`shift-heading-level-by` を設定すると、各見出しの **実効レベル** を次式で算出し、出力上のレベルで判定できる:
 
 ```
 effective_level = raw_level + shift_heading_level_by
@@ -250,7 +250,7 @@ page-break-before-heading:
 
 ### --shift-heading-level-by=-1 と組み合わせる
 
-`--shift-heading-level-by=-1` を使用する場合、`###` (ソース H3) が出力上 H2 になる。`heading-level-always` と `heading-level-to` を**出力レベル**で指定すると意図通りに動作する。
+`--shift-heading-level-by=-1` を使用する場合、`###` (ソース H3) が出力上 H2 になる。`heading-level-always` と `heading-level-to` を **出力レベル** で指定すると意図通りに動作する。
 
 コマンド ライン:
 
