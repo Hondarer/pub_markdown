@@ -110,7 +110,7 @@
 .docsfw-home-link {
   margin-bottom: 4px;
   padding-left: 10px;
-  margin-left: -4px;
+  margin-left: 0;
 }
 
 #docsfw-tree a,
@@ -175,6 +175,11 @@ div#docsfw-current-node {
   background-repeat: no-repeat;
   background-position: left 3px;
   background-size: 2px calc(100% - 6px);
+}
+
+.docsfw-home-link#docsfw-current-node {
+  margin-left: 0;
+  background-position: 6px 3px;
 }
 
 /* Directory nodes */

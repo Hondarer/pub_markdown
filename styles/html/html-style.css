@@ -61,6 +61,7 @@ body > *:last-child {
 
 .doc-title, .doc-info, .navbar-text {
   font-size: 14px;
+  font-weight: normal;
   line-height: normal;
   padding: 2px 20px; }
 
@@ -256,6 +257,7 @@ blockquote {
 
 blockquote p {
   font-size: 16px;
+  font-weight: normal;
   line-height: 1.5; }
 
 .table {

@@ -1008,13 +1008,10 @@ save_cache
 progress_log "キャッシュ保存を終了しました"
 
 # unsorted_keys をソートして sorted_keys に設定
-# カスタムソート: 各階層でディレクトリ→ファイルの順にソート
-# ソートキー生成: パスの各コンポーネントにプレフィックスを付ける
-# - ディレクトリ部分: "0" - 先にソートされる
-# - ファイル部分: "1" - 後にソートされる
+# カスタムソート: 各階層でファイルとディレクトリを混在させ、名前順にソート
+# ソートキー生成: パスの各コンポーネントを小文字化して連結する
 generate_sort_key() {
     local path="$1"
-    local type="$2"  # "directory" or "file"
     local separator="!"
 
     # パスを / で分割
@@ -1023,14 +1020,8 @@ generate_sort_key() {
     local last_idx=$((${#parts[@]} - 1))
 
     for i in "${!parts[@]}"; do
-        local part="${parts[$i]}"
-        if [[ $i -eq $last_idx && "$type" == "file" ]]; then
-            # 最後の部分がファイルなら "1" を付ける
-            key+="1${part}"
-        else
-            # ディレクトリ (または中間パス) なら "0" を付ける
-            key+="0${part}"
-        fi
+        local part="${parts[$i],,}"
+        key+="$part"
         if [[ $i -lt $last_idx ]]; then
             # '-' などを含む接頭辞関係の sibling より、親配下の要素を先に並べる。
             key+="$separator"
@@ -1043,9 +1034,7 @@ generate_sort_key() {
 # ソートキーと元パスのペアを生成してソート
 mapfile -t sorted_keys < <(
     for path in "${unsorted_keys[@]}"; do
-        entry="${memory_cache[$path]}"
-        IFS=$'\t' read -r _ type _ _ <<< "$entry"
-        sort_key=$(generate_sort_key "$path" "$type")
+        sort_key=$(generate_sort_key "$path")
         printf '%s\t%s\n' "$sort_key" "$path"
     done | sort -t$'\t' -k1 | cut -f2
 )

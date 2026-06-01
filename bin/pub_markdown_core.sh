@@ -2,8 +2,8 @@
 #set -x
 
 SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
-HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダの上位が home
-PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダを選択させる
+HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダーの上位が home
+PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダーを選択させる
 cd $HOME_DIR
 
 # 並列ジョブ内では stdout / stderr を一時ファイルへ集約するため、
@@ -67,7 +67,7 @@ cleanup_resources() {
     fi
     CLEANUP_DONE=1
 
-    # 共有ブラウザサーバーを停止
+    # 共有ブラウザー サーバーを停止
     if [[ -n "${BROWSER_SERVER_PID:-}" ]]; then
         kill "$BROWSER_SERVER_PID" 2>/dev/null
         wait "$BROWSER_SERVER_PID" 2>/dev/null
@@ -76,7 +76,7 @@ cleanup_resources() {
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
 
-    # そのほかのバックグラウンドジョブを停止
+    # そのほかのバックグラウンド ジョブを停止
     local _bg_jobs
     _bg_jobs=$(jobs -rp 2>/dev/null)
     [[ -n "$_bg_jobs" ]] && kill $_bg_jobs 2>/dev/null
@@ -113,7 +113,7 @@ trap 'cleanup_on_signal' INT TERM
 trap 'cleanup_on_exit' EXIT
 
 #-------------------------------------------------------------------
-# マルチプラットフォーム対応
+# マルチ プラットフォーム対応
 #-------------------------------------------------------------------
 
 LINUX=0
@@ -121,7 +121,7 @@ WSL=0
 
 if [[ "$(uname -s)" == "Linux" ]]; then
     LINUX=1
-    # WSL環境かどうかを判定
+    # WSL 環境かどうかを判定
     if grep -qi microsoft /proc/version 2>/dev/null || uname -r | grep -qi microsoft 2>/dev/null; then
         WSL=1
     fi
@@ -137,7 +137,7 @@ if [ $LINUX -eq 1 ]; then
     if [ $WSL -eq 1 ]; then
         # NOTE: WSL2 では 127.0.0.1 のネットワーク分離問題があるため、
         # PUPPETEER_EXECUTABLE_PATH に Windows 側の Edge を指定しても、
-        # WSL2 から Edge (127.0.0.1でLISTEN) にアクセスできない。
+        # WSL2 から Edge (127.0.0.1 で LISTEN) にアクセスできない。
         # そのため、PUPPETEER_EXECUTABLE_PATH は設定せず、
         # Puppeteer が自動的にダウンロードする Linux 版 Chromium を使用する。
         :
@@ -188,39 +188,77 @@ else
     PANDOC_CROSSREF=""
 fi
 
-# ${SCRIPT_DIR}/node_modules/.bin が存在しない場合はセットアップを試みる
-# package-lock.json を利用して固定バージョンでセットアップするため、npm install ではなく npm ci
-if [ ! -d "${SCRIPT_DIR}/node_modules/.bin" ]; then
+# セットアップ完了スタンプ。package.json / package-lock.json のハッシュを記録し、
+# npm ci とブラウザーのインストールがすべて成功したときのみ書き込む。
+# node_modules 内に置くことで、npm ci で node_modules が再生成された際に
+# スタンプも消え、再セットアップが強制されて整合する。
+# package-lock.json を利用して固定バージョンでセットアップするため、npm install ではなく npm ci。
+SETUP_STAMP_FILE="${SCRIPT_DIR}/node_modules/.docsfw-setup.stamp"
+
+compute_setup_hash() {
+    cat "${SCRIPT_DIR}/package.json" "${SCRIPT_DIR}/package-lock.json" 2>/dev/null \
+        | sha256sum | awk '{print $1}'
+}
+
+setup_stamp_valid() {
+    [[ -f "$SETUP_STAMP_FILE" ]] || return 1
+    local expected current
+    expected=$(compute_setup_hash)
+    current=$(cat "$SETUP_STAMP_FILE" 2>/dev/null)
+    [[ -n "$expected" && "$expected" == "$current" ]]
+}
+
+if ! setup_stamp_valid; then
     echo "Installing node.js modules..."
-    (cd "${SCRIPT_DIR}" && npm ci)
-    #echo "Error: ${SCRIPT_DIR}/node_modules/.bin not found. Please 'npm ci' in the ${SCRIPT_DIR} directory."
-    #exit 1
+    setup_ok=true
+    (
+        cd "${SCRIPT_DIR}" || exit 1
+        export PUPPETEER_SKIP_DOWNLOAD=1
+        npm ci || exit 1
+        unset PUPPETEER_SKIP_DOWNLOAD
+        # Windows では Edge を PUPPETEER_EXECUTABLE_PATH に指定するため、
+        # Puppeteer 用 chrome / chrome-headless-shell のダウンロードは不要。
+        # Linux / WSL のみ Puppeteer がダウンロードする Chromium を導入する。
+        if [ -z "${PUPPETEER_EXECUTABLE_PATH:-}" ]; then
+            npx puppeteer browsers install chrome || exit 1
+            npx puppeteer browsers install chrome-headless-shell || exit 1
+        fi
+    ) || setup_ok=false
+
+    if [[ "$setup_ok" == "true" ]]; then
+        compute_setup_hash > "$SETUP_STAMP_FILE"
+        progress_log "セットアップ完了スタンプを書き込みました: ${SETUP_STAMP_FILE}"
+    else
+        echo "Error: node.js modules / browser setup failed." >&2
+        rm -f "$SETUP_STAMP_FILE"
+        exit 1
+    fi
 fi
 
 # node.js の警告を非表示にする
 export NODE_NO_WARNINGS=1
 
 #-------------------------------------------------------------------
-# 共有ブラウザインスタンスの起動
+# 共有ブラウザー インスタンスの起動
 #-------------------------------------------------------------------
 
-# rsvg-convert.js や mmdc-reuse.js が共有ブラウザに接続するための
-# WebSocket エンドポイントファイルを設定
+# rsvg-convert.js や mmdc-reuse.js が共有ブラウザーに接続するための
+# WebSocket エンドポイント ファイルを設定
 export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
 BROWSER_SERVER_PID=""
 export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder:-}/docs"
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
-# 共有ブラウザサーバーをバックグラウンドで起動
-# NOTE: browser-server.js は Puppeteer のデフォルトブラウザ検出を使用する。
+# 共有ブラウザー サーバーをバックグラウンドで起動
+# NOTE: browser-server.js は Puppeteer のデフォルト ブラウザー検出を使用する。
 #       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
-#       chrome-wrapper.sh の WebSocket 競合回避はファイルベースの待機で代替する。
+#       chrome-wrapper.sh の WebSocket 競合回避はファイル ベースの待機で代替する。
 #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
 node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" &
 BROWSER_SERVER_PID=$!
 progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID}"
 
-# WebSocket エンドポイントファイルが作成されるまで待機 (最大 30 秒)
+# WebSocket エンドポイント ファイルが作成されるまで待機 (最大 30 秒)
 for _i in $(seq 1 300); do
     if [[ -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
         break
@@ -251,14 +289,14 @@ _nproc=$(nproc 2>/dev/null || echo 4)
 _parallel_default=$(( _nproc * 3 / 2 ))
 MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_default ))}
 
-# 並列出力の排他制御用ロックベースパス
-# flock (Linux 専用) の代わりに mkdir アトミックロックを使用することで
+# 並列出力の排他制御用ロック ベース パス
+# flock (Linux 専用) の代わりに mkdir アトミック ロックを使用することで
 # MSYS2 (Windows) 環境でも動作する
 OUTPUT_LOCK=$(mktemp -u)
 _PM_STATUS_DIR=$(mktemp -d)
 
-# 実行中のバックグラウンドジョブ数が MAX_PARALLEL に達している場合、
-# 1つ完了するまで待機する関数
+# 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
+# 1 つ完了するまで待機する関数
 wait_for_parallel_slot() {
     while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
         # 一部環境では wait -n 実行後に PID を個別 wait できず
@@ -279,12 +317,12 @@ resolve_path() {
         # 絶対パスの場合はそのまま使用
         resolved_path="$input_path"
     else
-        # 相対パスの場合はワークスペースフォルダからの絶対パスを作成
+        # 相対パスの場合はワークスペース フォルダーからの絶対パスを作成
         local workspace_resolved_path="$(realpath "$workspaceFolder/$input_path" 2>/dev/null)"
         if [[ -e "$workspace_resolved_path" ]]; then
             resolved_path="$workspace_resolved_path"
         else
-            # ワークスペースフォルダに存在しない場合は pub_markdown のホームディレクトリを使用
+            # ワークスペース フォルダーに存在しない場合は pub_markdown のホーム ディレクトリを使用
             resolved_path="$(realpath "$HOME_DIR/$input_path")"
         fi
     fi
@@ -342,7 +380,7 @@ while [[ $# -gt 0 ]]; do
 done
 #echo ""
 
-# 定義ファイルのデフォルトパス
+# 定義ファイルのデフォルト パス
 if [[ -z "$configFile" ]]; then
     configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
 else
@@ -450,7 +488,7 @@ fi
 
 # 数式サポート (LaTeX 書式) 関連オプションの組み立て
 # mathExtension: Pandoc 入力拡張。\[...\] \(...\) 書式の LaTeX 数式を認識させる (HTML/docx 共通)
-# mathJaxOption: MathJax によるブラウザレンダリングを指定する Pandoc オプション (HTML のみ)
+# mathJaxOption: MathJax によるブラウザー レンダリングを指定する Pandoc オプション (HTML のみ)
 if [[ "$mathLatexEnable" == "true" ]]; then
     mathExtension="+tex_math_single_backslash"
     mathJaxOption="--mathjax"
@@ -466,17 +504,17 @@ if [[ "$autoSetAuthor" == "" ]]; then
     autoSetAuthor="true"
 fi
 
-# 設定ファイルに htmlNavigationLinkEnable (ナビゲーションリンク) が指定されなかった場合の値を true にする
+# 設定ファイルに htmlNavigationLinkEnable (ナビゲーション リンク) が指定されなかった場合の値を true にする
 if [[ "$htmlNavigationLinkEnable" == "" ]]; then
     htmlNavigationLinkEnable="true"
 fi
 
-# 設定ファイルに htmlSearchEnable (全文検索・グローバルナビゲーション) が指定されなかった場合の値を true にする
+# 設定ファイルに htmlSearchEnable (全文検索・グローバル ナビゲーション) が指定されなかった場合の値を true にする
 if [[ "$htmlSearchEnable" == "" ]]; then
     htmlSearchEnable="true"
 fi
 
-# 設定ファイルに htmlNavTreeEnable (全体ナビゲーションツリー) が指定されなかった場合の値を true にする
+# 設定ファイルに htmlNavTreeEnable (全体ナビゲーション ツリー) が指定されなかった場合の値を true にする
 if [[ "$htmlNavTreeEnable" == "" ]]; then
     htmlNavTreeEnable="true"
 fi
@@ -529,7 +567,7 @@ if [[ "$mermaidScript" == "" ]]; then
 fi
 
 # 検索・ナビゲーション用アセットのパス解決
-# MiniSearch UMD ブラウザバンドル (npm ci で node_modules/minisearch/dist/umd/ 以下に配置)
+# MiniSearch UMD ブラウザー バンドル (npm ci で node_modules/minisearch/dist/umd/ 以下に配置)
 miniSearchScript=""
 for _ms_candidate in \
     "${SCRIPT_DIR}/node_modules/minisearch/dist/umd/index.min.js" \
@@ -583,7 +621,7 @@ else
 fi
 
 #-------------------------------------------------------------------
-# 追加ドキュメントサブフォルダー機能
+# 追加ドキュメント サブフォルダー機能
 #-------------------------------------------------------------------
 
 # mergeSubfolderDocs の path 部分で使用する環境変数を展開する関数
@@ -658,7 +696,7 @@ normalize_subfolder_path() {
     echo "$normalized_path"
 }
 
-# 追加ドキュメントサブフォルダー設定 1 件を解析する関数
+# 追加ドキュメント サブフォルダー設定 1 件を解析する関数
 # 引数: $1=設定 (例: "docsfw=framework/docsfw/docs")
 # 戻り値: グローバル変数 subfolder_alias / subfolder_path
 parse_subfolder_spec() {
@@ -695,7 +733,7 @@ parse_subfolder_path_entry() {
 }
 
 # subfolder_mdroot_paths の要素を解析する関数
-# 形式: "alias|path|mdRoot絶対パス"
+# 形式: "alias|path|mdRoot 絶対パス"
 parse_subfolder_mdroot_entry() {
     local entry="$1"
     local rest
@@ -706,7 +744,7 @@ parse_subfolder_mdroot_entry() {
     subfolder_mdroot="${rest#*|}"
 }
 
-# 設定ファイルで指定された追加ドキュメントサブフォルダーのパスリストを設定する関数
+# 設定ファイルで指定された追加ドキュメント サブフォルダーのパス リストを設定する関数
 # 引数: $1=スペース区切りの一覧 (例: "doxyfw=framework/doxyfw/docs docsfw=framework/docsfw/docs")
 # 戻り値: グローバル配列 subfolder_paths に "alias|path" を設定
 set_subfolder_paths() {
@@ -727,8 +765,8 @@ set_subfolder_paths() {
     done
 }
 
-# mergeSubfolderDocs で指定された追加ドキュメントサブフォルダーを検出する関数
-# 戻り値: グローバル配列 subfolder_mdroot_paths に "alias|path|ドキュメントルート絶対パス" を設定
+# mergeSubfolderDocs で指定された追加ドキュメント サブフォルダーを検出する関数
+# 戻り値: グローバル配列 subfolder_mdroot_paths に "alias|path|ドキュメント ルート絶対パス" を設定
 detect_subfolder_docs() {
     subfolder_mdroot_paths=()
 
@@ -753,17 +791,17 @@ detect_subfolder_docs() {
 real_to_virtual_path() {
     local real_path="$1"
 
-    # 追加ドキュメントサブフォルダーのパスかチェック
+    # 追加ドキュメント サブフォルダーのパスかチェック
     for entry in "${subfolder_mdroot_paths[@]}"; do
         parse_subfolder_mdroot_entry "$entry"
 
         if [[ "$real_path" == "${subfolder_mdroot}/"* ]]; then
-            # 追加ドキュメントサブフォルダー配下のファイル
+            # 追加ドキュメント サブフォルダー配下のファイル
             local relative="${real_path#${subfolder_mdroot}/}"
             echo "${workspaceFolder}/${mdRoot}/${subfolder_alias}/${relative}"
             return 0
         elif [[ "$real_path" == "${subfolder_mdroot}" ]]; then
-            # 追加ドキュメントサブフォルダー自体
+            # 追加ドキュメント サブフォルダー自体
             echo "${workspaceFolder}/${mdRoot}/${subfolder_alias}"
             return 0
         fi
@@ -788,17 +826,17 @@ virtual_to_real_path() {
 
     local relative="${virtual_path#${mdroot_prefix}}"
 
-    # 追加ドキュメントサブフォルダー名で始まるかチェック
+    # 追加ドキュメント サブフォルダー名で始まるかチェック
     for entry in "${subfolder_mdroot_paths[@]}"; do
         parse_subfolder_mdroot_entry "$entry"
 
         if [[ "$relative" == "${subfolder_alias}/"* ]]; then
-            # 追加ドキュメントサブフォルダーへのパスに変換
+            # 追加ドキュメント サブフォルダーへのパスに変換
             local subfolder_relative="${relative#${subfolder_alias}/}"
             echo "${subfolder_mdroot}/${subfolder_relative}"
             return 0
         elif [[ "$relative" == "${subfolder_alias}" ]]; then
-            # 追加ドキュメントサブフォルダー自体
+            # 追加ドキュメント サブフォルダー自体
             echo "${subfolder_mdroot}"
             return 0
         fi
@@ -822,12 +860,12 @@ fi
 
 #-------------------------------------------------------------------
 
-# relativeFile のパス検証 (追加ドキュメントサブフォルダー対応)
+# relativeFile のパス検証 (追加ドキュメント サブフォルダー対応)
 if [[ -n $relativeFile ]]; then
     path_type=""
     resolved_relativeFile="$relativeFile"
 
-    # 1. 追加ドキュメントサブフォルダー実パスのチェック
+    # 1. 追加ドキュメント サブフォルダー実パスのチェック
     if [[ -n "$mergeSubfolderDocs" ]]; then
         for entry in "${subfolder_mdroot_paths[@]}"; do
             parse_subfolder_mdroot_entry "$entry"
@@ -897,13 +935,13 @@ fi
 
 if [ -n "$relativeFile" ]; then
     if [ -d "${workspaceFolder}/$resolved_relativeFile" ]; then
-        # 実行モード=フォルダ
+        # 実行モード=フォルダー
         executionMode="folder"
 
-        # $relativeFile がフォルダ名の場合は、そのフォルダを基準とする
+        # $relativeFile がフォルダー名の場合は、そのフォルダーを基準とする
         base_dir="${workspaceFolder}/${relativeFile}"
 
-        # 当該フォルダ配下の clean (再帰)
+        # 当該フォルダー配下の clean (再帰)
         if [[ "$base_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir_rel=${base_dir#${workspaceFolder}/${mdRoot}/}
         else
@@ -933,7 +971,7 @@ if [ -n "$relativeFile" ]; then
         # 実行モード=ファイル
         executionMode="singlefile"
 
-        # 単一ファイルの場合は、そのファイルのあるフォルダを基準とする
+        # 単一ファイルの場合は、そのファイルのあるフォルダーを基準とする
         base_dir="${workspaceFolder}/$(dirname "$relativeFile")"
     fi
 else
@@ -943,7 +981,7 @@ else
     base_dir="${workspaceFolder}/${mdRoot}"
     mkdir -p "${workspaceFolder}/${pubRoot}"
 
-    # 出力フォルダの clean (対象言語に絞る)
+    # 出力フォルダーの clean (対象言語に絞る)
     for langElement in ${lang}; do
         if [[ "$details" == "both" ]]; then
             # 両方出力する場合は、対象言語の通常版と details 版を削除
@@ -962,7 +1000,7 @@ fi
 #-------------------------------------------------------------------
 
 # ファイルをコピーする関数
-# 引数: $1=元ファイルパス, $2=コピー先ファイルパス
+# 引数: $1=元ファイル パス, $2=コピー先ファイル パス
 copy_if_different_timestamp() {
     local src_file="$1"
     local dest_file="$2"
@@ -1044,12 +1082,12 @@ else
         find -L "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
     )
 
-    # 追加ドキュメントサブフォルダーのファイルを追加 (mergeSubfolderDocs が指定されている場合)
+    # 追加ドキュメント サブフォルダーのファイルを追加 (mergeSubfolderDocs が指定されている場合)
     if [[ -n "$mergeSubfolderDocs" ]]; then
         for entry in "${subfolder_mdroot_paths[@]}"; do
             parse_subfolder_mdroot_entry "$entry"
 
-            # 追加ドキュメントサブフォルダー配下の対象ファイルを収集
+            # 追加ドキュメント サブフォルダー配下の対象ファイルを収集
             # -L を付与してシンボリック リンクも対象にする
             mapfile -d '' -t subfolder_files < <(
                 find -L "${subfolder_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
@@ -1061,9 +1099,9 @@ else
     fi
 fi
 
-# ── (B) Git 管理下なら NUL 区切りでフィルタ ──
+# ── (B) Git 管理下なら NUL 区切りでフィルター ──
 if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
-    # 追加ドキュメントサブフォルダー配下のファイルを分離 (gitignore フィルタリング対象外)
+    # 追加ドキュメント サブフォルダー配下のファイルを分離 (gitignore フィルタリング対象外)
     declare -a subfolder_files_array=()
     declare -a main_files_array=()
 
@@ -1087,7 +1125,7 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
         main_files_array=("${files_raw_initial[@]}")
     fi
 
-    # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り) - メインファイルのみ
+    # 1) workspaceFolder/ を切り落として相対パス化 (NUL 区切り) - メイン ファイルのみ
     mapfile -d '' -t files_rel_zero_array < <(
         printf '%s\0' "${main_files_array[@]}" | \
         sed -z "s|^${workspaceFolder}/||g"
@@ -1111,7 +1149,7 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
             my $is_source_file = ($path =~ /\.(md|yaml|yml|json)$/i);
 
             if ($is_source_file) {
-                # ソースファイルは常に含める (.gitignore を無視)
+                # ソース ファイルは常に含める (.gitignore を無視)
                 push @out, $path;
             } elsif ($rule eq "" || $rule =~ /^!/) {
                 # その他のファイルは .gitignore ルールを尊重
@@ -1130,7 +1168,7 @@ if git -C "$workspaceFolder" rev-parse --is-inside-work-tree > /dev/null 2>&1; t
         files_raw+="${workspaceFolder}/${relpath}"$'\n'
     done
 
-    # 4) 追加ドキュメントサブフォルダー配下のファイルを追加 (フィルタリング済みとして扱う)
+    # 4) 追加ドキュメント サブフォルダー配下のファイルを追加 (フィルタリング済みとして扱う)
     for f in "${subfolder_files_array[@]}"; do
         files_raw+="${f}"$'\n'
     done
@@ -1162,7 +1200,7 @@ for file in "${files[@]}"; do
     # 単一 md の発行で、リンク先のファイルがない場合は処理しない
     # → ファイルが存在する場合のみ処理を行う
     if [[ -e "$file" ]]; then
-        # 追加ドキュメントサブフォルダー使用時は仮想パスに変換して出力パスを計算
+        # 追加ドキュメント サブフォルダー使用時は仮想パスに変換して出力パスを計算
         if [[ -n "$mergeSubfolderDocs" ]]; then
             virtual_file=$(real_to_virtual_path "$file")
         else
@@ -1213,14 +1251,14 @@ for langElement in ${lang}; do
     done
 done
 
-# ファイルレベルの並列処理用追跡配列
+# ファイル レベルの並列処理用追跡配列
 declare -a _file_pids=()
 declare -a _file_names=()
 declare -a _file_status_files=()
 _pm_job_index=0
 
 for file in "${files[@]}"; do
-    # 追加ドキュメントサブフォルダー使用時は仮想パスに変換して出力パスを計算
+    # 追加ドキュメント サブフォルダー使用時は仮想パスに変換して出力パスを計算
     if [[ -n "$mergeSubfolderDocs" ]]; then
         virtual_file=$(real_to_virtual_path "$file")
     else
@@ -1237,7 +1275,7 @@ for file in "${files[@]}"; do
 
         echo "Processing OpenAPI file: ${file#${workspaceFolder}/}"
 
-        # html (仮想パスベースで出力パスを計算)
+        # html (仮想パス ベースで出力パスを計算)
         publish_dir=$(dirname "${virtual_file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
@@ -1285,13 +1323,13 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
-        # ナビゲーションリンクメタデータの構築
+        # ナビゲーション リンク メタデータの構築
         navigationLinkMetadata=""
         if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
             navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
         fi
 
-        # 検索・ナビゲーションメタデータの構築
+        # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
         searchMetadata=""
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
@@ -1314,10 +1352,10 @@ for file in "${files[@]}"; do
             export -n DOCUMENT_AUTHOR
         fi
 
-        # オリジナルのソースファイル名を環境変数に保持
+        # オリジナルのソース ファイル名を環境変数に保持
         export SOURCE_FILE="$file"
 
-        # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプルコードを出力できる。shell, http, javascript, ruby, python, php, java, go
+        # NOTE: --code true を取り除き、--language_tabs http --language_tabs shell --omitHeader のように与えるとサンプル コードを出力できる。shell, http, javascript, ruby, python, php, java, go
         # TODO: --user_templates の切替機構未実装
         openapi_md=$(${WIDDERSHINS} --code true --user_templates ${HOME_DIR}/styles/widdershins/openapi3 --omitHeader "$file" | sed '1,/^<!--/ d')
         openapi_md_title=$(echo "${openapi_md}" \
@@ -1407,6 +1445,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
                                 ${PANDOC_CROSSREF} \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
@@ -1464,7 +1503,7 @@ for file in "${files[@]}"; do
         progress_log "Markdown 処理を開始しました file=${file#${workspaceFolder}/}"
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
-        # html (仮想パスベースで出力パスを計算)
+        # html (仮想パス ベースで出力パスを計算)
         publish_dir=$(dirname "${virtual_file}")
         if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
             publish_dir=html/${publish_dir#${workspaceFolder}/${mdRoot}/}
@@ -1537,13 +1576,13 @@ for file in "${files[@]}"; do
             fi
         fi
 
-        # \toc の早期検出 (タイムスタンプスキップ判定で使用)
+        # \toc の早期検出 (タイムスタンプ スキップ判定で使用)
         _has_toc=false
         if grep -qF '\toc' "$file" 2>/dev/null; then
             _has_toc=true
         fi
 
-        # タイムスタンプベーススキップ判定 (\toc を含まないファイルのみ)
+        # タイムスタンプ ベース スキップ判定 (\toc を含まないファイルのみ)
         _skip_generation=false
         if [[ "$_has_toc" == "false" ]]; then
             _all_outputs_fresh=true
@@ -1587,13 +1626,13 @@ for file in "${files[@]}"; do
             up_dir+="../"
         done
 
-        # ナビゲーションリンクメタデータの構築
+        # ナビゲーション リンク メタデータの構築
         navigationLinkMetadata=""
         if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
             navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
         fi
 
-        # 検索・ナビゲーションメタデータの構築
+        # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
         searchMetadata=""
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
@@ -1612,7 +1651,7 @@ for file in "${files[@]}"; do
         fi
 
         if [[ "$autoSetAuthor" == "true" ]]; then
-            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定 
+            # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定
             progress_log "文書著者の取得を開始しました file=${file#${workspaceFolder}/}"
             export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
             progress_log "文書著者の取得を終了しました file=${file#${workspaceFolder}/}"
@@ -1620,10 +1659,10 @@ for file in "${files[@]}"; do
             export -n DOCUMENT_AUTHOR
         fi
 
-        # オリジナルのソースファイル名を環境変数に保持
+        # オリジナルのソース ファイル名を環境変数に保持
         export SOURCE_FILE="$file"
 
-        # Markdown から参照されているリソースファイルを html 出力ディレクトリにコピー
+        # Markdown から参照されているリソース ファイルを html 出力ディレクトリにコピー
         # (pandoc の --resource-path は html 出力ディレクトリを参照するため、
         #  files[] に含まれない画像 (images/ サブディレクトリ等) を事前にコピーしておく)
         _pm_src_dir=$(dirname "$file")
@@ -1712,7 +1751,7 @@ for file in "${files[@]}"; do
                 export DOCUMENT_LANG=$langElement
 
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 _pm_pandoc_stderr=$(mktemp)
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 echo "${md_body}" | \
@@ -1742,7 +1781,7 @@ for file in "${files[@]}"; do
                 rm -f "$_pm_pandoc_stderr"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
@@ -1771,7 +1810,7 @@ for file in "${files[@]}"; do
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    # Markdown の最初にコメントがあると、レベル1のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
@@ -1791,6 +1830,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
                             ${PANDOC_CROSSREF} \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
@@ -1837,7 +1877,7 @@ for file in "${files[@]}"; do
         } >"$_pm_tmpout" 2>&1
         _pm_exit=$?
         progress_log "Markdown 処理を終了しました file=${file#${workspaceFolder}/} exit=${_pm_exit}"
-        # mkdir をアトミックロックとして使い、バッファリングした出力を表示する
+        # mkdir をアトミック ロックとして使い、バッファリングした出力を表示する
         # (mkdir は Linux/MSYS2/Windows いずれでもアトミック操作)
         while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
         cat "$_pm_tmpout"
@@ -1854,13 +1894,13 @@ done
 #-------------------------------------------------------------------
 
 #-------------------------------------------------------------------
-# 全ファイルジョブの完了待機
+# 全ファイル ジョブの完了待機
 #-------------------------------------------------------------------
 
 _overall_exit=0
 for _i in "${!_file_pids[@]}"; do
     wait "${_file_pids[$_i]}" 2>/dev/null
-    # bash の cleanup_dead_jobs で PID が既に回収されていても、
+    # bash の cleanup_dead_jobs で PID がすでに回収されていても、
     # サブシェル EXIT trap が書き込んだステータスを参照する
     _pm_job_exit=$(cat "${_file_status_files[$_i]}" 2>/dev/null || echo "127")
     rm -f "${_file_status_files[$_i]}"
@@ -1875,7 +1915,7 @@ if [[ $_overall_exit -ne 0 ]]; then
 fi
 
 #-------------------------------------------------------------------
-# 検索インデックス・ナビゲーションツリーの後処理生成
+# 検索インデックス・ナビゲーション ツリーの後処理生成
 # (全 HTML ファイルの生成完了後にバリアントごとに 1 回実行)
 #-------------------------------------------------------------------
 

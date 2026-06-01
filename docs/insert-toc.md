@@ -217,6 +217,11 @@ local defaults = {
 - `index.md` > `README.md` > `SKILL.md`
 - 大文字小文字は正規化 (`INDEX.md` → `index.md` として処理)
 
+**並び順**:
+
+- 同じ階層のファイルとディレクトリは混在させ、名前の大文字小文字を無視したアルファベット順で表示
+- 多段階層では、各階層ごとに同じ規則で並べ、親ディレクトリ配下の項目を親の直後に表示
+
 **階層名の表示ロジック**:
 
 1. ディレクトリ索引が存在する場合:
@@ -229,12 +234,16 @@ local defaults = {
 ```markdown
 # プロジェクト概要
 
+- 📄 [build-design.md](build-design.md) <br/>     ビルド設計
 - 📄 [intro.md](intro.md) <br/>     イントロダクション
-- 📁 [tutorial](tutorial/index.md) <br/>     チュートリアル
-  - 📄 [basics.md](tutorial/basics.md) <br/>     基本操作
-  - 📄 [advanced.md](tutorial/advanced.md) <br/>     応用
 - 📁 reference
   - 📄 [api.md](reference/api.md) <br/>     API リファレンス
+- 📁 [skill-guide](skill-guide/index.md) <br/>     スキル ガイド
+  - 📄 [overview.md](skill-guide/overview.md) <br/>     概要
+- 📄 [source-style-guideline.md](source-style-guideline.md) <br/>     ソース スタイル
+- 📁 [tutorial](tutorial/index.md) <br/>     チュートリアル
+  - 📄 [advanced.md](tutorial/advanced.md) <br/>     応用
+  - 📄 [basics.md](tutorial/basics.md) <br/>     基本操作
 
 ## 詳細
 ```
