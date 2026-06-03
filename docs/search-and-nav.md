@@ -164,10 +164,20 @@ framework/docsfw/
 
 ## ナビゲーション ツリー (generate-nav-tree.py)
 
-`html/` 配下の `*.html` を走査し、各ページの `<title>` を抽出してツリーを構築します。
+`html/` 配下の `*.html` を走査し、各ページのタイトルを抽出してツリーを構築します。
+
+タイトルの採用優先順位:
+
+1. `<meta name="docsfw-nav-title" content="...">` — YAML front matter の `short-title` 系フィールドから設定される簡潔タイトル
+2. `<title>...</title>` — ドキュメントの本文タイトル
+3. ファイル名の stem — フォールバック
+
+`short-title` フィールドについては [insert-toc.md の「簡潔タイトルの指定」](insert-toc.md) を参照してください。
+
+その他のルール:
 
 - `index.html` はそのディレクトリのノードとして扱います (URL はそのページを指します)
-- 子要素はファイル名の大文字小文字を無視したアルファベット順にソートします
+- 子要素はファイル名の大文字小文字を無視したアルファベット順にソートします (short-title ではなくファイル名基準)
 - 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`
 
 ブラウザー側の `docsfw-nav.js` は `__DOCSFW_NAV__` を読み込み、`<details>`/`<summary>` で折り畳みツリーを描画します。  

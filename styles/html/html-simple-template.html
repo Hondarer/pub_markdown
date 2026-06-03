@@ -17,6 +17,9 @@ $if(description-meta)$
   <meta name="description" content="$description-meta$" />
 $endif$
   <title>$if(title-prefix)$$title-prefix$ - $endif$$pagetitle$</title>
+$if(docsfw-nav-title)$
+  <meta name="docsfw-nav-title" content="$docsfw-nav-title$" />
+$endif$
   <style>
     $styles.html()$
     .header {

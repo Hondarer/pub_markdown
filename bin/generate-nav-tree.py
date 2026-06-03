@@ -43,23 +43,47 @@ SKIP_NAMES = {
 # ---------------------------------------------------------------------------
 
 def extract_title(path):
-    """Extract the page title from <title>...</title> (reads first 8 KB)."""
+    """Extract the page title from HTML (reads first 8 KB).
+
+    Priority:
+      1. <meta name="docsfw-nav-title" content="..."> — short-title for nav/toc
+      2. <title>...</title> — document title
+      3. filename stem — fallback
+    """
     try:
         with open(path, 'r', encoding='utf-8', errors='replace') as fh:
             head = fh.read(8192)
-        m = re.search(r'<title[^>]*>(.*?)</title>', head, re.IGNORECASE | re.DOTALL)
-        if m:
-            text = re.sub(r'<[^>]+>', '', m.group(1)).strip()
-            text = (text
+
+        def unescape(text):
+            return (text
                     .replace('&amp;', '&')
                     .replace('&lt;', '<')
                     .replace('&gt;', '>')
                     .replace('&quot;', '"')
                     .replace('&#39;', "'"))
-            return text
+
+        # 1. docsfw-nav-title meta タグを優先して採用する
+        m = re.search(
+            r'<meta\s[^>]*name=["\']docsfw-nav-title["\'][^>]*content=["\']([^"\']*)["\']',
+            head, re.IGNORECASE)
+        if not m:
+            # content が name より先に来る形式にも対応
+            m = re.search(
+                r'<meta\s[^>]*content=["\']([^"\']*)["\'][^>]*name=["\']docsfw-nav-title["\']',
+                head, re.IGNORECASE)
+        if m:
+            nav_title = unescape(m.group(1)).strip()
+            if nav_title:
+                return nav_title
+
+        # 2. <title> タグ
+        m = re.search(r'<title[^>]*>(.*?)</title>', head, re.IGNORECASE | re.DOTALL)
+        if m:
+            text = re.sub(r'<[^>]+>', '', m.group(1)).strip()
+            return unescape(text)
     except Exception:
         pass
-    # Fallback: use stem of filename
+    # 3. Fallback: use stem of filename
     return os.path.splitext(os.path.basename(path))[0]
 
 

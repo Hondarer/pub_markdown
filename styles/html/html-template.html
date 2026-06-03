@@ -59,6 +59,9 @@ $if(date-meta)$
   <meta name="date" content="$date-meta$" />
 $endif$
   <title>$if(title-prefix)$$title-prefix$ - $endif$$pagetitle$</title>
+$if(docsfw-nav-title)$
+  <meta name="docsfw-nav-title" content="$docsfw-nav-title$" />
+$endif$
   <style type="text/css">code{white-space: pre;}</style>
 $if(quotes)$
   <style type="text/css">q { quotes: "“" "”" "‘" "’"; }</style>

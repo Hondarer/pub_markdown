@@ -3,11 +3,18 @@
 # insert-toc.sh - Markdown インデックス生成スクリプト
 # 引数解釈と処理
 
+# このスクリプト自身の場所を特定し、共有ヘルパーを読み込む
+_INSERT_TOC_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
+source "${_INSERT_TOC_SCRIPT_DIR}/../extract-short-title.sh"
+
 # キャッシュファイルパス
 CACHE_FILE="/tmp/insert-toc-cache.tsv"
 
 # メモリ内キャッシュ (連想配列)
-# キー: 絶対パス, 値: "ファイル名\t種別\tベースタイトル\t言語別タイトル"
+# キー: 絶対パス
+# 値: "ファイル名\t種別\tベースタイトル\t言語別タイトル\tshort-titleキャッシュ"
+# short-titleキャッシュ形式: "<key>:<value>|<key>:<value>" (key = lang または lang-details)
+# 解決済みで値なし: "<key>:" (空値を保持してキャッシュ済みとマーク)
 declare -A memory_cache
 
 # ソート前キーリスト (順序付き配列)
@@ -27,6 +34,9 @@ DOCUMENT_LANG="${3:-neutral}" # 指定がない場合はニュートラル言語
 EXCLUDE="$4"
 BASEDIR="$5"
 EXCLUDE_BASEDIR="${6:-false}"
+
+# pub_markdown_core.sh が export する詳細フラグを継承する
+DOCUMENT_DETAILS="${DOCUMENT_DETAILS:-false}"
 
 # PUB_MARKDOWN_PROGRESS_LOG=1 のときだけ、長時間処理の進行状況を stderr に出力する。
 progress_log() {
@@ -172,12 +182,12 @@ load_cache() {
 
     # TSVファイルを連想配列に読み込み
     local count=0
-    while IFS=$'\t' read -r abs_path filename type base_title lang_titles; do
+    while IFS=$'\t' read -r abs_path filename type base_title lang_titles short_titles; do
         # 空行やコメント行はスキップ
         [[ -z "$abs_path" || "$abs_path" =~ ^# ]] && continue
 
-        # メモリキャッシュに追加
-        memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+        # メモリキャッシュに追加 (short_titles は空でも保持)
+        memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'"$short_titles"
         #echo "# キャッシュ読み込み: $abs_path ($type)" >&2
         ((count++))
     done < "$CACHE_FILE"
@@ -227,8 +237,8 @@ add_to_memory_cache() {
         return 0
     fi
 
-    # メモリキャッシュに追加
-    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+    # メモリキャッシュに追加 (short_titles は空で初期化)
+    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'""
     cache_modified=true
     #echo "# メモリキャッシュに追加: $abs_path ($type)" >&2
 }
@@ -283,9 +293,9 @@ update_memory_cache_title() {
         return 1
     fi
 
-    # エントリを分解
-    local filename type base_title lang_titles
-    IFS=$'\t' read -r filename type base_title lang_titles <<< "$cache_entry"
+    # エントリを分解 (short_titles も保持)
+    local filename type base_title lang_titles short_titles
+    IFS=$'\t' read -r filename type base_title lang_titles short_titles <<< "$cache_entry"
 
     # 言語別タイトルを更新
     if [[ -z "$lang_titles" ]]; then
@@ -303,10 +313,78 @@ update_memory_cache_title() {
         fi
     fi
 
-    # メモリキャッシュを更新
-    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"
+    # メモリキャッシュを更新 (short_titles を保持)
+    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'"${short_titles}"
     cache_modified=true
     #echo "# メモリキャッシュタイトル更新: $abs_path -> $new_lang_title" >&2
+}
+
+# ========================================
+# short-title キャッシュ関数
+# ========================================
+
+# メモリキャッシュから short-title を取得する
+# 引数: 絶対パス キャッシュキー (例: "ja", "ja-details")
+# 戻り値: 0=キャッシュ済み (値は echo, 空の場合は short-title なし)
+#         1=未キャッシュ
+get_short_title_from_cache() {
+    local abs_path="$1"
+    local cache_key="$2"
+
+    local cache_entry="${memory_cache[$abs_path]:-}"
+    if [[ -z "$cache_entry" ]]; then
+        return 1
+    fi
+
+    local short_titles
+    IFS=$'\t' read -r _ _ _ _ short_titles <<< "$cache_entry"
+
+    if [[ -z "$short_titles" ]]; then
+        return 1
+    fi
+
+    # キーが存在するかチェック (キー: または キー:値 の形式)
+    if [[ "$short_titles" =~ (^|\|)${cache_key}:([^|]*) ]]; then
+        echo "${BASH_REMATCH[2]}"
+        return 0
+    fi
+
+    return 1
+}
+
+# メモリキャッシュに short-title を書き込む
+# 引数: 絶対パス キャッシュキー 値 (空文字も可: short-title なしの解決済みを表す)
+update_short_title_cache() {
+    local abs_path="$1"
+    local cache_key="$2"
+    local value="$3"
+    local new_entry="${cache_key}:${value}"
+
+    local cache_entry="${memory_cache[$abs_path]:-}"
+    if [[ -z "$cache_entry" ]]; then
+        return 1
+    fi
+
+    local filename type base_title lang_titles short_titles
+    IFS=$'\t' read -r filename type base_title lang_titles short_titles <<< "$cache_entry"
+
+    if [[ -z "$short_titles" ]]; then
+        short_titles="$new_entry"
+    else
+        # 同じキーがすでに存在するかチェック
+        if [[ "$short_titles" =~ ${cache_key}: ]]; then
+            # 既存エントリを置換
+            if [[ "$short_titles" =~ (.*)(${cache_key}:[^|]*)(.*) ]]; then
+                short_titles="${BASH_REMATCH[1]}${new_entry}${BASH_REMATCH[3]}"
+            fi
+        else
+            # 新しいエントリを追加
+            short_titles="${short_titles}|${new_entry}"
+        fi
+    fi
+
+    memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'"$short_titles"
+    cache_modified=true
 }
 
 # ========================================
@@ -633,9 +711,13 @@ generate_toc() {
     progress_log "目次 Markdown の生成を開始しました entries=${#sorted_keys[@]}"
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
-        local filename type base_title lang_titles
+        local filename type base_title lang_titles _ignored_st
 
-        IFS=$'\t' read -r filename type base_title lang_titles <<< "$entry"
+        IFS=$'\t' read -r filename type base_title lang_titles _ignored_st <<< "$entry"
+
+        # (lang, details) の組み合わせを表すキャッシュキーを算出
+        local _st_cache_key="${lang_code}"
+        [[ "$DOCUMENT_DETAILS" == "true" ]] && _st_cache_key="${lang_code}-details"
 
         # 基準ディレクトリからの相対パスと深度を計算
         # $abs_path から $base_dir を削除して / の数で depth を計算
@@ -689,6 +771,16 @@ generate_toc() {
                 display_title="${BASH_REMATCH[1]}"
             fi
 
+            # short-title があれば最優先で使用 (キャッシュ経由)
+            local _st
+            if _st=$(get_short_title_from_cache "$abs_path" "$_st_cache_key"); then
+                [[ -n "$_st" ]] && display_title="$_st"
+            else
+                _st=$(extract_short_title "$abs_path" "$lang_code" "$DOCUMENT_DETAILS")
+                update_short_title_cache "$abs_path" "$_st_cache_key" "$_st"
+                [[ -n "$_st" ]] && display_title="$_st"
+            fi
+
             # 基準ディレクトリからの相対パスを計算
             local file_relative_path="${abs_path#$base_dir/}"
 
@@ -722,6 +814,15 @@ generate_toc() {
                 if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
                     index_display_title="${BASH_REMATCH[1]}"
                 fi
+                # short-title があれば最優先で使用 (キャッシュ経由)
+                local _ist
+                if _ist=$(get_short_title_from_cache "$check_path" "$_st_cache_key"); then
+                    [[ -n "$_ist" ]] && index_display_title="$_ist"
+                else
+                    _ist=$(extract_short_title "$check_path" "$lang_code" "$DOCUMENT_DETAILS")
+                    update_short_title_cache "$check_path" "$_st_cache_key" "$_ist"
+                    [[ -n "$_ist" ]] && index_display_title="$_ist"
+                fi
                 index_relative_path="${check_path#$base_dir/}"
                 if [[ -n "$basedir_prefix" ]]; then
                     index_relative_path="$basedir_prefix/$index_relative_path"
@@ -739,6 +840,15 @@ generate_toc() {
                     index_display_title="$file_base_title"
                     if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
                         index_display_title="${BASH_REMATCH[1]}"
+                    fi
+                    # short-title があれば最優先で使用 (キャッシュ経由)
+                    local _ist
+                    if _ist=$(get_short_title_from_cache "$check_path" "$_st_cache_key"); then
+                        [[ -n "$_ist" ]] && index_display_title="$_ist"
+                    else
+                        _ist=$(extract_short_title "$check_path" "$lang_code" "$DOCUMENT_DETAILS")
+                        update_short_title_cache "$check_path" "$_st_cache_key" "$_ist"
+                        [[ -n "$_ist" ]] && index_display_title="$_ist"
                     fi
 
                     local readme_dir
@@ -767,6 +877,15 @@ generate_toc() {
                     index_display_title="$file_base_title"
                     if [[ -n "$file_lang_titles" && "$file_lang_titles" =~ ${lang_code}:([^|]*) ]]; then
                         index_display_title="${BASH_REMATCH[1]}"
+                    fi
+                    # short-title があれば最優先で使用 (キャッシュ経由)
+                    local _ist
+                    if _ist=$(get_short_title_from_cache "$check_path" "$_st_cache_key"); then
+                        [[ -n "$_ist" ]] && index_display_title="$_ist"
+                    else
+                        _ist=$(extract_short_title "$check_path" "$lang_code" "$DOCUMENT_DETAILS")
+                        update_short_title_cache "$check_path" "$_st_cache_key" "$_ist"
+                        [[ -n "$_ist" ]] && index_display_title="$_ist"
                     fi
 
                     local skill_dir

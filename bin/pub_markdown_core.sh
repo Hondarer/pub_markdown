@@ -6,6 +6,9 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダーの上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダーを選択させる
 cd $HOME_DIR
 
+# short-title 解決ヘルパーを読み込む
+source "${SCRIPT_DIR}/extract-short-title.sh"
+
 # 並列ジョブ内では stdout / stderr を一時ファイルへ集約するため、
 # 進捗ログだけは元の stderr を保持した FD 3 へ直接出力する。
 exec 3>&2
@@ -1748,12 +1751,20 @@ for file in "${files[@]}"; do
                     | tr -d '\r')
                 md_body=$(echo "${replaced_md}" | sed '/^# /d')
 
+                # ナビツリー / \toc 用の簡潔タイトルを解決する
+                # short-title 系フィールドが指定されていない場合は空文字になる
+                nav_title=$(extract_short_title "${file}" "${langElement}" "${current_details}")
+
                 export DOCUMENT_LANG=$langElement
+                export DOCUMENT_DETAILS=$current_details
 
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                 _pm_pandoc_stderr=$(mktemp)
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
+                # nav_title が指定されている場合、docsfw-nav-title メタデータを付与する
+                local _nav_title_option=()
+                [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -1770,6 +1781,7 @@ for file in "${files[@]}"; do
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                        "${_nav_title_option[@]}" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                         2>"$_pm_pandoc_stderr"
                 progress_log "HTML 生成を終了しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
@@ -1799,6 +1811,7 @@ for file in "${files[@]}"; do
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                            "${_nav_title_option[@]}" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                             2>"$_pm_pandoc_stderr"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then
