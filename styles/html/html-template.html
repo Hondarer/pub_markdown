@@ -637,7 +637,14 @@ $body$
         // performance API が利用できない場合は復元しない
       }
 
-      // 「戻る」操作時のみ状態を復元
+      // back_forward かつ保存済み状態があれば復元、それ以外は open-level に従って初期展開
+      //
+      // 「それ以外」には以下が含まれる:
+      //   - 初回表示 / リロード (isBackForward=false)
+      //   - back/forward で戻ったが sessionStorage に保存済み状態がない場合
+      //     (訪問後にリストを操作せずに遷移したケース)
+      // いずれも open-level を適用することで初回表示と一貫した状態になる
+      var restoredFromStorage = false;
       if (isBackForward) {
         try {
           var savedState = sessionStorage.getItem(storageKey);
@@ -648,10 +655,31 @@ $body$
                 details.open = true;
               }
             });
+            restoredFromStorage = true;
           }
         } catch (e) {
           // sessionStorage の読み込みエラーは無視
         }
+      }
+      if (!restoredFromStorage) {
+        // data-open-level 属性が指定されている場合、第 N 階層まで初期展開する
+        // level の数え方: 最上位 <details> を level 1 とし、祖先 <details> の数 + 1 で深さを判定
+        // open-level < 0 (例: -1) の場合はすべて展開
+        containers.forEach(function(container) {
+          var openLevel = parseInt(container.getAttribute('data-open-level'), 10);
+          if (isNaN(openLevel)) return; // 指定なしは全閉のまま
+          container.querySelectorAll('details').forEach(function(details) {
+            var level = 1;
+            var p = details.parentElement;
+            while (p && p !== container) {
+              if (p.tagName === 'DETAILS') level++;
+              p = p.parentElement;
+            }
+            if (openLevel < 0 || level <= openLevel) {
+              details.open = true;
+            }
+          });
+        });
       }
 
       // 状態変更時に sessionStorage へ保存

@@ -398,6 +398,18 @@ local function process_toc_command(params_str, current_file)
     return proc_output
 end
 
+-- \toc パラメータ文字列から open-level の値を抽出する
+-- 戻り値: 値文字列 (例 "1", "-1")、指定なければ nil
+local function extract_open_level(params_str)
+    if not params_str then return nil end
+    for key, value in params_str:gmatch("([%w-_]+)=([^%s]+)") do
+        if key == "open-level" then
+            return value
+        end
+    end
+    return nil
+end
+
 -- Pandoc フィルタのメイン関数
 
 -- Para 要素内の \toc 処理（オプション付きの場合）
@@ -444,7 +456,12 @@ function Para(elem)
                     -- .collapsible-list 内のリストは HTML の場合、JavaScript により展開可能な
                     -- <details>/<summary> 構造に変換されます。
                     -- 詳細は docs/collapsible-list.md を参照してください。
-                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
+                    local open_level = extract_open_level(params_str)
+                    local kv_attrs = {}
+                    if open_level then
+                        kv_attrs = {{"data-open-level", open_level}}
+                    end
+                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}, kv_attrs))
                 else
                     --debug_print("Failed to parse markdown")
                     -- exclude 指定などにより TOC 対象が空になった場合のフォールバック。
@@ -457,7 +474,7 @@ function Para(elem)
             end
         end
     end
-    
+
     return elem
 end
 
@@ -495,7 +512,12 @@ function RawBlock(elem)
                     -- .collapsible-list 内のリストは HTML の場合、JavaScript により展開可能な
                     -- <details>/<summary> 構造に変換されます。
                     -- 詳細は docs/collapsible-list.md を参照してください。
-                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}))
+                    local open_level = extract_open_level(params_str)
+                    local kv_attrs = {}
+                    if open_level then
+                        kv_attrs = {{"data-open-level", open_level}}
+                    end
+                    return pandoc.Div(doc.blocks, pandoc.Attr("", {"collapsible-list"}, kv_attrs))
                 else
                     --debug_print("Failed to parse markdown")
                     -- exclude 指定などにより TOC 対象が空になった場合のフォールバック。
@@ -508,6 +530,20 @@ function RawBlock(elem)
             end
         end
     end
-    
+
+    return elem
+end
+
+-- 手動 fenced div (::: {.collapsible-list open-level=N} :::) の open-level 処理
+-- Pandoc が fenced div 属性を Div.attributes に保持するため、
+-- open-level を HTML5 準拠の data-open-level に正規化する
+function Div(elem)
+    if elem.classes:includes("collapsible-list") then
+        local lvl = elem.attributes["open-level"]
+        if lvl then
+            elem.attributes["open-level"] = nil
+            elem.attributes["data-open-level"] = lvl
+        end
+    end
     return elem
 end
