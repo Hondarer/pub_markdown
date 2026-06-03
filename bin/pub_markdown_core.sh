@@ -1036,6 +1036,43 @@ copy_if_different_timestamp() {
 
 #-------------------------------------------------------------------
 
+set_html_lang_attributes() {
+    local html_file="$1"
+    local lang_code="$2"
+    local tmp_file=""
+
+    if [[ ! -f "$html_file" ]]; then
+        echo "Error: Html file does not exist: $html_file"
+        return 1
+    fi
+
+    tmp_file=$(mktemp)
+    if ! HTML_LANG_CODE="$lang_code" perl -0777 -pe '
+        my $target_lang = $ENV{HTML_LANG_CODE} // "";
+        s{<html\b([^>]*)>}{
+            my $attrs = $1;
+            if ($attrs =~ /\blang\s*=\s*(["\x27]).*?\1/i) {
+                $attrs =~ s/\blang\s*=\s*(["\x27]).*?\1/ lang="$target_lang"/i;
+            } else {
+                $attrs .= qq{ lang="$target_lang"};
+            }
+            if ($attrs =~ /\bxml:lang\s*=\s*(["\x27]).*?\1/i) {
+                $attrs =~ s/\bxml:lang\s*=\s*(["\x27]).*?\1/ xml:lang="$target_lang"/i;
+            } else {
+                $attrs .= qq{ xml:lang="$target_lang"};
+            }
+            "<html$attrs>";
+        }ie;
+    ' "$html_file" > "$tmp_file"; then
+        rm -f "$tmp_file"
+        return 1
+    fi
+
+    mv "$tmp_file" "$html_file"
+}
+
+#-------------------------------------------------------------------
+
 echo "*** pub_markdown_core start $(date -Is)"
 if [ "${MAX_PARALLEL:-0}" -ge 2 ]; then
     echo "Parallelism: ${MAX_PARALLEL}"
@@ -1378,7 +1415,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1401,11 +1438,12 @@ for file in "${files[@]}"; do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1428,6 +1466,7 @@ for file in "${files[@]}"; do
                             printf "\e[0m"
                         fi
                         rm -f "$_pm_pandoc_stderr"
+                        set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                     fi
                     if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
@@ -1471,9 +1510,11 @@ for file in "${files[@]}"; do
                 else
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                    set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                     fi
                     if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
@@ -1766,7 +1807,7 @@ for file in "${files[@]}"; do
                 local _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1791,12 +1832,13 @@ for file in "${files[@]}"; do
                     printf "\e[0m"
                 fi
                 rm -f "$_pm_pandoc_stderr"
+                set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1820,6 +1862,7 @@ for file in "${files[@]}"; do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
@@ -1873,10 +1916,12 @@ for file in "${files[@]}"; do
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html (copy)"
                 cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file%.*}.html" \
                       "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html (copy)"
                     cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file_self_contain%.*}.html" \
                           "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                    set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx (copy)"
