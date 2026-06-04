@@ -1804,7 +1804,7 @@ for file in "${files[@]}"; do
                 _pm_pandoc_stderr=$(mktemp)
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 # nav_title が指定されている場合、docsfw-nav-title メタデータを付与する
-                local _nav_title_option=()
+                _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
                     ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
