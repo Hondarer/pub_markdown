@@ -146,14 +146,31 @@ def run_tests() -> bool:
         ("## @par [(paragraph title)] { paragraph }", "## @par [(paragraph title)] { paragraph }"),
         ("- item\n  detail", "- item  \n  detail"),
         ("- item  \n  detail", "- item  \n  detail"),
-        ("- item\n  - child", "- item\n  - child"),
+        ("- item\n  - child", "- item\n    - child"),
         ("説明文\n- item", "説明文\n\n- item"),
         ("説明文:\n- item", "説明文:\n\n- item"),
         ("説明文\n\n- item", "説明文\n\n- item"),
         ("### 非侵襲的\n- テスト対象の C コードを一切変更する必要がない", "### 非侵襲的\n\n- テスト対象の C コードを一切変更する必要がない"),
         ("1. item\n   detail", "1. item  \n   detail"),
         ("1. item  \n   detail", "1. item  \n   detail"),
-        ("1. item\n   1. child", "1. item\n   1. child"),
+        ("1. item\n   1. child", "1. item\n    1. child"),
+        # list-indent: 2 スペース子 → 4 スペースへ
+        ("- a\n  - b", "- a\n    - b"),
+        # list-indent: 多段ネスト (2 → 4、4 → 8)
+        ("- a\n  - b\n    - c", "- a\n    - b\n        - c"),
+        # list-indent: 順序付きと記号の混在
+        ("1. a\n   - b", "1. a\n    - b"),
+        # list-indent: 継続テキスト行も delta で追従 (trailing-space は後段パスが付与)
+        ("- a\n  - b\n    cont", "- a\n    - b  \n      cont"),
+        # list-indent: 配下フェンス コード ブロックも delta で追従
+        # _insert_blank_around_fences がフェンス直前に空行を挿入する
+        ("- a\n  - b\n    ```c\n    x\n    ```", "- a\n    - b\n\n      ```c\n      x\n      ```"),
+        # list-indent: 既に 4 スペースのネストは変更しない
+        ("- a\n    - b", "- a\n    - b"),
+        # list-indent: トップレベル (depth-0) の字下げは変更しない
+        (" * - item", " * - item"),
+        # list-indent: 同階層の連続リスト (ネストなし) は変更しない
+        ("- a\n- b\n- c", "- a\n- b\n- c"),
         ("- [] task", "- [ ] task"),
         ("- [ ] task", "- [ ] task"),
         ("- [x] task", "- [x] task"),
@@ -797,6 +814,33 @@ def run_tests() -> bool:
     passed = len(bd_findings) == 0
     status = "✓" if passed else "✗"
     print(f"\n{status} style_markdown box-drawing 矢印は対象外: {[(f.line, f.column, f.original) for f in bd_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: list-indent ルールが dry-run で検出されること
+    c = DiagnosticCollector()
+    result = style_markdown("- 親\n  - 子", collector=c)
+    li_findings = [f for f in c.findings if f.rule == "list-indent"]
+    passed = (
+        result == "- 親\n    - 子"
+        and len(li_findings) >= 1
+        and any(f.line == 2 for f in li_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown list-indent 検出: {[(f.line, f.rule, f.original, f.corrected) for f in li_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: list-indent でトップレベル項目が変更されないこと
+    c = DiagnosticCollector()
+    result = style_markdown("- a\n- b", collector=c)
+    li_findings = [f for f in c.findings if f.rule == "list-indent"]
+    passed = (
+        result == "- a\n- b"
+        and len(li_findings) == 0
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown list-indent トップレベル変更なし: findings={li_findings}")
     if not passed:
         all_passed = False
 

@@ -377,6 +377,99 @@ def _style_text_with_inline_code_spacing(
     return normalized
 
 
+def _find_owner_delta(stack: List[Tuple[int, int, int]], width: int) -> int:
+    """orig_content_indent <= width を満たす最深スタック エントリの delta を返す。
+
+    スタック エントリの構造: (orig_indent, orig_content_indent, delta)
+    """
+    for entry in reversed(stack):
+        if entry[1] <= width:  # orig_content_indent <= width
+            return entry[2]    # delta
+    return 0
+
+
+def _normalize_list_indent(
+    result_lines: List[str],
+    code_block_flags: List[bool],
+    collector: Optional["DiagnosticCollector"] = None,
+) -> Tuple[List[str], List[bool]]:
+    """リスト マーカーのネスト字下げを depth × 4 スペースに正規化する。
+
+    マーカー行・継続テキスト行・配下のフェンス付きコード ブロックを
+    同一 delta で平行移動させることで相対字下げを保持する。
+
+    スタック エントリ: (orig_indent, orig_content_indent, delta)
+      - orig_indent       : マーカー行の先頭空白幅 (expandtabs(4) 換算)
+      - orig_content_indent: マーカー後のコンテンツ開始位置 (orig_indent + マーカー長)
+      - delta             : 新インデント − 旧インデント
+    """
+    # スタック エントリ: (orig_indent, orig_content_indent, delta)
+    stack: List[Tuple[int, int, int]] = []
+    output: List[str] = []
+
+    for i, line in enumerate(result_lines):
+        # 空行はスタックに影響を与えずそのまま出力する
+        if not line.strip():
+            output.append(line)
+            continue
+
+        lead_match = _LEADING_WHITESPACE_RE.match(line)
+        lead_str = lead_match.group(0) if lead_match else ""
+        width = len(lead_str.expandtabs(4))
+        content_after_lead = line[len(lead_str):]
+
+        new_line = line
+
+        if not code_block_flags[i]:
+            marker_match = _LIST_ITEM_RE.match(line)
+            if marker_match:
+                # マーカー行: 同 / 浅インデントのエントリを閉じてから深さを決定する
+                while stack and width <= stack[-1][0]:
+                    stack.pop()
+                depth = len(stack)
+                target = depth * 4
+                delta = target - width
+                # トップレベル (depth == 0) の字下げは変更しない。
+                # 深さ × 4 の正規化はネスト項目 (depth >= 1) にのみ適用する。
+                if depth == 0:
+                    delta = 0
+                    new_line = line
+                else:
+                    new_line = " " * target + content_after_lead
+                # マーカー長: 先頭空白を除いた "- " / "1. " 部分の文字数
+                marker_len = marker_match.end() - len(lead_str)
+                stack.append((width, width + marker_len, delta))
+            else:
+                # 非マーカー行: width == 0 のトップレベル行はリストを閉じる
+                if width == 0:
+                    stack.clear()
+                else:
+                    d = _find_owner_delta(stack, width)
+                    if d != 0:
+                        new_line = " " * max(0, width + d) + content_after_lead
+        else:
+            # コード ブロック内 (フェンス行・内容行・閉じ行)
+            # width > 0 のときのみ所有項目の delta で平行移動する
+            if width > 0:
+                d = _find_owner_delta(stack, width)
+                if d != 0:
+                    new_line = " " * max(0, width + d) + content_after_lead
+
+        if collector is not None and new_line != line:
+            collector.set_line(i + 1)
+            _record_step_changes(
+                line,
+                new_line,
+                "list-indent",
+                collector,
+                message="リストのネスト字下げを 4 スペースに正規化",
+            )
+
+        output.append(new_line)
+
+    return output, list(code_block_flags)
+
+
 def _insert_blank_around_fences(
     result_lines: List[str],
     code_block_flags: List[bool],
@@ -765,6 +858,7 @@ def style_markdown(
             result_lines.append(normalized)
         code_block_flags.append(False)
 
+    result_lines, code_block_flags = _normalize_list_indent(result_lines, code_block_flags, collector)
     result_lines, code_block_flags = _insert_blank_around_fences(result_lines, code_block_flags)
     result_lines, code_block_flags = _insert_blank_before_top_level_lists(result_lines, code_block_flags)
     result_lines, code_block_flags = _insert_blank_after_standalone_emphasis_lines(result_lines, code_block_flags)
