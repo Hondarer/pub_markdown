@@ -5,7 +5,13 @@ import os
 import re
 from typing import Callable, List, Optional, Sequence, Tuple
 
-from text_style_jp_engine import DiagnosticCollector, _needs_space_between, _record_step_changes, style_text
+from text_style_jp_engine import (
+    DiagnosticCollector,
+    _needs_space_between,
+    _record_step_changes,
+    replace_nbsp_with_space,
+    style_text,
+)
 
 
 _BACKTICK_PATTERN = re.compile(r"(?<!`)(`+)(?!`)[^\n]*?(?<!`)\1(?!`)")
@@ -639,6 +645,7 @@ def style_markdown(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
+    text = replace_nbsp_with_space(text, collector=collector)
     if collector is not None:
         _find_box_drawing_chars(text, collector)
     lines = text.split("\n")
@@ -770,6 +777,7 @@ def style_source_comments(
     language: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
+    text = replace_nbsp_with_space(text, collector=collector)
     if language in {"c", "cpp", "csharp"}:
         return _style_c_like_comments(text, language, collector=collector)
     if language in {"python", "shell", "make"}:
@@ -787,6 +795,7 @@ def style_by_mode(
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:
         return normalize_blank_lines(style_source_comments(text, mode, collector=collector))
     if mode == "text":
+        text = replace_nbsp_with_space(text, collector=collector)
         return normalize_blank_lines(text)
     raise ValueError(f"unsupported mode: {mode}")
 

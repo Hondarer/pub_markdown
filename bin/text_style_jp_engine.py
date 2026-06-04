@@ -14,6 +14,7 @@ from typing import Callable, List, Match, Optional, Pattern, Sequence, Tuple, Un
 _URL_RE = re.compile(r"https?://\S+")
 _URL_TRAILING_PUNCT = frozenset("。、！？：；」』）】〕〉》〙〗")
 _FULL_KATAKANA_RE = re.compile(r"^[\u30A0-\u30FF]+$")
+_NBSP = "\u00A0"
 
 _no_space_words: List[str] = []
 _replace_pairs: List[Tuple[str, str]] = []
@@ -133,6 +134,32 @@ def _record_step_changes(
         if "\x00" in original_fragment or "\x00" in corrected_fragment:
             continue
         collector.add(i1 + 1, original_fragment, corrected_fragment, rule, source, message)
+
+
+def replace_nbsp_with_space(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
+    """Replace NBSP (U+00A0) with ASCII spaces across the entire input."""
+    if _NBSP not in text:
+        return text
+
+    if collector is not None:
+        for line_no, line in enumerate(text.split("\n"), start=1):
+            if _NBSP not in line:
+                continue
+            collector.set_line(line_no)
+            for column, char in enumerate(line, start=1):
+                if char == _NBSP:
+                    collector.add(
+                        column,
+                        _NBSP,
+                        " ",
+                        "nbsp-space",
+                        message="NBSP を半角スペースに変換",
+                    )
+
+    return text.replace(_NBSP, " ")
 
 
 def _strip_jsonc(text: str) -> str:

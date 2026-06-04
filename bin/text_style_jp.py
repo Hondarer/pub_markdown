@@ -63,6 +63,7 @@ def run_tests() -> bool:
     ]
 
     markdown_test_cases: List[Tuple[str, str]] = [
+        ("```\nA\u00A0B\n```", "```\nA B\n```"),
         ("詳しくは https://example.com/日本語abc を参照", "詳しくは https://example.com/日本語abc を参照"),
         ("https://example.com/abc日本語終端", "https://example.com/abc日本語終端"),
         ("[テキスト](https://example.com/日本語パス)", "[テキスト](https://example.com/日本語パス)"),
@@ -432,6 +433,11 @@ def run_tests() -> bool:
     source_test_cases: List[Tuple[str, str, str]] = [
         (
             "c",
+            "const char *label = \"A\u00A0B\"; // 第3章の説明\n",
+            "const char *label = \"A B\"; // 第 3 章の説明\n",
+        ),
+        (
+            "c",
             "/** @brief 第3章の説明。 */\nint main(void);\n",
             "/** @brief 第 3 章の説明。 */\nint main(void);\n",
         ),
@@ -528,9 +534,11 @@ def run_tests() -> bool:
     ]
 
     mode_style_test_cases: List[Tuple[str, str, str]] = [
+        ("markdown", "```\nA\u00A0B\n```", "```\nA B\n```\n"),
         ("markdown", "行1\n\n\n行2", "行 1\n\n行 2\n"),
         ("markdown", "```\nline1\n\n\nline2\n```", "```\nline1\n\nline2\n```\n"),
         ("python", "value = 1\n\n\n# 第3章", "value = 1\n\n# 第 3 章\n"),
+        ("text", "line1\u00A0line2", "line1 line2\n"),
         ("text", "line1\n \t \n\nline2", "line1\n\nline2\n"),
         ("text", "line1", "line1\n"),
         ("text", "", "\n"),
@@ -792,6 +800,19 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # style_by_mode: NBSP 検出と text モード置換
+    c = DiagnosticCollector()
+    result = style_by_mode("A\u00A0B", "text", collector=c)
+    nbsp_findings = [f for f in c.findings if f.rule == "nbsp-space"]
+    passed = (
+        result == "A B\n"
+        and any(f.line == 1 and f.column == 2 and f.original == "\u00A0" and f.corrected == " " for f in nbsp_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_by_mode NBSP 検出: {[(f.line, f.column, f.rule) for f in nbsp_findings]}")
+    if not passed:
+        all_passed = False
+
     # _format_findings_stylish: 出力フォーマットテスト
     c = DiagnosticCollector()
     c.set_line(3)
@@ -819,6 +840,17 @@ def run_tests() -> bool:
     passed = "10_microsoft.json" in output
     status = "✓" if passed else "✗"
     print(f"\n{status} _format_findings_stylish 辞書出典表示")
+    if not passed:
+        all_passed = False
+
+    # _format_findings_stylish: NBSP は可視化して表示
+    c = DiagnosticCollector()
+    c.set_line(1)
+    c.add(2, "\u00A0", " ", "nbsp-space", "", "NBSP を半角スペースに変換")
+    output = _format_findings_stylish("test.md", c.findings)
+    passed = '"\\u00A0"' in output and '" "' in output and "nbsp-space" in output
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _format_findings_stylish NBSP 表示")
     if not passed:
         all_passed = False
 
@@ -866,10 +898,22 @@ def run_tests() -> bool:
 
 def _format_findings_stylish(filepath: str, findings: List[Finding]) -> str:
     """textlint 風のフォーマットで Finding 一覧を文字列に変換する。"""
+    def _display_fragment(fragment: str) -> str:
+        return (
+            fragment
+            .replace("\\", "\\\\")
+            .replace("\u00A0", "\\u00A0")
+            .replace("\t", "\\t")
+            .replace("\r", "\\r")
+            .replace("\n", "\\n")
+        )
+
     lines = [filepath]
     for f in sorted(findings, key=lambda f: (f.line, f.column)):
         source_info = f" ({os.path.basename(f.source)})" if f.source else ""
-        lines.append(f'  {f.line}:{f.column}\t"{f.original}" → "{f.corrected}"\t{f.rule}{source_info}')
+        lines.append(
+            f'  {f.line}:{f.column}\t"{_display_fragment(f.original)}" → "{_display_fragment(f.corrected)}"\t{f.rule}{source_info}'
+        )
     lines.append("")
     count = len(findings)
     lines.append(f"  {count} problem{'s' if count != 1 else ''} found")
