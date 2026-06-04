@@ -11,6 +11,7 @@ const puppeteer = require('puppeteer');
 const minimist  = require('minimist');
 const fs        = require('fs');
 const crypto    = require('crypto');
+const sharp     = require('sharp');
 
 /* ── 1. オプション解析 ─────────────────────────────────────────────── */
 const argv  = minimist(process.argv.slice(2), {
@@ -152,6 +153,19 @@ async function getBrowser() {
         throw retryError;
       }
     }
+    /* ── 7. sharp によるパレット減色再エンコード ──────────────────────── */
+    try {
+      buf = await sharp(buf).png({
+        palette         : true,  // libimagequant による減色 (pngquant 相当)
+        quality         : 90,    // 減色品質 (0-100)
+        effort          : 10,    // 最適化強度 (1-10)
+        compressionLevel: 9,     // zlib 圧縮レベル (0-9)
+      }).toBuffer();
+    } catch (sharpErr) {
+      /* 再エンコード失敗時はスクリーンショット buf をそのまま使用して続行 */
+      console.error('[rsvg-convert] sharp re-encode failed, using raw screenshot:', sharpErr.message);
+    }
+
     process.stdout.write(buf);
   } finally {
     /* 共有ブラウザの場合はページを閉じて切断。専用ブラウザの場合はブラウザごと閉じる */
