@@ -620,3 +620,12 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 .admonition-caution .admonition-title {
   color: #da3633;
 }
+
+/* ==text== ハイライト (<mark> 要素): docx の黄色蛍光ペン (#FFFF00) に合わせた純黄色 */
+mark {
+  background-color: #ffff00;
+  color: inherit;
+  /* 印刷時にも背景色を維持する */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}

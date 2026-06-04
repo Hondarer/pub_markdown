@@ -489,6 +489,9 @@ if [[ "$mathLatexEnable" == "" ]]; then
     mathLatexEnable="true"
 fi
 
+# markExtension: Pandoc 入力拡張。==text== を <mark> / docx 黄色ハイライトとして認識させる (HTML/docx 共通)
+markExtension="+mark"
+
 # 数式サポート (LaTeX 書式) 関連オプションの組み立て
 # mathExtension: Pandoc 入力拡張。\[...\] \(...\) 書式の LaTeX 数式を認識させる (HTML/docx 共通)
 # mathJaxOption: MathJax によるブラウザー レンダリングを指定する Pandoc オプション (HTML のみ)
@@ -1415,7 +1418,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1443,7 +1446,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1472,7 +1475,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${mathExtension} \
+                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1807,7 +1810,7 @@ for file in "${files[@]}"; do
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1838,7 +1841,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1870,7 +1873,7 @@ for file in "${files[@]}"; do
                     _pm_pandoc_stderr=$(mktemp)
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
-                        ${PANDOC} -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${mathExtension} \
+                        ${PANDOC} -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
