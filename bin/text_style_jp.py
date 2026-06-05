@@ -51,6 +51,17 @@ def run_tests() -> bool:
         ("10 mm", "10mm"),
         ("ビルド ・ テスト", "ビルド・テスト"),
         ("保存しますか?Excelを使用", "保存しますか? Excel を使用"),
+        # fullwidth-bang: 全角 ？！ → 半角
+        ("本当ですか？", "本当ですか?"),
+        ("すごい！", "すごい!"),
+        # fullwidth-bang + space-after-punctuation: 半角化後に日本語が続く場合はスペース挿入
+        ("できますか？はい", "できますか? はい"),
+        ("できますか?はい", "できますか? はい"),
+        ("すごい！本当", "すごい! 本当"),
+        ("保存しますか？Excel", "保存しますか? Excel"),
+        # space-after-punctuation: 全角句読点・閉じ括弧が続く場合はスペースなし
+        ("質問？」と言った", "質問?」と言った"),
+        ("えっ？。そうか", "えっ?。そうか"),
         ("10/13(ページ)", "10/13 (ページ)"),
         ("hoge()", "hoge()"),
         ("hoge(fuga)", "hoge(fuga)"),
@@ -132,6 +143,8 @@ def run_tests() -> bool:
         ("単語, 単語", "単語, 単語"),
         ("先頭の ./ は中間一致を防くために明示したほうがベターです。", "先頭の ./ は中間一致を防くために明示したほうがベターです。"),
         ("全角コロン：サンプル", "全角コロン: サンプル"),
+        # fullwidth-bang: コード ブロック内は変換しない
+        ("```\n？！\n```", "```\n？！\n```"),
         ("## @brief { brief description }", "## @brief { brief description }"),
         (
             "## @param[<dir>] <parameter-name> { parameter description }",
@@ -741,6 +754,21 @@ def run_tests() -> bool:
     status = "✓" if passed else "✗"
     rules_found = [f.rule for f in c.findings]
     print(f"\n{status} style_prose fullwidth-alnum: rules={rules_found}")
+    if not passed:
+        all_passed = False
+
+    # style_prose: ルール属性テスト (fullwidth-bang)
+    c = DiagnosticCollector()
+    c.set_line(3)
+    result = style_prose("本当ですか？すごい！", collector=c)
+    passed = (
+        result == "本当ですか? すごい!"
+        and any(f.rule == "fullwidth-bang" for f in c.findings)
+        and all(f.line == 3 for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    rules_found = [f.rule for f in c.findings]
+    print(f"\n{status} style_prose fullwidth-bang: rules={rules_found}")
     if not passed:
         all_passed = False
 

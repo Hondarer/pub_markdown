@@ -531,6 +531,13 @@ def convert_fullwidth_colon_to_halfwidth(text: str) -> str:
     return "".join(result)
 
 
+_FULLWIDTH_QUESTION_EXCLAMATION = str.maketrans("？！", "?!")
+
+
+def convert_fullwidth_question_exclamation_to_halfwidth(text: str) -> str:
+    return text.translate(_FULLWIDTH_QUESTION_EXCLAMATION)
+
+
 def convert_halfwidth_katakana_to_fullwidth(text: str) -> str:
     result = []
     i = 0
@@ -595,7 +602,8 @@ def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
 
 
 def remove_space_before_punctuation(text: str) -> str:
-    text = re.sub(r" +([、。，．,;!！?？])", r"\1", text)
+    text = re.sub(r" +([、。，．,;!！])", r"\1", text)
+    text = re.sub(r" +([?？])(?!=)", r"\1", text)
     text = re.sub(r" +:(?!(?: |=))", ":", text)
     text = re.sub(r" +\.(?![A-Za-z./\\])", ".", text)
     return text
@@ -619,8 +627,20 @@ def remove_space_before_mm_unit(text: str) -> str:
     return re.sub(r"(\d) +(mm)\b", r"\1\2", text)
 
 
+# ? ! の直後に続いても半角スペースを挿入しない全角文字 (句読点・閉じ括弧・波ダッシュ・三点リーダー等)
+_FULLWIDTH_NO_SPACE_AFTER_BANG = "・。、，．！？…‥〜～）］｝」』】〕〉》"
+
+
 def add_space_after_punctuation_before_alnum(text: str) -> str:
-    return re.sub(r"([?？!！])([A-Za-z0-9])", r"\1 \2", text)
+    text = re.sub(r"([?？!！])([A-Za-z0-9])", r"\1 \2", text)
+    # 半角 ? ! の後に日本語 (全角文字) が続く場合もスペースを挿入する。
+    # 直後が全角の句読点・閉じ括弧などのときは挿入しない。
+    text = re.sub(
+        r"([?？!！])(?=[^\x00-\x7F])(?![" + re.escape(_FULLWIDTH_NO_SPACE_AFTER_BANG) + r"])",
+        r"\1 ",
+        text,
+    )
+    return text
 
 
 def add_space_after_number_before_bracket(text: str) -> str:
@@ -726,6 +746,7 @@ def normalize_spaces(text: str) -> str:
 _STYLE_PROSE_STEPS = [
     ("fullwidth-alnum",          convert_fullwidth_alnum_to_halfwidth,                   "全角英数字を半角に変換"),
     ("fullwidth-colon",          convert_fullwidth_colon_to_halfwidth,                   "全角コロンを半角に変換"),
+    ("fullwidth-bang",           convert_fullwidth_question_exclamation_to_halfwidth,    "全角の疑問符・感嘆符を半角に変換"),
     ("halfwidth-katakana",       convert_halfwidth_katakana_to_fullwidth,                "半角カタカナを全角に変換"),
     ("normalize-spaces",         normalize_spaces,                                       "スペースを正規化"),
     ("fullwidth-halfwidth-space", insert_space_between_fullwidth_and_halfwidth,          "全角/半角境界にスペースを挿入"),
