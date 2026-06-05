@@ -180,10 +180,24 @@ else
 
 起動シーケンス:
 
-1. `PUB_MARKDOWN_BROWSER_WS_FILE` 環境変数を設定
-2. `browser-server.js` をバックグラウンドで起動
-3. エンドポイント ファイルが作成されるまでポーリング待機 (最大 30 秒、100ms 間隔)
-4. 待機タイムアウト時はフォールバック モードに切り替え
+1. 対象ファイルを収集し、共有ブラウザーが必要か判定
+2. 必要な場合のみ `PUB_MARKDOWN_BROWSER_WS_FILE` 環境変数を設定
+3. `browser-server.js` をバックグラウンドで起動
+4. エンドポイント ファイルが作成されるまでポーリング待機
+5. 起動プロセスの終了または待機タイムアウト時はフォールバック モードに切り替え
+
+起動判定:
+
+- `PUB_MARKDOWN_BROWSER_REUSE=auto` (デフォルト): `docxOutput=true` かつ対象 Markdown に Mermaid または `.svg` 参照がある場合のみ起動
+- `PUB_MARKDOWN_BROWSER_REUSE=always`: 対象ファイルの内容に関係なく起動
+- `PUB_MARKDOWN_BROWSER_REUSE=off`: 共有ブラウザーを起動しない
+
+起動待機:
+
+- デフォルトは 10 秒
+- `PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC` で秒数を上書き可能
+- `browser-server.js` が先に終了した場合は、タイムアウトを待たずにフォールバックする
+- フォールバック時は `browser-server.js` の診断ログを警告として出力する
 
 停止処理:
 
@@ -219,7 +233,7 @@ else
 ### フォールバック発生条件
 
 1. `browser-server.js` の起動失敗 (Chromium が見つからない等)
-2. WebSocket エンドポイント ファイルの作成タイムアウト (30 秒)
+2. WebSocket エンドポイント ファイルの作成タイムアウト
 3. 共有ブラウザーへの接続失敗 (ブラウザー クラッシュ等)
 
 ### フォールバック時の動作

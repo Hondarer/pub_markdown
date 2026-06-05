@@ -35,6 +35,7 @@ _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
 _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
+_UNORDERED_LIST_MARKER_RE = re.compile(r"^(\s*)[*+](?= )")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
 _TABLE_SEPARATOR_RE = re.compile(r"^\s*\|(\s*:?-+:?\s*\|)+\s*$")
 _GRID_TABLE_BORDER_RE = re.compile(r"^\s*\+(?:[-=:]+\+)+\s*$")
@@ -377,15 +378,31 @@ def _style_text_with_inline_code_spacing(
     return normalized
 
 
-def _find_owner_delta(stack: List[Tuple[int, int, int]], width: int) -> int:
+def _find_owner_delta(stack: List[Tuple[int, int, int, int]], width: int) -> int:
     """orig_content_indent <= width を満たす最深スタック エントリの delta を返す。
 
-    スタック エントリの構造: (orig_indent, orig_content_indent, delta)
+    スタック エントリの構造: (orig_indent, orig_content_indent, delta, target_content_indent)
     """
     for entry in reversed(stack):
         if entry[1] <= width:  # orig_content_indent <= width
             return entry[2]    # delta
     return 0
+
+
+def _find_owner_continuation_indent(
+    stack: List[Tuple[int, int, int, int]], width: int
+) -> Optional[Tuple[int, int]]:
+    """継続テキスト行の所有リスト項目を返す。
+
+    Markdown 文書では、ネストしたリスト項目の継続行がマーカー後の
+    本文開始位置より 1 スペース浅く書かれていることがある。
+    その行をリスト項目配下として扱うため、orig_indent < width を満たす
+    最深エントリを所有項目とする。
+    """
+    for entry in reversed(stack):
+        if entry[0] < width:
+            return entry[2], entry[3]
+    return None
 
 
 def _normalize_list_indent(
@@ -398,13 +415,14 @@ def _normalize_list_indent(
     マーカー行・継続テキスト行・配下のフェンス付きコード ブロックを
     同一 delta で平行移動させることで相対字下げを保持する。
 
-    スタック エントリ: (orig_indent, orig_content_indent, delta)
+    スタック エントリ: (orig_indent, orig_content_indent, delta, target_content_indent)
       - orig_indent       : マーカー行の先頭空白幅 (expandtabs(4) 換算)
       - orig_content_indent: マーカー後のコンテンツ開始位置 (orig_indent + マーカー長)
       - delta             : 新インデント − 旧インデント
+      - target_content_indent: 正規化後のコンテンツ開始位置
     """
-    # スタック エントリ: (orig_indent, orig_content_indent, delta)
-    stack: List[Tuple[int, int, int]] = []
+    # スタック エントリ: (orig_indent, orig_content_indent, delta, target_content_indent)
+    stack: List[Tuple[int, int, int, int]] = []
     output: List[str] = []
 
     for i, line in enumerate(result_lines):
@@ -438,15 +456,21 @@ def _normalize_list_indent(
                     new_line = " " * target + content_after_lead
                 # マーカー長: 先頭空白を除いた "- " / "1. " 部分の文字数
                 marker_len = marker_match.end() - len(lead_str)
-                stack.append((width, width + marker_len, delta))
+                marker_indent = width
+                if depth != 0:
+                    marker_indent = target
+                stack.append((width, width + marker_len, delta, marker_indent + marker_len))
             else:
                 # 非マーカー行: width == 0 のトップレベル行はリストを閉じる
                 if width == 0:
                     stack.clear()
                 else:
-                    d = _find_owner_delta(stack, width)
-                    if d != 0:
-                        new_line = " " * max(0, width + d) + content_after_lead
+                    owner = _find_owner_continuation_indent(stack, width)
+                    if owner is not None:
+                        d, target_content_indent = owner
+                        target_width = max(0, width + d, target_content_indent)
+                        if target_width != width:
+                            new_line = " " * target_width + content_after_lead
         else:
             # コード ブロック内 (フェンス行・内容行・閉じ行)
             # width > 0 のときのみ所有項目の delta で平行移動する
@@ -640,6 +664,10 @@ def _remove_unnecessary_trailing_spaces(
 
 def _normalize_task_list_marker(line: str) -> str:
     return _EMPTY_TASK_LIST_MARKER_RE.sub(r"\1[ ]", line)
+
+
+def _normalize_unordered_list_marker(line: str) -> str:
+    return _UNORDERED_LIST_MARKER_RE.sub(r"\1-", line)
 
 
 def _remove_markdown_heading_number(line: str) -> str:
@@ -837,6 +865,10 @@ def style_markdown(
         if _TABLE_SEPARATOR_RE.match(line):
             result_lines.append(line)
         else:
+            before = line
+            line = _normalize_unordered_list_marker(line)
+            if collector is not None:
+                _record_step_changes(before, line, "unordered-list-marker", collector, message="unordered list マーカーを正規化")
             before = line
             line = _normalize_task_list_marker(line)
             if collector is not None:

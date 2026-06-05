@@ -99,7 +99,7 @@ short-title: "CalcException.cs"
 | `short-title-details` | details=true のビルド時 |
 | `short-title-<lang>-details` | 指定言語 かつ details=true のビルド時 |
 
-採用優先順位 (details=true、lang=ja の場合):
+採用優先順位 (details=true、lang=ja の場合):  
 `short-title-ja-details` > `short-title-ja` > `short-title-details` > `short-title`
 
 details=false の場合: `short-title-ja` > `short-title`
@@ -255,11 +255,11 @@ local defaults = {
 **階層名の表示ロジック**:
 
 1. ディレクトリ索引が存在する場合:
-   - フォルダー名をリンク テキストとして表示
-   - 採用された Markdown 内の最初の `# タイトル` を説明文として表示
-   - タイトルがない場合 → 説明文は表示されない
+    - フォルダー名をリンク テキストとして表示
+    - 採用された Markdown 内の最初の `# タイトル` を説明文として表示
+    - タイトルがない場合 → 説明文は表示されない
 2. ディレクトリ索引が存在しない場合:
-   - フォルダー名のみ (リンクなし、説明文なし)
+    - フォルダー名のみ (リンクなし、説明文なし)
 
 ```markdown
 # プロジェクト概要

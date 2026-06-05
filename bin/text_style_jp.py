@@ -162,15 +162,24 @@ def run_tests() -> bool:
         ("1. a\n   - b", "1. a\n    - b"),
         # list-indent: 継続テキスト行も delta で追従 (trailing-space は後段パスが付与)
         ("- a\n  - b\n    cont", "- a\n    - b  \n      cont"),
+        # list-indent: 継続テキスト行はマーカー後の本文開始位置まで字下げする
+        ("- a\n  1. b\n    cont", "- a\n    1. b  \n       cont"),
         # list-indent: 配下フェンス コード ブロックも delta で追従
         # _insert_blank_around_fences がフェンス直前に空行を挿入する
         ("- a\n  - b\n    ```c\n    x\n    ```", "- a\n    - b\n\n      ```c\n      x\n      ```"),
         # list-indent: 既に 4 スペースのネストは変更しない
         ("- a\n    - b", "- a\n    - b"),
         # list-indent: トップレベル (depth-0) の字下げは変更しない
-        (" * - item", " * - item"),
+        (" * - item", " - - item"),
         # list-indent: 同階層の連続リスト (ネストなし) は変更しない
         ("- a\n- b\n- c", "- a\n- b\n- c"),
+        # unordered-list-marker: 記号リストは - に統一する
+        ("* item", "- item"),
+        ("+ item", "- item"),
+        ("    * nested", "    - nested"),
+        ("+ [] task", "- [ ] task"),
+        ("1. item", "1. item"),
+        ("```\n* item\n+ item\n```", "```\n* item\n+ item\n```"),
         ("- [] task", "- [ ] task"),
         ("- [ ] task", "- [ ] task"),
         ("- [x] task", "- [x] task"),
@@ -231,7 +240,7 @@ def run_tests() -> bool:
         ("`(タイトル)`", "`(タイトル)`"),
         ("` ```text `", "` ```text `"),
         ("`<com_util/base/shared_lib_lifecycle.h>` :", "`<com_util/base/shared_lib_lifecycle.h>` :"),
-        (" *  - `<com_util/base/shared_lib_lifecycle.h>` :", " * - `<com_util/base/shared_lib_lifecycle.h>` :"),
+        (" *  - `<com_util/base/shared_lib_lifecycle.h>` :", " - - `<com_util/base/shared_lib_lifecycle.h>` :"),
         ("`1`=あり", "`1`=あり"),
         ("`0`=なし", "`0`=なし"),
         ("`FLAG`==1", "`FLAG`==1"),
@@ -294,7 +303,7 @@ def run_tests() -> bool:
             "利用側に `onLoad()` / `onUnload()` の実装を要求します。",
         ),
         ("- item1\n- item2", "- item1\n- item2"),
-        ("* item1\n* item2", "* item1\n* item2"),
+        ("* item1\n* item2", "- item1\n- item2"),
         ("1. item1\n2. item2", "1. item1\n2. item2"),
         ("- item\n\n本文", "- item\n\n本文"),
         ("| A | B |\n| C | D |", "| A | B |\n| C | D |"),
@@ -828,6 +837,21 @@ def run_tests() -> bool:
     )
     status = "✓" if passed else "✗"
     print(f"\n{status} style_markdown list-indent 検出: {[(f.line, f.rule, f.original, f.corrected) for f in li_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: unordered-list-marker ルールが dry-run で検出されること
+    c = DiagnosticCollector()
+    result = style_markdown("* 親\n  + 子", collector=c)
+    ulm_findings = [f for f in c.findings if f.rule == "unordered-list-marker"]
+    passed = (
+        result == "- 親\n    - 子"
+        and len(ulm_findings) == 2
+        and any(f.line == 1 for f in ulm_findings)
+        and any(f.line == 2 for f in ulm_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown unordered-list-marker 検出: {[(f.line, f.rule, f.original, f.corrected) for f in ulm_findings]}")
     if not passed:
         all_passed = False
 

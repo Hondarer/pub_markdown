@@ -78,6 +78,9 @@ cleanup_resources() {
     if [[ -n "${PUB_MARKDOWN_BROWSER_WS_FILE:-}" ]]; then
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
+    if [[ -n "${BROWSER_SERVER_LOG:-}" ]]; then
+        rm -f "$BROWSER_SERVER_LOG" 2>/dev/null
+    fi
 
     # そのほかのバックグラウンド ジョブを停止
     local _bg_jobs
@@ -242,41 +245,110 @@ fi
 export NODE_NO_WARNINGS=1
 
 #-------------------------------------------------------------------
-# 共有ブラウザー インスタンスの起動
+# 共有ブラウザー インスタンスの起動設定
 #-------------------------------------------------------------------
 
-# rsvg-convert.js や mmdc-reuse.js が共有ブラウザーに接続するための
-# WebSocket エンドポイント ファイルを設定
-export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
 BROWSER_SERVER_PID=""
-export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder:-}/docs"
+BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
-# 共有ブラウザー サーバーをバックグラウンドで起動
-# NOTE: browser-server.js は Puppeteer のデフォルト ブラウザー検出を使用する。
-#       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
-#       chrome-wrapper.sh の WebSocket 競合回避はファイル ベースの待機で代替する。
-#       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
-node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" &
-BROWSER_SERVER_PID=$!
-progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID}"
-
-# WebSocket エンドポイント ファイルが作成されるまで待機 (最大 30 秒)
-for _i in $(seq 1 300); do
-    if [[ -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
-        break
-    fi
-    sleep 0.1
-done
-
-if [[ ! -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
-    echo "Warning: Shared browser server failed to start. Falling back to per-process browser instances."
-    BROWSER_SERVER_PID=""
-    export -n PUB_MARKDOWN_BROWSER_WS_FILE
-    progress_log "共有ブラウザ起動待機を終了しました result=fallback"
-else
-    progress_log "共有ブラウザ起動待機を終了しました result=ready"
+PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
+PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-10}"
+if ! [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" =~ ^[0-9]+$ ]] || [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" -lt 1 ]]; then
+    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=10
 fi
+
+summarize_browser_server_log() {
+    local log_file="$1"
+    if [[ ! -s "$log_file" ]]; then
+        echo "(no browser-server diagnostics)"
+        return 0
+    fi
+
+    tail -n 20 "$log_file" \
+        | tr '\n' ' ' \
+        | sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^ //' -e 's/ $//'
+}
+
+start_shared_browser_server() {
+    local timeout_ticks=$(( PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC * 10 ))
+    local exit_status=0
+    local reason=""
+
+    export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
+    BROWSER_SERVER_LOG=$(mktemp)
+    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE"
+
+    # NOTE: browser-server.js は Puppeteer のデフォルト ブラウザー検出を使用する。
+    #       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
+    #       chrome-wrapper.sh の WebSocket 競合回避はファイル ベースの待機で代替する。
+    #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
+    node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" >"$BROWSER_SERVER_LOG" 2>&1 &
+    BROWSER_SERVER_PID=$!
+    progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID} timeout=${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC}s"
+
+    for _i in $(seq 1 "$timeout_ticks"); do
+        if [[ -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
+            progress_log "共有ブラウザ起動待機を終了しました result=ready"
+            return 0
+        fi
+        if ! jobs -pr | grep -qx "$BROWSER_SERVER_PID"; then
+            wait "$BROWSER_SERVER_PID" 2>/dev/null
+            exit_status=$?
+            reason="exit=${exit_status}"
+            break
+        fi
+        sleep 0.1
+    done
+
+    if [[ -z "$reason" ]]; then
+        reason="timeout=${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC}s"
+        kill "$BROWSER_SERVER_PID" 2>/dev/null
+        wait "$BROWSER_SERVER_PID" 2>/dev/null
+    fi
+
+    echo "Warning: Shared browser server failed to start (${reason}). Falling back to per-process browser instances."
+    echo "Warning: browser-server diagnostics: $(summarize_browser_server_log "$BROWSER_SERVER_LOG")"
+    BROWSER_SERVER_PID=""
+    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" "$BROWSER_SERVER_LOG" 2>/dev/null
+    BROWSER_SERVER_LOG=""
+    export -n PUB_MARKDOWN_BROWSER_WS_FILE
+    progress_log "共有ブラウザ起動待機を終了しました result=fallback ${reason}"
+    return 1
+}
+
+markdown_needs_shared_browser() {
+    local file="$1"
+    [[ "$file" == *.md ]] || return 1
+    grep -Eiq '(^```[[:space:]]*\{?\.?mermaid\b|^```[[:space:]]*mermaid\b)' "$file" && return 0
+    grep -Fqi '.svg' "$file"
+}
+
+should_start_shared_browser() {
+    local file
+
+    case "$PUB_MARKDOWN_BROWSER_REUSE" in
+        always)
+            return 0
+            ;;
+        off|false|0|no)
+            return 1
+            ;;
+        auto|"")
+            ;;
+        *)
+            echo "Warning: Unknown PUB_MARKDOWN_BROWSER_REUSE=${PUB_MARKDOWN_BROWSER_REUSE}; using auto."
+            ;;
+    esac
+
+    [[ "$docxOutput" == "true" ]] || return 1
+    for file in "${files[@]}"; do
+        if markdown_needs_shared_browser "$file"; then
+            return 0
+        fi
+    done
+    return 1
+}
 
 #-------------------------------------------------------------------
 
@@ -1236,6 +1308,15 @@ files=("${files_without_skip[@]}")
 
 echo " done."
 progress_log "対象ファイルの収集を終了しました count=${#files[@]}"
+
+#-------------------------------------------------------------------
+
+if should_start_shared_browser; then
+    start_shared_browser_server || true
+else
+    export -n PUB_MARKDOWN_BROWSER_WS_FILE
+    progress_log "共有ブラウザ起動を省略しました mode=${PUB_MARKDOWN_BROWSER_REUSE} docxOutput=${docxOutput}"
+fi
 
 #-------------------------------------------------------------------
 
