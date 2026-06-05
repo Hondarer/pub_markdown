@@ -480,6 +480,14 @@ def run_tests() -> bool:
         ("```\n// 第3章\n```", "```\n// 第3章\n```"),
         # コード本体・文字列リテラルは不変、コメントのみ整形
         ('```c\nconst char *s = "第3章"; // 第3章\n```', '```c\nconst char *s = "第3章"; // 第 3 章\n```'),
+        (
+            "```makefile\n# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n```",
+            "```makefile\n# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n```",
+        ),
+        (
+            "```c\n/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n```",
+            "```c\n/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n```",
+        ),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [
@@ -564,9 +572,19 @@ def run_tests() -> bool:
             "/** @warning ptr != nullptr と O(n²) とメモリ サイズを確認する。 */\n",
         ),
         (
+            "c",
+            "/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n",
+            "/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n",
+        ),
+        (
             "make",
             "# ターゲット定義パターン: ^ターゲット名[空白]*:\n",
             "# ターゲット定義パターン: ^ターゲット名[空白]*:\n",
+        ),
+        (
+            "make",
+            "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
+            "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
         ),
         (
             "csharp",

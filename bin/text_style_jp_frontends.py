@@ -67,6 +67,7 @@ _CODE_BRACKET_QUANTIFIER_PATTERN = re.compile(r"[^\s\[\]`]+[ \t]*\[[^\]\n`]+\][*
 _CODE_BIG_O_PATTERN = re.compile(r"\bO\([A-Za-z0-9_+\-*/^ .²³]+\)")
 _CODE_BRACE_BLOCK_PATTERN = re.compile(r"\{[A-Za-z0-9_(),;\"' .!=<>*/+\-]*\}")
 _CODE_INLINE_COMMENT_TAIL_PATTERN = re.compile(r"[ \t]+//[^\n]*")
+_COMMENT_ALIGNMENT_SPACES_PATTERN = re.compile(r"(?<=\S) {2,}(?=\S)")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
 
@@ -97,6 +98,7 @@ _COMMENT_CODE_PROTECTED_PATTERNS = [
     _CODE_BRACKET_QUANTIFIER_PATTERN,
     _CODE_BIG_O_PATTERN,
     _CODE_INLINE_COMMENT_TAIL_PATTERN,
+    _COMMENT_ALIGNMENT_SPACES_PATTERN,
 ]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
 

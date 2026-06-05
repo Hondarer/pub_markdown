@@ -36,9 +36,9 @@ Puppeteer を使用することで以下の改善を実現している。
 ### ファイル構成
 
 ```text
-rsvg-convert.exe    # Windows 用エントリーポイント
+rsvg-convert.exe    # Windows 用エントリ ポイント
 rsvg-convert.cmd    # Windows 用バッチファイル (rsvg-convert.exe から起動)
-rsvg-convert        # Linux 用シェルファイル (エントリーポイント)
+rsvg-convert        # Linux 用シェルファイル (エントリ ポイント)
 rsvg-convert.js     # メインの Node.js スクリプト
 ```
 

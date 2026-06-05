@@ -1,6 +1,6 @@
 {
   "_source": "local",
-  "_description": "JAPANESE.tbx (Microsoft Terminology Collection) に収録されない、社内独自カタカナ語の登録簿。tbx 自動導出で対応可能な語は 10_microsoft.json に任せ、ここには tbx 未収録の独自用語のみを登録する。no_space に登録した語はカタカナ列のスペース挿入誤記 (例: 'サブ モジュール') も自動的に元の連結形に補正される。",
+  "_description": "JAPANESE.tbx (Microsoft Terminology Collection) に収録されない、追加定義のカタカナ語の登録簿。tbx 自動導出で対応可能な語は 10_microsoft.json に任せ、ここには tbx 未収録の独自用語のみを登録する。no_space に登録した語はカタカナ列のスペース挿入誤記 (例: 'サブ モジュール') も自動的に元の連結形に補正される。",
   "no_space": [
     "サブモジュール",
     "ライフサイクル",
@@ -140,6 +140,14 @@
     {
       "from": "アサイン",
       "to": "割り当て"
+    },
+    {
+      "from": "ツール チップ",
+      "to": "ツールヒント"
+    },
+    {
+      "from": "ツールチップ",
+      "to": "ツールヒント"
     }
   ],
   "add_space": [
@@ -290,6 +298,10 @@
     {
       "from": "メモ リサイズ",
       "to": "メモリ サイズ"
+    },
+    {
+      "from": "エントリーポイント",
+      "to": "エントリ ポイント"
     }
   ]
 }
