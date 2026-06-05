@@ -1109,6 +1109,49 @@ copy_if_different_timestamp() {
     return 0
 }
 
+# SVG ファイルのコピー / foreignObject フィルター処理。
+# - .svg 以外、または <foreignObject を含まない .svg は copy_if_different_timestamp で素通し。
+# - <foreignObject を含む .svg は strip-foreignobject.py を通してフィルター後のファイルを配置する。
+#   ソース ファイルは変更しない。冪等性は mtime 比較で保証する。
+#   フィルター失敗時は原本をコピーして警告を出す (画像欠落を防ぐ)。
+copy_or_filter_svg() {
+    local src_file="$1"
+    local dest_file="$2"
+
+    # SVG 以外、または foreignObject を含まない SVG は素通し (mtime・バイト温存)
+    case "$src_file" in
+        *.svg)
+            if ! grep -q '<foreignObject' "$src_file" 2>/dev/null; then
+                copy_if_different_timestamp "$src_file" "$dest_file"
+                return 0
+            fi
+            ;;
+        *)
+            copy_if_different_timestamp "$src_file" "$dest_file"
+            return 0
+            ;;
+    esac
+
+    # foreignObject を含む SVG → フィルター処理
+    # 冪等性: dest が無い、または src が dest より新しい場合のみ再生成
+    if [[ -e "$dest_file" && ! "$src_file" -nt "$dest_file" && ! "$dest_file" -ot "$src_file" ]]; then
+        return 0
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    if python3 "${SCRIPT_DIR}/strip-foreignobject.py" "$src_file" > "$tmp_file" 2>/dev/null; then
+        mv "$tmp_file" "$dest_file"
+        touch -r "$src_file" "$dest_file"   # mtime を src に揃えて次回実行をスキップ
+    else
+        # フィルター失敗時は原本をコピー (画像欠落を防ぐ)
+        rm -f "$tmp_file"
+        echo "Warning: strip-foreignobject に失敗しました。原本をコピーします: ${src_file}"
+        cp -p "$src_file" "$dest_file"
+    fi
+    return 0
+}
+
 #-------------------------------------------------------------------
 
 set_html_lang_attributes() {
@@ -1803,7 +1846,7 @@ for file in "${files[@]}"; do
                     for details_suffix in "${details_suffixes[@]}"; do
                         dest_img="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_dir}/${img_path}"
                         mkdir -p "$(dirname "$dest_img")"
-                        copy_if_different_timestamp "$src_img" "$dest_img"
+                        copy_or_filter_svg "$src_img" "$dest_img"
                     done
                 done
             fi
@@ -1876,7 +1919,7 @@ for file in "${files[@]}"; do
                     | tr -d '\r')
                 md_body=$(echo "${replaced_md}" | sed '/^# /d')
 
-                # ナビツリー / \toc 用の簡潔タイトルを解決する
+                # ナビゲーション ツリー / \toc 用の簡潔タイトルを解決する
                 # short-title 系フィールドが指定されていない場合は空文字になる
                 nav_title=$(extract_short_title "${file}" "${langElement}" "${current_details}")
 

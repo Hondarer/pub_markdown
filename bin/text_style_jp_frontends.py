@@ -62,6 +62,14 @@ _CODE_OPERATOR_EXPRESSION_PATTERN = re.compile(
     r"\s*(?:[A-Za-z_][A-Za-z0-9_]*|NULL|nullptr|\d+)"
     r"(?![A-Za-z0-9_])"
 )
+_CODE_LOGICAL_MACRO_EXPRESSION_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_])"
+    r"!?[A-Z_][A-Z0-9_]*"
+    r"(?:\s*(?:&&|\|\|)\s*!?[A-Z_][A-Z0-9_]*)+"
+    r"(?![A-Za-z0-9_])"
+)
+_CODE_NEGATED_IDENTIFIER_PATTERN = re.compile(r"![A-Z_][A-Z0-9_]*")
+_COMMENT_CODE_NEGATION_SPACE_RE = re.compile(r"!\s+([A-Z_][A-Z0-9_]*)")
 _CODE_CALL_PREFIX_PATTERN = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*[ \t]*(?=\()")
 _CODE_BRACKET_QUANTIFIER_PATTERN = re.compile(r"[^\s\[\]`]+[ \t]*\[[^\]\n`]+\][*+?]?")
 _CODE_BIG_O_PATTERN = re.compile(r"\bO\([A-Za-z0-9_+\-*/^ .²³]+\)")
@@ -94,6 +102,8 @@ _COMMENT_CODE_PROTECTED_PATTERNS = [
     _DOXYGEN_MATH_PATTERN,
     _CODE_BRACE_BLOCK_PATTERN,
     _CODE_OPERATOR_EXPRESSION_PATTERN,
+    _CODE_LOGICAL_MACRO_EXPRESSION_PATTERN,
+    _CODE_NEGATED_IDENTIFIER_PATTERN,
     _CODE_CALL_PREFIX_PATTERN,
     _CODE_BRACKET_QUANTIFIER_PATTERN,
     _CODE_BIG_O_PATTERN,
@@ -1007,6 +1017,10 @@ def _style_general_comment_text(
 ) -> str:
     if not text.strip():
         return text
+    before = text
+    text = _COMMENT_CODE_NEGATION_SPACE_RE.sub(r"!\1", text)
+    if collector is not None:
+        _record_step_changes(before, text, "comment-code-negation", collector, message="コメント内の C 条件否定のスペースを削除")
     return _style_text_with_inline_code_spacing(text, _COMMENT_CODE_PROTECTED_PATTERNS, collector=collector)
 
 
@@ -1016,6 +1030,10 @@ def _style_doxygen_description(
 ) -> str:
     if not text.strip():
         return text
+    before = text
+    text = _COMMENT_CODE_NEGATION_SPACE_RE.sub(r"!\1", text)
+    if collector is not None:
+        _record_step_changes(before, text, "comment-code-negation", collector, message="コメント内の C 条件否定のスペースを削除")
     return _style_text_with_inline_code_spacing(
         text,
         _COMMENT_CODE_PROTECTED_PATTERNS + [_DOXYGEN_INLINE_COMMAND_PATTERN],

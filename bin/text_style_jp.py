@@ -488,6 +488,22 @@ def run_tests() -> bool:
             "```c\n/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n```",
             "```c\n/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n```",
         ),
+        (
+            "```c\n#else /* !MACRO */\n#endif /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+            "```c\n#else /* !MACRO */\n#endif /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+        ),
+        (
+            "```c\n#else /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+            "```c\n#else /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+        ),
+        (
+            "```c\n#else /* ! MACRO */\n#endif /* ! COMPILER_GCC && ! COMPILER_MSVC */\n```",
+            "```c\n#else /* !MACRO */\n#endif /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+        ),
+        (
+            "```c\n#else /* ! COMPILER_GCC && ! COMPILER_MSVC */\n```",
+            "```c\n#else /* !COMPILER_GCC && !COMPILER_MSVC */\n```",
+        ),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [
@@ -585,6 +601,21 @@ def run_tests() -> bool:
             "make",
             "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
             "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
+        ),
+        (
+            "c",
+            "/** #else /* !MACRO */ */\n",
+            "/** #else /* !MACRO */ */\n",
+        ),
+        (
+            "c",
+            "/** #else /* !COMPILER_GCC && !COMPILER_MSVC */ */\n",
+            "/** #else /* !COMPILER_GCC && !COMPILER_MSVC */ */\n",
+        ),
+        (
+            "c",
+            "/** #endif /* ! COMPILER_GCC && ! COMPILER_MSVC */ */\n",
+            "/** #endif /* !COMPILER_GCC && !COMPILER_MSVC */ */\n",
         ),
         (
             "csharp",
