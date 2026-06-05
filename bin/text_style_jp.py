@@ -467,6 +467,19 @@ def run_tests() -> bool:
         ),
         ("```makefile\nLIBS += mock_calcbase mock_libc\n```\n補足", "```makefile\nLIBS += mock_calcbase mock_libc\n```\n\n補足"),
         ("例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```", "例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```"),
+        # コードブロック内コメントのスタイリング
+        ("```c\n// 第3章の例\nint x = 0;\n```", "```c\n// 第 3 章の例\nint x = 0;\n```"),
+        ("```c\n/** @brief 第3章の例。 */\nint x;\n```", "```c\n/** @brief 第 3 章の例。 */\nint x;\n```"),
+        ("```python\nx = 1  # 第3章\n```", "```python\nx = 1  # 第 3 章\n```"),
+        ("```makefile\nLIBS += a # 第3章\n```", "```makefile\nLIBS += a # 第 3 章\n```"),
+        ("```bash\necho test # 第3章\n```", "```bash\necho test # 第 3 章\n```"),
+        ("```{.c}\n// 第3章\n```", "```{.c}\n// 第 3 章\n```"),
+        # 非対応言語は不変
+        ("```json\n// 第3章\n```", "```json\n// 第3章\n```"),
+        # 言語なしは不変
+        ("```\n// 第3章\n```", "```\n// 第3章\n```"),
+        # コード本体・文字列リテラルは不変、コメントのみ整形
+        ('```c\nconst char *s = "第3章"; // 第3章\n```', '```c\nconst char *s = "第3章"; // 第 3 章\n```'),
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [
@@ -851,6 +864,19 @@ def run_tests() -> bool:
     passed = len(bd_findings) == 0
     status = "✓" if passed else "✗"
     print(f"\n{status} style_markdown box-drawing 矢印は対象外: {[(f.line, f.column, f.original) for f in bd_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: コードブロック内コメントの行番号オフセット検証
+    c = DiagnosticCollector()
+    result = style_markdown("```c\n// 第3章\n```", collector=c)
+    cb_findings = [f for f in c.findings if f.rule == "fullwidth-halfwidth-space"]
+    passed = (
+        result == "```c\n// 第 3 章\n```"
+        and any(f.line == 2 for f in cb_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown コードブロック内コメント行番号オフセット: {[(f.line, f.rule) for f in cb_findings]}")
     if not passed:
         all_passed = False
 

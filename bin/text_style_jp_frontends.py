@@ -58,6 +58,16 @@ _EMPHASIS_PATTERN = re.compile(
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
 
+_FENCE_LANG_TO_SOURCE_MODE = {
+    "c": "c", "h": "c",
+    "cpp": "cpp", "c++": "cpp", "cc": "cpp", "cxx": "cpp",
+    "hpp": "cpp", "hh": "cpp", "hxx": "cpp",
+    "cs": "csharp", "csharp": "csharp",
+    "py": "python", "python": "python", "python3": "python",
+    "sh": "shell", "bash": "shell", "shell": "shell", "zsh": "shell",
+    "make": "make", "makefile": "make", "mk": "make",
+}
+
 _MARKDOWN_PROTECTED_PATTERNS = [
     _BACKTICK_PATTERN,
     _ADMONITION_MARKER_PATTERN,
@@ -762,6 +772,24 @@ def _find_box_drawing_chars(text: str, collector: "DiagnosticCollector") -> None
                 collector.add(col_idx, ch, ch, "box-drawing")
 
 
+def _detect_fence_source_mode(info: str) -> Optional[str]:
+    """フェンス情報文字列 (言語タグ部分) から対応するソースモードを返す。
+
+    Pandoc 属性形式 ({.c .numberLines}) と素のトークン (c title="x") の両方に対応する。
+    対応言語がない場合は None を返す。
+    """
+    info = info.strip()
+    if not info:
+        return None
+    if info.startswith("{"):
+        m = re.search(r"\.([A-Za-z0-9_+#.-]+)", info)
+        lang = m.group(1) if m else ""
+    else:
+        m = re.match(r"[A-Za-z0-9_+#.-]+", info)
+        lang = m.group(0) if m else ""
+    return _FENCE_LANG_TO_SOURCE_MODE.get(lang.lower())
+
+
 def style_markdown(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
@@ -780,6 +808,8 @@ def style_markdown(
     comment_tag: Optional[str] = None
     in_html_comment_block = False
     in_grid_table = False
+    code_block_mode: Optional[str] = None
+    code_body_start: int = 0
 
     for idx, line in enumerate(lines):
         if collector is not None:
@@ -814,6 +844,15 @@ def style_markdown(
                 if fence_nest == 0:
                     in_code_block = False
                     fence_len = 0
+                    if code_block_mode is not None and len(result_lines) > code_body_start:
+                        body_text = "\n".join(result_lines[code_body_start:])
+                        pre_count = len(collector.findings) if collector is not None else 0
+                        styled_body = style_source_comments(body_text, code_block_mode, collector=collector)
+                        if collector is not None:
+                            for f in collector.findings[pre_count:]:
+                                f.line += code_body_start
+                        result_lines[code_body_start:] = styled_body.split("\n")
+                    code_block_mode = None
                 else:
                     fence_nest -= 1
                 result_lines.append(line)
@@ -847,6 +886,8 @@ def style_markdown(
             fence_nest = 0
             result_lines.append(line)
             code_block_flags.append(True)
+            code_block_mode = _detect_fence_source_mode(stripped[match.end():])
+            code_body_start = len(result_lines)
             continue
 
         if in_grid_table:
