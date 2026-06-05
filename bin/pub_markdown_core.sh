@@ -288,7 +288,7 @@ start_shared_browser_server() {
     progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID} timeout=${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC}s"
 
     for _i in $(seq 1 "$timeout_ticks"); do
-        if [[ -f "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
+        if [[ -s "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
             progress_log "共有ブラウザ起動待機を終了しました result=ready"
             return 0
         fi
