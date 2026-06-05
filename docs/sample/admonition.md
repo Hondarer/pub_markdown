@@ -2,6 +2,16 @@
 
 ## 各タイプの表示
 
+Markdown admonition と Doxygen タグの対応は次のとおりです。
+
+| Markdown admonition | Doxygen タグ |
+|---|---|
+| NOTE | `@note` |
+| TIP | `@remark` |
+| IMPORTANT | `@important` |
+| WARNING | `@warning` |
+| CAUTION | `@attention` |
+
 > [!NOTE]
 > これは補足情報です。
 > 複数行にわたる内容も記述できます。
