@@ -493,7 +493,7 @@ file.md
 ```python
 from text_style_jp import style_markdown, style_source_comments, style_prose
 
-# Markdown 全体を処理 (本文整形ではコードブロック保護あり、NBSP は全文対象)
+# Markdown 全体を処理 (本文整形ではコード ブロック保護あり、NBSP は全文対象)
 styled = style_markdown(text)
 
 # C ソースのコメントを整形 (NBSP は全文対象)

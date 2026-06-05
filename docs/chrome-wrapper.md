@@ -132,7 +132,7 @@ node your-script.js
 既存の Puppeteer プロジェクトに影響を与えることなく導入できる:
 
 ```bash
-# プロジェクトディレクトリにスクリプトを配置
+# プロジェクト ディレクトリにスクリプトを配置
 cp chrome-wrapper.sh prepare_puppeteer_env.sh /your/project/
 
 # 起動スクリプトで環境を設定

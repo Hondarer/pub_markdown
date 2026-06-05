@@ -55,6 +55,18 @@ _EMPHASIS_PATTERN = re.compile(
     r"|(?<![A-Za-z0-9_])__(?=\S)[^_\n]+?(?<=\S)__(?![A-Za-z0-9_])"
     r"|(?<![A-Za-z0-9_])_(?=\S)[^_\n]+?(?<=\S)_(?![A-Za-z0-9_])"
 )
+_CODE_OPERATOR_EXPRESSION_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_])"
+    r"(?:[A-Za-z_][A-Za-z0-9_]*|NULL|nullptr|\d+)"
+    r"\s*(?:!=|==|<=|>=)"
+    r"\s*(?:[A-Za-z_][A-Za-z0-9_]*|NULL|nullptr|\d+)"
+    r"(?![A-Za-z0-9_])"
+)
+_CODE_CALL_PREFIX_PATTERN = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*[ \t]*(?=\()")
+_CODE_BRACKET_QUANTIFIER_PATTERN = re.compile(r"[^\s\[\]`]+[ \t]*\[[^\]\n`]+\][*+?]?")
+_CODE_BIG_O_PATTERN = re.compile(r"\bO\([A-Za-z0-9_+\-*/^ .²³]+\)")
+_CODE_BRACE_BLOCK_PATTERN = re.compile(r"\{[A-Za-z0-9_(),;\"' .!=<>*/+\-]*\}")
+_CODE_INLINE_COMMENT_TAIL_PATTERN = re.compile(r"[ \t]+//[^\n]*")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
 
@@ -76,6 +88,16 @@ _MARKDOWN_PROTECTED_PATTERNS = [
     _DOXYGEN_MATH_PATTERN,
 ]
 _INLINE_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN]
+_COMMENT_CODE_PROTECTED_PATTERNS = [
+    _BACKTICK_PATTERN,
+    _DOXYGEN_MATH_PATTERN,
+    _CODE_BRACE_BLOCK_PATTERN,
+    _CODE_OPERATOR_EXPRESSION_PATTERN,
+    _CODE_CALL_PREFIX_PATTERN,
+    _CODE_BRACKET_QUANTIFIER_PATTERN,
+    _CODE_BIG_O_PATTERN,
+    _CODE_INLINE_COMMENT_TAIL_PATTERN,
+]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
 
 _DOXYGEN_CODE_STARTS = ("@code", "\\code", "@verbatim", "\\verbatim", "@dot", "\\dot")
@@ -983,7 +1005,7 @@ def _style_general_comment_text(
 ) -> str:
     if not text.strip():
         return text
-    return _style_text_with_inline_code_spacing(text, _INLINE_PROTECTED_PATTERNS, collector=collector)
+    return _style_text_with_inline_code_spacing(text, _COMMENT_CODE_PROTECTED_PATTERNS, collector=collector)
 
 
 def _style_doxygen_description(
@@ -994,7 +1016,7 @@ def _style_doxygen_description(
         return text
     return _style_text_with_inline_code_spacing(
         text,
-        [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN, _DOXYGEN_INLINE_COMMAND_PATTERN],
+        _COMMENT_CODE_PROTECTED_PATTERNS + [_DOXYGEN_INLINE_COMMAND_PATTERN],
         collector=collector,
     )
 

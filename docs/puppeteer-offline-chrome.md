@@ -120,7 +120,7 @@ curl https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE
 # すべての履歴バージョンとダウンロード URL を取得
 curl https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json
 
-# ビルドごとの最新パッチバージョンとダウンロード URL を取得
+# ビルドごとの最新パッチ バージョンとダウンロード URL を取得
 curl https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions-per-build-with-downloads.json
 ```
 
@@ -189,17 +189,17 @@ await browser.close();
 ### オンライン環境での準備
 
 ```bash
-# 1. プロジェクトディレクトリに移動
+# 1. プロジェクト ディレクトリに移動
 cd /path/to/your/project
 
 # 2. Puppeteer をインストール (Chrome の自動ダウンロードをスキップ)
 export PUPPETEER_SKIP_DOWNLOAD=true
 npm install puppeteer
 
-# 3. プロジェクト内にキャッシュディレクトリを作成
+# 3. プロジェクト内にキャッシュ ディレクトリを作成
 mkdir -p .cache/puppeteer
 
-# 4. Chrome for Testing をダウンロード (カスタムキャッシュディレクトリを指定)
+# 4. Chrome for Testing をダウンロード (カスタム キャッシュ ディレクトリを指定)
 export PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer
 npx @puppeteer/browsers install chrome@stable
 
@@ -210,10 +210,10 @@ npx @puppeteer/browsers install chrome@stable
 ### オフライン環境での使用
 
 ```bash
-# 1. プロジェクトディレクトリに移動
+# 1. プロジェクト ディレクトリに移動
 cd /path/to/your/project
 
-# 2. キャッシュディレクトリを環境変数に設定 (必要に応じて)
+# 2. キャッシュ ディレクトリを環境変数に設定 (必要に応じて)
 export PUPPETEER_CACHE_DIR=$(pwd)/.cache/puppeteer
 
 # 3. Puppeteer を使用したスクリプトを実行

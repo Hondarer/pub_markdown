@@ -159,7 +159,7 @@ DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin"
 NODE_MODULES_CACHE_BASE='/var/cache/docsfw-node-modules'
 STATE_FILE="${WORKSPACE}/.node_modules_cache_state"
 
-# package-lock.json の MD5 からキャッシュキーを生成
+# package-lock.json の MD5 からキャッシュ キーを生成
 LOCK_HASH=$(md5sum "${DOCSFW_BIN}/package-lock.json" | awk '{print $1}')
 CACHE_DIR="${NODE_MODULES_CACHE_BASE}/${LOCK_HASH}/node_modules"
 
@@ -169,7 +169,7 @@ echo "NODE_MODULES_CACHE_HIT=false"        >> "${STATE_FILE}"
 
 if [ -d "${CACHE_DIR}/.bin" ]; then
     echo "node_modules cache hit: ${CACHE_DIR}"
-    # キャッシュをシンボリックリンクで参照
+    # キャッシュをシンボリック リンクで参照
     # → pub_markdown_core.sh が node_modules を検出し npm ci をスキップする
     ln -sfn "${CACHE_DIR}" "${DOCSFW_BIN}/node_modules"
     sed -i 's/NODE_MODULES_CACHE_HIT=false/NODE_MODULES_CACHE_HIT=true/' "${STATE_FILE}"
@@ -218,7 +218,7 @@ if [ "${NODE_MODULES_CACHE_HIT}" = "true" ]; then
     exit 0
 fi
 
-# キャッシュミス: npm ci で生成された node_modules をキャッシュに保存
+# キャッシュ ミス: npm ci で生成された node_modules をキャッシュに保存
 CACHE_DIR="${NODE_MODULES_CACHE_BASE}/${NODE_MODULES_CACHE_KEY}"
 mkdir -p "${CACHE_DIR}"
 cp -a "${DOCSFW_BIN}/node_modules" "${CACHE_DIR}/node_modules"
@@ -288,7 +288,7 @@ $HOME/.cache/puppeteer/chrome-headless-shell/linux-<バージョン>/chrome-head
 sudo mkdir -p /var/cache/docsfw-puppeteer
 sudo chown 1000:1000 /var/cache/docsfw-puppeteer  # コンテナー内ユーザーの uid に合わせる
 
-# Jenkins エージェント コンテナ起動例
+# Jenkins エージェント コンテナー起動例
 podman run --rm \
     -v "${WORKSPACE}:/workspace" \
     -v /var/cache/docsfw-puppeteer:/home/jenkins/.cache/puppeteer:Z \

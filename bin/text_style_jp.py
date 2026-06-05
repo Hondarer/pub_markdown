@@ -554,6 +554,21 @@ def run_tests() -> bool:
             "/** ファイル記述子を確認する。 */\n",
         ),
         (
+            "c",
+            "/** if (result != 0) { fprintf(stderr, \"Error\"); } */\n",
+            "/** if (result != 0) { fprintf(stderr, \"Error\"); } */\n",
+        ),
+        (
+            "c",
+            "/** @warning ptr != nullptr と O(n²) とメモリサイズを確認する。 */\n",
+            "/** @warning ptr != nullptr と O(n²) とメモリ サイズを確認する。 */\n",
+        ),
+        (
+            "make",
+            "# ターゲット定義パターン: ^ターゲット名[空白]*:\n",
+            "# ターゲット定義パターン: ^ターゲット名[空白]*:\n",
+        ),
+        (
             "csharp",
             "    /// <summary>\n    /// 第3章の説明と <see cref=\"CalcResult\"/> の参照。\n    /// </summary>\n",
             "    /// <summary>\n    /// 第 3 章の説明と <see cref=\"CalcResult\"/> の参照。\n    /// </summary>\n",
