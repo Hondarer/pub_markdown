@@ -74,10 +74,10 @@ rsvg-convert.js     # メインの Node.js スクリプト
 ### 高解像度レンダリング
 
 ```javascript
-const scale = Math.max(dpiX, dpiY) * 3 / 96;
+const scale = Math.max(dpiX, dpiY) * 1.5 / 96;
 ```
 
-指定された DPI の 3 倍でレンダリングを行い、高精細な出力を実現している。
+指定された DPI の 1.5 倍でレンダリングを行い、高精細な出力を実現している。
 
 ### SVG サイズ決定アルゴリズム
 

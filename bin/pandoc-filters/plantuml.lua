@@ -354,8 +354,8 @@ end
 local plantuml_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hiragino Kaku Gothic ProN\', sans-serif"
 
 -- docx 出力時の SVG → PNG 変換 DPI
--- rsvg-convert.js の計算式: scale = max(dpiX, dpiY) * 3 / 96
--- DPI 120 → scale = 3.75 → 実効 360 DPI
+-- rsvg-convert.js の計算式: scale = max(dpiX, dpiY) * 1.5 / 96
+-- DPI 120 → scale = 1.875 → 実効 180 DPI
 -- 生成 PNG は rsvg-convert.js 内で sharp によるパレット減色再エンコードを行う
 local RSVG_DPI_X = 120
 local RSVG_DPI_Y = 120

@@ -21,8 +21,8 @@ const argv  = minimist(process.argv.slice(2), {
 if (argv.f !== 'png') { console.error('PNG 以外は未対応'); process.exit(1); }
 const dpiX = +argv['dpi-x'] || 96;
 const dpiY = +argv['dpi-y'] || 96;
-/* 指定 DPI を 3 倍して描画 */
-const scale = Math.max(dpiX, dpiY) * 3 / 96;
+/* 指定 DPI を 1.5 倍して描画 */
+const scale = Math.max(dpiX, dpiY) * 1.5 / 96;
 const RETRY_DELAY_MS = 3000;
 
 /* ── 2. STDIN 取得 ────────────────────────────────────────────────── */
