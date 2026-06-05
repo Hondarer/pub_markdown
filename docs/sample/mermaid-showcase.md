@@ -1,4 +1,4 @@
-# Mermaid
+# Mermaid ショーケース
 
 Mermaid の各図種のサンプルを示します。
 

@@ -9,10 +9,10 @@ abstract: "概要"
 ---
 
 <!--ja:-->
-# トップレベルの index
+# pub-markdown を利用したドキュメント記載方法のプラクティス集
 <!--:ja-->
 <!--en:
-# index of top level
+# Practices for Writing Documentation with pub-markdown
 :en-->
 
 ## 概要

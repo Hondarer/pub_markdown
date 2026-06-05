@@ -1,4 +1,4 @@
-# PlantUML
+# PlantUML ショーケース
 
 PlantUML の各図種のサンプルを示します。
 
