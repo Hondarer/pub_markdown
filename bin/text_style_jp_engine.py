@@ -904,7 +904,7 @@ def _protect_urls(text: str) -> Tuple[str, List[Tuple[str, str]]]:
 
 def _restore_replacements(text: str, replacements: Sequence[Tuple[str, str]]) -> str:
     restored = text
-    for placeholder, original in replacements:
+    for placeholder, original in reversed(replacements):
         restored = restored.replace(placeholder, original, 1)
     return restored
 

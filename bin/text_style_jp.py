@@ -589,6 +589,21 @@ def run_tests() -> bool:
         ),
         (
             "c",
+            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+        ),
+        (
+            "c",
+            "/** @return @ref COM_UTIL_SYNC_OK、@ref COM_UTIL_SYNC_TIMEOUT、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+        ),
+        (
+            "c",
+            "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT、\n */\n",
+            "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT 、\n */\n",
+        ),
+        (
+            "c",
             "/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n",
             "/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n",
         ),
@@ -601,6 +616,21 @@ def run_tests() -> bool:
             "make",
             "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
             "# TEST_SRCS := $(WORKSPACE_DIR)/app/calc/prod/libsrc/calcbase/add.c  # NG\n",
+        ),
+        (
+            "make",
+            "# Regenerate .gitignore (avoid commit diffs)\n",
+            "# Regenerate .gitignore (avoid commit diffs)\n",
+        ),
+        (
+            "c",
+            "// [Pre-Assert確認_正常系] - 旧 .1 が .2 へ順送りされること。\n",
+            "// [Pre-Assert確認_正常系] - 旧 .1 が .2 へ順送りされること。\n",
+        ),
+        (
+            "c",
+            "/* 出力は [CK(2B)][raw DEFLATE] の形式になるため、 */\n",
+            "/* 出力は [CK(2B)][raw DEFLATE] の形式になるため、 */\n",
         ),
         (
             "c",
@@ -653,11 +683,11 @@ def run_tests() -> bool:
         ("markdown", "```\nA\u00A0B\n```", "```\nA B\n```\n"),
         ("markdown", "行1\n\n\n行2", "行 1\n\n行 2\n"),
         ("markdown", "```\nline1\n\n\nline2\n```", "```\nline1\n\nline2\n```\n"),
-        ("python", "value = 1\n\n\n# 第3章", "value = 1\n\n# 第 3 章\n"),
+        ("python", "value = 1\n\n\n# 第3章", "value = 1\n\n\n# 第 3 章"),
         ("text", "line1\u00A0line2", "line1 line2\n"),
         ("text", "line1\n \t \n\nline2", "line1\n\nline2\n"),
         ("text", "line1", "line1\n"),
-        ("text", "", "\n"),
+        ("text", "", ""),
     ]
 
     mode_test_cases: List[Tuple[str, str]] = [

@@ -34,6 +34,12 @@ _WAVE_DASH_SPACE_AFTER_ONLY_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)([〜～]
 _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
 _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
+_DOXYGEN_REF_TRAILING_JP_PUNCT_PATTERN = re.compile(
+    r"[@\\]ref\s+[A-Za-z_][A-Za-z0-9_:~.-]*\s+[、。，．]"
+)
+_DOXYGEN_REF_MISSING_SPACE_BEFORE_JP_PUNCT_RE = re.compile(
+    r"((?:[@\\]ref\s+)[A-Za-z_][A-Za-z0-9_:~.-]*)([、。，．])"
+)
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _UNORDERED_LIST_MARKER_RE = re.compile(r"^(\s*)[*+](?= )")
 _TABLE_ROW_RE = re.compile(r"^\s*\|")
@@ -75,6 +81,8 @@ _CODE_BRACKET_QUANTIFIER_PATTERN = re.compile(r"[^\s\[\]`]+[ \t]*\[[^\]\n`]+\][*
 _CODE_BIG_O_PATTERN = re.compile(r"\bO\([A-Za-z0-9_+\-*/^ .²³]+\)")
 _CODE_BRACE_BLOCK_PATTERN = re.compile(r"\{[A-Za-z0-9_(),;\"' .!=<>*/+\-]*\}")
 _CODE_INLINE_COMMENT_TAIL_PATTERN = re.compile(r"[ \t]+//[^\n]*")
+_CODE_DOT_NUMERIC_SUFFIX_PATTERN = re.compile(r"(?<=\s)\.\d+\b")
+_ASCII_PARENTHETICAL_PATTERN = re.compile(r"\b[A-Za-z0-9_.+-]+(?: [A-Za-z0-9_.+-]+)* \([A-Za-z0-9][A-Za-z0-9 _./+-]*\)")
 _COMMENT_ALIGNMENT_SPACES_PATTERN = re.compile(r"(?<=\S) {2,}(?=\S)")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
@@ -104,10 +112,13 @@ _COMMENT_CODE_PROTECTED_PATTERNS = [
     _CODE_OPERATOR_EXPRESSION_PATTERN,
     _CODE_LOGICAL_MACRO_EXPRESSION_PATTERN,
     _CODE_NEGATED_IDENTIFIER_PATTERN,
+    _ASCII_PARENTHETICAL_PATTERN,
     _CODE_CALL_PREFIX_PATTERN,
     _CODE_BRACKET_QUANTIFIER_PATTERN,
     _CODE_BIG_O_PATTERN,
     _CODE_INLINE_COMMENT_TAIL_PATTERN,
+    _CODE_DOT_NUMERIC_SUFFIX_PATTERN,
+    _DOXYGEN_REF_TRAILING_JP_PUNCT_PATTERN,
     _COMMENT_ALIGNMENT_SPACES_PATTERN,
 ]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
@@ -774,6 +785,9 @@ def _starts_html_comment_block(line: str) -> bool:
 
 
 def normalize_blank_lines(text: str) -> str:
+    if text == "":
+        return ""
+
     output: List[str] = []
     blank_count = 0
 
@@ -994,7 +1008,7 @@ def style_by_mode(
     if mode == "markdown":
         return normalize_blank_lines(style_markdown(text, collector=collector))
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:
-        return normalize_blank_lines(style_source_comments(text, mode, collector=collector))
+        return style_source_comments(text, mode, collector=collector)
     if mode == "text":
         text = replace_nbsp_with_space(text, collector=collector)
         return normalize_blank_lines(text)
@@ -1030,15 +1044,36 @@ def _style_doxygen_description(
 ) -> str:
     if not text.strip():
         return text
+    start_index = len(collector.findings) if collector is not None else 0
     before = text
     text = _COMMENT_CODE_NEGATION_SPACE_RE.sub(r"!\1", text)
     if collector is not None:
         _record_step_changes(before, text, "comment-code-negation", collector, message="コメント内の C 条件否定のスペースを削除")
-    return _style_text_with_inline_code_spacing(
+    styled = _style_text_with_inline_code_spacing(
         text,
         _COMMENT_CODE_PROTECTED_PATTERNS + [_DOXYGEN_INLINE_COMMAND_PATTERN],
         collector=collector,
     )
+    normalized = _normalize_doxygen_ref_punctuation_spacing(styled, collector=collector)
+    if collector is not None and normalized == before:
+        collector.findings = collector.findings[:start_index]
+    return normalized
+
+
+def _normalize_doxygen_ref_punctuation_spacing(
+    text: str,
+    collector: Optional["DiagnosticCollector"] = None,
+) -> str:
+    normalized = _DOXYGEN_REF_MISSING_SPACE_BEFORE_JP_PUNCT_RE.sub(r"\1 \2", text)
+    if collector is not None and normalized != text:
+        _record_step_changes(
+            text,
+            normalized,
+            "doxygen-ref-punctuation-spacing",
+            collector,
+            message="@ref 参照名と日本語句読点の間にスペースを挿入",
+        )
+    return normalized
 
 
 def _is_doxygen_table_line(content: str) -> bool:
@@ -1076,8 +1111,15 @@ def _style_doxygen_line(
 
     match = _GENERIC_COMMAND_RE.match(content)
     if match:
+        start_index = len(collector.findings) if collector is not None else 0
         desc = _style_doxygen_description(match.group(3), collector=collector)
-        return match.group(1) + match.group(2) + desc, in_code_block
+        normalized = _normalize_doxygen_ref_punctuation_spacing(
+            match.group(1) + match.group(2) + desc,
+            collector=collector,
+        )
+        if collector is not None and normalized == content:
+            collector.findings = collector.findings[:start_index]
+        return normalized, in_code_block
 
     return _style_doxygen_description(content, collector=collector), in_code_block
 
