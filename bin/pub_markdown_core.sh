@@ -185,13 +185,13 @@ else
 fi
 
 # pandoc-crossref が ${SCRIPT_DIR} にある または PATH が通っていれば
-# PANDOC-CROSSREF に "-F {pandoc-crossref のパス}" を設定
+# pandoc_crossref_args に "-F {pandoc-crossref のパス}" を設定
 if [ -x "${SCRIPT_DIR}/pandoc-crossref" ] || [ -x "${SCRIPT_DIR}/pandoc-crossref.exe" ]; then
-    PANDOC_CROSSREF="-F ${SCRIPT_DIR}/pandoc-crossref"
+    pandoc_crossref_args=(-F "${SCRIPT_DIR}/pandoc-crossref")
 elif command -v pandoc-crossref >/dev/null 2>&1 || command -v pandoc-crossref.exe >/dev/null 2>&1; then
-    PANDOC_CROSSREF="-F pandoc-crossref"
+    pandoc_crossref_args=(-F pandoc-crossref)
 else
-    PANDOC_CROSSREF=""
+    pandoc_crossref_args=()
 fi
 
 # セットアップ完了スタンプ。package.json / package-lock.json のハッシュを記録し、
@@ -552,8 +552,9 @@ if [[ "$htmlTocDepth" == "" ]]; then
 fi
 
 # toc 関連オプションの組み立て
+html_toc_args=()
 if [[ "$htmlTocEnable" == "true" ]]; then
-    htmlTocOption="--toc --toc-depth=${htmlTocDepth}"
+    html_toc_args=(--toc "--toc-depth=${htmlTocDepth}")
 fi
 
 # 設定ファイルに mathLatexEnable が指定されなかった場合の値を true にする
@@ -566,10 +567,11 @@ markExtension="+mark"
 
 # 数式サポート (LaTeX 書式) 関連オプションの組み立て
 # mathExtension: Pandoc 入力拡張。\[...\] \(...\) 書式の LaTeX 数式を認識させる (HTML/docx 共通)
-# mathJaxOption: MathJax によるブラウザー レンダリングを指定する Pandoc オプション (HTML のみ)
+# math_jax_args: MathJax によるブラウザー レンダリングを指定する Pandoc オプション (HTML のみ)
+math_jax_args=()
 if [[ "$mathLatexEnable" == "true" ]]; then
     mathExtension="+tex_math_single_backslash"
-    mathJaxOption="--mathjax"
+    math_jax_args=(--mathjax)
 fi
 
 # 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
@@ -1160,7 +1162,7 @@ set_html_lang_attributes() {
     local tmp_file=""
 
     if [[ ! -f "$html_file" ]]; then
-        echo "Error: Html file does not exist: $html_file"
+        echo "Warning: Html file does not exist: $html_file"
         return 1
     fi
 
@@ -1491,18 +1493,22 @@ for file in "${files[@]}"; do
         done
 
         # ナビゲーション リンク メタデータの構築
-        navigationLinkMetadata=""
+        navigation_link_metadata_args=()
         if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
-            navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
+            navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
         # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
-        searchMetadata=""
+        search_metadata_args=()
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             _search_current="${publish_file%.*}.html"
             _search_current="${_search_current#html/}"
-            searchMetadata="--metadata search-enable=true --metadata search-base=${up_dir} --metadata search-current=${_search_current}"
+            search_metadata_args=(
+                --metadata "search-enable=true"
+                --metadata "search-base=${up_dir}"
+                --metadata "search-current=${_search_current}"
+            )
         fi
 
         if [[ "$autoSetDate" == "true" ]]; then
@@ -1542,7 +1548,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1554,8 +1560,8 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             --metadata "mermaid-js=${up_dir}mermaid.min.js" \
-                            ${PANDOC_CROSSREF} \
-                            ${mathJaxOption} \
+                            "${pandoc_crossref_args[@]}" \
+                            "${math_jax_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                             2>"$_pm_pandoc_stderr"
@@ -1570,7 +1576,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1580,8 +1586,8 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                                ${PANDOC_CROSSREF} \
-                                ${mathJaxOption} \
+                                "${pandoc_crossref_args[@]}" \
+                                "${math_jax_args[@]}" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -1599,7 +1605,7 @@ for file in "${files[@]}"; do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            ${PANDOC} -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1615,7 +1621,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
-                                ${PANDOC_CROSSREF} \
+                                "${pandoc_crossref_args[@]}" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                                 2>"$_pm_pandoc_stderr"
@@ -1636,16 +1642,22 @@ for file in "${files[@]}"; do
                     firstSuffix="${details_suffix}"
                 else
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                    cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                    cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file%.*}.html" \
+                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
+                        || echo "Warning: Failed to copy HTML file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_self_contain%.*}.html" \
+                              "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
+                            || echo "Warning: Failed to copy HTML file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                     fi
                     if [[ "$docxOutput" == "true" ]]; then
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_docx%.*}.docx" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                        cp -p "${workspaceFolder}/${pubRoot}/${firstLang}${firstSuffix}/${publish_file_docx%.*}.docx" \
+                              "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                            || echo "Warning: Failed to copy DOCX file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     fi
                 fi
             done
@@ -1798,18 +1810,22 @@ for file in "${files[@]}"; do
         done
 
         # ナビゲーション リンク メタデータの構築
-        navigationLinkMetadata=""
+        navigation_link_metadata_args=()
         if [[ "$htmlNavigationLinkEnable" == "true" ]]; then
-            navigationLinkMetadata="--metadata homelink=${up_dir}index.html"
+            navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
         # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
-        searchMetadata=""
+        search_metadata_args=()
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             _search_current="${publish_file%.*}.html"
             _search_current="${_search_current#html/}"
-            searchMetadata="--metadata search-enable=true --metadata search-base=${up_dir} --metadata search-current=${_search_current}"
+            search_metadata_args=(
+                --metadata "search-enable=true"
+                --metadata "search-base=${up_dir}"
+                --metadata "search-current=${_search_current}"
+            )
         fi
 
         if [[ "$autoSetDate" == "true" ]]; then
@@ -1934,7 +1950,7 @@ for file in "${files[@]}"; do
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1944,8 +1960,8 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                        ${PANDOC_CROSSREF} \
-                        ${mathJaxOption} \
+                        "${pandoc_crossref_args[@]}" \
+                        "${math_jax_args[@]}" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -1965,7 +1981,7 @@ for file in "${files[@]}"; do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        ${PANDOC} -s ${htmlTocOption} --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" ${navigationLinkMetadata} ${searchMetadata} -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1975,8 +1991,8 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
-                            ${PANDOC_CROSSREF} \
-                            ${mathJaxOption} \
+                            "${pandoc_crossref_args[@]}" \
+                            "${math_jax_args[@]}" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -1997,7 +2013,7 @@ for file in "${files[@]}"; do
                     _pm_pandoc_stderr=$(mktemp)
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
-                        ${PANDOC} -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2014,7 +2030,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
-                            ${PANDOC_CROSSREF} \
+                            "${pandoc_crossref_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             2>"$_pm_pandoc_stderr"
@@ -2042,18 +2058,21 @@ for file in "${files[@]}"; do
                 else
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html (copy)"
                 cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file%.*}.html" \
-                      "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
+                      "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
+                    || echo "Warning: Failed to copy HTML file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html (copy)"
                     cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file_self_contain%.*}.html" \
-                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
+                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
+                        || echo "Warning: Failed to copy HTML file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx (copy)"
                     cp -p "${workspaceFolder}/${pubRoot}/${_copy_source_lang}${_copy_source_suffix}/${publish_file_docx%.*}.docx" \
-                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
+                          "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                        || echo "Warning: Failed to copy DOCX file: ${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                 fi
                 fi
             done
