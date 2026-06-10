@@ -661,6 +661,7 @@ done
 htmlSearchUiCss="${HOME_DIR}/styles/html/docsfw-ui.css"
 htmlSearchScript="${HOME_DIR}/styles/html/docsfw-search.js"
 htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
+htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
 htmlTokenizeScript="${SCRIPT_DIR}/docsfw-tokenize.js"
 htmlBuildSearchScript="${SCRIPT_DIR}/build-search-index.mjs"
 htmlNavTreeScript="${SCRIPT_DIR}/generate-nav-tree.py"
@@ -1409,6 +1410,8 @@ for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
         copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
+        # DOCX ダウンロードリンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
+        copy_if_different_timestamp "${htmlWordIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-word-icon.svg"
         # 検索・ナビゲーション用静的アセットの配置
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             copy_if_different_timestamp "${miniSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/minisearch.min.js"
@@ -1511,6 +1514,17 @@ for file in "${files[@]}"; do
             )
         fi
 
+        # DOCX ダウンロードリンク メタデータの構築
+        # docx 出力が有効な場合のみ、対応する docx への相対 URL とアイコンの URL を HTML に埋め込む
+        # (self-contain HTML には渡さない。実在確認はテンプレート内の JavaScript が行う)
+        docx_link_metadata_args=()
+        if [[ "$docxOutput" == "true" ]]; then
+            docx_link_metadata_args=(
+                --metadata "docx-url=${up_dir}../${publish_file_docx%.*}.docx"
+                --metadata "docx-icon=${up_dir}docsfw-word-icon.svg"
+            )
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
@@ -1548,7 +1562,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1828,6 +1842,17 @@ for file in "${files[@]}"; do
             )
         fi
 
+        # DOCX ダウンロードリンク メタデータの構築
+        # docx 出力が有効な場合のみ、対応する docx への相対 URL とアイコンの URL を HTML に埋め込む
+        # (self-contain HTML には渡さない。実在確認はテンプレート内の JavaScript が行う)
+        docx_link_metadata_args=()
+        if [[ "$docxOutput" == "true" ]]; then
+            docx_link_metadata_args=(
+                --metadata "docx-url=${up_dir}../${publish_file_docx%.*}.docx"
+                --metadata "docx-icon=${up_dir}docsfw-word-icon.svg"
+            )
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             progress_log "文書日付の取得を開始しました file=${file#${workspaceFolder}/}"
@@ -1950,7 +1975,7 @@ for file in "${files[@]}"; do
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \

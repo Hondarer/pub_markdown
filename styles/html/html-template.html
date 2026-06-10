@@ -102,6 +102,10 @@ $endif$
           $if(date)$
           <li><p class="navbar-text">$date$</p></li>
           $endif$
+          $if(docx-url)$
+          <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download
+            title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="Word" /></a></li>
+          $endif$
         </ul>
       </div>
     </div>
@@ -752,6 +756,28 @@ $if(mermaid-js)$
       postRenderCallback: normalizeMermaidSvgSize
     }).then(normalizeMermaidSvgSize);
   }
+  </script>
+$endif$
+$if(docx-url)$
+  <!-- DOCX ダウンロードリンク: HEAD リクエストで実在確認してから表示する -->
+  <script>
+  (function () {
+    var li = document.getElementById('docsfw-docx-li');
+    var link = document.getElementById('docsfw-docx-link');
+    if (!li || !link) { return; }
+    var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
+    var label = isJa ? 'Word 文書 (docx) をダウンロード' : 'Download as Word (docx)';
+    link.title = label;
+    link.setAttribute('aria-label', label);
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      fetch(link.getAttribute('href'), { method: 'HEAD' })
+        .then(function (res) { if (res.ok) { li.hidden = false; } })
+        .catch(function () { /* 実在しない・到達不能なら非表示のまま */ });
+    } else {
+      // file:// 等では fetch できないため、ビルド時情報を信頼して表示する
+      li.hidden = false;
+    }
+  })();
   </script>
 $endif$
 $if(search-enable)$
