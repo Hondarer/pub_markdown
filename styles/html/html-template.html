@@ -1,7 +1,7 @@
 <!doctype html>
 <html $if(lang)$ lang="$lang$" $endif$>
 <head>
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
@@ -20,7 +20,7 @@
     <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/blue.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/graphite.css" rel="stylesheet" type="text/css" />
     <link href="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/menu/css/skins/grey.css" rel="stylesheet" type="text/css" />
-  
+
     <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
 
@@ -89,7 +89,7 @@ $endif$
 </head>
 <body>
 
-    
+
   $if(title)$
   <div class="navbar navbar-static-top">
     <div class="navbar-inner">
@@ -199,7 +199,7 @@ $body$
          さらに N 行 (全 M 行)      ← ヒント行 (クリックで開く)
 
        構造 (展開時):
-         [▼ 閉じる]
+         [▼ たたむ]
          │ line 1                  │
          │ ...                     │
          │ line M                  │
@@ -217,7 +217,7 @@ $body$
       width: 100%;
       gap: 8px;
       box-sizing: border-box;
-      background: #e8e8e8;
+      background: #f8f8f8;
       border-bottom: 1px solid rgba(0,0,0,0.12);
       padding: 4px;
       margin: 0;
@@ -231,7 +231,7 @@ $body$
       border: none;
       cursor: pointer;
       font-size: 14px;
-      color: #555;
+      color: #444;
       line-height: 1.6;
       text-align: left;
       background: transparent;
@@ -241,7 +241,8 @@ $body$
     .code-expander-btn .code-expander-arrow {
       display: inline-block;
       font-size: 0.7em;
-      margin-right: 0.3em;
+      color: #999;
+      margin-right: calc(0.3em + 2px);
       transition: transform 0.15s;
     }
     .code-expander-btn[aria-expanded="true"] .code-expander-arrow {
@@ -316,6 +317,37 @@ $body$
   (function() {
     document.addEventListener('DOMContentLoaded', function() {
       var LINE_THRESHOLD = 5;
+      var expanderStateKey = 'code-expander-state:' + window.location.pathname;
+      var expandableItems = [];
+
+      function isBackForwardNavigation() {
+        try {
+          var navEntries = performance.getEntriesByType('navigation');
+          if (navEntries.length > 0) {
+            return navEntries[0].type === 'back_forward';
+          }
+          if (performance.navigation) {
+            return performance.navigation.type === 2;
+          }
+        } catch (e) {
+          // performance API が利用できない場合は復元しない
+        }
+        return false;
+      }
+
+      function saveExpanderState() {
+        try {
+          var state = {};
+          expandableItems.forEach(function(item, index) {
+            if (item.isExpanded()) {
+              state[index] = true;
+            }
+          });
+          sessionStorage.setItem(expanderStateKey, JSON.stringify(state));
+        } catch (e) {
+          // sessionStorage の書き込みエラーは無視
+        }
+      }
 
       function setCopyButtonState(btn, state, label) {
         if (btn._copyResetTimer) {
@@ -494,6 +526,18 @@ $body$
 
           restCount = lineCount - LINE_THRESHOLD;
 
+          function setExpanded(opening) {
+            restPre.style.display = opening ? '' : 'none';
+            hintEl.style.display  = opening ? 'none' : '';
+            toggleBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+            toggleBtn.querySelector('.code-expander-label').textContent =
+              opening ? ' たたむ' : ' 開く';
+          }
+
+          function isExpanded() {
+            return restPre.style.display !== 'none';
+          }
+
           // 縮小時に先頭ブロック末尾へ表示する「続きあり」ヒント行
           hintEl = document.createElement('div');
           hintEl.className = 'code-expander-hint';
@@ -502,20 +546,19 @@ $body$
           hintEl.addEventListener('click', function() {
             // 「開く」と同じ動作（縮小時のみ）
             if (restPre.style.display === 'none') {
-              restPre.style.display = '';
-              hintEl.style.display  = 'none';
-              toggleBtn.setAttribute('aria-expanded', 'true');
-              toggleBtn.querySelector('.code-expander-label').textContent = ' 閉じる';
+              setExpanded(true);
+              saveExpanderState();
             }
           });
 
           toggleBtn.addEventListener('click', function() {
-            var opening = restPre.style.display === 'none';
-            restPre.style.display = opening ? '' : 'none';
-            hintEl.style.display  = opening ? 'none' : '';
-            toggleBtn.setAttribute('aria-expanded', opening ? 'true' : 'false');
-            toggleBtn.querySelector('.code-expander-label').textContent =
-              opening ? ' 閉じる' : ' 開く';
+            setExpanded(!isExpanded());
+            saveExpanderState();
+          });
+
+          expandableItems.push({
+            setExpanded: setExpanded,
+            isExpanded: isExpanded
           });
         }
 
@@ -540,6 +583,30 @@ $body$
           wrapper.appendChild(hintEl);
         }
       });
+
+      if (expandableItems.length > 0) {
+        var restoredFromStorage = false;
+        if (isBackForwardNavigation()) {
+          try {
+            var savedState = sessionStorage.getItem(expanderStateKey);
+            if (savedState) {
+              var state = JSON.parse(savedState);
+              expandableItems.forEach(function(item, index) {
+                item.setExpanded(!!state[index]);
+              });
+              restoredFromStorage = true;
+            }
+          } catch (e) {
+            // sessionStorage の読み込みエラーは無視
+          }
+        }
+
+        if (!restoredFromStorage) {
+          expandableItems.forEach(function(item) {
+            item.setExpanded(true);
+          });
+        }
+      }
     });
   })();
   </script>
