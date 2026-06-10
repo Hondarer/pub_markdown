@@ -73,6 +73,10 @@ body > *:last-child {
 #docsfw-docx-li[hidden] {
   display: none !important; }
 
+@media (max-width: 767px) {
+  #docsfw-docx-li {
+    display: none !important; } }
+
 #docsfw-docx-li > a {
   display: inline-block;
   padding: 2px 20px;
