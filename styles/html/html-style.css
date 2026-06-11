@@ -316,7 +316,7 @@ table {
     margin: 0;
     padding: 0; }
     table tr th {
-      font-weight: bold;
+      font-weight: normal;
       border: 1px solid #cccccc;
       background-color: #eaeaea;
       text-align: left;
@@ -668,10 +668,14 @@ mark {
   print-color-adjust: exact;
 }
 
-/* 本文中 SVG 画像の「SVG をダウンロード」オーバーレイ (ホバー時のみ表示) */
+/* 本文中 SVG 画像の「SVG をダウンロード」オーバーレイ (ホバー時のみ表示)
+   アイコンの基準要素 (.docsfw-svg-dl-host) は figure があれば figure、
+   なければ画像を包む span (.docsfw-svg-dl-wrap) */
+.docsfw-svg-dl-host {
+  position: relative; }
+
 .docsfw-svg-dl-wrap {
   display: inline-block;
-  position: relative;
   max-width: 100%; }
 
 .docsfw-svg-dl {
@@ -686,7 +690,7 @@ mark {
   padding: 3px;
   line-height: 0; }
 
-.docsfw-svg-dl-wrap:hover .docsfw-svg-dl,
+.docsfw-svg-dl-host:hover .docsfw-svg-dl,
 .docsfw-svg-dl:focus {
   opacity: 1; }
 

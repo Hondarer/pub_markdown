@@ -961,14 +961,20 @@ $endif$
         if (/^[a-z][a-z0-9+.\-]*:/i.test(src)) { return; }
         var path = src.split('#')[0].split('?')[0];
         if (!/\.svg$$/i.test(path)) { return; }
-        if (img.closest('.docsfw-svg-dl-wrap')) { return; }
+        if (img.closest('.docsfw-svg-dl-host')) { return; }
         var name;
         try { name = decodeURIComponent(path.split('/').pop()); }
         catch (e) { name = path.split('/').pop(); }
-        var wrap = document.createElement('span');
-        wrap.className = 'docsfw-svg-dl-wrap';
-        img.parentNode.insertBefore(wrap, img);
-        wrap.appendChild(img);
+        // アイコンの基準要素: figure があれば figure の右上、なければ画像を包む span の右上
+        var host = img.closest('figure');
+        if (host) {
+          host.classList.add('docsfw-svg-dl-host');
+        } else {
+          host = document.createElement('span');
+          host.className = 'docsfw-svg-dl-wrap docsfw-svg-dl-host';
+          img.parentNode.insertBefore(host, img);
+          host.appendChild(img);
+        }
         var a = document.createElement('a');
         a.className = 'docsfw-svg-dl';
         a.href = src;
@@ -982,6 +988,7 @@ $endif$
         a.title = label;
         a.setAttribute('aria-label', label);
         a.innerHTML = ICON;
+        host.appendChild(a);
         // download 属性が無視されて SVG が表示される環境があるため、
         // http(s) では Blob URL (application/octet-stream) を経由して保存を強制する
         a.addEventListener('click', function (ev) {
@@ -1004,7 +1011,6 @@ $endif$
             window.location.href = src;
           });
         });
-        wrap.appendChild(a);
       });
     });
   })();
