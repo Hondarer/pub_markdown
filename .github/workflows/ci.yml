@@ -46,7 +46,7 @@ jobs:
           key: docsfw-cache-ol8-${{ hashFiles('bin/package-lock.json') }}
 
       - name: Generate documentation
-        run: bin/pub_markdown_core.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docx=true
+        run: bin/pub_markdown_core.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docxOutput=true
 
       - name: Create artifact archives
         run: |

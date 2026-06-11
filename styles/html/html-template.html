@@ -102,6 +102,10 @@ $endif$
           $if(date)$
           <li><p class="navbar-text">$date$</p></li>
           $endif$
+          $if(details-switch-root)$
+          <li id="docsfw-details-li" hidden><a id="docsfw-details-link" href="#"
+            ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></li>
+          $endif$
           $if(docx-url)$
           <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download
             title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="Word" /></a></li>
@@ -847,6 +851,56 @@ $if(docx-url)$
   })();
   </script>
 $endif$
+$if(details-switch-root)$
+  <!-- 概要版/詳細版 切替リンク: 切替先 URL はバリアントコピー最適化と両立させるため
+       ビルド時に確定せず、実行時の URL から算出する。HEAD リクエストで実在確認してから表示する -->
+  <script>
+  (function () {
+    var li = document.getElementById('docsfw-details-li');
+    var link = document.getElementById('docsfw-details-link');
+    var icon = document.getElementById('docsfw-details-icon');
+    if (!li || !link || !icon) { return; }
+    var root;
+    try { root = new URL("$details-switch-root$", window.location.href); } catch (e) { return; }
+    var pathname = window.location.pathname;
+    if (pathname.indexOf(root.pathname) !== 0) { return; }
+    var rest = pathname.slice(root.pathname.length);   // 例: "ja/html/sub/a.html"
+    var slash = rest.indexOf('/');
+    if (slash < 0) { return; }
+    var tree = rest.slice(0, slash);                   // "ja" または "ja-details"
+    var isDetails = /-details$$/.test(tree);
+    var targetTree;
+    if (isDetails) {
+      targetTree = tree.replace(/-details$$/, '');
+    } else {
+      targetTree = tree + '-details';
+    }
+    var targetUrl = root.pathname + targetTree + rest.slice(slash) + window.location.hash;
+    var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
+    var label;
+    if (isDetails) {
+      label = isJa ? '概要版を表示' : 'Show overview version';
+      icon.src = "$details-icon-base$docsfw-overview-icon.svg";
+      icon.alt = 'overview';
+    } else {
+      label = isJa ? '詳細版を表示' : 'Show detailed version';
+      icon.src = "$details-icon-base$docsfw-details-icon.svg";
+      icon.alt = 'details';
+    }
+    link.href = targetUrl;
+    link.title = label;
+    link.setAttribute('aria-label', label);
+    if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+      fetch(targetUrl, { method: 'HEAD' })
+        .then(function (res) { if (res.ok) { li.hidden = false; } })
+        .catch(function () { /* 実在しない・到達不能なら非表示のまま */ });
+    } else {
+      // file:// 等では fetch できないため、ビルド時情報 (details=both) を信頼して表示する
+      li.hidden = false;
+    }
+  })();
+  </script>
+$endif$
 $if(search-enable)$
   <!-- Search results overlay (positioned by docsfw-ui.css) -->
   <div id="docsfw-search-results"></div>
@@ -864,6 +918,49 @@ $if(search-enable)$
   <!-- docsfw-search.js lazy-loads the heavy index on first user interaction -->
   <script defer src="${search-base}docsfw-search.js"></script>
 $endif$
+  <!-- SVG ダウンロード ボタン: 本文 (#docsfw-content) 内の相対パス参照の .svg 画像に
+       ホバー時のみ右上にダウンロードリンクを重ねる。data URI (self-contain) や外部 URL は対象外 -->
+  <script>
+  (function () {
+    document.addEventListener('DOMContentLoaded', function () {
+      var main = document.getElementById('docsfw-content');
+      if (!main) { return; }
+      var ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
+        + ' stroke="#4183C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>';
+      var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
+      main.querySelectorAll('img').forEach(function (img) {
+        var src = img.getAttribute('src') || '';
+        // data:, http(s): などスキーム付きの src は対象外 (self-contain HTML を含む)
+        if (/^[a-z][a-z0-9+.\-]*:/i.test(src)) { return; }
+        var path = src.split('#')[0].split('?')[0];
+        if (!/\.svg$$/i.test(path)) { return; }
+        if (img.closest('.docsfw-svg-dl-wrap')) { return; }
+        var name;
+        try { name = decodeURIComponent(path.split('/').pop()); }
+        catch (e) { name = path.split('/').pop(); }
+        var wrap = document.createElement('span');
+        wrap.className = 'docsfw-svg-dl-wrap';
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        var a = document.createElement('a');
+        a.className = 'docsfw-svg-dl';
+        a.href = src;
+        a.setAttribute('download', name);
+        var label;
+        if (isJa) {
+          label = 'SVG をダウンロード: ' + name;
+        } else {
+          label = 'Download SVG: ' + name;
+        }
+        a.title = label;
+        a.setAttribute('aria-label', label);
+        a.innerHTML = ICON;
+        wrap.appendChild(a);
+      });
+    });
+  })();
+  </script>
 
 </body>
 </html>

@@ -88,6 +88,25 @@ body > *:last-child {
   height: 18px;
   vertical-align: text-bottom; }
 
+/* 概要版/詳細版 切替リンク (navbar 右側) */
+#docsfw-details-li[hidden] {
+  display: none !important; }
+
+@media (max-width: 767px) {
+  #docsfw-details-li {
+    display: none !important; } }
+
+#docsfw-details-li > a {
+  display: inline-block;
+  padding: 2px 8px;
+  line-height: normal;
+  background: none; }
+
+.docsfw-details-icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: text-bottom; }
+
 a {
   color: #4183C4; }
 a.absent {
@@ -648,3 +667,30 @@ mark {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+
+/* 本文中 SVG 画像の「SVG をダウンロード」オーバーレイ (ホバー時のみ表示) */
+.docsfw-svg-dl-wrap {
+  display: inline-block;
+  position: relative;
+  max-width: 100%; }
+
+.docsfw-svg-dl {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  padding: 3px;
+  line-height: 0; }
+
+.docsfw-svg-dl-wrap:hover .docsfw-svg-dl,
+.docsfw-svg-dl:focus {
+  opacity: 1; }
+
+.docsfw-svg-dl svg {
+  width: 16px;
+  height: 16px;
+  display: block; }
