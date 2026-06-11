@@ -840,6 +840,32 @@ $if(docx-url)$
     var label = isJa ? 'Word 文書 (docx) をダウンロード' : 'Download as Word (docx)';
     link.title = label;
     link.setAttribute('aria-label', label);
+    // download 属性が無視される環境やサーバーの MIME 誤設定に備え、
+    // http(s) では Blob URL (application/octet-stream) を経由して保存を強制する
+    link.addEventListener('click', function (ev) {
+      if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') { return; }
+      var href = link.getAttribute('href');
+      var name;
+      try { name = decodeURIComponent(href.split('#')[0].split('?')[0].split('/').pop()); }
+      catch (e) { name = href.split('/').pop(); }
+      ev.preventDefault();
+      fetch(href).then(function (res) {
+        if (!res.ok) { throw new Error('HTTP ' + res.status); }
+        return res.blob();
+      }).then(function (blob) {
+        var url = URL.createObjectURL(new Blob([blob], { type: 'application/octet-stream' }));
+        var tmp = document.createElement('a');
+        tmp.href = url;
+        tmp.setAttribute('download', name);
+        document.body.appendChild(tmp);
+        tmp.click();
+        document.body.removeChild(tmp);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      }).catch(function () {
+        // 取得に失敗した場合は従来のリンク挙動にフォールバックする
+        window.location.href = href;
+      });
+    });
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
       fetch(link.getAttribute('href'), { method: 'HEAD' })
         .then(function (res) { if (res.ok) { li.hidden = false; } })
@@ -956,6 +982,28 @@ $endif$
         a.title = label;
         a.setAttribute('aria-label', label);
         a.innerHTML = ICON;
+        // download 属性が無視されて SVG が表示される環境があるため、
+        // http(s) では Blob URL (application/octet-stream) を経由して保存を強制する
+        a.addEventListener('click', function (ev) {
+          if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') { return; }
+          ev.preventDefault();
+          fetch(src).then(function (res) {
+            if (!res.ok) { throw new Error('HTTP ' + res.status); }
+            return res.blob();
+          }).then(function (blob) {
+            var url = URL.createObjectURL(new Blob([blob], { type: 'application/octet-stream' }));
+            var tmp = document.createElement('a');
+            tmp.href = url;
+            tmp.setAttribute('download', name);
+            document.body.appendChild(tmp);
+            tmp.click();
+            document.body.removeChild(tmp);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+          }).catch(function () {
+            // 取得に失敗した場合は従来のリンク挙動にフォールバックする
+            window.location.href = src;
+          });
+        });
         wrap.appendChild(a);
       });
     });
