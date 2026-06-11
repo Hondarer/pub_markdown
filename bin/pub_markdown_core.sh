@@ -253,10 +253,11 @@ BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
-PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-10}"
+PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-30}"
 if ! [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" =~ ^[0-9]+$ ]] || [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" -lt 1 ]]; then
-    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=10
+    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=30
 fi
+export PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC
 
 summarize_browser_server_log() {
     local log_file="$1"
@@ -283,12 +284,14 @@ start_shared_browser_server() {
     #       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
     #       chrome-wrapper.sh の WebSocket 競合回避はファイル ベースの待機で代替する。
     #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
+    echo -n "Starting shared browser..."
     node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" >"$BROWSER_SERVER_LOG" 2>&1 &
     BROWSER_SERVER_PID=$!
     progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID} timeout=${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC}s"
 
     for _i in $(seq 1 "$timeout_ticks"); do
         if [[ -s "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
+            echo " done."
             progress_log "共有ブラウザ起動待機を終了しました result=ready"
             return 0
         fi
@@ -307,6 +310,7 @@ start_shared_browser_server() {
         wait "$BROWSER_SERVER_PID" 2>/dev/null
     fi
 
+    echo " fallback."
     echo "Warning: Shared browser server failed to start (${reason}). Falling back to per-process browser instances."
     echo "Warning: browser-server diagnostics: $(summarize_browser_server_log "$BROWSER_SERVER_LOG")"
     BROWSER_SERVER_PID=""

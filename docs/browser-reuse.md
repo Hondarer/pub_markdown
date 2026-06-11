@@ -194,8 +194,9 @@ else
 
 起動待機:
 
-- デフォルトは 10 秒
+- デフォルトは 30 秒
 - `PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC` で秒数を上書き可能
+- WebSocket エンドポイントを書き出す前に、DevTools API (`/json/version`) が `webSocketDebuggerUrl` を返すことを確認する
 - `browser-server.js` が先に終了した場合は、タイムアウトを待たずにフォールバックする
 - フォールバック時は `browser-server.js` の診断ログを警告として出力する
 
