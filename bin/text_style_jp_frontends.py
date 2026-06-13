@@ -970,8 +970,8 @@ def style_markdown(
             line = _remove_heading_inline_code(line)
             if collector is not None:
                 _record_step_changes(before, line, "heading-inline-code", collector, message="見出しのインライン コードを除去")
-            before = line
             line = _style_text_with_inline_code_spacing(line, _MARKDOWN_PROTECTED_PATTERNS, collector=collector)
+            before = line
             normalized = _normalize_markup_span_spacing(line)
             normalized = _ensure_heading_marker_space(normalized)
             if collector is not None:

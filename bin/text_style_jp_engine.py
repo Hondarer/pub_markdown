@@ -323,6 +323,26 @@ def _expand_add_space_pairs(
     return expanded_pairs
 
 
+def _drop_inverse_replace_pairs(replace_map: dict, replace_source: dict) -> None:
+    """逆方向の replace ペア (a→b と b→a) が両立する場合、優先度の低い
+    (basename が小さい) 側を除去する。両者を残すと適用順で相殺し、実変換は
+    変わらないまま dry-run に無意味な往復変更が出力されるため。"""
+    handled = set()
+    for a in list(replace_map.keys()):
+        b = replace_map.get(a)
+        if b is None or b == a:
+            continue
+        if (a, b) in handled or (b, a) in handled:
+            continue
+        if replace_map.get(b) == a:
+            handled.add((a, b))
+            key_a = (os.path.basename(replace_source.get(a, "")), a)
+            key_b = (os.path.basename(replace_source.get(b, "")), b)
+            drop = a if key_a < key_b else b
+            replace_map.pop(drop, None)
+            replace_source.pop(drop, None)
+
+
 def load_dictionaries() -> None:
     """Load dictionary files only once."""
 
@@ -395,6 +415,8 @@ def load_dictionaries() -> None:
         for word, to in file_as.items():
             word_kind[word] = "add_space"
             add_space_to[word] = to
+
+    _drop_inverse_replace_pairs(replace_map, replace_source)
 
     final_no_space = [w for w in no_space_order if word_kind.get(w) == "no_space"]
     final_add_space = [(w, t) for w, t in add_space_to.items() if word_kind.get(w) == "add_space"]

@@ -14,6 +14,7 @@ sys.stderr.reconfigure(encoding="utf-8")
 from text_style_jp_engine import (
     DiagnosticCollector,
     Finding,
+    _drop_inverse_replace_pairs,
     _loads_jsonc,
     _record_step_changes,
     apply_ms_style,
@@ -744,6 +745,33 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # _drop_inverse_replace_pairs: 逆方向ペアは低優先 (basename が小さい) 側を除去する
+    rm = {"セキュリティ": "セキュリティー", "セキュリティー": "セキュリティ"}
+    rs = {
+        "セキュリティ": "/x/10_microsoft.json",
+        "セキュリティー": "/x/90_local-katakana.json",
+    }
+    _drop_inverse_replace_pairs(rm, rs)
+    passed = (
+        rm == {"セキュリティー": "セキュリティ"}
+        and "セキュリティ" not in rs
+        and rs == {"セキュリティー": "/x/90_local-katakana.json"}
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _drop_inverse_replace_pairs 逆方向ペア除去: {rm}")
+    if not passed:
+        all_passed = False
+
+    # _drop_inverse_replace_pairs: 逆方向ペアでない通常エントリは保持する
+    rm = {"サーバ": "サーバー", "フィルタ": "フィルター"}
+    rs = {"サーバ": "/x/10_microsoft.json", "フィルタ": "/x/10_microsoft.json"}
+    _drop_inverse_replace_pairs(rm, rs)
+    passed = rm == {"サーバ": "サーバー", "フィルタ": "フィルター"}
+    status = "✓" if passed else "✗"
+    print(f"\n{status} _drop_inverse_replace_pairs 通常エントリ保持: {rm}")
+    if not passed:
+        all_passed = False
+
     original_cwd = os.getcwd()
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -1000,6 +1028,32 @@ def run_tests() -> bool:
     )
     status = "✓" if passed else "✗"
     print(f"\n{status} style_markdown unordered-list-marker 検出: {[(f.line, f.rule, f.original, f.corrected) for f in ulm_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: markup-span-spacing が dict-replace の変換を二重計上しないこと
+    c = DiagnosticCollector()
+    result = style_markdown("セキュリティーを統一する", collector=c)
+    msp_findings = [f for f in c.findings if f.rule == "markup-span-spacing"]
+    passed = (
+        result == "セキュリティを統一する"
+        and all(not (f.original == "ー" and f.corrected == "") for f in msp_findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown markup-span-spacing 二重計上なし: {[(f.original, f.corrected) for f in msp_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: markup-span-spacing が正当な強調前後スペース挿入を記録すること
+    c = DiagnosticCollector()
+    result = style_markdown("これは**動作設定**を与える", collector=c)
+    msp_findings = [f for f in c.findings if f.rule == "markup-span-spacing"]
+    passed = (
+        result == "これは **動作設定** を与える"
+        and len(msp_findings) >= 1
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown markup-span-spacing 正当発火: {[(f.line, f.original, f.corrected) for f in msp_findings]}")
     if not passed:
         all_passed = False
 
