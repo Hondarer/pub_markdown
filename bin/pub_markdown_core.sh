@@ -1991,7 +1991,14 @@ for file in "${files[@]}"; do
                     | head -n 1 \
                     | sed 's/^# *//' \
                     | tr -d '\r')
-                md_body=$(echo "${replaced_md}" | sed '/^# /d')
+                # コードフェンス外のレベル 1 見出し (ドキュメント タイトル) のみを本文から取り除く。
+                # sed '/^# /d' はコードフェンス内の行頭 # まで消すため、フェンスを追跡する awk を用いる
+                # (フェンス判定の基準は replace-tag.sh に合わせている)。
+                md_body=$(echo "${replaced_md}" | awk '
+                    /^```/ { in_code = !in_code }
+                    !in_code && /^# / { next }
+                    { print }
+                ')
 
                 # ナビゲーション ツリー / \toc 用の簡潔タイトルを解決する
                 # short-title 系フィールドが指定されていない場合は空文字になる
@@ -2001,7 +2008,7 @@ for file in "${files[@]}"; do
                 export DOCUMENT_DETAILS=$current_details
 
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                 _pm_pandoc_stderr=$(mktemp)
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 # nav_title が指定されている場合、docsfw-nav-title メタデータを付与する
@@ -2036,7 +2043,7 @@ for file in "${files[@]}"; do
                 set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
@@ -2067,7 +2074,7 @@ for file in "${files[@]}"; do
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。sed '/^# /d' で取り除く。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
