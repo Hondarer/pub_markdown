@@ -946,6 +946,27 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # style_markdown: heading-number ルール (日付形式は保持)
+    heading_date_cases = [
+        ("# 260611 内容", "# 260611 内容"),
+        ("# 20260611 内容", "# 20260611 内容"),
+        ("# 260231 内容", "# 内容"),
+        ("# 20260229 内容", "# 内容"),
+        ("# 20240229 内容", "# 20240229 内容"),
+        ("# 260611. 内容", "# 内容"),
+    ]
+    heading_date_results = []
+    for source, expected in heading_date_cases:
+        c = DiagnosticCollector()
+        c.set_line(1)
+        result = style_markdown(source, collector=c)
+        heading_date_results.append((source, result))
+    passed = all(result == expected for (_, expected), (_, result) in zip(heading_date_cases, heading_date_results))
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown heading-number 日付除外: {heading_date_results}")
+    if not passed:
+        all_passed = False
+
     # style_markdown: box-drawing 検出テスト (インラインコード外は警告)
     c = DiagnosticCollector()
     style_markdown("# 見出し\n罫線文字: ─\n本文", collector=c)

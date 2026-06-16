@@ -54,6 +54,7 @@ _HEADING_COUNTER_PREFIX_RE = re.compile(
     r"^(?:回|回目|章|節|項|個|件|人|日|年|月|時|分|秒|本|台|行|列|ページ|頁|つ|か所|ヶ所|箇所)"
 )
 _HEADING_LITERAL_NUMBER_PREFIX_RE = re.compile(r"^(?:階層)")
+_HEADING_DATE_TOKEN_RE = re.compile(r"^(?:\d{6}|\d{8})$")
 _HEADING_INLINE_CODE_RE = re.compile(r"`+([^`\n]+)`+")
 _EMPHASIS_PATTERN = re.compile(
     r"(?<!\*)\*\*(?=\S)[^*\n]+?(?<=\S)\*\*(?!\*)"
@@ -748,9 +749,55 @@ def _preserve_literal_number_heading(token: str, rest: str) -> bool:
     return _has_plain_heading_number_token(token) and _HEADING_LITERAL_NUMBER_PREFIX_RE.match(rest) is not None
 
 
+def _is_valid_heading_date_token(token: str) -> bool:
+    if _HEADING_DATE_TOKEN_RE.match(token) is None:
+        return False
+
+    if len(token) == 6:
+        year = 2000 + int(token[0:2])
+        month = int(token[2:4])
+        day = int(token[4:6])
+    else:
+        year = int(token[0:4])
+        month = int(token[4:6])
+        day = int(token[6:8])
+
+    if month < 1 or month > 12:
+        return False
+
+    days_per_month = (
+        31,
+        29 if _is_leap_year(year) else 28,
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    )
+    return day >= 1 and day <= days_per_month[month - 1]
+
+
+def _is_leap_year(year: int) -> bool:
+    if year % 400 == 0:
+        return True
+    if year % 100 == 0:
+        return False
+    return year % 4 == 0
+
+
+def _preserve_date_heading_number(token: str, rest: str) -> bool:
+    return _has_plain_heading_number_token(token) and _is_valid_heading_date_token(token)
+
+
 _HEADING_NUMBER_PRESERVE_RULES: Sequence[Callable[[str, str], bool]] = (
     _preserve_counter_heading_number,
     _preserve_literal_number_heading,
+    _preserve_date_heading_number,
 )
 
 
