@@ -63,6 +63,131 @@ is_skip() {
     return 1
 }
 
+# publocal.yaml / pubpart.yaml / pubchild.yaml の defaults: ブロックを抽出し、
+# pandoc の --metadata-file に渡せる素の YAML を out_tmp に書き出す。
+# defaults: が無い、または中身が無い場合は何も書かず 1 を返す。
+# 値の解釈 (コメント、クォート、型) は pandoc 側の YAML パーサーに委ねる。
+extract_defaults_block() {
+    local yaml_file="$1"
+    local out_tmp="$2"
+    local line
+    local content
+    local in_defaults=0
+    local base_indent=-1
+    local indent
+    local wrote=0
+
+    [[ -f "$yaml_file" ]] || return 1
+
+    : > "$out_tmp"
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        if [[ $in_defaults -eq 0 ]]; then
+            if [[ "$line" =~ ^defaults:[[:space:]]*$ ]]; then
+                in_defaults=1
+            fi
+            continue
+        fi
+        # 空行・コメント行は読み飛ばす (ブロックの区切りとはしない)
+        if [[ "$line" =~ ^[[:space:]]*$ ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+            continue
+        fi
+        # 行頭が非空白なら次のトップレベル キー。defaults ブロックは終了。
+        if [[ "$line" =~ ^[^[:space:]] ]]; then
+            break
+        fi
+        content="${line#"${line%%[![:space:]]*}"}"
+        indent=$(( ${#line} - ${#content} ))
+        if [[ $base_indent -lt 0 ]]; then
+            base_indent=$indent
+        fi
+        # 基準より浅いインデントはブロック外とみなす
+        if [[ $indent -lt $base_indent ]]; then
+            break
+        fi
+        # 基準インデントぶんだけ除去 (相対ネストは保持) して書き出す
+        printf '%s\n' "${line:$base_indent}" >> "$out_tmp"
+        wrote=1
+    done < "$yaml_file"
+
+    if [[ $wrote -eq 1 ]]; then
+        return 0
+    fi
+    : > "$out_tmp"
+    return 1
+}
+
+# ファイルが属するソース ルート (defaults 走査の上端境界) を出力する。
+# mergeSubfolderDocs のサブフォルダー配下ならその docs ルート、
+# そうでなければ主 mdRoot を返す。
+resolve_source_root_for_file() {
+    local file="$1"
+    local entry
+    if [[ -n "$mergeSubfolderDocs" ]]; then
+        for entry in "${subfolder_mdroot_paths[@]}"; do
+            parse_subfolder_mdroot_entry "$entry"
+            if [[ "$file" == "${subfolder_mdroot}/"* ]]; then
+                printf '%s\n' "$subfolder_mdroot"
+                return 0
+            fi
+        done
+    fi
+    printf '%s\n' "${PUB_MARKDOWN_MAIN_MDROOT}"
+}
+
+# ファイルの所属ディレクトリからソース ルートまでを遡り、各階層の
+# publocal / pubpart / pubchild の defaults: を pandoc の --metadata-file 群として構築する。
+# 優先順位 (低 -> 高): 遠い階層 -> 近い階層、同一階層では child -> part -> local。
+# pandoc は後に指定した --metadata-file を優先し、ドキュメント自身の YAML / -M が
+# すべてに勝つため、ドキュメントに指定があればデフォルトは適用されない。
+# 結果: グローバル配列 defaults_metadata_file_args と defaults_metadata_tmpfiles を設定する。
+build_defaults_metadata_args() {
+    local file="$1"
+    defaults_metadata_file_args=()
+    defaults_metadata_tmpfiles=()
+
+    local src_root
+    src_root=$(resolve_source_root_for_file "$file")
+
+    local file_dir
+    file_dir=$(dirname "$file")
+
+    # file_dir から src_root まで遡ったディレクトリを近い順に集める
+    local -a dirs_near_to_far=()
+    local d="$file_dir"
+    while :; do
+        dirs_near_to_far+=("$d")
+        [[ "$d" == "$src_root" ]] && break
+        local parent
+        parent=$(dirname "$d")
+        [[ "$parent" == "$d" ]] && break   # ファイルシステム ルートに到達
+        d="$parent"
+    done
+
+    # 遠い階層 -> 近い階層の順に処理し、--metadata-file を後勝ちで積む
+    local i dir magic tmp
+    local -a magic_order
+    for (( i=${#dirs_near_to_far[@]}-1; i>=0; i-- )); do
+        dir="${dirs_near_to_far[i]}"
+        if [[ $i -eq 0 ]]; then
+            # ファイルの居るディレクトリ自身: part (自階層に効く) -> local (最優先)
+            magic_order=("pubpart.yaml" "publocal.yaml")
+        else
+            # 祖先ディレクトリ: child (配下のみ) -> part の順 (part が優先)
+            magic_order=("pubchild.yaml" "pubpart.yaml")
+        fi
+        for magic in "${magic_order[@]}"; do
+            tmp=$(mktemp)
+            if extract_defaults_block "${dir}/${magic}" "$tmp"; then
+                defaults_metadata_file_args+=(--metadata-file "$tmp")
+                defaults_metadata_tmpfiles+=("$tmp")
+            else
+                rm -f "$tmp"
+            fi
+        done
+    done
+}
+
 # 終了時に実行する共通クリーンアップ処理
 cleanup_resources() {
     if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
@@ -1734,8 +1859,9 @@ for file in "${files[@]}"; do
         _pm_statusfile="${_PM_STATUS_DIR}/job-${_pm_job_index}"
         wait_for_parallel_slot
         (
-        # サブシェルがどの経路で終了してもステータスを書き込む
-        trap 'echo "$?" > "$_pm_statusfile"' EXIT
+        # サブシェルがどの経路で終了してもステータスを書き込む。
+        # あわせて defaults 用の一時ファイルを確実に削除する。
+        trap 'echo "$?" > "$_pm_statusfile"; [[ ${#defaults_metadata_tmpfiles[@]} -gt 0 ]] && rm -f "${defaults_metadata_tmpfiles[@]}"' EXIT
         # このサブシェル内の出力を一時ファイルにバッファリングし、
         # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
         _pm_tmpout=$(mktemp)
@@ -1975,6 +2101,11 @@ for file in "${files[@]}"; do
         _first_generated_lang=""
         _first_generated_suffix=""
 
+        # ディレクトリ階層の publocal / pubpart / pubchild から
+        # フロントマター デフォルト値 (--metadata-file 群) を構築する。
+        # 内容は lang / details に依存しないため 1 回だけ構築する。
+        build_defaults_metadata_args "$file"
+
         for details_suffix in "${details_suffixes[@]}"; do
             # details_suffix から details 値を決定
             if [[ "$details_suffix" == "-details" ]]; then
@@ -2048,6 +2179,7 @@ for file in "${files[@]}"; do
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
                     "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2079,6 +2211,7 @@ for file in "${files[@]}"; do
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2111,6 +2244,7 @@ for file in "${files[@]}"; do
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
                         "$PANDOC" -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
