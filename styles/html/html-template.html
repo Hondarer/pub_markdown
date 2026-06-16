@@ -107,7 +107,7 @@ $endif$
             ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></li>
           $endif$
           $if(docx-url)$
-          <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download
+          <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download$if(docx-download-name-encoded)$ data-docx-download-name-encoded="$docx-download-name-encoded$"$endif$
             title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="Word" /></a></li>
           $endif$
         </ul>
@@ -838,16 +838,25 @@ $if(docx-url)$
     if (!li || !link) { return; }
     var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
     var label = isJa ? 'Word 文書 (docx) をダウンロード' : 'Download as Word (docx)';
+    function getDocxDownloadName() {
+      var encodedName = link.getAttribute('data-docx-download-name-encoded');
+      if (encodedName) {
+        try { return decodeURIComponent(encodedName); }
+        catch (e) { /* 壊れたエンコード値なら URL 由来の名前に戻す */ }
+      }
+      var href = link.getAttribute('href');
+      try { return decodeURIComponent(href.split('#')[0].split('?')[0].split('/').pop()); }
+      catch (e) { return href.split('/').pop(); }
+    }
     link.title = label;
     link.setAttribute('aria-label', label);
+    link.setAttribute('download', getDocxDownloadName());
     // download 属性が無視される環境やサーバーの MIME 誤設定に備え、
     // http(s) では Blob URL (application/octet-stream) を経由して保存を強制する
     link.addEventListener('click', function (ev) {
       if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') { return; }
       var href = link.getAttribute('href');
-      var name;
-      try { name = decodeURIComponent(href.split('#')[0].split('?')[0].split('/').pop()); }
-      catch (e) { name = href.split('/').pop(); }
+      var name = getDocxDownloadName();
       ev.preventDefault();
       fetch(href).then(function (res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }

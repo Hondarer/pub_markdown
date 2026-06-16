@@ -354,6 +354,23 @@ should_start_shared_browser() {
     return 1
 }
 
+encode_docx_download_name_from_title() {
+    python3 -c '
+import re
+import sys
+import urllib.parse
+
+stem = sys.stdin.read()
+stem = re.sub(r"[<>:\"/\\\\|?*\x00-\x1f\x7f]", "_", stem)
+stem = stem.rstrip(" .")
+if not stem:
+    stem = "index"
+if re.match(r"(?i)^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)", stem):
+    stem += "_"
+sys.stdout.write(urllib.parse.quote(stem + ".docx", safe=""))
+'
+}
+
 #-------------------------------------------------------------------
 
 #-------------------------------------------------------------------
@@ -1767,8 +1784,11 @@ for file in "${files[@]}"; do
         file_basename=$(basename "$file")
         file_basename_lower=$(echo "$file_basename" | tr '[:upper:]' '[:lower:]')
         file_dirname=$(dirname "$file")
+        docx_download_name_from_title=false
 
-        if [[ "$file_basename_lower" == "readme.md" || "$file_basename_lower" == "skill.md" ]]; then
+        if [[ "$file_basename_lower" == "index.md" ]]; then
+            docx_download_name_from_title=true
+        elif [[ "$file_basename_lower" == "readme.md" || "$file_basename_lower" == "skill.md" ]]; then
             # 同じディレクトリに上位候補が存在するかチェック (大文字小文字を無視)
             index_md_exists=false
             readme_md_exists=false
@@ -1791,6 +1811,7 @@ for file in "${files[@]}"; do
                 publish_file="${publish_file%/*}/index.md"
                 publish_file_self_contain="${publish_file_self_contain%/*}/index.md"
                 publish_file_docx="${publish_file_docx%/*}/index.md"
+                docx_download_name_from_title=true
             fi
         fi
 
@@ -1991,6 +2012,11 @@ for file in "${files[@]}"; do
                     | head -n 1 \
                     | sed 's/^# *//' \
                     | tr -d '\r')
+                docx_download_name_metadata_args=()
+                if [[ "$docx_download_name_from_title" == "true" && -n "$md_title" ]]; then
+                    docx_download_name_encoded=$(printf "%s" "$md_title" | encode_docx_download_name_from_title)
+                    docx_download_name_metadata_args=(--metadata "docx-download-name-encoded=${docx_download_name_encoded}")
+                fi
                 # コードフェンス外のレベル 1 見出し (ドキュメント タイトル) のみを本文から取り除く。
                 # sed '/^# /d' はコードフェンス内の行頭 # まで消すため、フェンスを追跡する awk を用いる
                 # (フェンス判定の基準は replace-tag.sh に合わせている)。
@@ -2015,7 +2041,7 @@ for file in "${files[@]}"; do
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
