@@ -14,9 +14,20 @@ Tree node format:
     - A directory is represented by its index.html (url = "dir/index.html").
       If no index.html exists, url is null.
     - Leaf pages have no "children" key (or children=[]).
-    - Children are sorted: files and subdirs mixed alphabetically by name.
+    - Children are sorted: files and subdirs mixed alphabetically by name,
+      unless the corresponding source directory provides a publocal.yaml with
+      an explicit "order" list (listed entries first, the rest by name).
 
-Usage: python3 generate-nav-tree.py <html-root>
+Usage: python3 generate-nav-tree.py <html-root> [<source-md-root> [alias=dir ...]]
+
+  <source-md-root> is the Markdown source root (mdRoot). When given, each
+  output directory's child order can be overridden by a publocal.yaml placed
+  in the corresponding source directory. When omitted, the legacy name order
+  is used (backward compatible).
+
+  Each trailing "alias=dir" is a mergeSubfolderDocs mapping: output paths under
+  "<alias>/..." resolve to the real source directory "<dir>/..." for the
+  purpose of locating publocal.yaml.
 """
 
 import sys
@@ -37,6 +48,107 @@ SKIP_NAMES = {
     'docsfw-search.js', 'docsfw-nav.js', 'docsfw-tokenize.js', 'docsfw-ui.css',
     'html-style.css', 'mermaid.min.js',
 }
+
+# ---------------------------------------------------------------------------
+# Source-directory ordering (publocal.yaml)
+# ---------------------------------------------------------------------------
+
+# Markdown source root passed as the optional 2nd CLI argument. None => legacy
+# name ordering (backward compatible).
+SRC_ROOT = None
+
+# mergeSubfolderDocs mapping: alias -> real source directory. Output directories
+# under "<alias>/..." map to "<real>/..." instead of "<SRC_ROOT>/<alias>/...".
+MERGE_MAP = {}
+
+# Cache: source directory -> { normalized_name: order_index }
+_order_cache = {}
+
+
+def resolve_src_dir(prefix):
+    """Map an output-relative directory *prefix* to its source directory.
+
+    Honors mergeSubfolderDocs aliases (longest alias match wins). Returns None
+    when no source root is configured.
+    """
+    if SRC_ROOT is None:
+        return None
+    p = prefix.strip('/')
+    if not p:
+        return SRC_ROOT
+
+    best = None  # (alias_stripped, real_dir)
+    for alias, real in MERGE_MAP.items():
+        a = alias.strip('/')
+        if a and (p == a or p.startswith(a + '/')):
+            if best is None or len(a) > len(best[0]):
+                best = (a, real)
+    if best is not None:
+        a, real = best
+        rest = p[len(a):].lstrip('/')
+        return os.path.join(real, rest.replace('/', os.sep)) if rest else real
+
+    return os.path.join(SRC_ROOT, p.replace('/', os.sep))
+
+
+def normalize_order_name(name):
+    """Normalize an order entry or an item name to a comparison key.
+
+    Strips a known document/output extension and a trailing slash, then
+    lowercases. So 'overview.md', 'overview.html' and 'overview/' all compare
+    equal to the directory/file stem 'overview'.
+    """
+    base = name.rstrip('/')
+    lower = base.lower()
+    for ext in ('.md', '.markdown', '.html'):
+        if lower.endswith(ext):
+            base = base[:-len(ext)]
+            break
+    return base.lower()
+
+
+def load_order(src_dir):
+    """Return { normalized_name: index } from publocal.yaml in *src_dir*.
+
+    Returns an empty dict when there is no publocal.yaml or no 'order' list.
+    Results are cached per directory. The parser is intentionally minimal
+    (matching the awk-level YAML handling used elsewhere in docsfw): it reads a
+    top-level 'order:' key followed by '- item' list entries.
+    """
+    if src_dir in _order_cache:
+        return _order_cache[src_dir]
+
+    result = {}
+    path = os.path.join(src_dir, 'publocal.yaml')
+    try:
+        with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+            in_order = False
+            idx = 0
+            for raw in fh:
+                line = raw.rstrip('\r\n')
+                if re.match(r'^order:\s*$', line):
+                    in_order = True
+                    continue
+                if not in_order:
+                    continue
+                m = re.match(r'^\s*-\s*(.*)$', line)
+                if m:
+                    name = re.sub(r'\s+#.*$', '', m.group(1)).strip()
+                    if len(name) >= 2 and name[0] == name[-1] and name[0] in '"\'':
+                        name = name[1:-1]
+                    key = normalize_order_name(name)
+                    if key and key not in result:
+                        result[key] = idx
+                        idx += 1
+                elif re.match(r'^\S', line):
+                    # A new top-level key terminates the order block.
+                    in_order = False
+    except (OSError, IOError):
+        pass
+
+    _order_cache[src_dir] = result
+    return result
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -155,7 +267,19 @@ def build_tree(pages, prefix=''):
         sub_node = build_tree(pages, prefix + subdir + '/')
         all_items[subdir] = sub_node
 
-    children = [all_items[k] for k in sorted(all_items.keys(), key=str.lower)]
+    # Determine child order. By default it is the case-insensitive name order.
+    # When a source publocal.yaml exists for this directory, listed entries come
+    # first in that order; the rest follow by name.
+    order_map = {}
+    src_dir = resolve_src_dir(prefix)
+    if src_dir is not None:
+        order_map = load_order(src_dir)
+
+    def child_sort_key(name):
+        idx = order_map.get(normalize_order_name(name), len(order_map))
+        return (idx, name.lower())
+
+    children = [all_items[k] for k in sorted(all_items.keys(), key=child_sort_key)]
 
     node = {
         'title':    dir_title,
@@ -171,14 +295,30 @@ def build_tree(pages, prefix=''):
 # ---------------------------------------------------------------------------
 
 def main():
+    global SRC_ROOT
+
     if len(sys.argv) < 2:
-        sys.stderr.write('Usage: python3 generate-nav-tree.py <html-root>\n')
+        sys.stderr.write('Usage: python3 generate-nav-tree.py <html-root> [<source-md-root>]\n')
         sys.exit(1)
 
     html_root = sys.argv[1]
     if not os.path.isdir(html_root):
         sys.stderr.write(f'Error: not a directory: {html_root}\n')
         sys.exit(1)
+
+    # Optional source mdRoot: enables publocal.yaml order overrides.
+    if len(sys.argv) >= 3 and sys.argv[2]:
+        if os.path.isdir(sys.argv[2]):
+            SRC_ROOT = sys.argv[2]
+        else:
+            sys.stderr.write(f'  Warning: source md-root not found, using name order: {sys.argv[2]}\n')
+
+    # Optional mergeSubfolderDocs mapping: each remaining arg is "alias=real-dir".
+    for arg in sys.argv[3:]:
+        if '=' in arg:
+            alias, real = arg.split('=', 1)
+            if alias and real:
+                MERGE_MAP[alias] = real
 
     sys.stdout.write(f'  Collecting pages from {html_root}...\n')
     pages = collect_pages(html_root)

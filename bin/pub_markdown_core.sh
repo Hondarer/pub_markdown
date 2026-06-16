@@ -1248,8 +1248,10 @@ if [ -n "$relativeFile" ]; then
         base_dir="${workspaceFolder}/${relativeFile}"
 
         # ディレクトリ配下の対象ファイル (.md / .yaml / .json) を再帰的に収集
+        # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
         mapfile -d '' -t files_raw_initial < <(
-            find -L "${real_base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+            find -L "${real_base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
+                ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
         )
     else
         # relativeFile が単一ファイルの場合: そのファイルを対象とする
@@ -1262,8 +1264,10 @@ if [ -n "$relativeFile" ]; then
 else
     # relativeFile が指定されていない場合: mdRoot 以下の対象ファイル (.md / .yaml / .json) を対象
     # -L を付与してシンボリック リンクも対象にする
+    # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
     mapfile -d '' -t files_raw_initial < <(
-        find -L "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+        find -L "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
+            ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
     )
 
     # 追加ドキュメント サブフォルダーのファイルを追加 (mergeSubfolderDocs が指定されている場合)
@@ -1273,8 +1277,10 @@ else
 
             # 追加ドキュメント サブフォルダー配下の対象ファイルを収集
             # -L を付与してシンボリック リンクも対象にする
+            # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
             mapfile -d '' -t subfolder_files < <(
-                find -L "${subfolder_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) -print0 | sort -z -u
+                find -L "${subfolder_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
+                    ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
             )
 
             # files_raw_initial に追加
@@ -2222,7 +2228,18 @@ for langElement in ${lang}; do
         fi
         if [[ "$htmlNavTreeEnable" == "true" ]]; then
             echo "Generating nav tree: ${pubRoot}/${langElement}${details_suffix}/html/"
-            python3 "${htmlNavTreeScript}" "${_html_root}"
+            # 第 2 引数にソース mdRoot を渡す。各ディレクトリの publocal.yaml の order を
+            # 参照して並び順を上書きするために使う (未指定時は従来の名前順)。
+            # 第 3 引数以降に mergeSubfolderDocs の "alias=実ソース ディレクトリ" を渡し、
+            # マージされたサブフォルダー配下の publocal.yaml も解決できるようにする。
+            _nav_merge_map=()
+            if [[ -n "$mergeSubfolderDocs" ]]; then
+                for entry in "${subfolder_mdroot_paths[@]}"; do
+                    parse_subfolder_mdroot_entry "$entry"
+                    _nav_merge_map+=("${subfolder_alias}=${subfolder_mdroot}")
+                done
+            fi
+            python3 "${htmlNavTreeScript}" "${_html_root}" "${PUB_MARKDOWN_MAIN_MDROOT}" "${_nav_merge_map[@]}"
         fi
         if [[ "$htmlSearchEnable" == "true" ]]; then
             echo "Generating search index: ${pubRoot}/${langElement}${details_suffix}/html/"

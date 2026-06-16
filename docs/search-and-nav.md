@@ -178,6 +178,7 @@ framework/docsfw/
 
 - `index.html` はそのディレクトリのノードとして扱います (URL はそのページを指します)
 - 子要素はファイル名の大文字小文字を無視したアルファベット順にソートします (short-title ではなくファイル名基準)
+- ただし、対応するソース ディレクトリに `publocal.yaml` の `order` がある場合は、その順序を優先します (列挙されたものを先頭に、未列挙は名前順で末尾)。詳細は [pubparts.md](pubparts.md) を参照してください
 - 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`
 
 ブラウザー側の `docsfw-nav.js` は `__DOCSFW_NAV__` を読み込み、`<details>`/`<summary>` で折り畳みツリーを描画します。  

@@ -1126,9 +1126,107 @@ progress_log "キャッシュ保存を開始しました changed=${cache_modifie
 save_cache
 progress_log "キャッシュ保存を終了しました"
 
+# ディレクトリ制御マジックファイル publocal.yaml の order をディレクトリ単位でキャッシュする。
+# order に列挙された子 (ファイル / サブフォルダー) を先頭にその順で並べ、未列挙は名前順で末尾に置く。
+declare -A _publocal_loaded   # 実ディレクトリ -> 1 (読み込み試行済み)
+declare -A _publocal_index    # "実ディレクトリ<US>name" -> 0 始まりの並び順インデックス
+declare -A _vreal_cache       # 仮想ディレクトリ -> 実ディレクトリ (逆引きキャッシュ)
+_PUBLOCAL_SEP=$'\x1f'
+
+# 仮想ディレクトリ (memory_cache のキーが採る形) を、publocal.yaml が実在する
+# ソース ディレクトリへ逆引きする。
+# - サブフォルダー内ページの TOC: current_dir(仮想) -> current_scan_dir(実)
+# - mergeSubfolderDocs: ${PUB_MARKDOWN_MAIN_MDROOT}/${alias} -> ${subfolder_docs_src}
+# - 主 mdRoot 配下: 仮想パスがそのまま実パス
+_map_virtual_to_real_dir() {
+    local vdir="$1"
+    if [[ -n "${_vreal_cache[$vdir]:-}" ]]; then
+        REAL_DIR="${_vreal_cache[$vdir]}"
+        return
+    fi
+    local real="$vdir"
+    if [[ "$current_is_subfolder" == "true" && -n "$current_dir" ]]; then
+        if [[ "$vdir" == "$current_dir" ]]; then
+            real="$current_scan_dir"
+        elif [[ "$vdir" == "$current_dir"/* ]]; then
+            real="${current_scan_dir}${vdir#$current_dir}"
+        fi
+    else
+        local entry base
+        for entry in "${subfolder_entries[@]}"; do
+            parse_subfolder_entry "$entry"
+            base="${PUB_MARKDOWN_MAIN_MDROOT}/${subfolder_alias}"
+            if [[ "$vdir" == "$base" ]]; then
+                real="$subfolder_docs_src"
+                break
+            elif [[ "$vdir" == "$base"/* ]]; then
+                real="${subfolder_docs_src}${vdir#$base}"
+                break
+            fi
+        done
+    fi
+    _vreal_cache[$vdir]="$real"
+    REAL_DIR="$real"
+}
+
+# 指定ディレクトリの publocal.yaml を読み込み、order をキャッシュへ展開する
+_load_publocal_order() {
+    local dir="$1"
+    [[ -n "${_publocal_loaded[$dir]:-}" ]] && return
+    _publocal_loaded[$dir]=1
+    local f="${dir}/publocal.yaml"
+    [[ -f "$f" ]] || return
+
+    local in_order=0 idx=0 line name key
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        if [[ "$line" =~ ^order:[[:space:]]*$ ]]; then
+            in_order=1
+            continue
+        fi
+        [[ $in_order -eq 1 ]] || continue
+        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*(.*)$ ]]; then
+            name="${BASH_REMATCH[1]}"
+            name="${name%%#*}"                       # 行内コメント除去
+            name="${name%"${name##*[![:space:]]}"}"  # 末尾空白除去
+            name="${name#\"}"; name="${name%\"}"     # 二重引用符除去
+            name="${name#\'}"; name="${name%\'}"     # 単一引用符除去
+            name="${name%/}"                         # フォルダー末尾スラッシュ除去
+            [[ -z "$name" ]] && continue
+            key="${dir}${_PUBLOCAL_SEP}${name}"
+            if [[ -z "${_publocal_index[$key]:-}" ]]; then
+                _publocal_index[$key]=$idx
+                idx=$((idx + 1))
+            fi
+        elif [[ "$line" =~ ^[^[:space:]] ]]; then
+            # 別のトップレベル キーで order ブロックは終了
+            in_order=0
+        fi
+    done < "$f"
+}
+
+# order_index_for <親ディレクトリ(仮想)> <名前> -> ORDER_IDX に 0 始まりインデックス、未列挙は 999999
+order_index_for() {
+    local vdir="$1" name="$2"
+    if [[ -z "$vdir" || "$vdir" == "/" ]]; then
+        ORDER_IDX=999999
+        return
+    fi
+    _map_virtual_to_real_dir "$vdir"
+    local dir="$REAL_DIR"
+    _load_publocal_order "$dir"
+    local v="${_publocal_index["${dir}${_PUBLOCAL_SEP}${name}"]:-}"
+    if [[ -n "$v" ]]; then
+        ORDER_IDX="$v"
+    else
+        ORDER_IDX=999999
+    fi
+}
+
 # unsorted_keys をソートして sorted_keys に設定
-# カスタムソート: 各階層でファイルとディレクトリを混在させ、名前順にソート
-# ソートキー生成: パスの各コンポーネントを小文字化して連結する
+# カスタムソート: 各階層でファイルとディレクトリを混在させて並べる。
+# 並び順は「親ディレクトリの publocal.yaml の order を優先 (6 桁ゼロ埋め)、未列挙は名前順」。
+# 結果は SORT_KEY に設定する (連想配列キャッシュを保持するため command substitution を避ける)。
 generate_sort_key() {
     local path="$1"
     local separator="!"
@@ -1137,24 +1235,42 @@ generate_sort_key() {
     IFS='/' read -ra parts <<< "$path"
     local key=""
     local last_idx=$((${#parts[@]} - 1))
+    local accum=""
+    local i part lc pad
 
     for i in "${!parts[@]}"; do
-        local part="${parts[$i],,}"
-        key+="$part"
+        part="${parts[$i]}"
+        lc="${part,,}"
+        # この component の親ディレクトリは accum。publocal.yaml の order を引く。
+        order_index_for "$accum" "$part"
+        printf -v pad '%06d' "$ORDER_IDX"
+        key+="${pad}${lc}"
+        # accum を 1 段進める
+        if [[ -z "$part" ]]; then
+            accum="/"
+        elif [[ "$accum" == "/" ]]; then
+            accum="/$part"
+        elif [[ -z "$accum" ]]; then
+            accum="$part"
+        else
+            accum="${accum}/${part}"
+        fi
         if [[ $i -lt $last_idx ]]; then
             # '-' などを含む接頭辞関係の sibling より、親配下の要素を先に並べる。
             key+="$separator"
         fi
     done
 
-    echo "$key"
+    SORT_KEY="$key"
 }
 
 # ソートキーと元パスのペアを生成してソート
+# generate_sort_key は SORT_KEY に書き込む。同一サブシェル内で呼ぶことで
+# publocal.yaml のディレクトリ単位キャッシュをイテレーション間で共有する。
 mapfile -t sorted_keys < <(
     for path in "${unsorted_keys[@]}"; do
-        sort_key=$(generate_sort_key "$path")
-        printf '%s\t%s\n' "$sort_key" "$path"
+        generate_sort_key "$path"
+        printf '%s\t%s\n' "$SORT_KEY" "$path"
     done | sort -t$'\t' -k1 | cut -f2
 )
 progress_log "ソートを終了しました entries=${#sorted_keys[@]}"
