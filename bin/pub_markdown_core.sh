@@ -378,9 +378,9 @@ BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
-PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-30}"
+PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-60}"
 if ! [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" =~ ^[0-9]+$ ]] || [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" -lt 1 ]]; then
-    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=30
+    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=60
 fi
 export PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC
 
@@ -405,9 +405,9 @@ start_shared_browser_server() {
     BROWSER_SERVER_LOG=$(mktemp)
     rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE"
 
-    # NOTE: browser-server.js は Puppeteer のデフォルト ブラウザー検出を使用する。
-    #       prepare_puppeteer_env.sh (chrome-wrapper.sh) はここでは適用しない。
-    #       chrome-wrapper.sh の WebSocket 競合回避はファイル ベースの待機で代替する。
+    # NOTE: browser-server.js は prepare_puppeteer_env.sh を source せず、
+    #       chrome-wrapper.sh を直接 executablePath に指定する。
+    #       これにより二重ラップを避けながら DevTools readiness 待機を適用する。
     #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
     echo -n "Starting shared browser..."
     node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" >"$BROWSER_SERVER_LOG" 2>&1 &
@@ -427,6 +427,9 @@ start_shared_browser_server() {
             break
         fi
         sleep 0.1
+        if (( _i % 100 == 0 )); then
+            echo -n "."
+        fi
     done
 
     if [[ -z "$reason" ]]; then

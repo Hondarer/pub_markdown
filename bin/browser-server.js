@@ -13,6 +13,7 @@
 const puppeteer = require('puppeteer');
 const fs        = require('fs');
 const http      = require('http');
+const path      = require('path');
 
 const wsFile = process.argv[2];
 if (!wsFile) {
@@ -20,13 +21,59 @@ if (!wsFile) {
   process.exit(1);
 }
 
-const START_TIMEOUT_SEC = Number.parseInt(process.env.PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC || '30', 10);
+const START_TIMEOUT_SEC = Number.parseInt(process.env.PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC || '60', 10);
 const START_TIMEOUT_MS = Number.isFinite(START_TIMEOUT_SEC) && START_TIMEOUT_SEC > 0
   ? START_TIMEOUT_SEC * 1000
-  : 30000;
+  : 60000;
 const READY_POLL_INTERVAL_MS = 50;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function canUseChromeWrapper(wrapperPath) {
+  if (process.platform === 'win32') {
+    console.error('browser-server.js: chrome-wrapper.sh is skipped on native Windows');
+    return false;
+  }
+
+  try {
+    fs.accessSync(wrapperPath, fs.constants.X_OK);
+    return true;
+  } catch (err) {
+    console.error(`browser-server.js: chrome-wrapper.sh is not executable: ${err.message}`);
+    return false;
+  }
+}
+
+function pathsReferToSameFile(left, right) {
+  try {
+    return fs.realpathSync(left) === fs.realpathSync(right);
+  } catch (_) {
+    return path.resolve(left) === path.resolve(right);
+  }
+}
+
+function buildLaunchOptions() {
+  const launchOptions = { args: ['--no-sandbox'] };
+  const wrapperPath = path.join(__dirname, 'chrome-wrapper.sh');
+
+  if (!canUseChromeWrapper(wrapperPath)) {
+    return launchOptions;
+  }
+
+  const env = { ...process.env };
+  const originalExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '';
+  if (originalExecutablePath && !pathsReferToSameFile(originalExecutablePath, wrapperPath)) {
+    env.ORG_PUPPETEER_EXECUTABLE_PATH = originalExecutablePath;
+  } else {
+    delete env.ORG_PUPPETEER_EXECUTABLE_PATH;
+  }
+  delete env.PUPPETEER_EXECUTABLE_PATH;
+
+  launchOptions.executablePath = wrapperPath;
+  launchOptions.env = env;
+  console.error(`browser-server.js: launching browser via ${wrapperPath}`);
+  return launchOptions;
+}
 
 function getJsonVersionUrl(wsEndpoint) {
   const endpointUrl = new URL(wsEndpoint);
@@ -84,7 +131,7 @@ async function waitForDevToolsReady(wsEndpoint) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch(buildLaunchOptions());
   let shuttingDown = false;
 
   // シャットダウン処理
