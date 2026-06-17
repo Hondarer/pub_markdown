@@ -667,6 +667,8 @@ if [ -f "$configFile" ]; then
     mergeSubfolderDocs=$(parse_yaml "$config_content" "mergeSubfolderDocs")
     htmlNavigationLinkEnable=$(parse_yaml "$config_content" "htmlNavigationLinkEnable")
     mathLatexEnable=$(parse_yaml "$config_content" "mathLatexEnable")
+    gitLinkEnable=$(parse_yaml "$config_content" "gitLinkEnable")
+    gitLinkHostProvider=$(parse_yaml "$config_content" "gitLinkHostProvider")
 fi
 
 # 設定ファイルに mdRoot が指定されなかった場合の値を "docs" にする
@@ -748,6 +750,14 @@ if [[ "$htmlNavTreeEnable" == "" ]]; then
     htmlNavTreeEnable="true"
 fi
 
+# 設定ファイルに gitLinkEnable (Git 単一ページ リンク) が指定されなかった場合の値を true にする
+# (Git 管理外・remote 未解決のファイルは get_file_git_url.sh が空を返し自動的に非表示となる)
+if [[ "$gitLinkEnable" == "" ]]; then
+    gitLinkEnable="true"
+fi
+# 自己ホスト用 host=provider マッピングを get_file_git_url.sh へ環境変数で渡す
+export GIT_LINK_HOST_PROVIDER="$gitLinkHostProvider"
+
 #-------------------------------------------------------------------
 
 # 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-style.css" にする
@@ -813,6 +823,13 @@ htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
 htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
 htmlDetailsIconSvg="${HOME_DIR}/styles/html/docsfw-details-icon.svg"
 htmlOverviewIconSvg="${HOME_DIR}/styles/html/docsfw-overview-icon.svg"
+# Git 単一ページ リンク用 プロバイダ別アイコン (github / gitlab / gitbucket / gitea は git にフォールバック)
+htmlGitIconSvgs=(
+    "${HOME_DIR}/styles/html/docsfw-github-icon.svg"
+    "${HOME_DIR}/styles/html/docsfw-gitlab-icon.svg"
+    "${HOME_DIR}/styles/html/docsfw-gitbucket-icon.svg"
+    "${HOME_DIR}/styles/html/docsfw-git-icon.svg"
+)
 htmlTokenizeScript="${SCRIPT_DIR}/docsfw-tokenize.js"
 htmlBuildSearchScript="${SCRIPT_DIR}/build-search-index.mjs"
 htmlNavTreeScript="${SCRIPT_DIR}/generate-nav-tree.py"
@@ -1572,6 +1589,10 @@ for langElement in ${lang}; do
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDetailsIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-details-icon.svg"
         copy_if_different_timestamp "${htmlOverviewIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-overview-icon.svg"
+        # Git 単一ページ リンク用 プロバイダ別アイコン (gitLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
+        for _gitIconSvg in "${htmlGitIconSvgs[@]}"; do
+            copy_if_different_timestamp "${_gitIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/$(basename "${_gitIconSvg}")"
+        done
         # 検索・ナビゲーション用静的アセットの配置
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             copy_if_different_timestamp "${miniSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/minisearch.min.js"
@@ -1697,6 +1718,23 @@ for file in "${files[@]}"; do
             )
         fi
 
+        # Git 単一ページ リンク メタデータの構築
+        # ソース ファイルに対応する Git ホスティング上の blob URL を解決して HTML に埋め込む。
+        # Git 管理外・.gitignore 対象・remote 未解決のファイルは get_file_git_url.sh が空を返し、
+        # この場合はリンクを埋め込まない (= ボタン非表示)。
+        git_link_metadata_args=()
+        if [[ "$gitLinkEnable" == "true" ]]; then
+            git_link_result=$(sh ${SCRIPT_DIR}/get_file_git_url.sh "$file")
+            if [[ -n "$git_link_result" ]]; then
+                git_link_url="${git_link_result%%$'\t'*}"
+                git_link_provider="${git_link_result##*$'\t'}"
+                git_link_metadata_args=(
+                    --metadata "git-url=${git_link_url}"
+                    --metadata "git-icon=${up_dir}docsfw-${git_link_provider}-icon.svg"
+                )
+            fi
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
@@ -1734,7 +1772,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2042,6 +2080,47 @@ for file in "${files[@]}"; do
             )
         fi
 
+        # Git 単一ページ リンク メタデータの構築
+        # ソース ファイルに対応する Git ホスティング上の blob URL を解決して HTML に埋め込む。
+        # URL は lang / details バリアント間で不変 (ソース ファイルにのみ依存) のため、
+        # バリアント コピー最適化と両立する (実行時 JS による実在確認は不要)。
+        # Git 管理外・.gitignore 対象・remote 未解決のファイルは get_file_git_url.sh が空を返し、
+        # この場合はリンクを埋め込まない (= ボタン非表示)。
+        git_link_metadata_args=()
+        if [[ "$gitLinkEnable" == "true" ]]; then
+            progress_log "Git リンクの解決を開始しました file=${file#${workspaceFolder}/}"
+            # doxyfw 生成 md は先頭フロントマターに git-origin (元ソースの workspace 相対パス) を持つ。
+            # ヒントがあり実体が存在すれば、md 自身ではなく元ソースに対して Git リンクを解決する。
+            # これにより、生成 md が .gitignore 対象でも追跡済みの元ソースへリンクできる。
+            _git_link_target="$file"
+            _git_origin_hint=$(awk '
+                NR==1 { if ($0 !~ /^---[[:space:]]*$/) exit; next }
+                /^---[[:space:]]*$/ { exit }
+                /^git-origin:[[:space:]]*/ {
+                    line=$0
+                    sub(/\r$/, "", line)
+                    sub(/^git-origin:[[:space:]]*/, "", line)
+                    sub(/[[:space:]]+$/, "", line)
+                    gsub(/^"|"$/, "", line)
+                    print line
+                    exit
+                }
+            ' "$file")
+            if [[ -n "$_git_origin_hint" && -f "${workspaceFolder}/${_git_origin_hint}" ]]; then
+                _git_link_target="${workspaceFolder}/${_git_origin_hint}"
+            fi
+            git_link_result=$(sh ${SCRIPT_DIR}/get_file_git_url.sh "$_git_link_target")
+            progress_log "Git リンクの解決を終了しました file=${file#${workspaceFolder}/}"
+            if [[ -n "$git_link_result" ]]; then
+                git_link_url="${git_link_result%%$'\t'*}"
+                git_link_provider="${git_link_result##*$'\t'}"
+                git_link_metadata_args=(
+                    --metadata "git-url=${git_link_url}"
+                    --metadata "git-icon=${up_dir}docsfw-${git_link_provider}-icon.svg"
+                )
+            fi
+        fi
+
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             progress_log "文書日付の取得を開始しました file=${file#${workspaceFolder}/}"
@@ -2181,7 +2260,7 @@ for file in "${files[@]}"; do
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \

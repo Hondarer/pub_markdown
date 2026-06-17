@@ -78,6 +78,18 @@
 # デフォルト: true
 #autoSetAuthor: true
 
+# Git 単一ページ リンクの有効化 (true / false)
+# 各ページのナビバーに、対応する Git ホスティング上の単一ページ (blob ビュー) へのリンクを表示する。
+# Git 管理外・.gitignore 対象 (生成物など)・remote 未解決のファイルでは自動的に非表示となる。
+# デフォルト: true
+#gitLinkEnable: true
+
+# 自己ホスト Git の host から provider 種別へのマッピング
+# host=provider 形式をスペース区切りで指定する。provider: github | gitlab | gitbucket | gitea
+# github.com / *gitlab* は自動判定されるため、社内ホスト等を明示したい場合にのみ指定する。
+# 例: gitLinkHostProvider: git.example.com=gitlab gitbucket.example.com=gitbucket
+#gitLinkHostProvider:
+
 # 追加ドキュメント サブフォルダー機能
 # alias=path 形式で追加ドキュメント サブフォルダーをスペース区切りで指定
 # 空または未指定の場合は機能無効、値には $VAR または ${VAR} 形式の環境変数を使用可能

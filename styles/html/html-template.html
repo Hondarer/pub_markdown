@@ -106,6 +106,10 @@ $endif$
           <li id="docsfw-details-li" hidden><a id="docsfw-details-link" href="#"
             ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></li>
           $endif$
+          $if(git-url)$
+          <li id="docsfw-git-li"><a id="docsfw-git-link" href="$git-url$" target="_blank" rel="noopener"
+            title="Git" aria-label="Git"><img class="docsfw-git-icon" src="$git-icon$" alt="Git" /></a></li>
+          $endif$
           $if(docx-url)$
           <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download$if(docx-download-name-encoded)$ data-docx-download-name-encoded="$docx-download-name-encoded$"$endif$
             title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="Word" /></a></li>
@@ -827,6 +831,19 @@ $if(mermaid-js)$
       postRenderCallback: normalizeMermaidSvgSize
     }).then(normalizeMermaidSvgSize);
   }
+  </script>
+$endif$
+$if(git-url)$
+  <!-- Git 単一ページ リンク: ビルド時に追跡確認済みのため常時表示し、言語別の title のみ設定する -->
+  <script>
+  (function () {
+    var link = document.getElementById('docsfw-git-link');
+    if (!link) { return; }
+    var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
+    var label = isJa ? 'Git リポジトリで開く' : 'View on Git repository';
+    link.title = label;
+    link.setAttribute('aria-label', label);
+  })();
   </script>
 $endif$
 $if(docx-url)$

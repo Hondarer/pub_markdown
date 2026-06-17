@@ -107,6 +107,29 @@ body > *:last-child {
   height: 18px;
   vertical-align: text-bottom; }
 
+/* Git 単一ページ リンク (navbar 右側) */
+@media (max-width: 767px) {
+  #docsfw-git-li {
+    display: none !important; } }
+
+#docsfw-git-li > a {
+  display: inline-block;
+  padding: 2px 8px;
+  line-height: normal;
+  background: none; }
+
+.docsfw-git-icon {
+  width: 18px;
+  height: 18px;
+  vertical-align: text-bottom; }
+
+/* navbar アイコン リンク (詳細切替 / Git / docx):
+   マウス クリック時のフォーカス枠は消し、キーボード操作時 (:focus-visible) は残す */
+#docsfw-details-li > a:focus:not(:focus-visible),
+#docsfw-git-li > a:focus:not(:focus-visible),
+#docsfw-docx-li > a:focus:not(:focus-visible) {
+  outline: none; }
+
 a {
   color: #4183C4; }
 a.absent {
