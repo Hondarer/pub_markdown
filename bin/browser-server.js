@@ -21,7 +21,7 @@ if (!wsFile) {
   process.exit(1);
 }
 
-const START_TIMEOUT_SEC = Number.parseInt(process.env.PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC || '60', 10);
+const START_TIMEOUT_SEC = Number.parseInt(process.env.PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC || '120', 10);
 const START_TIMEOUT_MS = Number.isFinite(START_TIMEOUT_SEC) && START_TIMEOUT_SEC > 0
   ? START_TIMEOUT_SEC * 1000
   : 60000;

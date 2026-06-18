@@ -378,9 +378,9 @@ BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
-PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-60}"
+PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-120}"
 if ! [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" =~ ^[0-9]+$ ]] || [[ "$PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC" -lt 1 ]]; then
-    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=60
+    PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC=120
 fi
 export PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC
 
@@ -397,7 +397,8 @@ summarize_browser_server_log() {
 }
 
 start_shared_browser_server() {
-    local timeout_ticks=$(( PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC * 10 ))
+    # ポーリングは 1 秒/tick のため、タイムアウト秒数をそのまま tick 数とする
+    local timeout_ticks=$(( PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC * 1 ))
     local exit_status=0
     local reason=""
 
@@ -426,8 +427,8 @@ start_shared_browser_server() {
             reason="exit=${exit_status}"
             break
         fi
-        sleep 0.1
-        if (( _i % 100 == 0 )); then
+        sleep 1
+        if (( _i % 10 == 0 )); then
             echo -n "."
         fi
     done
