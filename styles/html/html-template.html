@@ -875,7 +875,17 @@ $if(docx-url)$
       var href = link.getAttribute('href');
       var name = getDocxDownloadName();
       ev.preventDefault();
-      fetch(href).then(function (res) {
+      // ページ URL に資格情報 (user:password@) が含まれると、相対 href がそれを継承し
+      // fetch が TypeError になる。絶対 URL へ解決して資格情報を除去する
+      // (同一 origin の認証はブラウザーがセッションで保持するため HEAD/GET は通る)。
+      var fetchUrl = href;
+      try {
+        var fu = new URL(href, window.location.href);
+        fu.username = '';
+        fu.password = '';
+        fetchUrl = fu.href;
+      } catch (e) { /* 解析不可ならそのまま */ }
+      fetch(fetchUrl).then(function (res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.blob();
       }).then(function (blob) {
@@ -893,7 +903,15 @@ $if(docx-url)$
       });
     });
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-      fetch(link.getAttribute('href'), { method: 'HEAD' })
+      // 資格情報入り URL では相対 href の fetch が TypeError になるため、資格情報を除去する
+      var checkUrl = link.getAttribute('href');
+      try {
+        var cu = new URL(checkUrl, window.location.href);
+        cu.username = '';
+        cu.password = '';
+        checkUrl = cu.href;
+      } catch (e) { /* 解析不可ならそのまま */ }
+      fetch(checkUrl, { method: 'HEAD' })
         .then(function (res) { if (res.ok) { li.hidden = false; } })
         .catch(function () { /* 実在しない・到達不能なら非表示のまま */ });
     } else {
@@ -943,7 +961,15 @@ $if(details-switch-root)$
     link.title = label;
     link.setAttribute('aria-label', label);
     if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-      fetch(targetUrl, { method: 'HEAD' })
+      // 資格情報入り URL では targetUrl の fetch が TypeError になるため、資格情報を除去する
+      var checkUrl = targetUrl;
+      try {
+        var cu = new URL(targetUrl, window.location.href);
+        cu.username = '';
+        cu.password = '';
+        checkUrl = cu.href;
+      } catch (e) { /* 解析不可ならそのまま */ }
+      fetch(checkUrl, { method: 'HEAD' })
         .then(function (res) { if (res.ok) { li.hidden = false; } })
         .catch(function () { /* 実在しない・到達不能なら非表示のまま */ });
     } else {
@@ -1020,7 +1046,15 @@ $endif$
         a.addEventListener('click', function (ev) {
           if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') { return; }
           ev.preventDefault();
-          fetch(src).then(function (res) {
+          // 資格情報入り URL では相対 src の fetch が TypeError になるため、資格情報を除去する
+          var fetchSrc = src;
+          try {
+            var su = new URL(src, window.location.href);
+            su.username = '';
+            su.password = '';
+            fetchSrc = su.href;
+          } catch (e) { /* 解析不可ならそのまま */ }
+          fetch(fetchSrc).then(function (res) {
             if (!res.ok) { throw new Error('HTTP ' + res.status); }
             return res.blob();
           }).then(function (blob) {
