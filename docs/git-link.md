@@ -70,8 +70,21 @@ gitLinkEnable: true
 # 自己ホスト Git の host から provider 種別へのマッピング
 # host=provider 形式をスペース区切りで指定する。provider: github | gitlab | gitbucket | gitea
 # github.com / *gitlab* は自動判定されるため、社内ホスト等を明示したい場合にのみ指定する。
+# Git アクセス用ホストと Web ブラウザー用ホストが異なる場合は host=provider@webhost 形式で指定する。
 gitLinkHostProvider: git.example.com=gitlab gitbucket.example.com=gitbucket
 ```
+
+### ホスト読み替え
+
+Git remote URL のホストと Web ブラウザーでアクセスするホストが異なる環境では、`host=provider@webhost` 形式でホストの読み替えを指定します。
+
+```yaml
+# Git remote のホストが cba.example.com、Web が www.example.com の場合
+gitLinkHostProvider: cba.example.com=gitlab@www.example.com
+```
+
+この設定により、remote URL から取得したホスト (`cba.example.com`) を Web ホスト (`www.example.com`) に置換して blob URL を生成します。
+`@webhost` を省略した場合 (`host=provider`) は従来通り remote URL のホストをそのまま使用します。
 
 `github.com` および host に `gitlab` を含むホストは自動的に判定されます。
 社内ホストの GitLab や GitBucket など、host 名から判定できないホスティングを使う場合に `gitLinkHostProvider` を指定します。

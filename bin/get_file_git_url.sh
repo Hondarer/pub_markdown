@@ -17,21 +17,30 @@
 #
 #   環境変数:
 #     GIT_LINK_HOST_PROVIDER  自己ホスト用 host=provider マッピング (スペース区切り)。
-#                             例: "git.example.com=gitlab gitbucket.example.com=gitbucket"
+#                             provider@webhost 形式で Web ホストの読み替えも指定可能。
+#                             例: "git.example.com=gitlab githost.example.com=gitlab@www.example.com"
 
-# host から provider 種別を判定する
+# host から provider 種別 (および Web ホスト読み替え) を判定する
 #   引数: host
-#   出力: github / gitlab / gitbucket / gitea / git
+#   出力: "<provider>\t<webhost>" (webhost が無い場合は "<provider>" のみ)
+#   設定形式: host=provider または host=provider@webhost
 detect_provider() {
   local host=$1
-  local entry entry_host entry_provider
+  local entry entry_host entry_value entry_provider entry_webhost
 
   # 設定マッピングを最優先で参照する
   for entry in $GIT_LINK_HOST_PROVIDER; do
     entry_host="${entry%%=*}"
-    entry_provider="${entry#*=}"
+    entry_value="${entry#*=}"
     if [[ "$entry_host" == "$host" ]]; then
-      echo "$entry_provider"
+      # provider@webhost 形式を分解する
+      if [[ "$entry_value" == *@* ]]; then
+        entry_provider="${entry_value%%@*}"
+        entry_webhost="${entry_value#*@}"
+        printf '%s\t%s\n' "$entry_provider" "$entry_webhost"
+      else
+        echo "$entry_value"
+      fi
       return
     fi
   done
@@ -175,9 +184,17 @@ get_file_git_url() {
   base="${normalized%%$'\t'*}"
   host="${normalized##*$'\t'}"
 
-  # ─── 9) provider を判定 ────────────────────────────────────────
-  local provider
-  provider=$(detect_provider "$host")
+  # ─── 9) provider を判定 (webhost 読み替えがあれば base を置換) ────
+  local provider_result provider webhost
+  provider_result=$(detect_provider "$host")
+  if [[ "$provider_result" == *$'\t'* ]]; then
+    provider="${provider_result%%$'\t'*}"
+    webhost="${provider_result##*$'\t'}"
+    # base URL のホスト部分を webhost で置換する
+    base="${base//$host/$webhost}"
+  else
+    provider="$provider_result"
+  fi
 
   # ─── 10) ref を決定 (ブランチ優先、detached はコミット SHA fallback) ──
   local ref
