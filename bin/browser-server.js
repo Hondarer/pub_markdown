@@ -53,7 +53,10 @@ function pathsReferToSameFile(left, right) {
 }
 
 function buildLaunchOptions() {
-  const launchOptions = { args: ['--no-sandbox'] };
+  // launch フェーズ (WS エンドポイント URL が stdout に現れるまでの待機) にも
+  // START_TIMEOUT_MS を適用する。未指定だと puppeteer 既定の 30000 ms が効き、
+  // 低リソース環境で Chrome 起動が 30 秒を超えるとフォールバックに落ちる。
+  const launchOptions = { args: ['--no-sandbox'], timeout: START_TIMEOUT_MS };
   const wrapperPath = path.join(__dirname, 'chrome-wrapper.sh');
 
   if (!canUseChromeWrapper(wrapperPath)) {
@@ -108,8 +111,7 @@ function fetchJsonVersion(jsonVersionUrl) {
   });
 }
 
-async function waitForDevToolsReady(wsEndpoint) {
-  const deadline = Date.now() + START_TIMEOUT_MS;
+async function waitForDevToolsReady(wsEndpoint, deadline) {
   const jsonVersionUrl = getJsonVersionUrl(wsEndpoint);
   let lastError = null;
 
@@ -131,6 +133,9 @@ async function waitForDevToolsReady(wsEndpoint) {
 }
 
 (async () => {
+  // launch フェーズと DevTools ready 待ちで単一のデッドラインを共有し、
+  // 子プロセス全体の所要を START_TIMEOUT_MS (親の起動待機予算) 以内に収める。
+  const deadline = Date.now() + START_TIMEOUT_MS;
   const browser = await puppeteer.launch(buildLaunchOptions());
   let shuttingDown = false;
 
@@ -156,7 +161,7 @@ async function waitForDevToolsReady(wsEndpoint) {
 
   const wsEndpoint = browser.wsEndpoint();
   try {
-    await waitForDevToolsReady(wsEndpoint);
+    await waitForDevToolsReady(wsEndpoint, deadline);
   } catch (err) {
     shuttingDown = true;
     try { await browser.close(); } catch (_) {}
