@@ -869,18 +869,60 @@ def _apply_add_space_pairs(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
-    for from_word, to_word in sorted(_add_space_pairs, key=lambda pair: len(pair[0]), reverse=True):
-        if from_word not in text:
-            continue
-        before = text
-        text = text.replace(from_word, to_word)
-        if collector is not None and before != text:
-            _record_step_changes(
-                before, text, "dict-add-space", collector,
-                source=_add_space_sources.get(from_word, ""),
-                message="辞書 add_space",
+    text_without_spaces = text.replace(" ", "")
+    pairs = sorted(
+        _add_space_pairs,
+        key=lambda pair: len(pair[0].replace(" ", "")),
+        reverse=True,
+    )
+    candidates = []
+    for priority, (from_word, to_word) in enumerate(pairs):
+        compact_from = from_word.replace(" ", "")
+        if _is_full_katakana_text(compact_from):
+            if compact_from not in text_without_spaces:
+                continue
+            pattern = re.compile(" *".join(re.escape(char) for char in compact_from))
+        else:
+            if from_word not in text:
+                continue
+            pattern = re.compile(re.escape(from_word))
+
+        for match in pattern.finditer(text):
+            candidates.append(
+                (priority, match.start(), match.end(), match.group(0), to_word, from_word)
             )
-    return text
+
+    selected = []
+    for candidate in sorted(candidates, key=lambda item: (item[0], item[1])):
+        _priority, start, end, _original, _corrected, _from_word = candidate
+        overlaps = any(
+            start < selected_end and end > selected_start
+            for selected_start, selected_end, *_ in selected
+        )
+        if overlaps:
+            continue
+        selected.append((start, end, _original, _corrected, _from_word))
+
+    if not selected:
+        return text
+
+    result = []
+    pos = 0
+    for start, end, original, corrected, from_word in sorted(selected):
+        result.append(text[pos:start])
+        result.append(corrected)
+        if collector is not None and original != corrected:
+            collector.add(
+                start + 1,
+                original,
+                corrected,
+                "dict-add-space",
+                _add_space_sources.get(from_word, ""),
+                "辞書 add_space",
+            )
+        pos = end
+    result.append(text[pos:])
+    return "".join(result)
 
 
 def _protect_patterns(
