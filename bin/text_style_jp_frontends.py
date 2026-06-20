@@ -621,6 +621,29 @@ def _insert_blank_before_top_level_lists(
     return new_lines, new_flags
 
 
+def _insert_blank_after_headings(
+    result_lines: List[str],
+    code_block_flags: List[bool],
+) -> Tuple[List[str], List[bool]]:
+    new_lines: List[str] = []
+    new_flags: List[bool] = []
+    n = len(result_lines)
+
+    for i, line in enumerate(result_lines):
+        new_lines.append(line)
+        new_flags.append(code_block_flags[i])
+
+        if code_block_flags[i]:
+            continue
+        if not _HEADING_RE.match(line):
+            continue
+        if i + 1 < n and result_lines[i + 1].strip():
+            new_lines.append("")
+            new_flags.append(False)
+
+    return new_lines, new_flags
+
+
 def _insert_blank_after_standalone_emphasis_lines(
     result_lines: List[str],
     code_block_flags: List[bool],
@@ -1028,6 +1051,7 @@ def style_markdown(
 
     result_lines, code_block_flags = _normalize_list_indent(result_lines, code_block_flags, collector)
     result_lines, code_block_flags = _insert_blank_around_fences(result_lines, code_block_flags)
+    result_lines, code_block_flags = _insert_blank_after_headings(result_lines, code_block_flags)
     result_lines, code_block_flags = _insert_blank_before_top_level_lists(result_lines, code_block_flags)
     result_lines, code_block_flags = _insert_blank_after_standalone_emphasis_lines(result_lines, code_block_flags)
     result_lines = _remove_unnecessary_trailing_spaces(result_lines, code_block_flags)

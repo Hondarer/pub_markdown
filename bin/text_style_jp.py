@@ -363,6 +363,11 @@ def run_tests() -> bool:
         ("1. first\n   continuation\n2. second", "1. first  \n   continuation\n2. second"),
         ("- item\n  detail\n- next", "- item  \n  detail\n- next"),
         ("paragraph\n# heading", "paragraph\n# heading"),
+        # 見出し直後に非空行が続く場合は空行を挿入し、末尾スペースを付けない
+        ("## タイトル\n本文", "## タイトル\n\n本文"),
+        ("## タイトル\n\n本文", "## タイトル\n\n本文"),
+        ("# A\n## B", "# A\n\n## B"),
+        ("```\n## h\n本文\n```", "```\n## h\n本文\n```"),
         ("## 1. 段落の説明", "## 段落の説明"),
         ("## 1 段落の説明", "## 段落の説明"),
         ("## 1.2 段落の説明", "## 段落の説明"),
