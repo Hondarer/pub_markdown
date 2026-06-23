@@ -136,3 +136,17 @@ There is more, of course. If you are in doubt, consult the terminology, translat
 - 昭和 48 年 6 月 18 日 内閣告示第 2 号「送り仮名の付け方」  
 - 『新しい国語表記ハンド ブック』(三省堂)  
 - 『用字用語 新表記辞典』(第一法規)
+
+## トーンの補足 (full Japanese Style Guide 4.2 より)
+
+以下は Top 10 には含まれないが、原典 ([full Japanese Style Guide](https://aka.ms/japanese-styleguide)) の "Style and tone consideration" 節が示すトーンの指針である。日本語文を書くときに適用する。
+
+無生物主語 (製品、プログラム、デバイスなど) を動作の主体としてそのまま訳さない。受動態にして主語を省く。
+
+例: The component detects the device. -> デバイスが検出されます。
+
+操作の主体によって態を選ぶ。主体が人 (ユーザー) なら能動態、コンピューターが自動的に行う動作なら (利用者から見て) 受動態にする。
+
+例: Open the file. -> ファイルを開きます。 / A dialog box is displayed. -> ダイアログ ボックスが表示されます。
+
+尊敬語・謙譲語は原則使わない。ただし「供給者-顧客」の関係を考慮すべき資料 (顧客向け) では使う。いずれの場合も過度に丁寧な表現は避ける。
