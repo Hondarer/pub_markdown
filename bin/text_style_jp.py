@@ -139,10 +139,7 @@ def run_tests() -> bool:
         ("行1\t \n行2", "行 1  \n行 2"),
         ("行1  \n", "行 1\n"),
         ("行1  \n\n行2", "行 1\n\n行 2"),
-        (
-            "1. `.c` のコンパイル完了時に `.d` 依存ファイルが生成される  \n   (GCC: `-MMD -MP -MF`、MSVC: `/showIncludes` + フィルタ、GROUP_COMPILE: `/sourceDependencies`)",
-            "1. `.c` のコンパイル完了時に `.d` 依存ファイルが生成される  \n   (GCC: `-MMD -MP -MF`、MSVC: `/showIncludes` + フィルター、GROUP_COMPILE: `/sourceDependencies`)",
-        ),
+        ("出力フィルタを使用する", "出力フィルターを使用する"),
         ("**LTO (`-flto`, Release ビルド)**:", "**LTO (`-flto`, Release ビルド)**:"),
         ("`cmd`, `arg`", "`cmd`, `arg`"),
         ("単語, 単語", "単語, 単語"),

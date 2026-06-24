@@ -42,6 +42,10 @@ chcp 65001
 `bin/` 配下の Python スクリプトはスクリプト内で `sys.stdout.reconfigure(encoding="utf-8")` を設定済みのため、`-X utf8` オプションは不要。  
 新たに日本語出力を含む Python スクリプトを追加するときは、同様の設定を先頭に追加すること。
 
+`python bin/text_style_jp.py --test` は `tempfile.TemporaryDirectory()` を使用してユーザーの一時ディレクトリへ書き込むため、エージェントのサンドボックス外で実行すること。
+
+サンドボックス内で実行すると、Windows の一時ディレクトリへの書き込みが拒否され、辞書読み込みテストと `--in-place` テストが失敗する。
+
 ## 注意点
 
 - Linux と Windows でブラウザー起動経路が異なる。Puppeteer、Edge、Chromium 関連の変更では `pub_markdown_core.sh` とラッパー スクリプトを同時に確認すること。
