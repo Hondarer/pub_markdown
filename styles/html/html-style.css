@@ -682,6 +682,14 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   color: #da3633;
 }
 
+.admonition-deprecated {
+  border-left-color: #6a737d;
+  background-color: #f6f8fa;
+}
+.admonition-deprecated .admonition-title {
+  color: #6a737d;
+}
+
 /* ==text== ハイライト (<mark> 要素): docx の黄色蛍光ペン (#FFFF00) に合わせた純黄色 */
 mark {
   background-color: #ffff00;

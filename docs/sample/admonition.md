@@ -11,6 +11,7 @@ Markdown admonition と Doxygen タグの対応は次のとおりです。
 | IMPORTANT | `@important` |
 | WARNING | `@warning` |
 | CAUTION | `@attention` |
+| DEPRECATED | `@deprecated` |
 
 > [!NOTE]
 > これは補足情報です。
@@ -27,6 +28,10 @@ Markdown admonition と Doxygen タグの対応は次のとおりです。
 
 > [!CAUTION]
 > これは危険な操作に関する警告です。
+
+> [!DEPRECATED]
+> これは非推奨の機能に関する情報です。
+> 代替 API や廃止予定を記述できます。
 
 ## 通常の blockquote との共存
 

@@ -1,6 +1,7 @@
 -- admonition.lua
 -- GitHub-style admonitions (alerts) を検出し、出力形式に応じた要素に変換する。
--- BlockQuote の先頭行が [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION] の
+-- BlockQuote の先頭行が [!NOTE], [!TIP], [!IMPORTANT], [!WARNING], [!CAUTION],
+-- [!DEPRECATED] の
 -- いずれかにマッチした場合のみ変換する。マッチしない場合は従来の blockquote のまま。
 
 local stringify = pandoc.utils.stringify
@@ -10,7 +11,8 @@ local TYPES = {
   TIP       = { class = "tip",       title = "Tip",        mark = "💡", color = "238636" },
   IMPORTANT = { class = "important", title = "Important",  mark = "❗", color = "8957E5" },
   WARNING   = { class = "warning",   title = "Warning",    mark = "⚠️", color = "9A6700" },
-  CAUTION   = { class = "caution",   title = "Caution",    mark = "🛑", color = "DA3633" },
+  CAUTION    = { class = "caution",    title = "Caution",    mark = "🛑", color = "DA3633" },
+  DEPRECATED = { class = "deprecated", title = "Deprecated", mark = "🏚️", color = "6A737D" },
 }
 
 --- BlockQuote の先頭 Para/Plain から [!TYPE] を検出し、タイプ名を返す。
@@ -60,7 +62,10 @@ function BlockQuote(bq)
   if not adm_type then return nil end
 
   local info = TYPES[adm_type]
-  local display_title = info.mark .. " " .. info.title
+  local display_title = info.title
+  if info.mark ~= "" then
+    display_title = info.mark .. " " .. info.title
+  end
   local content = strip_marker(bq, adm_type)
 
   if FORMAT:match("html") then
