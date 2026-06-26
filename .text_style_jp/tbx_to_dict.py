@@ -21,9 +21,9 @@ Output:
     10_microsoft.json  - md_style_jp 用辞書ファイル
                          no_space:  tbx カタカナ語の許可リスト (長さ ≥ 3)
                                     Sudachi B モードの過剰分割を抑制するために使う
+                         add_space: Microsoft 標準形（スペース区切り）
                          replace:   末尾 ー 省略形 → Microsoft 標準形 (順方向)
                                     + ー 付き形が tbx 未登録の場合に ー 削除形へ正規化 (逆方向)
-                         add_space: スペースなし複合語 → Microsoft 標準形（スペース区切り）
 
     tbx 未収録の社内独自カタカナ語は別ファイル (例: 90_local-katakana.json) で補う前提とする。
 """
@@ -113,33 +113,29 @@ def collect_katakana_words(tbx_path):
     return all_words, eer_words, compounds, singletons
 
 
-def build_add_space_pairs(compounds):
-    """スペース区切りカタカナ複合語から add_space ペアリストを生成する。
+def build_add_space_words(compounds):
+    """スペース区切りカタカナ複合語から add_space 正規形リストを生成する。
 
-    from = スペースを除去した複合語（連結形）
-    to   = スペース区切りの複合語（Microsoft 標準形）
-
-    同じ from に複数の to が存在する場合（分割位置の揺れ）は、
+    同じスペース除去形に複数の正規形が存在する場合（分割位置の揺れ）は、
     スペース数が最少のもの（最も保守的な分割）を採用する。
 
-    処理は長い from から順に行われるため、prefix 衝突は自然に解決される。
+    処理は長いスペース除去形から順に行われるため、prefix 衝突は自然に解決される。
     （add_space は JSON の記載順に適用されるため、長さ降順でソートして出力する）
     """
-    from_map = {}  # from_word -> to_word (スペース数最少のものを保持)
+    compact_map = {}  # compact_word -> 正規形 (スペース数最少のものを保持)
     for compound in compounds:
-        from_word = compound.replace(" ", "")
+        compact_word = compound.replace(" ", "")
         # 同じ from に複数の to: スペース数（分割粒度）が少ない方を優先
-        if from_word not in from_map:
-            from_map[from_word] = compound
+        if compact_word not in compact_map:
+            compact_map[compact_word] = compound
         else:
-            existing = from_map[from_word]
+            existing = compact_map[compact_word]
             if existing.count(" ") > compound.count(" "):
-                from_map[from_word] = compound
+                compact_map[compact_word] = compound
 
-    # from の長さ降順でソート（長い複合語を先に処理してprefixの誤置換を防ぐ）
-    pairs = [{"from": f, "to": t} for f, t in from_map.items()]
-    pairs.sort(key=lambda p: len(p["from"]), reverse=True)
-    return pairs
+    words = list(compact_map.values())
+    words.sort(key=lambda word: len(word.replace(" ", "")), reverse=True)
+    return words
 
 
 def is_safe_replace(from_word, to_word, all_words):
@@ -374,8 +370,8 @@ def main():
     no_space_words = build_no_space_words(all_words, all_words, min_length=3)
     print(f"  no_space カタカナ語 (長さ ≥ 3): {len(no_space_words)} 件")
 
-    add_space_pairs = build_add_space_pairs(compounds)
-    print(f"  add_space ペア: {len(add_space_pairs)} 件 (長さ降順でソート済み)")
+    add_space_words = build_add_space_words(compounds)
+    print(f"  add_space 正規形: {len(add_space_words)} 件 (長さ降順でソート済み)")
 
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -396,15 +392,16 @@ def main():
             "(Microsoft Terminology Search)。"
             "no_space: tbx に登録されたカタカナ語 (長さ ≥ 3) の許可リスト。"
             "Sudachi B モードの過剰分割を抑制する。"
+            "add_space: スペース区切りの Microsoft 標準形を登録し、"
+            "スペースなし表記や別表記を実行時に正規化する。"
             "replace: 順方向 (ー 付与) は末尾 ー が省略された語を Microsoft 標準形に変換する。"
             "逆方向 (ー 削除) は ー 付き形が tbx 未登録の語 (例: カテゴリー → カテゴリ) を正規化する。"
-            "add_space: スペースなしのカタカナ複合語を Microsoft 標準形（スペース区切り）に変換する。"
             "tbx 未収録の社内独自語は別の番号付き辞書 (例: 90_local-katakana.json) で補う。"
             "no_space と add_space は長さ降順に処理されるため prefix 衝突は自動的に解決される。"
         ),
         "no_space": no_space_words,
+        "add_space": add_space_words,
         "replace": replace_pairs,
-        "add_space": add_space_pairs,
     }
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -454,7 +451,7 @@ def main():
         "ネットワークアダプター", "ユーザーインターフェイス",
     ]
     print("\n[add_space] 複合語サンプル:")
-    as_map = {p["from"]: p["to"] for p in add_space_pairs}
+    as_map = {word.replace(" ", ""): word for word in add_space_words}
     for term in key_compounds:
         if term in as_map:
             print(f"  ✓ \"{term}\" → \"{as_map[term]}\"")

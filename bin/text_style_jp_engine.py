@@ -281,44 +281,62 @@ def _has_non_katakana_boundaries(text: str, start: int, length: int) -> bool:
     return not _is_full_katakana_char(prev_char) and not _is_full_katakana_char(next_char)
 
 
-def _expand_add_space_pairs(
-    add_space_pairs: List[Tuple[str, str]],
+def _expand_segment_aliases(
+    segment: str,
+    replace_reverse_map: dict,
+) -> List[str]:
+    variants = [segment]
+    seen = {segment}
+
+    for to_word in sorted(replace_reverse_map, key=len, reverse=True):
+        if to_word not in segment:
+            continue
+        current_variants = list(variants)
+        for variant in current_variants:
+            if to_word not in variant:
+                continue
+            for alias in replace_reverse_map[to_word]:
+                alias_variant = variant.replace(to_word, alias)
+                if alias_variant in seen:
+                    continue
+                variants.append(alias_variant)
+                seen.add(alias_variant)
+
+    return variants
+
+
+def _expand_add_space_words(
+    add_space_words: List[str],
     replace_pairs: List[Tuple[str, str]],
 ) -> List[Tuple[str, str]]:
     replace_reverse_map = {}
     for from_word, to_word in replace_pairs:
-        if not (_is_full_katakana_text(from_word) and _is_full_katakana_text(to_word)):
-            continue
         replace_reverse_map.setdefault(to_word, [])
         if from_word not in replace_reverse_map[to_word]:
             replace_reverse_map[to_word].append(from_word)
 
     expanded_pairs = []
     seen_pairs = set()
-    for from_word, to_word in add_space_pairs:
-        if (from_word, to_word) not in seen_pairs:
-            expanded_pairs.append((from_word, to_word))
-            seen_pairs.add((from_word, to_word))
-
+    for to_word in add_space_words:
+        compact_to = to_word.replace(" ", "")
+        if (compact_to, to_word) not in seen_pairs:
+            expanded_pairs.append((compact_to, to_word))
+            seen_pairs.add((compact_to, to_word))
         parts = to_word.split(" ")
         if len(parts) < 2:
-            continue
+            segment_variants = [_expand_segment_aliases(to_word, replace_reverse_map)]
+        else:
+            segment_variants = [
+                _expand_segment_aliases(part, replace_reverse_map)
+                for part in parts
+            ]
 
-        part_variants = []
-        for part in parts:
-            variants = [part]
-            if _is_full_katakana_text(part):
-                for alias in replace_reverse_map.get(part, []):
-                    if alias not in variants:
-                        variants.append(alias)
-            part_variants.append(variants)
-
-        for variant_parts in product(*part_variants):
-            alias_from = "".join(variant_parts)
-            if (alias_from, to_word) in seen_pairs:
+        for variant_parts in product(*segment_variants):
+            alias_key = "".join(variant_parts)
+            if (alias_key, to_word) in seen_pairs:
                 continue
-            expanded_pairs.append((alias_from, to_word))
-            seen_pairs.add((alias_from, to_word))
+            expanded_pairs.append((alias_key, to_word))
+            seen_pairs.add((alias_key, to_word))
 
     return expanded_pairs
 
@@ -369,11 +387,11 @@ def load_dictionaries() -> None:
     # word -> "no_space" or "add_space" の最終分類。ファイル名昇順で後ファイルが勝つ。
     # 同一ファイル内では add_space が no_space に勝つ。
     word_kind = {}
-    add_space_to = {}    # add_space として確定した語の変換先
+    add_space_words = {}  # compact_word -> add_space 正規形
     no_space_order = []  # no_space として初めて登場した語の挿入順
     replace_map = {}
     replace_source: dict = {}     # from_word → ファイルパス (出典追跡用)
-    add_space_source: dict = {}   # from_word → ファイルパス (出典追跡用)
+    add_space_source: dict = {}   # compact_word → ファイルパス (出典追跡用)
 
     file_entries = []  # (fname, dir_index, abs_path)
     for di, dict_dir in enumerate(search_paths):
@@ -397,10 +415,13 @@ def load_dictionaries() -> None:
         for word in data.get("no_space", []):
             if isinstance(word, str):
                 file_ns.add(word)
-        for pair in data.get("add_space", []):
-            if isinstance(pair, dict) and "from" in pair and "to" in pair:
-                file_as[pair["from"]] = pair["to"]
-                add_space_source[pair["from"]] = fpath
+        for word in data.get("add_space", []):
+            if isinstance(word, str):
+                compact_word = word.replace(" ", "")
+                file_as[compact_word] = word
+                add_space_source[compact_word] = fpath
+            else:
+                raise ValueError(f"add_space entries must be strings: {fpath}")
         for pair in data.get("replace", []):
             if isinstance(pair, dict) and "from" in pair and "to" in pair:
                 replace_map[pair["from"]] = pair["to"]
@@ -409,17 +430,20 @@ def load_dictionaries() -> None:
         for word in file_ns:
             if word not in file_as:
                 word_kind[word] = "no_space"
-                add_space_to.pop(word, None)
+                add_space_words.pop(word, None)
                 if word not in no_space_order:
                     no_space_order.append(word)
-        for word, to in file_as.items():
+        for word, to_word in file_as.items():
             word_kind[word] = "add_space"
-            add_space_to[word] = to
+            add_space_words[word] = to_word
 
     _drop_inverse_replace_pairs(replace_map, replace_source)
 
     final_no_space = [w for w in no_space_order if word_kind.get(w) == "no_space"]
-    final_add_space = [(w, t) for w, t in add_space_to.items() if word_kind.get(w) == "add_space"]
+    final_add_space = [
+        t for w, t in add_space_words.items()
+        if word_kind.get(w) == "add_space"
+    ]
 
     _no_space_words[:] = final_no_space
     _no_space_set.clear()
@@ -428,20 +452,15 @@ def load_dictionaries() -> None:
     _replace_sources.clear()
     _replace_sources.update(replace_source)
 
-    expanded = _expand_add_space_pairs(final_add_space, _replace_pairs)
+    expanded = _expand_add_space_words(final_add_space, _replace_pairs)
     final_expanded = [(f, t) for f, t in expanded if f not in _no_space_set]
     _add_space_pairs[:] = final_expanded
     _add_space_sources.clear()
     # エイリアス展開されたペアは元の add_space エントリの出典を継承する
     for from_word, _to_word in final_expanded:
-        if from_word in add_space_source:
-            _add_space_sources[from_word] = add_space_source[from_word]
-        else:
-            # エイリアス: 同じ to_word を持つ元エントリの出典を探す
-            for orig_from, orig_src in add_space_source.items():
-                if add_space_to.get(orig_from) == _to_word:
-                    _add_space_sources[from_word] = orig_src
-                    break
+        compact_to = _to_word.replace(" ", "")
+        if compact_to in add_space_source:
+            _add_space_sources[from_word] = add_space_source[compact_to]
 
 
 def get_char_type(char: str) -> CharType:
@@ -876,18 +895,25 @@ def _apply_add_space_pairs(
         reverse=True,
     )
     candidates = []
+
+    def _has_word_boundary(from_word: str, start: int, end: int) -> bool:
+        if from_word and is_halfwidth_alnum(from_word[0]):
+            if start > 0 and is_halfwidth_alnum(text[start - 1]):
+                return False
+        if from_word and is_halfwidth_alnum(from_word[-1]):
+            if end < len(text) and is_halfwidth_alnum(text[end]):
+                return False
+        return True
+
     for priority, (from_word, to_word) in enumerate(pairs):
         compact_from = from_word.replace(" ", "")
-        if _is_full_katakana_text(compact_from):
-            if compact_from not in text_without_spaces:
-                continue
-            pattern = re.compile(" *".join(re.escape(char) for char in compact_from))
-        else:
-            if from_word not in text:
-                continue
-            pattern = re.compile(re.escape(from_word))
+        if compact_from not in text_without_spaces:
+            continue
+        pattern = re.compile(" *".join(re.escape(char) for char in compact_from))
 
         for match in pattern.finditer(text):
+            if not _has_word_boundary(compact_from, match.start(), match.end()):
+                continue
             candidates.append(
                 (priority, match.start(), match.end(), match.group(0), to_word, from_word)
             )

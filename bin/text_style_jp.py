@@ -11,6 +11,7 @@ from typing import List, Optional, Sequence, Tuple
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
+import text_style_jp_engine
 from text_style_jp_engine import (
     DiagnosticCollector,
     Finding,
@@ -28,6 +29,16 @@ from text_style_jp_frontends import (
     style_markdown,
     style_source_comments,
 )
+
+
+def _reset_dictionaries_for_test() -> None:
+    text_style_jp_engine._dict_loaded = False
+    text_style_jp_engine._no_space_words.clear()
+    text_style_jp_engine._replace_pairs.clear()
+    text_style_jp_engine._add_space_pairs.clear()
+    text_style_jp_engine._replace_sources.clear()
+    text_style_jp_engine._add_space_sources.clear()
+    text_style_jp_engine._no_space_set.clear()
 
 
 def run_tests() -> bool:
@@ -805,6 +816,84 @@ def run_tests() -> bool:
     print("\n{} dictionary JSONC load 入力: {!r}".format(status, "JSONC辞書テスト"))
     print("  期待: {!r}".format("JSONC辞書テスト"))
     print(f"  結果: {result!r}")
+    if not passed:
+        all_passed = False
+
+    _reset_dictionaries_for_test()
+    add_space_json = '''
+    {
+      "replace": [
+        {
+          "from": "フィルタ",
+          "to": "フィルター"
+        }
+      ],
+      "add_space": [
+        "Lua フィルター",
+        "App ID"
+      ]
+    }
+    '''
+    original_cwd = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dict_dir = os.path.join(tmp_dir, ".text_style_jp")
+            os.mkdir(dict_dir)
+            dict_path = os.path.join(dict_dir, "99_add-space-test.json")
+            with open(dict_path, "w", encoding="utf-8") as handle:
+                handle.write(add_space_json)
+            try:
+                os.chdir(tmp_dir)
+                result = style_markdown("Lua フィル タ と AppID と MyAppID")
+            finally:
+                os.chdir(original_cwd)
+        passed = result == "Lua フィルター と App ID と MyAppID"
+    except Exception:
+        passed = False
+        result = ""
+    finally:
+        os.chdir(original_cwd)
+        _reset_dictionaries_for_test()
+    status = "✓" if passed else "✗"
+    print("\n{} dictionary add_space string load".format(status))
+    print("  期待: {!r}".format("Lua フィルター と App ID と MyAppID"))
+    print(f"  結果: {result!r}")
+    if not passed:
+        all_passed = False
+
+    old_add_space_json = '''
+    {
+      "add_space": [
+        {
+          "from": "旧形式",
+          "to": "旧 形式"
+        }
+      ]
+    }
+    '''
+    original_cwd = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dict_dir = os.path.join(tmp_dir, ".text_style_jp")
+            os.mkdir(dict_dir)
+            dict_path = os.path.join(dict_dir, "99_old-add-space-test.json")
+            with open(dict_path, "w", encoding="utf-8") as handle:
+                handle.write(old_add_space_json)
+            try:
+                os.chdir(tmp_dir)
+                style_markdown("旧形式")
+                passed = False
+            except ValueError:
+                passed = True
+            finally:
+                os.chdir(original_cwd)
+    except Exception:
+        passed = False
+    finally:
+        os.chdir(original_cwd)
+        _reset_dictionaries_for_test()
+    status = "✓" if passed else "✗"
+    print("\n{} dictionary add_space old format error".format(status))
     if not passed:
         all_passed = False
 
