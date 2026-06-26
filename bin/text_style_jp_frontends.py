@@ -62,6 +62,10 @@ _EMPHASIS_PATTERN = re.compile(
     r"|(?<![A-Za-z0-9_])__(?=\S)[^_\n]+?(?<=\S)__(?![A-Za-z0-9_])"
     r"|(?<![A-Za-z0-9_])_(?=\S)[^_\n]+?(?<=\S)_(?![A-Za-z0-9_])"
 )
+_FILE_LINK_PATTERN = re.compile(
+    r"\[(?=[^\]\s]*\.[A-Za-z0-9]+[^\]\s]*\])"
+    r"[^\]\s]+\]\([^\)\n]*\)"
+)
 _CODE_OPERATOR_EXPRESSION_PATTERN = re.compile(
     r"(?<![A-Za-z0-9_])"
     r"(?:[A-Za-z_][A-Za-z0-9_]*|NULL|nullptr|\d+)"
@@ -104,6 +108,7 @@ _MARKDOWN_PROTECTED_PATTERNS = [
     _TASK_LIST_MARKER_PATTERN,
     _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN,
     _DOXYGEN_MATH_PATTERN,
+    _FILE_LINK_PATTERN,
 ]
 _INLINE_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN]
 _COMMENT_CODE_PROTECTED_PATTERNS = [
@@ -322,11 +327,14 @@ def _is_emphasis_span(span: str) -> bool:
 
 def _normalize_markup_span_spacing(text: str) -> str:
     pattern = re.compile(rf"{_BACKTICK_PATTERN.pattern}|{_EMPHASIS_PATTERN.pattern}")
+    protected_spans = [match.span() for match in _FILE_LINK_PATTERN.finditer(text)]
     output: List[str] = []
     last = 0
 
     for match in pattern.finditer(text):
         start, end = match.span()
+        if any(protected_start <= start and end <= protected_end for protected_start, protected_end in protected_spans):
+            continue
         output.append(text[last:start])
         span = match.group(0)
         content = _strip_markup_delimiters(span).strip()

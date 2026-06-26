@@ -220,6 +220,10 @@ def run_tests() -> bool:
             "- [GNU Make (スキル ガイド)](../04-build-system/gnu-make.md)",
         ),
         (
+            "資料 [共有用_資料名_バージョン.pptx](url)",
+            "資料 [共有用_資料名_バージョン.pptx](url)",
+        ),
+        (
             "- [GitHub Flavored Markdown(GFM)仕様]",
             "- [GitHub Flavored Markdown (GFM) 仕様]",
         ),
