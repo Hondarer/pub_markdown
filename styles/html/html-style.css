@@ -107,6 +107,22 @@ body > *:last-child {
   height: 18px;
   vertical-align: text-bottom; }
 
+/* Doxygen 単一ページ リンク (navbar 右側) */
+@media (max-width: 767px) {
+  #docsfw-doxygen-li {
+    display: none !important; } }
+
+#docsfw-doxygen-li > a {
+  display: inline-block;
+  padding: 2px 8px;
+  line-height: normal;
+  background: none; }
+
+.docsfw-doxygen-icon {
+  width: 58px;
+  height: 18px;
+  vertical-align: text-bottom; }
+
 /* Git 単一ページ リンク (navbar 右側) */
 @media (max-width: 767px) {
   #docsfw-git-li {
@@ -123,9 +139,10 @@ body > *:last-child {
   height: 18px;
   vertical-align: text-bottom; }
 
-/* navbar アイコン リンク (詳細切替 / Git / docx):
+/* navbar アイコン リンク (詳細切替 / Doxygen / Git / docx):
    マウス クリック時のフォーカス枠は消し、キーボード操作時 (:focus-visible) は残す */
 #docsfw-details-li > a:focus:not(:focus-visible),
+#docsfw-doxygen-li > a:focus:not(:focus-visible),
 #docsfw-git-li > a:focus:not(:focus-visible),
 #docsfw-docx-li > a:focus:not(:focus-visible) {
   outline: none; }

@@ -84,6 +84,11 @@
 # デフォルト: true
 #gitLinkEnable: true
 
+# Doxygen 単一ページ リンクの有効化 (true / false)
+# doxygen-page-url フロントマターを持つページでは、対応する Doxygen HTML へのリンクを表示する。
+# デフォルト: true
+#doxygenLinkEnable: true
+
 # 自己ホスト Git の host から provider 種別へのマッピング
 # host=provider 形式をスペース区切りで指定する。provider: github | gitlab | gitbucket | gitea
 # github.com / *gitlab* は自動判定されるため、社内ホスト等を明示したい場合にのみ指定する。

@@ -106,6 +106,10 @@ $endif$
           <li id="docsfw-details-li" hidden><a id="docsfw-details-link" href="#"
             ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></li>
           $endif$
+          $if(doxygen-url)$
+          <li id="docsfw-doxygen-li"><a id="docsfw-doxygen-link" href="$doxygen-url$" target="_blank" rel="noopener"
+            title="Doxygen" aria-label="Doxygen"><img class="docsfw-doxygen-icon" src="$doxygen-icon$" alt="Doxygen" /></a></li>
+          $endif$
           $if(git-url)$
           <li id="docsfw-git-li"><a id="docsfw-git-link" href="$git-url$" target="_blank" rel="noopener"
             title="Git" aria-label="Git"><img class="docsfw-git-icon" src="$git-icon$" alt="Git" /></a></li>

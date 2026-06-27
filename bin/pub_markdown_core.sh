@@ -500,6 +500,67 @@ sys.stdout.write(urllib.parse.quote(stem + ".docx", safe=""))
 '
 }
 
+extract_frontmatter_value() {
+    local file="$1"
+    local key="$2"
+    awk -v key="$key" '
+        NR==1 { if ($0 !~ /^---[[:space:]]*$/) exit; next }
+        /^---[[:space:]]*$/ { exit }
+        $0 ~ "^" key ":[[:space:]]*" {
+            line=$0
+            sub(/\r$/, "", line)
+            sub("^" key ":[[:space:]]*", "", line)
+            sub(/[[:space:]]+$/, "", line)
+            gsub(/^"|"$/, "", line)
+            print line
+            exit
+        }
+    ' "$file"
+}
+
+relative_url_from_output() {
+    local output_html="$1"
+    local workspace_root="$2"
+    local target_ws_rel="$3"
+    python3 -c '
+import os
+import sys
+
+output_html, workspace_root, target_ws_rel = sys.argv[1:4]
+output_dir = os.path.dirname(os.path.abspath(output_html))
+target = target_ws_rel.replace("\\", "/")
+if "://" in target or target.startswith("/"):
+    print(target)
+else:
+    target_abs = os.path.abspath(os.path.join(workspace_root, target))
+    print(os.path.relpath(target_abs, output_dir).replace("\\", "/"))
+' "$output_html" "$workspace_root" "$target_ws_rel"
+}
+
+build_doxygen_link_metadata_args() {
+    local source_file="$1"
+    local output_html="$2"
+    local icon_url="$3"
+
+    doxygen_link_metadata_args=()
+    if [[ "$doxygenLinkEnable" != "true" ]]; then
+        return
+    fi
+
+    local doxygen_page_url
+    doxygen_page_url=$(extract_frontmatter_value "$source_file" "doxygen-page-url")
+    if [[ -z "$doxygen_page_url" ]]; then
+        return
+    fi
+
+    local doxygen_url
+    doxygen_url=$(relative_url_from_output "$output_html" "$workspaceFolder" "$doxygen_page_url")
+    doxygen_link_metadata_args=(
+        --metadata "doxygen-url=${doxygen_url}"
+        --metadata "doxygen-icon=${icon_url}"
+    )
+}
+
 #-------------------------------------------------------------------
 
 #-------------------------------------------------------------------
@@ -669,6 +730,7 @@ if [ -f "$configFile" ]; then
     htmlNavigationLinkEnable=$(parse_yaml "$config_content" "htmlNavigationLinkEnable")
     mathLatexEnable=$(parse_yaml "$config_content" "mathLatexEnable")
     gitLinkEnable=$(parse_yaml "$config_content" "gitLinkEnable")
+    doxygenLinkEnable=$(parse_yaml "$config_content" "doxygenLinkEnable")
     gitLinkHostProvider=$(parse_yaml "$config_content" "gitLinkHostProvider")
 fi
 
@@ -756,6 +818,11 @@ fi
 if [[ "$gitLinkEnable" == "" ]]; then
     gitLinkEnable="true"
 fi
+# 設定ファイルに doxygenLinkEnable (Doxygen 単一ページ リンク) が指定されなかった場合の値を true にする
+if [[ "$doxygenLinkEnable" == "" ]]; then
+    doxygenLinkEnable="true"
+fi
+
 # 自己ホスト用 host=provider マッピングを get_file_git_url.sh へ環境変数で渡す
 export GIT_LINK_HOST_PROVIDER="$gitLinkHostProvider"
 
@@ -824,6 +891,7 @@ htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
 htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
 htmlDetailsIconSvg="${HOME_DIR}/styles/html/docsfw-details-icon.svg"
 htmlOverviewIconSvg="${HOME_DIR}/styles/html/docsfw-overview-icon.svg"
+htmlDoxygenIconSvg="${HOME_DIR}/styles/html/docsfw-doxygen-icon.svg"
 # Git 単一ページ リンク用 プロバイダ別アイコン (github / gitlab / gitbucket / gitea は git にフォールバック)
 htmlGitIconSvgs=(
     "${HOME_DIR}/styles/html/docsfw-github-icon.svg"
@@ -1590,6 +1658,8 @@ for langElement in ${lang}; do
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDetailsIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-details-icon.svg"
         copy_if_different_timestamp "${htmlOverviewIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-overview-icon.svg"
+        # Doxygen 単一ページ リンク用アイコン (doxygenLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
+        copy_if_different_timestamp "${htmlDoxygenIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
         # Git 単一ページ リンク用 プロバイダ別アイコン (gitLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         for _gitIconSvg in "${htmlGitIconSvgs[@]}"; do
             copy_if_different_timestamp "${_gitIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/$(basename "${_gitIconSvg}")"
@@ -1768,12 +1838,13 @@ for file in "${files[@]}"; do
             for langElement in ${lang}; do
 
                 export DOCUMENT_LANG=$langElement
+                build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
 
                 if [ "$firstLang" == "" ]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -1798,10 +1869,11 @@ for file in "${files[@]}"; do
                     rm -f "$_pm_pandoc_stderr"
                     set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
+                        build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2260,8 +2332,9 @@ for file in "${files[@]}"; do
                 # nav_title が指定されている場合、docsfw-nav-title メタデータを付与する
                 _nav_title_option=()
                 [[ -n "$nav_title" ]] && _nav_title_option=(--metadata "docsfw-nav-title=${nav_title}")
+                build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2289,11 +2362,12 @@ for file in "${files[@]}"; do
                 rm -f "$_pm_pandoc_stderr"
                 set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
+                    build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
