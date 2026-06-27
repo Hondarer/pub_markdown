@@ -850,6 +850,19 @@ $if(git-url)$
   })();
   </script>
 $endif$
+$if(doxygen-url)$
+  <!-- Doxygen リンク: 言語別の title のみ設定する -->
+  <script>
+  (function () {
+    var link = document.getElementById('docsfw-doxygen-link');
+    if (!link) { return; }
+    var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
+    var label = isJa ? 'Doxygen で開く' : 'Open in Doxygen';
+    link.title = label;
+    link.setAttribute('aria-label', label);
+  })();
+  </script>
+$endif$
 $if(docx-url)$
   <!-- DOCX ダウンロードリンク: HEAD リクエストで実在確認してから表示する -->
   <script>
