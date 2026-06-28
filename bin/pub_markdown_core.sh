@@ -489,6 +489,7 @@ import re
 import sys
 import urllib.parse
 
+sys.stdin.reconfigure(encoding="utf-8")
 stem = sys.stdin.read()
 stem = re.sub(r"[<>:\"/\\\\|?*\x00-\x1f\x7f]", "_", stem)
 stem = stem.rstrip(" .")
