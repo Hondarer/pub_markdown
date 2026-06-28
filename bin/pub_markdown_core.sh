@@ -188,6 +188,44 @@ build_defaults_metadata_args() {
     done
 }
 
+is_windows_host() {
+    case "$(uname -s 2>/dev/null)" in
+        MINGW*|MSYS*|CYGWIN*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+append_unique_pid() {
+    local pid="$1"
+    local existing
+    [[ -n "$pid" ]] || return 0
+    for existing in "${_cleanup_pids[@]}"; do
+        [[ "$existing" == "$pid" ]] && return 0
+    done
+    _cleanup_pids+=("$pid")
+}
+
+terminate_managed_pids() {
+    local pid
+
+    [[ ${#_cleanup_pids[@]} -gt 0 ]] || return 0
+
+    for pid in "${_cleanup_pids[@]}"; do
+        kill "$pid" 2>/dev/null || true
+    done
+
+    if [[ "${CLEANUP_FORCE_WINDOWS_TREE:-0}" == "1" ]] && is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+        sleep 1
+        for pid in "${_cleanup_pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$pid" /T /F >/dev/null 2>&1 || true
+            fi
+        done
+    fi
+
+    wait 2>/dev/null || true
+}
+
 # 終了時に実行する共通クリーンアップ処理
 cleanup_resources() {
     if [[ "${CLEANUP_DONE:-0}" == "1" ]]; then
@@ -195,24 +233,37 @@ cleanup_resources() {
     fi
     CLEANUP_DONE=1
 
+    _cleanup_pids=()
+
     # 共有ブラウザー サーバーを停止
     if [[ -n "${BROWSER_SERVER_PID:-}" ]]; then
-        kill "$BROWSER_SERVER_PID" 2>/dev/null
-        wait "$BROWSER_SERVER_PID" 2>/dev/null
+        append_unique_pid "$BROWSER_SERVER_PID"
     fi
+
+    # Markdown ファイル単位の並列ジョブを停止
+    if declare -p _file_pids >/dev/null 2>&1; then
+        for _pid in "${_file_pids[@]}"; do
+            append_unique_pid "$_pid"
+        done
+    fi
+
+    # そのほかのバックグラウンド ジョブを停止
+    local _bg_jobs
+    _bg_jobs=$(jobs -rp 2>/dev/null)
+    if [[ -n "$_bg_jobs" ]]; then
+        for _pid in $_bg_jobs; do
+            append_unique_pid "$_pid"
+        done
+    fi
+
+    terminate_managed_pids
+
     if [[ -n "${PUB_MARKDOWN_BROWSER_WS_FILE:-}" ]]; then
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
     if [[ -n "${BROWSER_SERVER_LOG:-}" ]]; then
         rm -f "$BROWSER_SERVER_LOG" 2>/dev/null
     fi
-
-    # そのほかのバックグラウンド ジョブを停止
-    local _bg_jobs
-    _bg_jobs=$(jobs -rp 2>/dev/null)
-    [[ -n "$_bg_jobs" ]] && kill $_bg_jobs 2>/dev/null
-    wait 2>/dev/null
-
     if [[ -n "${OUTPUT_LOCK:-}" ]]; then
         rm -rf "${OUTPUT_LOCK}.lck" 2>/dev/null
     fi
@@ -227,6 +278,7 @@ cleanup_resources() {
 # Ctrl+C (SIGINT) や SIGTERM を捕まえて実行する処理
 cleanup_on_signal() {
     #echo >&2 "スクリプトが中断されました。"
+    CLEANUP_FORCE_WINDOWS_TREE=1
     cleanup_resources
     printf "\e[0m" # 文字色を通常に設定
     exit 1
