@@ -1,0 +1,6 @@
+# 自己ホスト Git の host から provider 種別へのマッピング
+# host=provider 形式をスペース区切りで指定する。provider: github | gitlab | gitbucket | gitea
+# github.com / *gitlab* は自動判定されるため、社内ホスト等を明示したい場合にのみ指定する。
+# Git アクセス用ホストと Web ブラウザー用ホストが異なる場合は host=provider@webhost 形式で指定する。
+# 例: gitLinkHostProvider: git.example.com=gitlab githost.example.com=gitlab@www.example.com
+#gitLinkHostProvider:

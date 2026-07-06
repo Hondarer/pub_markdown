@@ -838,13 +838,13 @@ $if(mermaid-js)$
   </script>
 $endif$
 $if(git-url)$
-  <!-- Git 単一ページ リンク: ビルド時に追跡確認済みのため常時表示し、言語別の title のみ設定する -->
+  <!-- Git 単一ページ リンク: Git blob URL または Doxygen source link を表示し、言語別の title のみ設定する -->
   <script>
   (function () {
     var link = document.getElementById('docsfw-git-link');
     if (!link) { return; }
     var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
-    var label = isJa ? 'Git リポジトリで開く' : 'View on Git repository';
+    var label = isJa ? 'ソースを開く' : 'View source';
     link.title = label;
     link.setAttribute('aria-label', label);
   })();

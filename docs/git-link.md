@@ -8,12 +8,15 @@
 
 ## 表示条件
 
-リンクは次のすべてを満たす場合にのみ表示します。いずれかを満たさないファイルでは自動的に非表示となります。
+リンクは `gitLinkEnable` が `true` (デフォルト) の場合に表示候補になります。
+通常は、次のすべてを満たす場合に Git ホスティング上の blob URL を表示します。
 
-- `gitLinkEnable` が `true` (デフォルト)
 - ソース ファイルが Git 管理下にある (追跡済み)
 - ソース ファイルが `.gitignore` の対象でない (doxyfw などの生成物 `.md` を除外する)
 - リポジトリの remote URL (`remote.origin.url`) が解決できる
+
+これらを満たさない場合でも、Markdown の front matter に `doxygen-page-url` があれば、Git アイコンのリンク先を Doxygen HTML にフォールバックします。
+`doxygen-page-url` もない場合はリンクを表示しません。
 
 ## URL 解決の仕組み
 
@@ -27,13 +30,16 @@
 
 1. 実体パスから所属リポジトリのルートを取得する。
 2. リポジトリ ルートからの相対パスを求める。
-3. 追跡済みかどうかを確認する。未追跡なら非表示。
-4. `.gitignore` 対象かどうかを確認する。対象なら非表示。
-5. `remote.origin.url` を取得する。空なら非表示。
+3. 追跡済みかどうかを確認する。未追跡なら Doxygen HTML へのフォールバック候補にする。
+4. `.gitignore` 対象かどうかを確認する。対象なら Doxygen HTML へのフォールバック候補にする。
+5. `remote.origin.url` を取得する。空なら Doxygen HTML へのフォールバック候補にする。
 6. remote URL を web ベース URL (`scheme://host/owner/repo`) に正規化する。
 7. host から provider 種別を判定する。
-8. ref を決定する。通常はブランチ名を用いる。detached HEAD (サブモジュールで多い) の場合は、そのファイルの最終コミット SHA にフォールバックする。
+8. ref を決定する。リンク対象ファイルの最終コミット SHA を用いる。
 9. provider に応じた blob URL を組み立てる。
+
+Git blob URL を組み立てられない場合、docsfw は `doxygen-page-url` から出力 HTML への相対 URL を計算し、その URL を Git アイコンに設定します。
+このフォールバックは、doxyfw 生成 Markdown のように Doxygen HTML への対応がわかるページだけで有効です。
 
 ### remote URL の正規化
 
@@ -57,22 +63,28 @@
 GitHub / GitBucket / Gitea は同じ `/blob/` 形式で、GitLab のみ `/-/blob/` 形式です。
 GitBucket がコンテキスト パス配下 (例: `https://host/gitbucket/owner/repo`) で運用されている場合も、remote URL がそのパスを含んでいれば正しく解決されます。
 
-provider はアイコンの選択にも用います。判定できない場合は汎用 Git アイコンにフォールバックします。
+provider はアイコンの選択にも用います。
+GitHub、GitLab、GitBucket 以外の provider、または provider を判定できない場合は汎用 Git アイコンにフォールバックします。
 
 ## 設定
 
-`pub_markdown.config.yaml` で次のオプションを指定します。
+`pub_markdown.config.yaml` で Git リンクの表示を制御します。
 
 ```yaml
 # Git 単一ページ リンクの有効化 (true / false)。デフォルト: true
 gitLinkEnable: true
+```
 
-# 自己ホスト Git の host から provider 種別へのマッピング
-# host=provider 形式をスペース区切りで指定する。provider: github | gitlab | gitbucket | gitea
-# github.com / *gitlab* は自動判定されるため、社内ホスト等を明示したい場合にのみ指定する。
-# Git アクセス用ホストと Web ブラウザー用ホストが異なる場合は host=provider@webhost 形式で指定する。
+自己ホスト Git の host から provider 種別へのマッピングは、workspace の `.vscode/git_link.yaml` で指定します。
+
+```yaml
 gitLinkHostProvider: git.example.com=gitlab gitbucket.example.com=gitbucket
 ```
+
+`gitLinkHostProvider` は host=provider 形式をスペース区切りで指定します。
+provider には `github`、`gitlab`、`gitbucket`、`gitea` を指定できます。
+`github.com` と host に `gitlab` を含むホストは自動判定されるため、社内ホスト等を明示したい場合に指定します。
+Git アクセス用ホストと Web ブラウザー用ホストが異なる場合は host=provider@webhost 形式で指定します。
 
 ### ホスト読み替え
 
@@ -113,7 +125,7 @@ doxyfw 側の埋め込みは `templates/inject-source-origin.py` が担当し、
 
 ## 補足
 
-- リンク先 URL の到達性 (push 済みかどうか) はネットワーク確認しません。Git の追跡状態と remote の解決のみを条件とします。未 push のコミットやブランチを参照している場合、リンク先が見つからないことがあります。
-- リンク先 URL は言語版・詳細版のバリアント間で不変 (ソース ファイルにのみ依存) のため、バリアント コピー最適化と両立します。docx ダウンロードや詳細切り替えのような実行時の実在確認は行いません。
+- リンク先 URL の到達性 (push 済みかどうか) はネットワーク確認しません。Git blob URL は最終コミット SHA を参照するため、未 push のコミットを参照している場合はリンク先が見つからないことがあります。
+- Git blob URL は言語版・詳細版のバリアント間で不変 (ソース ファイルにのみ依存) のため、バリアント コピー最適化と両立します。Doxygen HTML へのフォールバック URL は、出力 HTML からの相対 URL として発行時に計算します。docx ダウンロードや詳細切り替えのような実行時の実在確認は行いません。
 - self-contain HTML にはリンクを埋め込みません (docx ダウンロード リンクと同じ扱い)。
 - フロントマターの `git-origin` キーは pandoc がメタデータとして読み取りますが、テンプレートは参照しないため出力には影響しません。
