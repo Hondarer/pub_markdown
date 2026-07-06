@@ -31,6 +31,7 @@ doxygen-page-url: "pages/doxygen/calc_public/calc_8h.html"
 docsfw は発行時に、出力 HTML のディレクトリから `doxygen-page-url` が指すファイルへの相対 URL を計算します。  
 この計算は通常 HTML と self-contain HTML の両方で同じです。  
 self-contain HTML では Doxygen アイコンの SVG も HTML に埋め込まれます。
+Doxygen リンクは `doxygen-page` を `target` に指定し、シングルページと依存関係レポートで同じタブまたはウィンドウを再利用します。
 
 ## 設定
 

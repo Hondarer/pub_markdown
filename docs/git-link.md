@@ -40,6 +40,7 @@
 
 Git blob URL を組み立てられない場合、docsfw は `doxygen-page-url` から出力 HTML への相対 URL を計算し、その URL を Git アイコンに設定します。
 このフォールバックは、doxyfw 生成 Markdown のように Doxygen HTML への対応がわかるページだけで有効です。
+Source リンクは `source-file` を `target` に指定し、シングルページと依存関係レポートで同じタブまたはウィンドウを再利用します。
 
 ### remote URL の正規化
 
