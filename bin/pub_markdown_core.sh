@@ -214,7 +214,8 @@ terminate_managed_pids() {
         kill "$pid" 2>/dev/null || true
     done
 
-    if [[ "${CLEANUP_FORCE_WINDOWS_TREE:-0}" == "1" ]] && is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+    # Windows では SIGTERM が Native プロセスに届かないため常に taskkill で強制終了する
+    if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
         sleep 1
         for pid in "${_cleanup_pids[@]}"; do
             if kill -0 "$pid" 2>/dev/null; then
@@ -223,7 +224,7 @@ terminate_managed_pids() {
         done
     fi
 
-    wait 2>/dev/null || true
+    wait "${_cleanup_pids[@]}" 2>/dev/null || true
 }
 
 # 終了時に実行する共通クリーンアップ処理
@@ -692,14 +693,21 @@ MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_
 # MSYS2 (Windows) 環境でも動作する
 OUTPUT_LOCK=$(mktemp -u)
 _PM_STATUS_DIR=$(mktemp -d)
+_running_count=0
 
 # 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
 # 1 つ完了するまで待機する関数
 wait_for_parallel_slot() {
-    while (( $(jobs -rp 2>/dev/null | wc -l) >= MAX_PARALLEL )); do
-        # 一部環境では wait -n 実行後に PID を個別 wait できず
-        # "not a child of this shell" になるため、ここでは状態監視のみにする。
-        sleep 0.1
+    while (( _running_count >= MAX_PARALLEL )); do
+        # wait -n で 1 つ完了を待つ。
+        # 一部環境では wait -n 実行後に PID を個別 wait できないが、
+        # 最終 wait ループはステータス ファイルをフォールバックとして使うため問題ない。
+        # $(jobs -rp) はコマンド置換サブシェル内では親ジョブテーブルが不可視となり
+        # 常に 0 を返すため、非対話シェルでの並列制限が機能しない。
+        wait -n 2>/dev/null || true
+        if (( _running_count > 0 )); then
+            (( _running_count-- ))
+        fi
     done
 }
 
@@ -2076,7 +2084,12 @@ for file in "${files[@]}"; do
         (
         # サブシェルがどの経路で終了してもステータスを書き込む。
         # あわせて defaults 用の一時ファイルを確実に削除する。
-        trap 'echo "$?" > "$_pm_statusfile"; [[ ${#defaults_metadata_tmpfiles[@]} -gt 0 ]] && rm -f "${defaults_metadata_tmpfiles[@]}"' EXIT
+        trap '
+            _pm_trap_exit=$?
+            rmdir "${OUTPUT_LOCK}.lck" 2>/dev/null
+            echo "$_pm_trap_exit" > "$_pm_statusfile"
+            [[ ${#defaults_metadata_tmpfiles[@]} -gt 0 ]] && rm -f "${defaults_metadata_tmpfiles[@]}"
+        ' EXIT
         # このサブシェル内の出力を一時ファイルにバッファリングし、
         # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
         _pm_tmpout=$(mktemp)
@@ -2534,13 +2547,14 @@ for file in "${files[@]}"; do
         # (mkdir は Linux/MSYS2/Windows いずれでもアトミック操作)
         while ! mkdir "${OUTPUT_LOCK}.lck" 2>/dev/null; do sleep 0.01; done
         cat "$_pm_tmpout"
-        rmdir "${OUTPUT_LOCK}.lck"
+        rmdir "${OUTPUT_LOCK}.lck" 2>/dev/null
         rm -f "$_pm_tmpout"
         exit $_pm_exit
         ) &
         _file_pids+=($!)
         _file_names+=("$file")
         _file_status_files+=("$_pm_statusfile")
+        (( _running_count++ ))
     fi
 done
 

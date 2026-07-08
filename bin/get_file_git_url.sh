@@ -201,7 +201,12 @@ get_file_git_remote_context() {
 urlencode_path() {
   local path=$1
   if command -v python3 &>/dev/null; then
-    printf '%s' "$path" | python3 -c 'import sys, urllib.parse; sys.stdout.write(urllib.parse.quote(sys.stdin.read(), safe="/"))'
+    printf '%s' "$path" | python3 -c '
+import sys, urllib.parse
+sys.stdin.reconfigure(encoding="utf-8")
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stdout.write(urllib.parse.quote(sys.stdin.read(), safe="/"))
+'
   else
     # python3 が無い環境では素のパスを返す (ASCII パス前提)
     printf '%s' "$path"
