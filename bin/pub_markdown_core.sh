@@ -694,18 +694,32 @@ MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_
 OUTPUT_LOCK=$(mktemp -u)
 _PM_STATUS_DIR=$(mktemp -d)
 _running_count=0
+_wait_p_supported=false
+if help wait 2>/dev/null | grep -q -- '-p VARNAME'; then
+    _wait_p_supported=true
+fi
 
 # 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
 # 1 つ完了するまで待機する関数
 wait_for_parallel_slot() {
     local _waited_pid
     while (( _running_count >= MAX_PARALLEL )); do
-        # wait -p で収集した PID を識別し、ファイル処理ジョブのみカウントする。
-        # BROWSER_SERVER_PID が先に終了した場合に wait -n でそれを収集してしまうと
-        # _running_count が不正にデクリメントされ MAX_PARALLEL を超えて起動するため除外する。
-        _waited_pid=""
-        wait -p _waited_pid -n 2>/dev/null || true
-        if [[ -n "$_waited_pid" && "$_waited_pid" != "${BROWSER_SERVER_PID:-}" ]]; then
+        if [[ "$_wait_p_supported" == "true" ]]; then
+            # wait -p で収集した PID を識別し、ファイル処理ジョブのみカウントする。
+            # BROWSER_SERVER_PID が先に終了した場合に wait -n でそれを収集してしまうと
+            # _running_count が不正にデクリメントされ MAX_PARALLEL を超えて起動するため除外する。
+            _waited_pid=""
+            wait -p _waited_pid -n 2>/dev/null || true
+            if [[ -n "$_waited_pid" && "$_waited_pid" != "${BROWSER_SERVER_PID:-}" ]]; then
+                if (( _running_count > 0 )); then
+                    (( _running_count-- ))
+                fi
+            fi
+        else
+            # Bash 4.x には wait -p がないため PID 識別なしで待つ。
+            # 非対応環境で wait -p を実行すると _running_count が減らず、
+            # このループが進行不能になる。
+            wait -n 2>/dev/null || true
             if (( _running_count > 0 )); then
                 (( _running_count-- ))
             fi
