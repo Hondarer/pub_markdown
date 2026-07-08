@@ -698,15 +698,17 @@ _running_count=0
 # 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
 # 1 つ完了するまで待機する関数
 wait_for_parallel_slot() {
+    local _waited_pid
     while (( _running_count >= MAX_PARALLEL )); do
-        # wait -n で 1 つ完了を待つ。
-        # 一部環境では wait -n 実行後に PID を個別 wait できないが、
-        # 最終 wait ループはステータス ファイルをフォールバックとして使うため問題ない。
-        # $(jobs -rp) はコマンド置換サブシェル内では親ジョブテーブルが不可視となり
-        # 常に 0 を返すため、非対話シェルでの並列制限が機能しない。
-        wait -n 2>/dev/null || true
-        if (( _running_count > 0 )); then
-            (( _running_count-- ))
+        # wait -p で収集した PID を識別し、ファイル処理ジョブのみカウントする。
+        # BROWSER_SERVER_PID が先に終了した場合に wait -n でそれを収集してしまうと
+        # _running_count が不正にデクリメントされ MAX_PARALLEL を超えて起動するため除外する。
+        _waited_pid=""
+        wait -p _waited_pid -n 2>/dev/null || true
+        if [[ -n "$_waited_pid" && "$_waited_pid" != "${BROWSER_SERVER_PID:-}" ]]; then
+            if (( _running_count > 0 )); then
+                (( _running_count-- ))
+            fi
         fi
     done
 }
@@ -2565,12 +2567,37 @@ done
 #-------------------------------------------------------------------
 
 _overall_exit=0
+_file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-300}"
+
 for _i in "${!_file_pids[@]}"; do
-    wait "${_file_pids[$_i]}" 2>/dev/null
+    _cur_pid="${_file_pids[$_i]}"
+    _cur_statusfile="${_file_status_files[$_i]}"
+
+    # プロセスが実行中の場合のみポーリングでタイムアウトを適用する。
+    # EXIT trap がステータスファイルを書き込んだらサブシェル完了とみなす。
+    # kill -0 はゾンビプロセスにも 0 を返す場合があるため、
+    # ステータスファイルの有無を主判定条件とし、ゾンビはポーリングを抜けて wait でリープする。
+    if kill -0 "$_cur_pid" 2>/dev/null; then
+        _poll_start=$SECONDS
+        while [[ ! -s "$_cur_statusfile" ]] && kill -0 "$_cur_pid" 2>/dev/null; do
+            if (( SECONDS - _poll_start >= _file_job_timeout_sec )); then
+                echo >&2 "Warning: Timeout (${_file_job_timeout_sec}s) ${_file_names[$_i]}, killing."
+                kill "$_cur_pid" 2>/dev/null
+                if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+                    sleep 0.5
+                    MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$_cur_pid" /T /F >/dev/null 2>&1 || true
+                fi
+                break
+            fi
+            sleep 1
+        done
+    fi
+
+    wait "$_cur_pid" 2>/dev/null
     # bash の cleanup_dead_jobs で PID がすでに回収されていても、
     # サブシェル EXIT trap が書き込んだステータスを参照する
-    _pm_job_exit=$(cat "${_file_status_files[$_i]}" 2>/dev/null || echo "127")
-    rm -f "${_file_status_files[$_i]}"
+    _pm_job_exit=$(cat "$_cur_statusfile" 2>/dev/null || echo "127")
+    rm -f "$_cur_statusfile"
     if [[ "${_pm_job_exit}" -ne 0 ]]; then
         echo >&2 "Error: Failed to process ${_file_names[$_i]}"
         _overall_exit=1
