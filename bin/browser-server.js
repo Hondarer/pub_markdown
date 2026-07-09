@@ -143,7 +143,13 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
   const cleanup = async () => {
     shuttingDown = true;
     try { fs.unlinkSync(wsFile); } catch (_) {}
-    try { await browser.close(); } catch (_) {}
+    try {
+      // browser.close() が Chrome 内部で詰まった場合に備え 5 秒でタイムアウトする
+      await Promise.race([
+        browser.close(),
+        new Promise(resolve => setTimeout(resolve, 5000))
+      ]);
+    } catch (_) {}
     process.exit(0);
   };
 

@@ -214,15 +214,22 @@ terminate_managed_pids() {
         kill "$pid" 2>/dev/null || true
     done
 
-    # Windows では SIGTERM が Native プロセスに届かないため常に taskkill で強制終了する
-    if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
-        sleep 1
-        for pid in "${_cleanup_pids[@]}"; do
-            if kill -0 "$pid" 2>/dev/null; then
+    # SIGTERM 送信後、猶予時間を置いてから残存プロセスを強制終了する。
+    # Linux: browser.close() のタイムアウト (5 秒) に余裕を持たせ 6 秒待機してから SIGKILL。
+    # Windows: SIGTERM が Native プロセスに届かないため 1 秒待機して taskkill。
+    local _grace_sec=1
+    if ! is_windows_host; then _grace_sec=6; fi
+    sleep "$_grace_sec"
+
+    for pid in "${_cleanup_pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
                 MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$pid" /T /F >/dev/null 2>&1 || true
+            else
+                kill -9 "$pid" 2>/dev/null || true
             fi
-        done
-    fi
+        fi
+    done
 
     wait "${_cleanup_pids[@]}" 2>/dev/null || true
 }
@@ -273,6 +280,9 @@ cleanup_resources() {
     fi
     if [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]]; then
         rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
+    fi
+    if [[ -n "${PUB_MARKDOWN_PLANTUML_CACHE_DIR:-}" ]]; then
+        rm -rf "$PUB_MARKDOWN_PLANTUML_CACHE_DIR" 2>/dev/null
     fi
 }
 
@@ -429,6 +439,7 @@ export NODE_NO_WARNINGS=1
 BROWSER_SERVER_PID=""
 BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
+export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$(mktemp -d)"
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
 PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-120}"

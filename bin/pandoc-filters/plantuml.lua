@@ -43,6 +43,28 @@ local function unquote_yaml_scalar(value)
     return trimmed
 end
 
+-- バイナリ ファイルをアトミックにコピーする
+-- dst が既存のとき Windows では rename が失敗するため、失敗時は tmp を削除して正常とみなす
+local function copy_file(src, dst)
+    local _src = utf8_to_active_cp(src)
+    local fin = io.open(_src, "rb")
+    if not fin then return false end
+    local data = fin:read("*a")
+    fin:close()
+    local tmp = dst .. ".tmp." .. tostring(math.random(100000000, 999999999))
+    local _tmp = utf8_to_active_cp(tmp)
+    local fout = io.open(_tmp, "wb")
+    if not fout then return false end
+    fout:write(data)
+    fout:close()
+    local _dst = utf8_to_active_cp(dst)
+    if not os.rename(_tmp, _dst) then
+        -- Windows: dst が既存だと rename が失敗する。他プロセスが先に書き込み済み。
+        os.remove(_tmp)
+    end
+    return true
+end
+
 local function read_text_file(path)
     if path == nil or path == "" then
         return nil
@@ -638,17 +660,14 @@ return {
             local image_file_path = paths.join({resource_dir, filename})
             local _image_file_path = utf8_to_active_cp(image_file_path)
 
+            -- 共有 SVG キャッシュ: 出力バリアントをまたいだ重複 HTTP 取得を防ぐ
+            local shared_cache_dir = os.getenv("PUB_MARKDOWN_PLANTUML_CACHE_DIR") or ""
+            local shared_cache_path = (shared_cache_dir ~= "") and paths.join({shared_cache_dir, filename}) or ""
+            local _fresh_generated = false
+
             if not file_exists(image_file_path) then
-                local local_success = false
-                local temp_output = nil
-
-                -- plantuml コマンドに PATH が通っているかチェック
-                if check_local_plantuml() then
-                    -- ローカルの plantuml コマンドで変換
-                    --io.stderr:write("[plantuml] Using local plantuml command\n")
-
-                    -- 出力ディレクトリが存在しない場合は作成
-                    -- ※ Windows の場合は、file_exists では既存ディレクトリの不存在チェックができないので、nul にリダイレクト
+                if shared_cache_path ~= "" and file_exists(shared_cache_path) then
+                    -- 共有キャッシュから resource_dir へコピーして再利用
                     if not file_exists(resource_dir) then
                         if package.config:sub(1,1) == '\\' then -- Windows
                             os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\" >nul 2>&1")
@@ -656,67 +675,94 @@ return {
                             os.execute("mkdir -p " .. resource_dir)
                         end
                     end
+                    copy_file(shared_cache_path, image_file_path)
+                else
+                    local local_success = false
+                    local temp_output = nil
 
-                    local temp_path
-                    local_success, temp_path = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
-                    if local_success then
-                        temp_output = temp_path
-                    else
-                        io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. "\n")
-                        return el
-                    end
-                end
+                    -- plantuml コマンドに PATH が通っているかチェック
+                    if check_local_plantuml() then
+                        -- ローカルの plantuml コマンドで変換
+                        --io.stderr:write("[plantuml] Using local plantuml command\n")
 
-                if not local_success then
-                    -- サーバーを使用した変換
-                    --io.stderr:write("[plantuml] Using server conversion\n")
-                    local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
-                    local mt, img = mediabags.fetch(url .. encoded_text)
-
-                    if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
-                        io.stderr:write("Error: fetching image from " .. url .. "\n")
-                        return el
-                    end
-
-                    -- 仮ファイルに書き込む（並列実行時の競合を防ぐため）
-                    local temp_path = image_file_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
-                    local _temp_path = utf8_to_active_cp(temp_path)
-                    local fs, errorDisc, errorCode = io.open(_temp_path, "wb")
-
-                    if errorCode == 2 then
-                        -- Use platform-specific commands to create the directory
-                        if package.config:sub(1,1) == '\\' then -- Windows
-                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
-                        else -- Unix-like systems (Linux, macOS, etc.)
-                            os.execute("mkdir -p " .. resource_dir)
+                        -- 出力ディレクトリが存在しない場合は作成
+                        -- ※ Windows の場合は、file_exists では既存ディレクトリの不存在チェックができないので、nul にリダイレクト
+                        if not file_exists(resource_dir) then
+                            if package.config:sub(1,1) == '\\' then -- Windows
+                                os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\" >nul 2>&1")
+                            else -- Unix-like systems (Linux, macOS, etc.)
+                                os.execute("mkdir -p " .. resource_dir)
+                            end
                         end
-                        fs = io.open(_temp_path, "wb")
+
+                        local temp_path
+                        local_success, temp_path = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
+                        if local_success then
+                            temp_output = temp_path
+                        else
+                            io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. "\n")
+                            return el
+                        end
                     end
 
-                    fs:write(img)
-                    fs:close()
-                    temp_output = temp_path
-                end
+                    if not local_success then
+                        -- サーバーを使用した変換
+                        --io.stderr:write("[plantuml] Using server conversion\n")
+                        local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
+                        local mt, img = mediabags.fetch(url .. encoded_text)
 
-                -- pu_config.format が "svg" の場合は、
-                -- font-family を、Word で日本語フォントとして解釈されやすい "Segoe UI, メイリオ" に置換する。
-                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
-                -- PlantUML v1.2026.0 以降の SVG 先頭処理命令は、Pandoc の docx 画像サイズ解析を妨げるため <svg> 開始タグの直後へ移動する。
-                -- フォント置換は仮ファイルに対して実施してからアトミックにリネームする
-                if temp_output and pu_config.format == "svg" then
-                    patch_svg_file(temp_output)
-                end
+                        if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
+                            io.stderr:write("Error: fetching image from " .. url .. "\n")
+                            return el
+                        end
 
-                -- 仮ファイルを最終ファイル名にアトミックにリネーム
-                -- 複数プロセスが同時に完了しても os.rename は上書きになるだけで内容は同一
-                if temp_output then
-                    local _temp_output = utf8_to_active_cp(temp_output)
-                    os.rename(_temp_output, _image_file_path)
+                        -- 仮ファイルに書き込む（並列実行時の競合を防ぐため）
+                        local temp_path = image_file_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
+                        local _temp_path = utf8_to_active_cp(temp_path)
+                        local fs, errorDisc, errorCode = io.open(_temp_path, "wb")
+
+                        if errorCode == 2 then
+                            -- Use platform-specific commands to create the directory
+                            if package.config:sub(1,1) == '\\' then -- Windows
+                                os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
+                            else -- Unix-like systems (Linux, macOS, etc.)
+                                os.execute("mkdir -p " .. resource_dir)
+                            end
+                            fs = io.open(_temp_path, "wb")
+                        end
+
+                        fs:write(img)
+                        fs:close()
+                        temp_output = temp_path
+                    end
+
+                    -- pu_config.format が "svg" の場合は、
+                    -- font-family を、Word で日本語フォントとして解釈されやすい "Segoe UI, メイリオ" に置換する。
+                    -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                    -- PlantUML v1.2026.0 以降の SVG 先頭処理命令は、Pandoc の docx 画像サイズ解析を妨げるため <svg> 開始タグの直後へ移動する。
+                    -- フォント置換は仮ファイルに対して実施してからアトミックにリネームする
+                    if temp_output and pu_config.format == "svg" then
+                        patch_svg_file(temp_output)
+                    end
+
+                    -- 仮ファイルを最終ファイル名にアトミックにリネーム
+                    -- 複数プロセスが同時に完了しても os.rename は上書きになるだけで内容は同一
+                    if temp_output then
+                        local _temp_output = utf8_to_active_cp(temp_output)
+                        os.rename(_temp_output, _image_file_path)
+                    end
+
+                    _fresh_generated = true
                 end
             end
 
             if pu_config.format == "svg" then
                 patch_svg_file(image_file_path)
+            end
+
+            -- SVG パッチ適用後に共有キャッシュへ保存 (初回生成時のみ)
+            if _fresh_generated and shared_cache_path ~= "" then
+                copy_file(image_file_path, shared_cache_path)
             end
 
             -- docx 出力時かつ SVG フォーマットの場合: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
