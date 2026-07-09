@@ -86,6 +86,20 @@ end
 
 local _root_dir = utf8_to_active_cp(root_dir)
 
+-- pub_markdown_core.sh の無進捗ウォッチドッグへ図 1 個分の進捗を伝える。
+-- 図の生成が続く限りハートビート ファイルが更新され、親はジョブを kill しない。
+local function touch_heartbeat()
+    local hb = os.getenv("PUB_MARKDOWN_JOB_HEARTBEAT_FILE")
+    if hb == nil or hb == "" then
+        return
+    end
+    local f = io.open(hb, "ab")
+    if f then
+        f:write(".")
+        f:close()
+    end
+end
+
 local function file_exists(name)
     local _name = utf8_to_active_cp(name)
 
@@ -362,6 +376,9 @@ return {
                     image_file_path = png_file_path
                 end
             end
+
+            -- 図 1 個分の生成 (mmdc 実行や PNG 変換を含む) が完了した
+            touch_heartbeat()
 
             local image_src = image_file_path
 

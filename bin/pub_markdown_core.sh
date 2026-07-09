@@ -14,7 +14,12 @@ source "${SCRIPT_DIR}/extract-short-title.sh"
 exec 3>&2
 
 # PUB_MARKDOWN_PROGRESS_LOG=1 のときだけ、長時間処理の進行状況を stderr に出力する。
+# _pm_heartbeat_file が設定されている場合 (.md 処理サブシェル内) は、
+# 出力設定にかかわらずハートビート ファイルを touch し、親の無進捗監視に進捗を伝える。
 progress_log() {
+    if [[ -n "${_pm_heartbeat_file:-}" ]]; then
+        touch "$_pm_heartbeat_file" 2>/dev/null
+    fi
     [[ "${PUB_MARKDOWN_PROGRESS_LOG:-0}" == "1" ]] || return 0
     printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
 }
@@ -195,6 +200,16 @@ is_windows_host() {
     esac
 }
 
+# MSYS2 (Cygwin) の PID は Windows ネイティブの PID と一致しない場合があるため、
+# taskkill.exe へ渡す前に /proc/<pid>/winpid で Windows PID に変換する。
+# 変換できない場合は入力の PID をそのまま返す。
+# see: https://cygwin.com/cygwin-ug-net/proc.html
+win_pid_of() {
+    local wp
+    wp=$(cat "/proc/$1/winpid" 2>/dev/null)
+    echo "${wp:-$1}"
+}
+
 append_unique_pid() {
     local pid="$1"
     local existing
@@ -210,28 +225,43 @@ terminate_managed_pids() {
 
     [[ ${#_cleanup_pids[@]} -gt 0 ]] || return 0
 
-    for pid in "${_cleanup_pids[@]}"; do
-        kill "$pid" 2>/dev/null || true
-    done
+    if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+        # Windows: SIGTERM は native プロセスに届かず、MSYS サブシェルに送ると
+        # 親だけが先に死んで native の子 (pandoc.exe、powershell.exe など) が孤児化する。
+        # 孤児は継承した stdout/stderr のパイプ ハンドルを保持し続け、
+        # スクリプト終了後も呼び出し元 (make やコンソール) に制御が戻らなくなるため、
+        # プロセス ツリーが健在なうちに taskkill /T /F で子孫ごと強制終了する。
+        # kill -0 による生存確認は PID 再利用による誤爆の防止。
+        for pid in "${_cleanup_pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
+                MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$(win_pid_of "$pid")" /T /F >/dev/null 2>&1 || true
+            fi
+        done
+    else
+        for pid in "${_cleanup_pids[@]}"; do
+            kill "$pid" 2>/dev/null || true
+        done
 
-    # SIGTERM 送信後、猶予時間を置いてから残存プロセスを強制終了する。
-    # Linux: browser.close() のタイムアウト (5 秒) に余裕を持たせ 6 秒待機してから SIGKILL。
-    # Windows: SIGTERM が Native プロセスに届かないため 1 秒待機して taskkill。
-    local _grace_sec=1
-    if ! is_windows_host; then _grace_sec=6; fi
-    sleep "$_grace_sec"
+        # SIGTERM 送信後、猶予時間を置いてから残存プロセスを強制終了する。
+        # browser.close() のタイムアウト (5 秒) に余裕を持たせ 6 秒待機してから SIGKILL。
+        sleep 6
 
-    for pid in "${_cleanup_pids[@]}"; do
-        if kill -0 "$pid" 2>/dev/null; then
-            if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
-                MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$pid" /T /F >/dev/null 2>&1 || true
-            else
+        for pid in "${_cleanup_pids[@]}"; do
+            if kill -0 "$pid" 2>/dev/null; then
                 kill -9 "$pid" 2>/dev/null || true
             fi
+        done
+    fi
+
+    # force kill 後のゾンビを reap する。
+    # kill -0 が非ゼロを返すプロセス (終了確認済み) のみ wait してリープする。
+    # kill -0 が 0 を返すまま (強制終了できなかったケース) はスキップし、
+    # bash 自身の終了時に OS が回収する。
+    for pid in "${_cleanup_pids[@]}"; do
+        if ! kill -0 "$pid" 2>/dev/null; then
+            wait "$pid" 2>/dev/null || true
         fi
     done
-
-    wait "${_cleanup_pids[@]}" 2>/dev/null || true
 }
 
 # 終了時に実行する共通クリーンアップ処理
@@ -439,7 +469,16 @@ export NODE_NO_WARNINGS=1
 BROWSER_SERVER_PID=""
 BROWSER_SERVER_LOG=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
-export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$(mktemp -d)"
+# Windows (MSYS2) では mktemp が POSIX パスを返すが、
+# pandoc.exe (Win32) の Lua が環境変数のパスを解決できないため
+# cygpath -m で Windows ネイティブ形式 (ドライブレター + 順スラッシュ) に変換する
+_pm_plantuml_cache_tmp="$(mktemp -d)"
+if is_windows_host && command -v cygpath >/dev/null 2>&1; then
+    export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$(cygpath -m "$_pm_plantuml_cache_tmp")"
+else
+    export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$_pm_plantuml_cache_tmp"
+fi
+unset _pm_plantuml_cache_tmp
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
 PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-120}"
@@ -2117,6 +2156,18 @@ for file in "${files[@]}"; do
             echo "$_pm_trap_exit" > "$_pm_statusfile"
             [[ ${#defaults_metadata_tmpfiles[@]} -gt 0 ]] && rm -f "${defaults_metadata_tmpfiles[@]}"
         ' EXIT
+        # 親の無進捗監視 (ウォッチドッグ) 用ハートビート ファイル。
+        # progress_log と pandoc の Lua フィルター (plantuml.lua / mermaid.lua) が
+        # 進捗のたびに更新し、親はこの更新を検出してタイムアウトのタイマーをリセットする。
+        _pm_heartbeat_file="${_pm_statusfile}.hb"
+        touch "$_pm_heartbeat_file"
+        # pandoc.exe (Win32) の Lua がパスを解決できるよう
+        # cygpath -m で Windows ネイティブ形式に変換して渡す
+        if is_windows_host && command -v cygpath >/dev/null 2>&1; then
+            export PUB_MARKDOWN_JOB_HEARTBEAT_FILE="$(cygpath -m "$_pm_heartbeat_file")"
+        else
+            export PUB_MARKDOWN_JOB_HEARTBEAT_FILE="$_pm_heartbeat_file"
+        fi
         # このサブシェル内の出力を一時ファイルにバッファリングし、
         # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
         _pm_tmpout=$(mktemp)
@@ -2592,26 +2643,41 @@ done
 #-------------------------------------------------------------------
 
 _overall_exit=0
+# 無進捗ウォッチドッグ: ジョブのハートビート ファイルが FILE_PROCESS_TIMEOUT_SEC 秒間
+# 更新されない場合のみハング (デッドロックなど) とみなして kill する。
+# 図の多いファイルは正常でも長時間かかるため、処理時間の絶対値では kill しない。
 _file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-300}"
 
 for _i in "${!_file_pids[@]}"; do
     _cur_pid="${_file_pids[$_i]}"
     _cur_statusfile="${_file_status_files[$_i]}"
+    _cur_heartbeat="${_cur_statusfile}.hb"
 
-    # プロセスが実行中の場合のみポーリングでタイムアウトを適用する。
+    # プロセスが実行中の場合のみポーリングで無進捗監視を適用する。
     # EXIT trap がステータスファイルを書き込んだらサブシェル完了とみなす。
     # kill -0 はゾンビプロセスにも 0 を返す場合があるため、
     # ステータスファイルの有無を主判定条件とし、ゾンビはポーリングを抜けて wait でリープする。
     if kill -0 "$_cur_pid" 2>/dev/null; then
         _poll_start=$SECONDS
+        _last_heartbeat_sig=""
         while [[ ! -s "$_cur_statusfile" ]] && kill -0 "$_cur_pid" 2>/dev/null; do
+            # ハートビートの mtime とサイズが変化していたら進捗ありとみなしタイマーをリセット
+            _cur_heartbeat_sig=$(stat -c '%Y:%s' "$_cur_heartbeat" 2>/dev/null || echo "")
+            if [[ "$_cur_heartbeat_sig" != "$_last_heartbeat_sig" ]]; then
+                _last_heartbeat_sig="$_cur_heartbeat_sig"
+                _poll_start=$SECONDS
+            fi
             if (( SECONDS - _poll_start >= _file_job_timeout_sec )); then
-                echo >&2 "Warning: Timeout (${_file_job_timeout_sec}s) ${_file_names[$_i]}, killing."
-                kill "$_cur_pid" 2>/dev/null
+                echo >&2 "Warning: No progress for ${_file_job_timeout_sec}s ${_file_names[$_i]}, killing."
                 if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
-                    sleep 0.5
-                    MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$_cur_pid" /T /F >/dev/null 2>&1 || true
+                    # 先に kill (SIGTERM) でサブシェルの bash を終了させると native の子
+                    # (pandoc.exe、powershell.exe など) が孤児化し、taskkill /T がツリーを
+                    # たどれなくなる。孤児は継承したパイプ ハンドルを保持し続けるため、
+                    # スクリプト終了後も呼び出し元に制御が戻らない。
+                    # プロセス ツリーが健在なうちに taskkill /T /F で子孫ごと強制終了する。
+                    MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$(win_pid_of "$_cur_pid")" /T /F >/dev/null 2>&1 || true
                 fi
+                kill "$_cur_pid" 2>/dev/null
                 break
             fi
             sleep 1
@@ -2622,7 +2688,7 @@ for _i in "${!_file_pids[@]}"; do
     # bash の cleanup_dead_jobs で PID がすでに回収されていても、
     # サブシェル EXIT trap が書き込んだステータスを参照する
     _pm_job_exit=$(cat "$_cur_statusfile" 2>/dev/null || echo "127")
-    rm -f "$_cur_statusfile"
+    rm -f "$_cur_statusfile" "$_cur_heartbeat"
     if [[ "${_pm_job_exit}" -ne 0 ]]; then
         echo >&2 "Error: Failed to process ${_file_names[$_i]}"
         _overall_exit=1
