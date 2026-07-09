@@ -43,28 +43,6 @@ local function unquote_yaml_scalar(value)
     return trimmed
 end
 
--- バイナリ ファイルをアトミックにコピーする
--- dst が既存のとき Windows では rename が失敗するため、失敗時は tmp を削除して正常とみなす
-local function copy_file(src, dst)
-    local _src = utf8_to_active_cp(src)
-    local fin = io.open(_src, "rb")
-    if not fin then return false end
-    local data = fin:read("*a")
-    fin:close()
-    local tmp = dst .. ".tmp." .. tostring(math.random(100000000, 999999999))
-    local _tmp = utf8_to_active_cp(tmp)
-    local fout = io.open(_tmp, "wb")
-    if not fout then return false end
-    fout:write(data)
-    fout:close()
-    local _dst = utf8_to_active_cp(dst)
-    if not os.rename(_tmp, _dst) then
-        -- Windows: dst が既存だと rename が失敗する。他プロセスが先に書き込み済み。
-        os.remove(_tmp)
-    end
-    return true
-end
-
 local function read_text_file(path)
     if path == nil or path == "" then
         return nil
@@ -311,6 +289,28 @@ local function active_cp_to_utf8(text)
         return (out:gsub("[\r\n]+$", ""))
     end
     return text
+end
+
+-- バイナリ ファイルをアトミックにコピーする
+-- dst が既存のとき Windows では rename が失敗するため、失敗時は tmp を削除して正常とみなす
+local function copy_file(src, dst)
+    local _src = utf8_to_active_cp(src)
+    local fin = io.open(_src, "rb")
+    if not fin then return false end
+    local data = fin:read("*a")
+    fin:close()
+    local tmp = dst .. ".tmp." .. tostring(math.random(100000000, 999999999))
+    local _tmp = utf8_to_active_cp(tmp)
+    local fout = io.open(_tmp, "wb")
+    if not fout then return false end
+    fout:write(data)
+    fout:close()
+    local _dst = utf8_to_active_cp(dst)
+    if not os.rename(_tmp, _dst) then
+        -- Windows: dst が既存だと rename が失敗する。他プロセスが先に書き込み済み。
+        os.remove(_tmp)
+    end
+    return true
 end
 
 local _root_dir = utf8_to_active_cp(root_dir)
