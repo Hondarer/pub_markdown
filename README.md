@@ -51,6 +51,8 @@ PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/pat
 
 ハング調査などで無進捗ジョブを停止したい場合だけ、`FILE_PROCESS_TIMEOUT_SEC` に秒数を指定する。
 タイムアウト時は対象ファイルと最後に記録した工程を出力する。
+未指定または `0` の場合は監視を無効にする。
+負数、小数、文字列を指定した場合は、Markdown ジョブを開始せずにエラーで終了する。
 
 ```bash
 FILE_PROCESS_TIMEOUT_SEC=300 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace

@@ -705,45 +705,72 @@ _nproc=$(nproc 2>/dev/null || echo 4)
 _parallel_default=$(( _nproc * 3 / 2 ))
 MAX_PARALLEL=${PUB_MARKDOWN_PARALLEL:-$(( _parallel_default > 6 ? 6 : _parallel_default ))}
 
+# FILE_PROCESS_TIMEOUT_SEC を未指定または 0 にすると、無進捗ウォッチドッグを無効にする。
+# 正の整数を指定した場合だけ、ハートビートが更新されないジョブを停止する。
+_file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-0}"
+if ! [[ "$_file_job_timeout_sec" =~ ^[0-9]+$ ]]; then
+    echo >&2 "Error: FILE_PROCESS_TIMEOUT_SEC must be a non-negative integer."
+    exit 1
+fi
+
 # 並列出力の排他制御用ロック ベース パス
 # flock (Linux 専用) の代わりに mkdir アトミック ロックを使用することで
 # MSYS2 (Windows) 環境でも動作する
 OUTPUT_LOCK=$(mktemp -u)
 _PM_STATUS_DIR=$(mktemp -d)
 _running_count=0
-_wait_p_supported=false
-if help wait 2>/dev/null | grep -q -- '-p VARNAME'; then
-    _wait_p_supported=true
-fi
+declare -a _file_pids=()
+declare -a _file_names=()
+declare -a _file_status_files=()
+declare -a _file_slot_released=()
+declare -a _file_heartbeat_sigs=()
+declare -a _file_last_progress=()
+declare -a _file_timeout_reported=()
 
-# 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
-# 1 つ完了するまで待機する関数
-wait_for_parallel_slot() {
-    local _waited_pid
-    while (( _running_count >= MAX_PARALLEL )); do
-        if [[ "$_wait_p_supported" == "true" ]]; then
-            # wait -p で収集した PID を識別し、ファイル処理ジョブのみカウントする。
-            # BROWSER_SERVER_PID が先に終了した場合に wait -n でそれを収集してしまうと
-            # _running_count が不正にデクリメントされ MAX_PARALLEL を超えて起動するため除外する。
-            _waited_pid=""
-            wait -p _waited_pid -n 2>/dev/null || true
-            if [[ -n "$_waited_pid" && "$_waited_pid" != "${BROWSER_SERVER_PID:-}" ]]; then
-                if (( _running_count > 0 )); then
-                    (( _running_count-- ))
-                fi
+monitor_file_jobs_once() {
+    local _i _cur_pid _cur_statusfile _cur_heartbeat _cur_phase _cur_heartbeat_sig
+
+    for _i in "${!_file_pids[@]}"; do
+        [[ "${_file_slot_released[$_i]:-false}" == "true" ]] && continue
+        _cur_pid="${_file_pids[$_i]}"
+        _cur_statusfile="${_file_status_files[$_i]}"
+        _cur_heartbeat="${_cur_statusfile}.hb"
+        _cur_phase="${_cur_statusfile}.phase"
+
+        if [[ -s "$_cur_statusfile" ]] || ! kill -0 "$_cur_pid" 2>/dev/null; then
+            _file_slot_released[$_i]=true
+            (( _running_count > 0 )) && (( _running_count-- ))
+            continue
+        fi
+        (( _file_job_timeout_sec > 0 )) || continue
+
+        _cur_heartbeat_sig=$(stat -c '%Y:%s' "$_cur_heartbeat" 2>/dev/null || echo "")
+        if [[ "$_cur_heartbeat_sig" != "${_file_heartbeat_sigs[$_i]:-}" ]]; then
+            _file_heartbeat_sigs[$_i]="$_cur_heartbeat_sig"
+            _file_last_progress[$_i]=$SECONDS
+        fi
+        if (( SECONDS - ${_file_last_progress[$_i]} >= _file_job_timeout_sec )) &&
+           [[ "${_file_timeout_reported[$_i]:-false}" != "true" ]]; then
+            _file_timeout_reported[$_i]=true
+            echo >&2 "Warning: No progress for ${_file_job_timeout_sec}s ${_file_names[$_i]}, killing."
+            [[ -s "$_cur_phase" ]] && echo >&2 "Warning: Last phase: $(cat "$_cur_phase")"
+            if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
+                MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$(win_pid_of "$_cur_pid")" /T /F >/dev/null 2>&1 || true
             fi
-        else
-            # Bash 4.x には wait -p がないため PID 識別なしで待つ。
-            # 非対応環境で wait -p を実行すると _running_count が減らず、
-            # このループが進行不能になる。
-            wait -n 2>/dev/null || true
-            if (( _running_count > 0 )); then
-                (( _running_count-- ))
-            fi
+            kill "$_cur_pid" 2>/dev/null || true
         fi
     done
 }
 
+# 実行中のバックグラウンド ジョブ数が MAX_PARALLEL に達している場合、
+# 監視しながら空きスロットが生じるまで待機する。
+wait_for_parallel_slot() {
+    while (( _running_count >= MAX_PARALLEL )); do
+        monitor_file_jobs_once
+        (( _running_count < MAX_PARALLEL )) && break
+        sleep 1
+    done
+}
 #-------------------------------------------------------------------
 
 # パスを絶対パスに変換する関数
@@ -1834,9 +1861,6 @@ for langElement in ${lang}; do
 done
 
 # ファイル レベルの並列処理用追跡配列
-declare -a _file_pids=()
-declare -a _file_names=()
-declare -a _file_status_files=()
 _pm_job_index=0
 
 for file in "${files[@]}"; do
@@ -2607,6 +2631,10 @@ for file in "${files[@]}"; do
         _file_pids+=($!)
         _file_names+=("$file")
         _file_status_files+=("$_pm_statusfile")
+        _file_slot_released+=(false)
+        _file_heartbeat_sigs+=("")
+        _file_last_progress+=("$SECONDS")
+        _file_timeout_reported+=(false)
         (( _running_count++ ))
     fi
 done
@@ -2618,17 +2646,12 @@ done
 #-------------------------------------------------------------------
 
 _overall_exit=0
-# 無進捗ウォッチドッグ: ジョブのハートビート ファイルが FILE_PROCESS_TIMEOUT_SEC 秒間
-# 更新されない場合のみハング (デッドロックなど) とみなして kill する。
-# 図の多いファイルは正常でも長時間かかるため、処理時間の絶対値では kill しない。
-# FILE_PROCESS_TIMEOUT_SEC を未指定または 0 にすると、無進捗ウォッチドッグを無効にする。
-# 長時間の PlantUML や Pandoc 変換は正当な処理であり、通常の発行では時間だけで停止しない。
-# 正の整数を指定した場合だけ、ハートビートが更新されないジョブを停止する。
-_file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-0}"
-if ! [[ "$_file_job_timeout_sec" =~ ^[0-9]+$ ]]; then
-    echo >&2 "Error: FILE_PROCESS_TIMEOUT_SEC must be a non-negative integer."
-    exit 1
-fi
+# スロット待機と同じ監視処理を使い、すべてのジョブが完了するまで待機する。
+while (( _running_count > 0 )); do
+    monitor_file_jobs_once
+    (( _running_count == 0 )) && break
+    sleep 1
+done
 
 for _i in "${!_file_pids[@]}"; do
     _cur_pid="${_file_pids[$_i]}"
@@ -2636,41 +2659,6 @@ for _i in "${!_file_pids[@]}"; do
     _cur_infofile="${_cur_statusfile}.info"
     _cur_heartbeat="${_cur_statusfile}.hb"
     _cur_phase="${_cur_statusfile}.phase"
-
-    # プロセスが実行中の場合のみポーリングで無進捗監視を適用する。
-    # EXIT trap がステータスファイルを書き込んだらサブシェル完了とみなす。
-    # kill -0 はゾンビプロセスにも 0 を返す場合があるため、
-    # ステータスファイルの有無を主判定条件とし、ゾンビはポーリングを抜けて wait でリープする。
-    if (( _file_job_timeout_sec > 0 )) && kill -0 "$_cur_pid" 2>/dev/null; then
-        _poll_start=$SECONDS
-        _last_heartbeat_sig=""
-        while [[ ! -s "$_cur_statusfile" ]] && kill -0 "$_cur_pid" 2>/dev/null; do
-            # ハートビートの mtime とサイズが変化していたら進捗ありとみなしタイマーをリセット
-            _cur_heartbeat_sig=$(stat -c '%Y:%s' "$_cur_heartbeat" 2>/dev/null || echo "")
-            if [[ "$_cur_heartbeat_sig" != "$_last_heartbeat_sig" ]]; then
-                _last_heartbeat_sig="$_cur_heartbeat_sig"
-                _poll_start=$SECONDS
-            fi
-            if (( SECONDS - _poll_start >= _file_job_timeout_sec )); then
-                echo >&2 "Warning: No progress for ${_file_job_timeout_sec}s ${_file_names[$_i]}, killing."
-                if [[ -s "$_cur_phase" ]]; then
-                    echo >&2 "Warning: Last phase: $(cat "$_cur_phase")"
-                fi
-                if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
-                    # 先に kill (SIGTERM) でサブシェルの bash を終了させると native の子
-                    # (pandoc.exe、powershell.exe など) が孤児化し、taskkill /T がツリーを
-                    # たどれなくなる。孤児は継承したパイプ ハンドルを保持し続けるため、
-                    # スクリプト終了後も呼び出し元に制御が戻らない。
-                    # プロセス ツリーが健在なうちに taskkill /T /F で子孫ごと強制終了する。
-                    MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$(win_pid_of "$_cur_pid")" /T /F >/dev/null 2>&1 || true
-                fi
-                kill "$_cur_pid" 2>/dev/null
-                break
-            fi
-            sleep 1
-        done
-    fi
-
     wait "$_cur_pid" 2>/dev/null
     # bash の cleanup_dead_jobs で PID がすでに回収されていても、
     # サブシェル EXIT trap が書き込んだステータスを参照する
