@@ -44,6 +44,17 @@ Markdown to html and docx with Pandoc.
 ```bash
 PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
 ```
+### 無進捗監視
+
+通常の発行では、時間を基準に Markdown ジョブを停止しない。
+大きな PlantUML 図や Pandoc の docx 変換は長時間になる場合があるためです。
+
+ハング調査などで無進捗ジョブを停止したい場合だけ、`FILE_PROCESS_TIMEOUT_SEC` に秒数を指定する。
+タイムアウト時は対象ファイルと最後に記録した工程を出力する。
+
+```bash
+FILE_PROCESS_TIMEOUT_SEC=300 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
+```
 
 ## ビルド結果公開 Pages
 

@@ -343,6 +343,18 @@ local function touch_heartbeat()
     end
 end
 
+local function set_job_phase(phase)
+    local phase_file = os.getenv("PUB_MARKDOWN_JOB_PHASE_FILE")
+    if phase_file ~= nil and phase_file ~= "" then
+        local f = io.open(phase_file, "wb")
+        if f then
+            f:write(phase)
+            f:close()
+        end
+    end
+    touch_heartbeat()
+end
+
 local function move_root_processing_instructions_after_svg(content)
     local svg_start, svg_end = content:find("<svg[%s>][^>]*>")
     if not svg_start then
@@ -694,6 +706,8 @@ return {
                     local local_success = false
                     local temp_output = nil
 
+                    set_job_phase("PlantUML 生成: " .. (caption or "名称なし"))
+
                     -- plantuml コマンドに PATH が通っているかチェック
                     if check_local_plantuml() then
                         -- ローカルの plantuml コマンドで変換
@@ -786,13 +800,14 @@ return {
                 local png_filename = string.format("puml_%s.png", utils.sha1(encoded_text))
                 local png_file_path = paths.join({resource_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
+                set_job_phase("PlantUML SVG から PNG への変換: " .. (caption or "名称なし"))
                 if convert_svg_to_png(image_file_path, png_file_path) then
                     image_file_path = png_file_path
                 end
             end
 
             -- 図 1 個分の生成 (キャッシュ利用や PNG 変換を含む) が完了した
-            touch_heartbeat()
+            set_job_phase("PlantUML 生成完了: " .. (caption or "名称なし"))
 
             local image_src = image_file_path
 

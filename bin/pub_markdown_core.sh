@@ -6,6 +6,8 @@ HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダーの上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダーを選択させる
 cd $HOME_DIR
 
+source "${SCRIPT_DIR}/pub-markdown-skip.sh"
+
 # short-title 解決ヘルパーを読み込む
 source "${SCRIPT_DIR}/extract-short-title.sh"
 
@@ -24,48 +26,13 @@ progress_log() {
     printf '[pub_markdown %s] %s\n' "$(date '+%H:%M:%S')" "$*" >&3
 }
 
-is_skip() {
-    local file="$1"
-    local line
-    local key
-    local value
-    local skip_flag_found=false
-
-    [[ "$file" == *.md ]] || return 1
-    [[ -f "$file" ]] || return 1
-
-    IFS= read -r line < "$file" || return 1
-    line="${line%$'\r'}"
-    [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]] || return 1
-
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        line="${line%$'\r'}"
-        if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
-            [[ "$skip_flag_found" == "true" ]]
-            return
-        fi
-
-        if [[ "$line" == *:* ]]; then
-            key="${line%%:*}"
-            value="${line#*:}"
-            key="${key#"${key%%[![:space:]]*}"}"
-            key="${key%"${key##*[![:space:]]}"}"
-            value="${value%%#*}"
-            value="${value#"${value%%[![:space:]]*}"}"
-            value="${value%"${value##*[![:space:]]}"}"
-            value="${value%\"}"
-            value="${value#\"}"
-            value="${value%\'}"
-            value="${value#\'}"
-            value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
-
-            if [[ "$key" == "pub_markdown.skip" && "$value" == "true" ]]; then
-                skip_flag_found=true
-            fi
-        fi
-    done < <(tail -n +2 "$file")
-
-    return 1
+set_job_phase() {
+    local phase="$1"
+    [[ -n "${_pm_phase_file:-}" ]] || return 0
+    printf '%s\n' "$phase" > "$_pm_phase_file"
+    if [[ -n "${_pm_heartbeat_file:-}" ]]; then
+        touch "$_pm_heartbeat_file" 2>/dev/null
+    fi
 }
 
 # publocal.yaml / pubpart.yaml / pubchild.yaml の defaults: ブロックを抽出し、
@@ -1778,7 +1745,7 @@ IFS=$'\n' read -r -d '' -a files <<< "$files_raw"
 
 files_without_skip=()
 for file in "${files[@]}"; do
-    if is_skip "$file"; then
+    if is_pub_markdown_skip "$file"; then
         progress_log "pub_markdown.skip により発行対象から除外しました file=${file#${workspaceFolder}/}"
         continue
     fi
@@ -2146,6 +2113,7 @@ for file in "${files[@]}"; do
         _pm_job_index=$((_pm_job_index + 1))
         # 親シェルで確定させる: サブシェル exit 後に親側から読み取る
         _pm_statusfile="${_PM_STATUS_DIR}/job-${_pm_job_index}"
+        _pm_infofile="${_pm_statusfile}.info"
         wait_for_parallel_slot
         (
         # サブシェルがどの経路で終了してもステータスを書き込む。
@@ -2160,19 +2128,24 @@ for file in "${files[@]}"; do
         # progress_log と pandoc の Lua フィルター (plantuml.lua / mermaid.lua) が
         # 進捗のたびに更新し、親はこの更新を検出してタイムアウトのタイマーをリセットする。
         _pm_heartbeat_file="${_pm_statusfile}.hb"
+        _pm_phase_file="${_pm_statusfile}.phase"
+        printf 'pid=%s\nfile=%s\n' "$BASHPID" "$file" > "$_pm_infofile"
         touch "$_pm_heartbeat_file"
         # pandoc.exe (Win32) の Lua がパスを解決できるよう
         # cygpath -m で Windows ネイティブ形式に変換して渡す
         if is_windows_host && command -v cygpath >/dev/null 2>&1; then
             export PUB_MARKDOWN_JOB_HEARTBEAT_FILE="$(cygpath -m "$_pm_heartbeat_file")"
+            export PUB_MARKDOWN_JOB_PHASE_FILE="$(cygpath -m "$_pm_phase_file")"
         else
             export PUB_MARKDOWN_JOB_HEARTBEAT_FILE="$_pm_heartbeat_file"
+            export PUB_MARKDOWN_JOB_PHASE_FILE="$_pm_phase_file"
         fi
         # このサブシェル内の出力を一時ファイルにバッファリングし、
         # 完了後に flock でアトミックに標準出力へ書き出す (並列実行時の出力混在を防ぐ)
         _pm_tmpout=$(mktemp)
         {
         # .md ファイルの処理
+        set_job_phase "Markdown 処理"
         progress_log "Markdown 処理を開始しました file=${file#${workspaceFolder}/}"
         echo "Processing Markdown file: ${file#${workspaceFolder}/}"
 
@@ -2448,7 +2421,7 @@ for file in "${files[@]}"; do
                 if [[ "$_need_generate" == "true" ]]; then
                 # Markdown の最初にコメントがあると、--shift-heading-level-by=-1 を使った title の抽出に失敗するので
                 # 独自に抽出を行う。コードのリファクタリングがなされておらず冗長だが動作はする。
-                replaced_md=$(cat "${file}" | replace-tag.sh --lang=${langElement} --details=${current_details})
+                replaced_md=$(replace-tag.sh --lang=${langElement} --details=${current_details} < "${file}")
                 md_title=$(echo "${replaced_md}" \
                     | perl -0777 -pe 's/<!--.*?-->//gs' \
                     | sed -n '/^#/p' \
@@ -2479,6 +2452,7 @@ for file in "${files[@]}"; do
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                 _pm_pandoc_stderr=$(mktemp)
+                set_job_phase "HTML 生成 lang=${langElement} details=${current_details}"
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                 # nav_title が指定されている場合、docsfw-nav-title メタデータを付与する
                 _nav_title_option=()
@@ -2550,6 +2524,7 @@ for file in "${files[@]}"; do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
+                    set_job_phase "DOCX 生成 lang=${langElement} details=${current_details}"
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
                         "$PANDOC" -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
@@ -2646,18 +2621,27 @@ _overall_exit=0
 # 無進捗ウォッチドッグ: ジョブのハートビート ファイルが FILE_PROCESS_TIMEOUT_SEC 秒間
 # 更新されない場合のみハング (デッドロックなど) とみなして kill する。
 # 図の多いファイルは正常でも長時間かかるため、処理時間の絶対値では kill しない。
-_file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-300}"
+# FILE_PROCESS_TIMEOUT_SEC を未指定または 0 にすると、無進捗ウォッチドッグを無効にする。
+# 長時間の PlantUML や Pandoc 変換は正当な処理であり、通常の発行では時間だけで停止しない。
+# 正の整数を指定した場合だけ、ハートビートが更新されないジョブを停止する。
+_file_job_timeout_sec="${FILE_PROCESS_TIMEOUT_SEC:-0}"
+if ! [[ "$_file_job_timeout_sec" =~ ^[0-9]+$ ]]; then
+    echo >&2 "Error: FILE_PROCESS_TIMEOUT_SEC must be a non-negative integer."
+    exit 1
+fi
 
 for _i in "${!_file_pids[@]}"; do
     _cur_pid="${_file_pids[$_i]}"
     _cur_statusfile="${_file_status_files[$_i]}"
+    _cur_infofile="${_cur_statusfile}.info"
     _cur_heartbeat="${_cur_statusfile}.hb"
+    _cur_phase="${_cur_statusfile}.phase"
 
     # プロセスが実行中の場合のみポーリングで無進捗監視を適用する。
     # EXIT trap がステータスファイルを書き込んだらサブシェル完了とみなす。
     # kill -0 はゾンビプロセスにも 0 を返す場合があるため、
     # ステータスファイルの有無を主判定条件とし、ゾンビはポーリングを抜けて wait でリープする。
-    if kill -0 "$_cur_pid" 2>/dev/null; then
+    if (( _file_job_timeout_sec > 0 )) && kill -0 "$_cur_pid" 2>/dev/null; then
         _poll_start=$SECONDS
         _last_heartbeat_sig=""
         while [[ ! -s "$_cur_statusfile" ]] && kill -0 "$_cur_pid" 2>/dev/null; do
@@ -2669,6 +2653,9 @@ for _i in "${!_file_pids[@]}"; do
             fi
             if (( SECONDS - _poll_start >= _file_job_timeout_sec )); then
                 echo >&2 "Warning: No progress for ${_file_job_timeout_sec}s ${_file_names[$_i]}, killing."
+                if [[ -s "$_cur_phase" ]]; then
+                    echo >&2 "Warning: Last phase: $(cat "$_cur_phase")"
+                fi
                 if is_windows_host && command -v taskkill.exe >/dev/null 2>&1; then
                     # 先に kill (SIGTERM) でサブシェルの bash を終了させると native の子
                     # (pandoc.exe、powershell.exe など) が孤児化し、taskkill /T がツリーを
@@ -2688,7 +2675,13 @@ for _i in "${!_file_pids[@]}"; do
     # bash の cleanup_dead_jobs で PID がすでに回収されていても、
     # サブシェル EXIT trap が書き込んだステータスを参照する
     _pm_job_exit=$(cat "$_cur_statusfile" 2>/dev/null || echo "127")
-    rm -f "$_cur_statusfile" "$_cur_heartbeat"
+    if [[ "$_pm_job_exit" == "127" && ! -s "$_cur_statusfile" ]]; then
+        echo >&2 "Error: Process exited without a result status: ${_file_names[$_i]}"
+        if [[ -s "$_cur_infofile" ]]; then
+            sed 's/^/Error: Job /' "$_cur_infofile" >&2
+        fi
+    fi
+    rm -f "$_cur_statusfile" "$_cur_infofile" "$_cur_heartbeat" "$_cur_phase"
     if [[ "${_pm_job_exit}" -ne 0 ]]; then
         echo >&2 "Error: Failed to process ${_file_names[$_i]}"
         _overall_exit=1

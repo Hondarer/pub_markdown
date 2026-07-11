@@ -14,6 +14,7 @@ const puppeteer = require('puppeteer');
 const fs        = require('fs');
 const http      = require('http');
 const path      = require('path');
+const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 
 const wsFile = process.argv[2];
 if (!wsFile) {
@@ -56,7 +57,10 @@ function buildLaunchOptions() {
   // launch フェーズ (WS エンドポイント URL が stdout に現れるまでの待機) にも
   // START_TIMEOUT_MS を適用する。未指定だと puppeteer 既定の 30000 ms が効き、
   // 低リソース環境で Chrome 起動が 30 秒を超えるとフォールバックに落ちる。
-  const launchOptions = { args: ['--no-sandbox'], timeout: START_TIMEOUT_MS };
+  const launchOptions = buildBrowserLaunchOptions({
+    args: ['--no-sandbox'],
+    timeout: START_TIMEOUT_MS,
+  });
   const wrapperPath = path.join(__dirname, 'chrome-wrapper.sh');
 
   if (!canUseChromeWrapper(wrapperPath)) {
@@ -74,6 +78,10 @@ function buildLaunchOptions() {
 
   launchOptions.executablePath = wrapperPath;
   launchOptions.env = env;
+  launchOptions.args = buildBrowserLaunchOptions({
+    args: launchOptions.args,
+    executablePath: originalExecutablePath,
+  }).args;
   console.error(`browser-server.js: launching browser via ${wrapperPath}`);
   return launchOptions;
 }

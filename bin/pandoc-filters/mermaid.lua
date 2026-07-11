@@ -100,6 +100,18 @@ local function touch_heartbeat()
     end
 end
 
+local function set_job_phase(phase)
+    local phase_file = os.getenv("PUB_MARKDOWN_JOB_PHASE_FILE")
+    if phase_file ~= nil and phase_file ~= "" then
+        local f = io.open(phase_file, "wb")
+        if f then
+            f:write(phase)
+            f:close()
+        end
+    end
+    touch_heartbeat()
+end
+
 local function file_exists(name)
     local _name = utf8_to_active_cp(name)
 
@@ -264,6 +276,8 @@ return {
             local image_file_path = paths.join({resource_dir, image_filename})
             local _image_file_path = utf8_to_active_cp(image_file_path)
 
+            set_job_phase("Mermaid 生成: " .. (caption or "名称なし"))
+
             if not file_exists(image_file_path) then
                 local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
                 local _mmd_filename = utf8_to_active_cp(mmd_filename)
@@ -372,13 +386,14 @@ return {
                 local png_filename = string.format("mermaid_%s.png", utils.sha1(el.text))
                 local png_file_path = paths.join({resource_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
+                set_job_phase("Mermaid SVG から PNG への変換: " .. (caption or "名称なし"))
                 if convert_svg_to_png(image_file_path, png_file_path) then
                     image_file_path = png_file_path
                 end
             end
 
             -- 図 1 個分の生成 (mmdc 実行や PNG 変換を含む) が完了した
-            touch_heartbeat()
+            set_job_phase("Mermaid 生成完了: " .. (caption or "名称なし"))
 
             local image_src = image_file_path
 

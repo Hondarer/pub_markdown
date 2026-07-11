@@ -28,15 +28,16 @@ if [[ ! " ${supported_langs[@]} " =~ " ${lang} " ]]; then
   exit 1
 fi
 
-# 標準入力から Markdown を読み込む
-markdown_text=$(cat)
-
-markdown_text=$(awk -v lang="$lang" -v details="$details" -v supported_langs="$(IFS=,; echo "${supported_langs[*]}")" '
+# 標準入力を awk で直接処理する。
+# コマンド置換で cat の出力を保持すると、Git Bash の並列パイプ実行時に
+# 入力パイプのハンドルが残り、EOF を待ち続けることがある。
+awk -v lang="$lang" -v details="$details" -v supported_langs="$(IFS=,; echo "${supported_langs[*]}")" '
 BEGIN {
     split(supported_langs, langs, ",");
     in_code_block = 0;
     in_skip = 0;
     skip_key = "";
+    saw_input = 0;
 
     # 有効なキーセットを初期化 (1: 有効、0: 無効)
     # details キー
@@ -48,6 +49,7 @@ BEGIN {
 }
 
 {
+    saw_input = 1;
     # CRLF 対応: 行末の \r を除去
     gsub(/\r$/, "");
 
@@ -104,7 +106,9 @@ BEGIN {
     if (in_skip) next;
 
     print $0;
-}' <<< "$markdown_text")
+}
 
-echo "$markdown_text"
-exit
+END {
+    # 旧実装の echo と同じく、空入力でも改行 1 個を出力する。
+    if (!saw_input) print "";
+}'

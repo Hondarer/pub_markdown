@@ -12,6 +12,7 @@ const minimist  = require('minimist');
 const fs        = require('fs');
 const crypto    = require('crypto');
 const sharp     = require('sharp');
+const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 
 /* ── 1. オプション解析 ─────────────────────────────────────────────── */
 const argv  = minimist(process.argv.slice(2), {
@@ -72,7 +73,7 @@ async function getBrowser() {
       // ファイルが読めない・接続失敗時はフォールバック
     }
   }
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch(buildBrowserLaunchOptions({ args: ['--no-sandbox'] }));
   return { browser, shared: false };
 }
 

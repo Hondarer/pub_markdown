@@ -7,6 +7,7 @@
 _INSERT_TOC_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 source "${_INSERT_TOC_SCRIPT_DIR}/../extract-short-title.sh"
 
+source "${_INSERT_TOC_SCRIPT_DIR}/../pub-markdown-skip.sh"
 # キャッシュファイルパス
 CACHE_FILE="/tmp/insert-toc-cache.tsv"
 
@@ -110,49 +111,6 @@ resolve_current_context() {
     done
 }
 
-is_skip() {
-    local file="$1"
-    local line
-    local key
-    local value
-    local skip_flag_found=false
-
-    [[ "$file" == *.md || "$file" == *.markdown ]] || return 1
-    [[ -f "$file" ]] || return 1
-
-    IFS= read -r line < "$file" || return 1
-    line="${line%$'\r'}"
-    [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]] || return 1
-
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        line="${line%$'\r'}"
-        if [[ "$line" =~ ^[[:space:]]*---[[:space:]]*$ ]]; then
-            [[ "$skip_flag_found" == "true" ]]
-            return
-        fi
-
-        if [[ "$line" == *:* ]]; then
-            key="${line%%:*}"
-            value="${line#*:}"
-            key="${key#"${key%%[![:space:]]*}"}"
-            key="${key%"${key##*[![:space:]]}"}"
-            value="${value%%#*}"
-            value="${value#"${value%%[![:space:]]*}"}"
-            value="${value%"${value##*[![:space:]]}"}"
-            value="${value%\"}"
-            value="${value#\"}"
-            value="${value%\'}"
-            value="${value#\'}"
-            value=$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')
-
-            if [[ "$key" == "pub_markdown.skip" && "$value" == "true" ]]; then
-                skip_flag_found=true
-            fi
-        fi
-    done < <(tail -n +2 "$file")
-
-    return 1
-}
 
 toc_output_cache_path() {
     [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]] || return 1
@@ -972,7 +930,7 @@ scan_directory() {
             add_to_memory_cache "$abs_path" "$filename" "directory" "$filename" ""
             unsorted_keys+=("$abs_path")
         elif [[ -f "$path" ]]; then
-            if is_skip "$path"; then
+            if is_pub_markdown_skip "$path"; then
                 continue
             fi
 
@@ -1089,7 +1047,7 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                     fi
                     unsorted_keys+=("$_virtual_abs_path")
                 elif [[ -f "$path" ]]; then
-                    if is_skip "$path"; then
+                    if is_pub_markdown_skip "$path"; then
                         continue
                     fi
 

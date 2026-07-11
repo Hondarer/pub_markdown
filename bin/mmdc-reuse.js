@@ -15,6 +15,7 @@ const puppeteer = require('puppeteer');
 const fs        = require('fs');
 const path      = require('path');
 const minimist  = require('minimist');
+const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 
 const argv = minimist(process.argv.slice(2), {
   string: ['i', 'o', 'b'],
@@ -62,7 +63,7 @@ async function getBrowser() {
       }
     } catch (_) {}
   }
-  const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch(buildBrowserLaunchOptions({ args: ['--no-sandbox'] }));
   return { browser, shared: false };
 }
 
