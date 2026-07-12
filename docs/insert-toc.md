@@ -318,7 +318,9 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ### 概要
 
-`insert-toc.sh` は性能向上のため、ファイル情報と Markdown タイトルをキャッシュ ファイルに永続化します。
+`insert-toc.sh` は性能向上のため、ファイル情報と Markdown タイトルをキャッシュ ファイルに保存します。
+キャッシュは `pub_markdown_core.sh` が処理の冒頭で削除するため、 `pub_markdown_core.sh` の実行単位をまたいで共有されません。
+同一実行内の別プロセス (`insert-toc.sh` の複数起動) 間の共有だけを目的としています。
 
 ### キャッシュ ファイル
 
@@ -353,9 +355,10 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ### キャッシュ管理
 
-- **リセット**: 外部でキャッシュ ファイルを削除してリセット
-- **更新**: 一度作成されたエントリは無効化されず、言語別タイトルの追加のみ実行
+- **寿命**: `pub_markdown_core.sh` が処理の冒頭で `rm -f /tmp/insert-toc-cache.tsv` を行うため、実行ごとに再生成される
+- **更新**: 同一実行内では、一度作成されたエントリは無効化されず、言語別タイトルの追加のみ実行
 - **スコープ**: パラメーターに依存しない汎用的なキャッシュ
+- **形式変更**: 実行間の互換性を保つ必要がないため、TSV の列追加などの形式変更は既存キャッシュとの互換を考慮せずに行ってよい
 
 ### Markdown タイトル抽出
 

@@ -51,3 +51,4 @@ chcp 65001
 - Linux と Windows でブラウザー起動経路が異なる。Puppeteer、Edge、Chromium 関連の変更では `pub_markdown_core.sh` とラッパー スクリプトを同時に確認すること。
 - `bin/pub_markdown_core.sh` は `node_modules` がなければ自動で `npm ci` を試みる。依存更新では `package.json` とスクリプト双方の整合を保つこと。
 - 出力整形は Pandoc フィルターと `styles/` に分散しているため、見た目の変更では CSS だけでなくフィルターの影響も確認すること。
+- `styles/html/html-template.html` は Pandoc テンプレートとして処理されるため、インライン JavaScript 内の literal `$` (正規表現の `/foo$/` など) は `$$` にエスケープすること。エスケープ漏れは「Error compiling template ... expecting "()"」でページ全体の生成が失敗する。テンプレートに JS を追加したらビルド ログの「Error compiling template」を必ず確認する。テンプレートや CSS の変更はタイムスタンプ スキップの対象外のため、フルビルドでは `pages` の削除が必要 (`rm -rf pages && bash bin/pub_markdown_core.sh --workspaceFolder="$PWD" --details=both --docxOutput=true`)。オプション名は `--docxOutput=` であり、`--docx=` は黙って無視される。
