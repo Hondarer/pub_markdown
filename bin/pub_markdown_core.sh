@@ -167,6 +167,13 @@ is_windows_host() {
     esac
 }
 
+# Linux ではバックグラウンド ジョブごとに独立したプロセス グループを作る。
+# cleanup_resources はグループ全体へシグナルを送り、Pandoc や Node.js などの
+# 子孫プロセスが親サブシェルの終了後に残ることを防ぐ。
+if ! is_windows_host; then
+    set -m
+fi
+
 # MSYS2 (Cygwin) の PID は Windows ネイティブの PID と一致しない場合があるため、
 # taskkill.exe へ渡す前に /proc/<pid>/winpid で Windows PID に変換する。
 # 変換できない場合は入力の PID をそのまま返す。
@@ -189,6 +196,8 @@ append_unique_pid() {
 
 terminate_managed_pids() {
     local pid
+    local attempt
+    local any_alive
 
     [[ ${#_cleanup_pids[@]} -gt 0 ]] || return 0
 
@@ -204,30 +213,52 @@ terminate_managed_pids() {
                 MSYS2_ARG_CONV_EXCL='*' taskkill.exe /PID "$(win_pid_of "$pid")" /T /F >/dev/null 2>&1 || true
             fi
         done
+    elif is_windows_host; then
+        # taskkill.exe を利用できない Windows 環境では、少なくとも管理対象の
+        # MSYS プロセスを直接終了する。通常のサポート環境では上の /T /F を使う。
+        for pid in "${_cleanup_pids[@]}"; do
+            kill -TERM "$pid" 2>/dev/null || true
+        done
     else
         for pid in "${_cleanup_pids[@]}"; do
-            kill "$pid" 2>/dev/null || true
+            # monitor mode により pid はバックグラウンド ジョブのプロセス
+            # グループ ID でもある。負の PID で子孫を含む全体へ送信する。
+            kill -TERM -- "-$pid" 2>/dev/null || true
         done
 
-        # SIGTERM 送信後、猶予時間を置いてから残存プロセスを強制終了する。
-        # browser.close() のタイムアウト (5 秒) に余裕を持たせ 6 秒待機してから SIGKILL。
-        sleep 6
+        # browser.close() のタイムアウトは 5 秒。最大 6 秒の範囲で終了を監視し、
+        # 全グループが終了した場合は猶予時間を待たずに次へ進む。
+        attempt=0
+        while [ "$attempt" -lt 60 ]; do
+            any_alive=0
+            for pid in "${_cleanup_pids[@]}"; do
+                if kill -0 -- "-$pid" 2>/dev/null; then
+                    any_alive=1
+                    break
+                fi
+            done
+            if [ "$any_alive" -eq 0 ]; then
+                break
+            fi
+            sleep 0.1
+            attempt=$((attempt + 1))
+        done
 
         for pid in "${_cleanup_pids[@]}"; do
-            if kill -0 "$pid" 2>/dev/null; then
-                kill -9 "$pid" 2>/dev/null || true
+            if kill -0 -- "-$pid" 2>/dev/null; then
+                kill -KILL -- "-$pid" 2>/dev/null || true
             fi
         done
     fi
 
-    # force kill 後のゾンビを reap する。
-    # kill -0 が非ゼロを返すプロセス (終了確認済み) のみ wait してリープする。
-    # kill -0 が 0 を返すまま (強制終了できなかったケース) はスキップし、
-    # bash 自身の終了時に OS が回収する。
+    # 終了済みの直接の子を wait してリープする。Linux では上でプロセス
+    # グループへ SIGKILL 済み、Windows では taskkill /T /F 済みのため、
+    # ここで実行中プロセスを無期限に待つことはない。
     for pid in "${_cleanup_pids[@]}"; do
-        if ! kill -0 "$pid" 2>/dev/null; then
-            wait "$pid" 2>/dev/null || true
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -KILL "$pid" 2>/dev/null || true
         fi
+        wait "$pid" 2>/dev/null || true
     done
 }
 
