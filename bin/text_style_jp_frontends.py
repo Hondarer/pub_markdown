@@ -34,11 +34,16 @@ _WAVE_DASH_SPACE_AFTER_ONLY_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)([〜～]
 _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
 _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
+#  @ref は entity 名 (:: ~ . - を含みうる) を、@p/@c/@a/@b/@e/@em は単純な
+#  C 識別子 1 語を引数に取る。Doxygen はこれらの引数を空白区切りの 1 トークンとして
+#  読み取るため、直後に日本語句読点が空白なしで続くと句読点までが引数に取り込まれ、
+#  意図しない書式 (@p など) や @ref のリンク解決失敗を招く。
+_DOXYGEN_INLINE_ARG_COMMAND_RE = r"(?:[@\\]ref\s+[A-Za-z_][A-Za-z0-9_:~.-]*|[@\\](?:p|c|a|b|e|em)\s+[A-Za-z_][A-Za-z0-9_]*)"
 _DOXYGEN_REF_TRAILING_JP_PUNCT_PATTERN = re.compile(
-    r"[@\\]ref\s+[A-Za-z_][A-Za-z0-9_:~.-]*\s+[、。，．]"
+    _DOXYGEN_INLINE_ARG_COMMAND_RE + r"\s+[、。，．]"
 )
 _DOXYGEN_REF_MISSING_SPACE_BEFORE_JP_PUNCT_RE = re.compile(
-    r"((?:[@\\]ref\s+)[A-Za-z_][A-Za-z0-9_:~.-]*)([、。，．])"
+    r"(" + _DOXYGEN_INLINE_ARG_COMMAND_RE + r")([、。，．])"
 )
 _LIST_ITEM_RE = re.compile(r"^\s*([-*+]|\d+[.)]) ")
 _UNORDERED_LIST_MARKER_RE = re.compile(r"^(\s*)[*+](?= )")
@@ -1133,13 +1138,13 @@ def _style_doxygen_description(
         _COMMENT_CODE_PROTECTED_PATTERNS + [_DOXYGEN_INLINE_COMMAND_PATTERN],
         collector=collector,
     )
-    normalized = _normalize_doxygen_ref_punctuation_spacing(styled, collector=collector)
+    normalized = _normalize_doxygen_inline_arg_punctuation_spacing(styled, collector=collector)
     if collector is not None and normalized == before:
         collector.findings = collector.findings[:start_index]
     return normalized
 
 
-def _normalize_doxygen_ref_punctuation_spacing(
+def _normalize_doxygen_inline_arg_punctuation_spacing(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
@@ -1148,9 +1153,9 @@ def _normalize_doxygen_ref_punctuation_spacing(
         _record_step_changes(
             text,
             normalized,
-            "doxygen-ref-punctuation-spacing",
+            "doxygen-inline-arg-punctuation-spacing",
             collector,
-            message="@ref 参照名と日本語句読点の間にスペースを挿入",
+            message="@ref/@p などのコマンド引数と日本語句読点の間にスペースを挿入",
         )
     return normalized
 
@@ -1192,7 +1197,7 @@ def _style_doxygen_line(
     if match:
         start_index = len(collector.findings) if collector is not None else 0
         desc = _style_doxygen_description(match.group(3), collector=collector)
-        normalized = _normalize_doxygen_ref_punctuation_spacing(
+        normalized = _normalize_doxygen_inline_arg_punctuation_spacing(
             match.group(1) + match.group(2) + desc,
             collector=collector,
         )

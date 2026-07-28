@@ -624,6 +624,28 @@ def run_tests() -> bool:
             "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT、\n */\n",
             "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT 、\n */\n",
         ),
+        # @p/@c/@a/@b/@e/@em は @ref と同様に空白区切りの 1 語を引数に取るため、
+        # 直後に空白なしで日本語句読点が続くと Doxygen が句読点まで引数に取り込んでしまう。
+        (
+            "c",
+            "/** @return 成功時は @p buf、EOF またはエラー時は NULL を返します。 */\n",
+            "/** @return 成功時は @p buf 、EOF またはエラー時は NULL を返します。 */\n",
+        ),
+        (
+            "c",
+            "/** @param[in] whence 基準位置 (@c SEEK_SET、@c SEEK_CUR、@c SEEK_END のいずれか)。 */\n",
+            "/** @param[in] whence 基準位置 (@c SEEK_SET 、@c SEEK_CUR 、@c SEEK_END のいずれか)。 */\n",
+        ),
+        (
+            "c",
+            "/** これは @a value。詳細です。 */\n",
+            "/** これは @a value 。詳細です。 */\n",
+        ),
+        (
+            "c",
+            "/** これは @p value 。詳細です。 */\n",
+            "/** これは @p value 。詳細です。 */\n",
+        ),
         (
             "c",
             "/**\n * @brief  関数の説明です。  ← 字下げレベルが一致していない\n */\n",
