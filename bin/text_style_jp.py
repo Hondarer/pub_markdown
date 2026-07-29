@@ -55,6 +55,10 @@ def run_tests() -> bool:
         ("送信者 1 : 受信者 1", "送信者 1 : 受信者 1"),
         ("path, ...", "path, ..."),
         ("文末 .", "文末."),
+        ("警告 !", "警告!"),
+        ("変数 ?= 値", "変数 ?= 値"),
+        ("戻り値 == 0", "戻り値 == 0"),
+        ("戻り値 != 0", "戻り値 != 0"),
         ("列 A ( タイトル )", "列 A (タイトル)"),
         ("[ 新規 ] をクリック", "[新規] をクリック"),
         ("「 test 」と入力", "「test」と入力"),
@@ -156,6 +160,14 @@ def run_tests() -> bool:
         ("単語, 単語", "単語, 単語"),
         ("先頭の ./ は中間一致を防くために明示したほうがベターです。", "先頭の ./ は中間一致を防くために明示したほうがベターです。"),
         ("全角コロン：サンプル", "全角コロン: サンプル"),
+        (
+            "旧コードの「戻り値 != 0」なら失敗です。",
+            "旧コードの「戻り値 != 0」なら失敗です。",
+        ),
+        (
+            "旧コードの「戻り値 == 0」なら成功です。",
+            "旧コードの「戻り値 == 0」なら成功です。",
+        ),
         # fullwidth-bang: コード ブロック内は変換しない
         ("```\n？！\n```", "```\n？！\n```"),
         ("## @brief { brief description }", "## @brief { brief description }"),
@@ -1025,6 +1037,22 @@ def run_tests() -> bool:
     status = "✓" if passed else "✗"
     rules_found = [f.rule for f in c.findings]
     print(f"\n{status} style_prose fullwidth-bang: rules={rules_found}")
+    if not passed:
+        all_passed = False
+
+    # style_prose: != の直前スペースを保持し、句読点の指摘として報告しない
+    c = DiagnosticCollector()
+    c.set_line(1)
+    result = style_prose("戻り値 != 0", collector=c)
+    space_before_punctuation_findings = [
+        f for f in c.findings if f.rule == "space-before-punctuation"
+    ]
+    passed = result == "戻り値 != 0" and not space_before_punctuation_findings
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} style_prose != 演算子除外: "
+        f"findings={space_before_punctuation_findings}"
+    )
     if not passed:
         all_passed = False
 

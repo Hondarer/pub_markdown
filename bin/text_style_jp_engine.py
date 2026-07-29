@@ -643,8 +643,8 @@ def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
 
 
 def remove_space_before_punctuation(text: str) -> str:
-    text = re.sub(r" +([、。，．,;!！])", r"\1", text)
-    text = re.sub(r" +([?？])(?!=)", r"\1", text)
+    text = re.sub(r" +([、。，．,;])", r"\1", text)
+    text = re.sub(r" +([?？!！])(?!=)", r"\1", text)
     text = re.sub(r" +:(?!(?: |=))", ":", text)
     text = re.sub(r" +\.(?![A-Za-z./\\])", ".", text)
     return text
