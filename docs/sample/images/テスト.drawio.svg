@@ -1,22 +1,30 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZTBjpswEEC/xtcK4wWFY0mz3ctqD3vo2cUDWDE2cpxN6NfXhnGAhki7UqMoMW9mYpg3MWH77vrT8r59NQIUSRNxJewHSdMiy/1nAMMEMpZNoLFSTIjO4F3+AcxDeJYCTqs8Z4xysl/DymgNlVsxbq25rNNqo9ab9ryBO/BecXVPf0nh2onmWTLzF5BNG3emeTFFOh6TMfXUcmEuC8QOhO2tMW5addc9qNC62Jap7vlB9HZjFrT7TAGbCj64OuOzkQMjO//Ox0VKyiKSHUm9NkYTwsqRUfI9wawQHJ/HDbFJ1py1gLAP9QW1VGpvlLFjkEEKaR1+qDbaLXgyvjw/OWuOsBUJFc+8kyrMzitIOxikOCf06VYf7STfMs+4rTBlzOh5JXWDV9gHsA6uD3tJb4b8YIPpwNnBp1zmGaBRbLvwnyPjOHbNrXQ24xcoZ1vU07YoSsoMF0WJLgp258KPWR+W2jj/Vf7m1bEZ/bydnZIaUJLg9vgW2uKGsWlJ6Nra42MvWx3/nKtHM/DPzNRQ10KEnbA23A9XstH+QkHt/qvUWMBQHp5U8aBaON9tKI8n1ReU+8v5fz/GFmcnO/wF&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZTBbqMwEEC/xtcV4JAmx5Km3UvVQw979uIBrBgbOU4T9uvXxuMADZFaqVEkzJuZGOZNTOiuvbwY1jWvmoMkWcIvhD6RLEvzfOMunvSB0PQhgNoIjkkjeBf/IMAc4UlwOM7yrNbSim4OS60UlHbGmDH6PE+rtJxv2rEabsB7yeQt/SO4bQJdr7KR/wZRN7jz9mEdAi2LuUkAx4ZxfZ4guid0Z7S2YdVediB962JXQt3znej1uQwo+5UCGgo+mDzhq5E9JRv3XQ+LjBTbSJwy9xo0TQgtBpaSxwSzNujzaPvYI6NPioPfJ3UFlZByp6U2Q5BCBlnlf6jSyk54MnwcP1qjD7AU8RXPrBXSj84rCNNrpDgm6epaH+Ukv3LHmCkxZcjoWClUjXe3jcNefoCxcJkgbOQL6Bas6V3KeRyBNIptJvrXyBhOXX0tHc24BcpZFrVaFpWSIsfFtkAXW3rjwo1Z55dKW3cp/rLyUA9+3k5WCgUoiTNzePNtsf3QtMR3be7xvpeljn/N1b0Z+DQzFVQV534nrPXPw6SolbuRUNkflRqjFOXFgwpPoInzzYLyeFB9Q7m7Hf/3Q2xydtL9fw==&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
-        <rect x="0" y="0" width="120" height="60" rx="2.4" ry="2.4" fill="#e2e2f0" stroke="#000000" stroke-width="0.5" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" text-anchor="middle" font-size="14px">
-            <text x="59.5" y="27">
-                テスト
-            </text>
-            <text x="59.5" y="44">
-                だよ
-            </text>
+        <g>
+            <rect x="0" y="0" width="120" height="60" rx="2.4" ry="2.4" fill="#e2e2f0" stroke="#000000" stroke-width="0.5" pointer-events="all" style="fill: light-dark(rgb(226, 226, 240), rgb(41, 41, 53)); stroke: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));"/>
         </g>
-        <path d="M 130 35 L 199 35 L 210 46 L 210 60 L 130 60 L 130 35 Z" fill="#feffdd" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
-        <path d="M 199 35 L 199 46 L 210 46 Z" fill-opacity="0.05" fill="#000000" stroke="none" pointer-events="all"/>
-        <path d="M 199 35 L 199 46 L 210 46" fill="none" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" font-size="14px">
-            <text x="133.5" y="53">
-                ふせん
-            </text>
+        <g>
+            <g fill="#000000" font-family="&quot;Meiryo&quot;" text-anchor="middle" font-size="14px" style="fill: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));">
+                <text x="59.5" y="27">
+                    テスト
+                </text>
+                <text x="59.5" y="44">
+                    だよ
+                </text>
+            </g>
+        </g>
+        <g>
+            <path d="M 130 35 L 199 35 L 210 46 L 210 60 L 130 60 L 130 35 Z" fill="#feffdd" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all" style="fill: light-dark(rgb(254, 255, 221), rgb(22, 23, 0)); stroke: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));"/>
+            <path d="M 199 35 L 199 46 L 210 46 Z" fill-opacity="0.05" fill="#000000" stroke="none" pointer-events="all" style="fill: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));"/>
+            <path d="M 199 35 L 199 46 L 210 46" fill="none" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));"/>
+        </g>
+        <g>
+            <g fill="#000000" font-family="&quot;Meiryo&quot;" font-size="14px" style="fill: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));">
+                <text x="133.5" y="53">
+                    ふせん
+                </text>
+            </g>
         </g>
     </g>
 </svg>
