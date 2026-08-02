@@ -201,6 +201,12 @@ else
 - WebSocket エンドポイントを書き出す前に、DevTools API (`/json/version`) が `webSocketDebuggerUrl` を返すことを確認する
 - `browser-server.js` が先に終了した場合は、タイムアウトを待たずにフォールバックする
 - フォールバック時は `browser-server.js` の診断ログを警告として出力する
+- 起動に成功した場合は、ラッパーが最終的に選択したブラウザーの実行パスを表示する
+
+```text
+Starting shared browser... done.
+Browser executable: /usr/local/bin/chrome
+```
 
 停止処理:
 

@@ -297,6 +297,9 @@ cleanup_resources() {
     if [[ -n "${PUB_MARKDOWN_BROWSER_WS_FILE:-}" ]]; then
         rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" 2>/dev/null
     fi
+    if [[ -n "${BROWSER_EXECUTABLE_REPORT_FILE:-}" ]]; then
+        rm -f "$BROWSER_EXECUTABLE_REPORT_FILE" 2>/dev/null
+    fi
     if [[ -n "${BROWSER_SERVER_LOG:-}" ]]; then
         rm -f "$BROWSER_SERVER_LOG" 2>/dev/null
     fi
@@ -497,6 +500,7 @@ export NODE_NO_WARNINGS=1
 
 BROWSER_SERVER_PID=""
 BROWSER_SERVER_LOG=""
+BROWSER_EXECUTABLE_REPORT_FILE=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 # Windows (MSYS2) では mktemp が POSIX パスを返すが、
 # pandoc.exe (Win32) の Lua が環境変数のパスを解決できないため
@@ -528,6 +532,21 @@ summarize_browser_server_log() {
         | sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^ //' -e 's/ $//'
 }
 
+print_browser_executable() {
+    local report_file="$1"
+    local executable_path=""
+
+    if [[ -s "$report_file" ]]; then
+        IFS= read -r executable_path < "$report_file"
+    fi
+
+    if [[ -n "$executable_path" ]]; then
+        printf 'Browser executable: %s\n' "$executable_path"
+    else
+        printf 'Browser executable: (unknown)\n'
+    fi
+}
+
 start_shared_browser_server() {
     # ポーリングは 1 秒/tick のため、タイムアウト秒数をそのまま tick 数とする
     local timeout_ticks=$(( PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC * 1 ))
@@ -535,21 +554,25 @@ start_shared_browser_server() {
     local reason=""
 
     export PUB_MARKDOWN_BROWSER_WS_FILE="/tmp/pub_markdown_browser_ws_$$"
+    BROWSER_EXECUTABLE_REPORT_FILE="${PUB_MARKDOWN_BROWSER_WS_FILE}.executable"
     BROWSER_SERVER_LOG=$(mktemp)
-    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE"
+    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" "$BROWSER_EXECUTABLE_REPORT_FILE"
 
     # NOTE: browser-server.js は prepare_puppeteer_env.sh を source せず、
     #       chrome-wrapper.sh を直接 executablePath に指定する。
     #       これにより二重ラップを避けながら DevTools readiness 待機を適用する。
     #       フォールバック時 (rsvg-convert 単体実行) は従来通り chrome-wrapper.sh が使われる。
     echo -n "Starting shared browser..."
-    node "${SCRIPT_DIR}/browser-server.js" "$PUB_MARKDOWN_BROWSER_WS_FILE" >"$BROWSER_SERVER_LOG" 2>&1 &
+    node "${SCRIPT_DIR}/browser-server.js" \
+        "$PUB_MARKDOWN_BROWSER_WS_FILE" \
+        "$BROWSER_EXECUTABLE_REPORT_FILE" >"$BROWSER_SERVER_LOG" 2>&1 &
     BROWSER_SERVER_PID=$!
     progress_log "共有ブラウザ起動待機を開始しました pid=${BROWSER_SERVER_PID} timeout=${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC}s"
 
     for _i in $(seq 1 "$timeout_ticks"); do
         if [[ -s "$PUB_MARKDOWN_BROWSER_WS_FILE" ]]; then
             echo " done."
+            print_browser_executable "$BROWSER_EXECUTABLE_REPORT_FILE"
             progress_log "共有ブラウザ起動待機を終了しました result=ready"
             return 0
         fi
@@ -575,7 +598,11 @@ start_shared_browser_server() {
     echo "Warning: Shared browser server failed to start (${reason}). Falling back to per-process browser instances."
     echo "Warning: browser-server diagnostics: $(summarize_browser_server_log "$BROWSER_SERVER_LOG")"
     BROWSER_SERVER_PID=""
-    rm -f "$PUB_MARKDOWN_BROWSER_WS_FILE" "$BROWSER_SERVER_LOG" 2>/dev/null
+    rm -f \
+        "$PUB_MARKDOWN_BROWSER_WS_FILE" \
+        "$BROWSER_EXECUTABLE_REPORT_FILE" \
+        "$BROWSER_SERVER_LOG" 2>/dev/null
+    BROWSER_EXECUTABLE_REPORT_FILE=""
     BROWSER_SERVER_LOG=""
     export -n PUB_MARKDOWN_BROWSER_WS_FILE
     progress_log "共有ブラウザ起動待機を終了しました result=fallback ${reason}"

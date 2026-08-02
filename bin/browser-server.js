@@ -5,7 +5,7 @@
  * pub_markdown_core.sh から起動され、ビルド全体で 1 つのブラウザを使い回す。
  *
  * 使い方:
- *   node browser-server.js <ws-endpoint-file>
+ *   node browser-server.js <ws-endpoint-file> [browser-executable-file]
  *
  * 停止:
  *   SIGTERM または SIGINT で終了し、ブラウザを閉じてエンドポイントファイルを削除する。
@@ -17,8 +17,9 @@ const path      = require('path');
 const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 
 const wsFile = process.argv[2];
+const browserExecutableFile = process.argv[3] || '';
 if (!wsFile) {
-  console.error('Usage: node browser-server.js <ws-endpoint-file>');
+  console.error('Usage: node browser-server.js <ws-endpoint-file> [browser-executable-file]');
   process.exit(1);
 }
 
@@ -29,6 +30,24 @@ const START_TIMEOUT_MS = Number.isFinite(START_TIMEOUT_SEC) && START_TIMEOUT_SEC
 const READY_POLL_INTERVAL_MS = 50;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function removeRuntimeFiles() {
+  try { fs.unlinkSync(wsFile); } catch (_) {}
+  if (browserExecutableFile) {
+    try { fs.unlinkSync(browserExecutableFile); } catch (_) {}
+  }
+}
+
+function reportBrowserExecutable(executablePath) {
+  if (!browserExecutableFile || !executablePath) {
+    return;
+  }
+  try {
+    fs.writeFileSync(browserExecutableFile, `${executablePath}\n`, 'utf8');
+  } catch (err) {
+    console.error(`browser-server.js: browser executable report failed: ${err.message}`);
+  }
+}
 
 function canUseChromeWrapper(wrapperPath) {
   if (process.platform === 'win32') {
@@ -64,6 +83,11 @@ function buildLaunchOptions() {
   const wrapperPath = path.join(__dirname, 'chrome-wrapper.sh');
 
   if (!canUseChromeWrapper(wrapperPath)) {
+    try {
+      reportBrowserExecutable(launchOptions.executablePath || puppeteer.executablePath());
+    } catch (err) {
+      console.error(`browser-server.js: browser executable resolution failed: ${err.message}`);
+    }
     return launchOptions;
   }
 
@@ -75,6 +99,11 @@ function buildLaunchOptions() {
     delete env.ORG_PUPPETEER_EXECUTABLE_PATH;
   }
   delete env.PUPPETEER_EXECUTABLE_PATH;
+  if (browserExecutableFile) {
+    env.DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE = browserExecutableFile;
+  } else {
+    delete env.DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE;
+  }
 
   launchOptions.executablePath = wrapperPath;
   launchOptions.env = env;
@@ -150,7 +179,7 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
   // シャットダウン処理
   const cleanup = async () => {
     shuttingDown = true;
-    try { fs.unlinkSync(wsFile); } catch (_) {}
+    removeRuntimeFiles();
     try {
       // browser.close() が Chrome 内部で詰まった場合に備え 5 秒でタイムアウトする
       await Promise.race([
@@ -169,7 +198,7 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
     if (shuttingDown) {
       return;
     }
-    try { fs.unlinkSync(wsFile); } catch (_) {}
+    removeRuntimeFiles();
     process.exit(1);
   });
 
@@ -178,6 +207,7 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
     await waitForDevToolsReady(wsEndpoint, deadline);
   } catch (err) {
     shuttingDown = true;
+    removeRuntimeFiles();
     try { await browser.close(); } catch (_) {}
     throw err;
   }
@@ -186,6 +216,6 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
   fs.writeFileSync(wsFile, wsEndpoint, 'utf8');
 })().catch(err => {
   console.error('browser-server.js:', err);
-  try { fs.unlinkSync(wsFile); } catch (_) {}
+  removeRuntimeFiles();
   process.exit(2);
 });

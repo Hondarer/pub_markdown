@@ -7,6 +7,7 @@ eval "$(awk '
     /^configure_external_puppeteer_browser\(\)/,/^}/
     /^compute_setup_hash\(\)/,/^}/
     /^install_node_modules_and_browsers\(\)/,/^}/
+    /^print_browser_executable\(\)/,/^}/
 ' "${SCRIPT_DIR}/pub_markdown_core.sh")"
 
 tmp_dir=$(mktemp -d)
@@ -74,8 +75,37 @@ install_node_modules_and_browsers
     [[ "$ORG_PUPPETEER_EXECUTABLE_PATH" == "/bin/true" ]]
 )
 
+browser_report="${tmp_dir}/browser-executable"
+DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="$browser_report" \
 ORG_PUPPETEER_EXECUTABLE_PATH=/bin/true \
 PUPPETEER_EXECUTABLE_PATH="${SCRIPT_DIR}/chrome-wrapper.sh" \
     "${SCRIPT_DIR}/chrome-wrapper.sh" --version >/dev/null 2>&1
+[[ "$(cat "$browser_report")" == "/bin/true" ]]
+
+DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="${tmp_dir}/missing/browser-executable" \
+ORG_PUPPETEER_EXECUTABLE_PATH=/bin/true \
+PUPPETEER_EXECUTABLE_PATH="${SCRIPT_DIR}/chrome-wrapper.sh" \
+    "${SCRIPT_DIR}/chrome-wrapper.sh" --version >/dev/null 2>&1
+
+fallback_chrome="${tmp_dir}/chrome/linux-999.0.0.0/chrome-linux64/chrome"
+missing_chrome="${tmp_dir}/chrome/linux-100.0.0.0/chrome-linux64/chrome"
+mkdir -p "$(dirname "$fallback_chrome")"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$fallback_chrome"
+chmod +x "$fallback_chrome"
+(
+    node() {
+        printf '%s\n' "$FAKE_PUPPETEER_EXECUTABLE"
+    }
+    export -f node
+    export FAKE_PUPPETEER_EXECUTABLE="$missing_chrome"
+    export DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="$browser_report"
+    unset ORG_PUPPETEER_EXECUTABLE_PATH PUPPETEER_EXECUTABLE_PATH
+    "${SCRIPT_DIR}/chrome-wrapper.sh" --version >/dev/null 2>&1
+)
+[[ "$(cat "$browser_report")" == "$fallback_chrome" ]]
+
+[[ "$(print_browser_executable "$browser_report")" == "Browser executable: ${fallback_chrome}" ]]
+rm -f "$browser_report"
+[[ "$(print_browser_executable "$browser_report")" == "Browser executable: (unknown)" ]]
 
 printf 'puppeteer setup tests passed.\n'

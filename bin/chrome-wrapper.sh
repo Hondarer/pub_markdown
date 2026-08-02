@@ -75,6 +75,15 @@ if [ ! -x "$CHROME" ]; then
   fi
 fi
 
+# Browser Server から指定された場合は、代替バージョンの探索後に確定した
+# Chrome の実行パスを診断表示用のファイルへ記録する。
+if [[ -n "${DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE:-}" ]]; then
+  if ! printf '%s\n' "$CHROME" > "$DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE"; then
+    echo "Unable to report browser executable: $DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE" >&2
+  fi
+  unset DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE
+fi
+
 # Puppeteer に返す stderr を FD 3 に退避しておく
 exec 3>&2
 
