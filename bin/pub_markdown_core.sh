@@ -340,6 +340,29 @@ trap 'cleanup_on_exit' EXIT
 
 LINUX=0
 WSL=0
+DOCSFW_EXTERNAL_BROWSER=false
+
+# Linux / WSL で利用者が指定した外部ブラウザーを検証する。
+# 後段では PUPPETEER_EXECUTABLE_PATH が chrome-wrapper.sh に差し替わるため、
+# セットアップ処理はこの関数が保存した判定結果だけを参照する。
+configure_external_puppeteer_browser() {
+    local executable_path="${PUPPETEER_EXECUTABLE_PATH:-}"
+    local wrapper_path="${SCRIPT_DIR}/chrome-wrapper.sh"
+
+    DOCSFW_EXTERNAL_BROWSER=false
+    if [[ -z "$executable_path" ]]; then
+        return 0
+    fi
+
+    if [[ -f "$executable_path" && -x "$executable_path" && ! "$executable_path" -ef "$wrapper_path" ]]; then
+        DOCSFW_EXTERNAL_BROWSER=true
+        return 0
+    fi
+
+    # 無効な指定は未指定時と同じ扱いにする。呼び出し元の環境には影響しない。
+    unset PUPPETEER_EXECUTABLE_PATH
+    unset ORG_PUPPETEER_EXECUTABLE_PATH
+}
 
 if [[ "$(uname -s)" == "Linux" ]]; then
     LINUX=1
@@ -355,13 +378,13 @@ if [ $LINUX -eq 1 ]; then
     chmod +x "${SCRIPT_DIR}/chrome-wrapper.sh"
     chmod +x "${SCRIPT_DIR}/pandoc-filters/insert-toc.sh"
     WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
+    configure_external_puppeteer_browser
 
     if [ $WSL -eq 1 ]; then
         # NOTE: WSL2 では 127.0.0.1 のネットワーク分離問題があるため、
         # PUPPETEER_EXECUTABLE_PATH に Windows 側の Edge を指定しても、
         # WSL2 から Edge (127.0.0.1 で LISTEN) にアクセスできない。
-        # そのため、PUPPETEER_EXECUTABLE_PATH は設定せず、
-        # Puppeteer が自動的にダウンロードする Linux 版 Chromium を使用する。
+        # 外部ブラウザーを指定する場合は、WSL 側から実行できる Linux 版を使用する。
         :
     fi
 else
@@ -381,6 +404,7 @@ else
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
         export PUPPETEER_SKIP_DOWNLOAD=1
+        DOCSFW_EXTERNAL_BROWSER=true
         #echo "PUPPETEER_EXECUTABLE_PATH=\"${PUPPETEER_EXECUTABLE_PATH}\""
         #echo "PUPPETEER_SKIP_DOWNLOAD=1"
     else
@@ -418,8 +442,13 @@ fi
 SETUP_STAMP_FILE="${SCRIPT_DIR}/node_modules/.docsfw-setup.stamp"
 
 compute_setup_hash() {
-    cat "${SCRIPT_DIR}/package.json" "${SCRIPT_DIR}/package-lock.json" 2>/dev/null \
-        | sha256sum | awk '{print $1}'
+    {
+        cat "${SCRIPT_DIR}/package.json" "${SCRIPT_DIR}/package-lock.json" 2>/dev/null
+        # 従来モードでは既存スタンプと同じハッシュを維持する。
+        if [[ "$DOCSFW_EXTERNAL_BROWSER" == "true" ]]; then
+            printf '\ndocsfw-external-browser\n'
+        fi
+    } | sha256sum | awk '{print $1}'
 }
 
 setup_stamp_valid() {
@@ -430,22 +459,24 @@ setup_stamp_valid() {
     [[ -n "$expected" && "$expected" == "$current" ]]
 }
 
-if ! setup_stamp_valid; then
-    echo "Installing node.js modules..."
-    setup_ok=true
+install_node_modules_and_browsers() {
     (
         cd "${SCRIPT_DIR}" || exit 1
         export PUPPETEER_SKIP_DOWNLOAD=1
         npm ci || exit 1
         unset PUPPETEER_SKIP_DOWNLOAD
-        # Windows では Edge を PUPPETEER_EXECUTABLE_PATH に指定するため、
-        # Puppeteer 用 chrome / chrome-headless-shell のダウンロードは不要。
-        # Linux / WSL のみ Puppeteer がダウンロードする Chromium を導入する。
-        if [ -z "${PUPPETEER_EXECUTABLE_PATH:-}" ]; then
+        # 外部ブラウザーを使用しない場合だけ Puppeteer 用ブラウザーを導入する。
+        if [[ "$DOCSFW_EXTERNAL_BROWSER" != "true" ]]; then
             npx puppeteer browsers install chrome || exit 1
             npx puppeteer browsers install chrome-headless-shell || exit 1
         fi
-    ) || setup_ok=false
+    )
+}
+
+if ! setup_stamp_valid; then
+    echo "Installing node.js modules..."
+    setup_ok=true
+    install_node_modules_and_browsers || setup_ok=false
 
     if [[ "$setup_ok" == "true" ]]; then
         compute_setup_hash > "$SETUP_STAMP_FILE"

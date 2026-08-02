@@ -213,22 +213,24 @@ else
 
 `browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります:
 
-1. `pub_markdown_core.sh` が `prepare_puppeteer_env.sh` を source → `PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
-2. 後に `rsvg-convert` シェル スクリプトが `prepare_puppeteer_env.sh` を再度 source → `ORG_PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
-3. フォールバック時に `puppeteer.launch()` が `chrome-wrapper.sh` を起動
-4. `chrome-wrapper.sh` が `ORG_PUPPETEER_EXECUTABLE_PATH` を復元 → `PUPPETEER_EXECUTABLE_PATH` = `chrome-wrapper.sh`
-5. `puppeteer.executablePath()` が `chrome-wrapper.sh` を返す → **無限ループ**
+1. 呼び出し元が `prepare_puppeteer_env.sh` を source し、`PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を設定する
+2. `browser-server.js` が同じ準備処理を適用し、`ORG_PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を退避する
+3. `chrome-wrapper.sh` が退避値を復元し、自身を Chrome として再び起動する
 
-この問題を避けるため、`browser-server.js` は `prepare_puppeteer_env.sh` を経由しません。
-代わりに `chrome-wrapper.sh` を `puppeteer.launch()` の `executablePath` として直接指定し、`ORG_PUPPETEER_EXECUTABLE_PATH` には元の `PUPPETEER_EXECUTABLE_PATH` が `chrome-wrapper.sh` 自身でない場合だけ渡します。
+この問題を避けるため、`browser-server.js` は `prepare_puppeteer_env.sh` を経由しません。  
+代わりに `chrome-wrapper.sh` を `puppeteer.launch()` の `executablePath` として直接指定し、`ORG_PUPPETEER_EXECUTABLE_PATH` には元の `PUPPETEER_EXECUTABLE_PATH` が `chrome-wrapper.sh` 自身でない場合だけ渡します。  
 これにより二重ラップを防ぎつつ、DevTools WebSocket の readiness 待機を共有ブラウザー起動にも適用します。
+
+Linux または WSL で実行可能な外部ブラウザーが `PUPPETEER_EXECUTABLE_PATH` に指定されている場合、`browser-server.js` はその値を `ORG_PUPPETEER_EXECUTABLE_PATH` に退避してから `chrome-wrapper.sh` を起動します。  
+フォールバック時は `prepare_puppeteer_env.sh` が同じ退避を行います。  
+セットアップ処理はラッパー適用前に保存した判定結果を使うため、ラッパー自身のパスを外部ブラウザーとして扱いません。
 
 ### プラットフォーム別の動作
 
 | プラットフォーム | browser-server.js のブラウザー | フォールバック時のブラウザー |
 |---|---|---|
-| Linux | chrome-wrapper.sh 経由の Chromium | chrome-wrapper.sh 経由の Chromium |
-| WSL | chrome-wrapper.sh 経由の Chromium | chrome-wrapper.sh 経由の Chromium |
+| Linux | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
+| WSL | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
 | Windows (Git Bash) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) |
 
 ## フォールバック機構
