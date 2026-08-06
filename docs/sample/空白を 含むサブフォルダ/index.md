@@ -12,8 +12,10 @@
 @enduml
 ```
 
-```{.mermaid caption="Mermaid のキャプション"}
+```mermaid
 sequenceDiagram
     Alice->>John: Hello John, how are you?
     John-->>Alice: いいね!
 ```
+
+CodeBlock: Mermaid のキャプション

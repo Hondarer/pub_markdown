@@ -197,6 +197,8 @@ plantuml とします。
 
 また、上記とは別に `caption` キーワードでタイトルを記載します。`caption` は、PlantUML の図の見出しとして使われるとともに、Pandoc での発行時には図のキャプションになります。
 
+コード ブロックの直後に `CodeBlock:` 行を記載した場合は、そちらが優先されます。相互参照のラベルを付ける場合は `CodeBlock:` 行を使います。
+
 背景色は、pandoc 側で skinparam backgroundColor transparent を自動付与して透明にしています。  
 すでに skinparam backgroundColor が定義されている場合は、置換します。
 
@@ -237,15 +239,47 @@ Mermaid と PlantUML は実現できることが重複します。PlantUML を�
 
 ### タイトル
 
-コード ブロックのファイル名として記載します。
+コード ブロックの直後に `CodeBlock:` 行を記載します。詳細は [コード ブロックのキャプション](#コード-ブロックのキャプション) を参照してください。
 
 ### 記載例
 
-```{.mermaid caption="Mermaid のキャプション"}
+```mermaid
 sequenceDiagram
     Alice->>John: Hello John, how are you?
     John-->>Alice: いいね!
 ```
+
+CodeBlock: Mermaid のキャプション
+
+## コード ブロックのキャプション
+
+コード ブロックのキャプションは、ブロックの直後に空行をはさんで `CodeBlock:` 行を記載します。
+Mermaid、PlantUML、通常のソース コードのいずれも同じ記法です。
+
+````text
+```c
+int main(void);
+```
+
+CodeBlock: サンプル コード
+````
+
+フェンスには言語名だけを記載するため、GitHub などの Web 表示でも図の描画とシンタックス ハイライトが機能します。
+
+`CodeBlock:` 行の末尾に `{#lst:xxx}` または `{#fig:xxx}` の形式でラベルを記載すると、pandoc-crossref による採番と相互参照の対象になります。
+Mermaid と PlantUML は図なので `fig:`、それ以外のコード ブロックはリストなので `lst:` を使います。
+
+````text
+```makefile
+all: build
+```
+
+CodeBlock: ビルド手順 {#lst:build-steps}
+````
+
+キャプションを段落内で改行すると、キャプションも複数行で出力されます。
+
+サンプルは [コード ブロック キャプションのサンプル](codeblock-caption.md) と [Mermaid キャプションのサンプル](mermaid-caption.md) を参照してください。
 
 ## draw.io
 
@@ -334,6 +368,7 @@ Debug.WriteLine("日本");
 [列幅の指定方法](https://github.com/jgm/pandoc/issues/2486) により、ページ幅に収まらなかった場合の列幅を指定できます。
 
 表に続いて、`Table:` または `:` を記載して表のキャプションを指定します。
+キャプションの末尾に `{#tbl:xxx}` を記載すると、pandoc-crossref による採番と相互参照の対象になります。
 
 |No.|内容     |
 |--:|---------|

@@ -138,23 +138,35 @@ local function escape_html(text)
     return text
 end
 
-local function caption_to_html(caption)
+--- キャプション文字列をインライン列へ変換する。"\n" は改行として扱う。
+local function caption_to_inlines(caption)
     caption = caption:gsub("\\n", "\n")
-    local lines = {}
+    local inlines = {}
     for line in caption:gmatch("[^\n]+") do
-        table.insert(lines, escape_html(line))
+        table.insert(inlines, pandoc.Str(line))
+        table.insert(inlines, pandoc.LineBreak())
     end
-    return table.concat(lines, "<br />")
+    if #inlines == 0 then
+        return { pandoc.Str(caption) }
+    end
+    -- 末尾の LineBreak を除去する
+    table.remove(inlines)
+    return inlines
 end
 
-local function mermaid_html_block(text, caption)
-    local pre = '<pre class="mermaid">' .. escape_html(text) .. '</pre>'
+-- NOTE: HTML 出力では mermaid を画像化せず、ブラウザー側の mermaid.min.js に描画させる。
+-- キャプションがある場合は RawBlock ではなく Figure として返す。
+-- Figure にしておくと pandoc-crossref が identifier を見て採番できる。
+local function mermaid_html_block(text, caption, identifier)
+    local pre = pandoc.RawBlock("html", '<pre class="mermaid">' .. escape_html(text) .. '</pre>')
     if caption == nil then
-        return pandoc.RawBlock("html", pre)
+        return pre
     end
-    return pandoc.RawBlock("html",
-        '<figure class="mermaid-figure">' .. pre .. '<figcaption>' ..
-        caption_to_html(caption) .. '</figcaption></figure>')
+    return pandoc.Figure(
+        { pre },
+        caption_to_inlines(caption),
+        pandoc.Attr(identifier or "", { "mermaid-figure" })
+    )
 end
 
 -- NOTE: Microsoft Word では、最初のフォント以外は評価されない
@@ -226,36 +238,28 @@ return {
 
             ---------------------------------------------------------------------
 
-            -- コードブロックの種別とファイル名を取得
-            local code_class = el.classes[1] or ""
-            local lang, filename = code_class:match("^([^:]+):(.+)$")
-            if not lang then
-                lang = code_class
-            end
             -- コード種別判定
-            if lang ~= "mermaid" then
+            if (el.classes[1] or "") ~= "mermaid" then
                 return el
             end
 
             ---------------------------------------------------------------------
 
-            -- caption 属性があれば優先してキャプションに
+            -- キャプションは codeblock-caption-line.lua が "CodeBlock:" 行から
+            -- caption 属性へ設定する
             local caption = el.attributes["caption"]
             if caption then
                 -- 属性を消す
                 el.attributes["caption"] = nil
-            elseif filename then
-                -- 属性がない場合は従来どおりファイル名をキャプションに
-                -- ファイル名の拡張子を除去
-                filename = filename:gsub("%.[mM][mM][dD]$", "")
-                -- ファイル名を caption に
-                caption = filename
             end
+
+            -- pandoc-crossref による採番用のラベル
+            local identifier = el.identifier
 
             ---------------------------------------------------------------------
 
             if is_html_format() then
-                return mermaid_html_block(el.text, caption)
+                return mermaid_html_block(el.text, caption, identifier)
             end
 
             ---------------------------------------------------------------------
@@ -418,22 +422,17 @@ return {
             end
 
             -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
-            caption = caption:gsub("\\n", "\n")
-            local caption_elements = {}
-            for line in caption:gmatch("[^\n]+") do
-                --io.stderr:write("[plantuml] captionline: '" .. line .. "'\n")
-                table.insert(caption_elements, pandoc.Str(line))
-                table.insert(caption_elements, pandoc.LineBreak())
-            end
-            -- Remove the last LineBreak
-            table.remove(caption_elements)
+            local caption_elements = caption_to_inlines(caption)
+
+            -- identifier は pandoc-crossref の採番に用いる
+            local figure_attr = pandoc.Attr(identifier)
 
             if display_width and display_height then
                 return pandoc.Figure(pandoc.Image(caption, image_src, "",
                     pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
-                                        {"height", tostring(display_height) .. "px"}})), caption_elements)
+                                        {"height", tostring(display_height) .. "px"}})), caption_elements, figure_attr)
             end
-            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements, figure_attr)
 
         end
     }

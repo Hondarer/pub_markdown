@@ -13,38 +13,35 @@
 ### コード ブロックの検出と処理
 
 ```lua
-CodeBlock = function(el) 
-    local code_class = el.classes[1] or ""
-    local lang, filename = code_class:match("^([^:]+):(.+)$")
-    if not lang then
-        lang = code_class
-    end
+CodeBlock = function(el)
     -- コード種別判定
-    if lang ~= "mermaid" then
+    if (el.classes[1] or "") ~= "mermaid" then
         return el
     end
 ```
 
 - コード ブロックのクラス属性を解析
-- `mermaid` または `mermaid:filename` 形式をサポート
 - mermaid 以外のコード ブロックはそのまま通過
 - HTML では事前レンダリングせず、Mermaid ソースをブラウザー描画用 HTML として出力
 
 ### キャプション処理
 
 ```lua
--- caption 属性があれば優先してキャプションに
+-- キャプションは codeblock-caption-line.lua が "CodeBlock:" 行から
+-- caption 属性へ設定する
 local caption = el.attributes["caption"]
 if caption then
     el.attributes["caption"] = nil
-elseif filename then
-    filename = filename:gsub("%.[mM][mM][dD]$", "")
-    caption = filename
 end
+
+-- pandoc-crossref による採番用のラベル
+local identifier = el.identifier
 ```
 
-- `caption` 属性が指定されていればそれを使用
-- なければファイル名部分 (拡張子除く) をキャプションとして使用
+- キャプションはコード ブロックの直後の `CodeBlock:` 行で指定する。記法は [コード ブロックのキャプション](codeblock-caption.md) を参照
+- `codeblock-caption-line.lua` が `caption` 属性と identifier へ正規化するため、本フィルターは属性だけを見る
+- identifier は生成する Figure に設定し、pandoc-crossref の採番に用いる
+- キャプションがある場合、HTML 出力でも Figure として出力するため、pandoc-crossref の採番対象になる
 
 ### クロスプラットフォーム対応
 

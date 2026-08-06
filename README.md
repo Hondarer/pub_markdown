@@ -27,6 +27,7 @@ Markdown to html and docx with Pandoc.
 - pandoc に PATH を通す。
 - pandoc-crossref に PATH を通す。
     - pandoc-crossref はオプション。存在しなくても動作する。
+    - 存在する場合、ラベルを付けた図、リスト、表が採番と相互参照の対象になる。詳細は [コード ブロックのキャプション](docs/codeblock-caption.md) を参照のこと。
 - node.exe に PATH を通す。Linux では nodejs モジュール パッケージに含まれる。
 - bin 配下で、`npm ci` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
 

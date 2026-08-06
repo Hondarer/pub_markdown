@@ -54,6 +54,23 @@ function Meta(meta)
         end
     end
 
+    -- pandoc-crossref のラベルを日本語にする
+    -- (figureTitle / tableTitle / listingTitle はキャプションの接頭辞、
+    --  figPrefix / tblPrefix / lstPrefix は本文中の参照の接頭辞)
+    local crossref_labels = {
+        figureTitle = "図",
+        tableTitle = "表",
+        listingTitle = "リスト",
+        figPrefix = "図",
+        tblPrefix = "表",
+        lstPrefix = "リスト",
+    }
+    for key, value in pairs(crossref_labels) do
+        if not meta[key] then
+            meta[key] = pandoc.MetaString(value)
+        end
+    end
+
     -- 目次に対する処理
     if FORMAT == "docx" then
         -- docx 出力の場合

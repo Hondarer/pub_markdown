@@ -2,13 +2,17 @@
 
 ## コード ブロックの繰り返し
 
-```{.text caption="codeblock 1"}
+```text
 test 1
 ```
 
-```{.text caption="codeblock 2"}
+CodeBlock: codeblock 1
+
+```text
 test 2
 ```
+
+CodeBlock: codeblock 2
 
 ## 引用の繰り返し
 

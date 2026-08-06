@@ -1,23 +1,42 @@
 # Mermaid キャプションのサンプル
 
-## 推奨
+Mermaid のキャプションは、コード ブロックの直後に `CodeBlock:` 行を置いて指定します。
+フェンスには言語名だけを記載するため、GitHub などの Web 表示でも図がそのまま描画されます。
 
-```{.mermaid caption="Mermaid のキャプション"}
+## キャプションあり
+
+```mermaid
 sequenceDiagram
     Alice->>John: Hello John, how are you?
     John-->>Alice: いいね!
 ```
 
-## 非推奨
+CodeBlock: Mermaid のキャプション
 
-Pandoc としては扱えるが、Markdown Preview Enhanced でのプレビューが正しく行われない。  
-(Markdown Preview Enhanced 0.8.18 にて現象を確認)
+## ラベル付き (相互参照)
 
-```mermaid:テストだよ.mmd
+`{#fig:xxx}` を付けると pandoc-crossref が採番し、[@fig:mermaid-caption-label] のように本文から参照できます。
+
+```mermaid
 sequenceDiagram
-    Alice->>John: Hello John, how are you?
-    John-->>Alice: いいね!
+    Alice->>John: ラベル付きの例
+    John-->>Alice: 採番されます
 ```
+
+CodeBlock: ラベル付きの Mermaid {#fig:mermaid-caption-label}
+
+## 複数行のキャプション
+
+キャプションを段落内で改行すると、キャプションも複数行で出力されます。
+
+```mermaid
+sequenceDiagram
+    Alice->>John: 複数行キャプションの例
+    John-->>Alice: 2 行目があります
+```
+
+CodeBlock: 1 行目のキャプション
+2 行目のキャプション
 
 ## キャプションなし
 

@@ -437,6 +437,15 @@ else
     pandoc_crossref_args=()
 fi
 
+# pandoc-crossref の有無を Lua フィルターへ通知する。
+# codeblock-caption.lua は、pandoc-crossref がある場合はラベル付きコードブロックの
+# キャプション生成を pandoc-crossref に委譲し、ない場合は自前で生成する。
+if [ ${#pandoc_crossref_args[@]} -gt 0 ]; then
+    crossref_metadata_args=(--metadata "docsfw-crossref=true")
+else
+    crossref_metadata_args=(--metadata "docsfw-crossref=false")
+fi
+
 # セットアップ完了スタンプ。package.json / package-lock.json のハッシュを記録し、
 # npm ci とブラウザーのインストールがすべて成功したときのみ書き込む。
 # node_modules 内に置くことで、npm ci で node_modules が再生成された際に
@@ -2103,6 +2112,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
@@ -2111,7 +2121,9 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             --metadata "mermaid-js=${up_dir}mermaid.min.js" \
+                            "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             "${math_jax_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
@@ -2132,13 +2144,16 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                                "${crossref_metadata_args[@]}" \
                                 "${pandoc_crossref_args[@]}" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                                 "${math_jax_args[@]}" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
@@ -2161,6 +2176,7 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
@@ -2173,7 +2189,9 @@ for file in "${files[@]}"; do
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
+                                "${crossref_metadata_args[@]}" \
                                 "${pandoc_crossref_args[@]}" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                                 2>"$_pm_pandoc_stderr"
@@ -2578,13 +2596,16 @@ for file in "${files[@]}"; do
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                        "${crossref_metadata_args[@]}" \
                         "${pandoc_crossref_args[@]}" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                         "${math_jax_args[@]}" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --metadata "mermaid-js=${up_dir}mermaid.min.js" \
@@ -2611,13 +2632,16 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             "${math_jax_args[@]}" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
@@ -2645,6 +2669,7 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption-line.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/plantuml.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/mermaid.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/pagebreak.lua" \
@@ -2654,11 +2679,12 @@ for file in "${files[@]}"; do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/page-break-before-heading.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/separate-consecutive-blockquotes.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
-                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/replace-table-br.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-docx.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/inline-code-style.lua" \
+                            "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t docx --reference-doc="${docxTemplate}" -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             2>"$_pm_pandoc_stderr"

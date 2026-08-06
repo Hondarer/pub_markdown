@@ -565,31 +565,25 @@ return {
 
             ---------------------------------------------------------------------
 
-            -- コードブロックの種別とファイル名を取得
-            local code_class = el.classes[1] or ""
-            local lang, filename = code_class:match("^([^:]+):(.+)$")
-            if not lang then
-                lang = code_class
-            end
             -- コード種別判定
-            if lang ~= "plantuml" then
+            if (el.classes[1] or "") ~= "plantuml" then
                 return el
             end
 
             ---------------------------------------------------------------------
 
-            -- caption 属性があれば優先してキャプションに
+            -- キャプションは codeblock-caption-line.lua が "CodeBlock:" 行から
+            -- caption 属性へ設定する。
+            -- 属性がない場合は、後段で PlantUML ソース内の caption 行や
+            -- @startuml のタイトルからキャプションを採用する。
             local caption = el.attributes["caption"]
             if caption then
                 -- 属性を消す
                 el.attributes["caption"] = nil
-            elseif filename then
-                -- 属性がない場合は従来どおりファイル名をキャプションに
-                -- ファイル名の拡張子を除去
-                filename = filename:gsub("%.[mM][mM][dD]$", "")
-                -- ファイル名を caption に
-                caption = filename
             end
+
+            -- pandoc-crossref による採番用のラベル
+            local identifier = el.identifier
 
             ---------------------------------------------------------------------
 
@@ -842,12 +836,15 @@ return {
             -- Remove the last LineBreak
             table.remove(caption_elements)
 
+            -- identifier は pandoc-crossref の採番に用いる
+            local figure_attr = pandoc.Attr(identifier)
+
             if display_width and display_height then
                 return pandoc.Figure(pandoc.Image(caption, image_src, "",
                     pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
-                                        {"height", tostring(display_height) .. "px"}})), caption_elements)
+                                        {"height", tostring(display_height) .. "px"}})), caption_elements, figure_attr)
             end
-            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements, figure_attr)
         end
     }
 }

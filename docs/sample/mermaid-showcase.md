@@ -4,7 +4,7 @@ Mermaid の各図種のサンプルを示します。
 
 ## Flowchart
 
-```{.mermaid caption="Flowchart のサンプル"}
+```mermaid
 flowchart LR
     Start([開始]) --> Check{確認}
     Check -->|OK| Done([完了])
@@ -12,9 +12,11 @@ flowchart LR
     Fix --> Check
 ```
 
+CodeBlock: Flowchart のサンプル
+
 ## Sequence
 
-```{.mermaid caption="Sequence のサンプル"}
+```mermaid
 sequenceDiagram
     participant User as 利用者
     participant App as アプリ
@@ -22,9 +24,11 @@ sequenceDiagram
     App-->>User: レスポンス
 ```
 
+CodeBlock: Sequence のサンプル
+
 ## Class
 
-```{.mermaid caption="Class のサンプル"}
+```mermaid
 classDiagram
     class Document {
         +string title
@@ -36,9 +40,11 @@ classDiagram
     Renderer --> Document
 ```
 
+CodeBlock: Class のサンプル
+
 ## State
 
-```{.mermaid caption="State のサンプル"}
+```mermaid
 stateDiagram-v2
     [*] --> Draft
     Draft --> Review: 提出
@@ -47,9 +53,11 @@ stateDiagram-v2
     Published --> [*]
 ```
 
+CodeBlock: State のサンプル
+
 ## ER
 
-```{.mermaid caption="ER のサンプル"}
+```mermaid
 erDiagram
     CUSTOMER ||--o{ ORDER : places
     ORDER ||--|{ LINE_ITEM : contains
@@ -63,9 +71,11 @@ erDiagram
     }
 ```
 
+CodeBlock: ER のサンプル
+
 ## User Journey
 
-```{.mermaid caption="User Journey のサンプル"}
+```mermaid
 journey
     title ドキュメント発行
     section 作成
@@ -76,9 +86,11 @@ journey
       成果物を確認する: 5: Publisher
 ```
 
+CodeBlock: User Journey のサンプル
+
 ## Gantt
 
-```{.mermaid caption="Gantt のサンプル"}
+```mermaid
 gantt
     title サンプル工程
     dateFormat  YYYY-MM-DD
@@ -88,18 +100,22 @@ gantt
     確認      :2d
 ```
 
+CodeBlock: Gantt のサンプル
+
 ## Pie
 
-```{.mermaid caption="Pie のサンプル"}
+```mermaid
 pie title 作業割合
     "設計" : 30
     "実装" : 50
     "確認" : 20
 ```
 
+CodeBlock: Pie のサンプル
+
 ## Quadrant
 
-```{.mermaid caption="Quadrant のサンプル"}
+```mermaid
 quadrantChart
     title Priority Matrix
     x-axis Low Cost --> High Cost
@@ -109,9 +125,11 @@ quadrantChart
     TaskC: [0.45, 0.35]
 ```
 
+CodeBlock: Quadrant のサンプル
+
 ## Requirement
 
-```{.mermaid caption="Requirement のサンプル"}
+```mermaid
 requirementDiagram
     requirement req_publish {
         id: 1
@@ -127,9 +145,11 @@ requirementDiagram
     cli - satisfies -> req_publish
 ```
 
+CodeBlock: Requirement のサンプル
+
 ## GitGraph
 
-```{.mermaid caption="GitGraph のサンプル"}
+```mermaid
 gitGraph
     commit id: "init"
     branch feature
@@ -139,21 +159,26 @@ gitGraph
     merge feature
 ```
 
+CodeBlock: GitGraph のサンプル
+
 <!--
 ## C4
 
-```{.mermaid caption="C4 のサンプル"}
+```mermaid
 C4Context
     title C4 Context のサンプル
     Person(user, "利用者")
     System(pub, "pub_markdown", "Markdown を発行する")
     Rel(user, pub, "Markdown を発行")
 ```
+
+CodeBlock: C4 のサンプル
+
 -->
 
 ## Mindmap
 
-```{.mermaid caption="Mindmap のサンプル"}
+```mermaid
 mindmap
   root((pub_markdown))
     入力
@@ -164,9 +189,11 @@ mindmap
       docx
 ```
 
+CodeBlock: Mindmap のサンプル
+
 ## Timeline
 
-```{.mermaid caption="Timeline のサンプル"}
+```mermaid
 timeline
     title 発行処理の流れ
     受付 : 対象 Markdown を確認
@@ -174,10 +201,12 @@ timeline
     出力 : HTML と docx を生成
 ```
 
+CodeBlock: Timeline のサンプル
+
 <!--
 ## ZenUML
 
-```{.mermaid caption="ZenUML のサンプル"}
+```mermaid
 zenuml
     title API 呼び出し
     User->App.method() {
@@ -185,20 +214,25 @@ zenuml
         return result
     }
 ```
+
+CodeBlock: ZenUML のサンプル
+
 -->
 
 ## Sankey
 
-```{.mermaid caption="Sankey のサンプル"}
+```mermaid
 sankey-beta
     Markdown,HTML,60
     Markdown,docx,40
     Mermaid,SVG,30
 ```
 
+CodeBlock: Sankey のサンプル
+
 ## XY Chart
 
-```{.mermaid caption="XY Chart のサンプル"}
+```mermaid
 xychart-beta
     title "テスト件数"
     x-axis ["月", "火", "水", "木", "金"]
@@ -206,9 +240,11 @@ xychart-beta
     bar [3, 5, 7, 6, 8]
 ```
 
+CodeBlock: XY Chart のサンプル
+
 ## Block
 
-```{.mermaid caption="Block のサンプル"}
+```mermaid
 block-beta
     columns 3
     A["入力"] B["変換"] C["出力"]
@@ -216,9 +252,11 @@ block-beta
     B --> C
 ```
 
+CodeBlock: Block のサンプル
+
 ## Packet
 
-```{.mermaid caption="Packet のサンプル"}
+```mermaid
 packet-beta
     title TCP Packet
     0-15: "Source Port"
@@ -226,9 +264,11 @@ packet-beta
     32-63: "Sequence Number"
 ```
 
+CodeBlock: Packet のサンプル
+
 ## Kanban
 
-```{.mermaid caption="Kanban のサンプル"}
+```mermaid
 kanban
     todo[未着手]
         task1[構成を確認]
@@ -238,9 +278,11 @@ kanban
         task3[レビュー済み]
 ```
 
+CodeBlock: Kanban のサンプル
+
 ## Architecture
 
-```{.mermaid caption="Architecture のサンプル"}
+```mermaid
 architecture-beta
     group app(cloud)[Application]
     service user(internet)[User]
@@ -250,9 +292,11 @@ architecture-beta
     docs:R --> L:store
 ```
 
+CodeBlock: Architecture のサンプル
+
 ## Radar
 
-```{.mermaid caption="Radar のサンプル"}
+```mermaid
 radar-beta
     axis d["Design"], i["Implement"], t["Test"], doc["Docs"]
     curve current["Current"]{4,3,5,4}
@@ -261,9 +305,11 @@ radar-beta
     min 0
 ```
 
+CodeBlock: Radar のサンプル
+
 ## Treemap
 
-```{.mermaid caption="Treemap のサンプル"}
+```mermaid
 treemap
     title 成果物の内訳
     "HTML": 60
@@ -271,9 +317,11 @@ treemap
     "SVG": 10
 ```
 
+CodeBlock: Treemap のサンプル
+
 ## Venn
 
-```{.mermaid caption="Venn のサンプル"}
+```mermaid
 venn-beta
     title Scope
     set HTML: 50
@@ -283,9 +331,11 @@ venn-beta
     union docx,Markdown: 15
 ```
 
+CodeBlock: Venn のサンプル
+
 ## Ishikawa
 
-```{.mermaid caption="Ishikawa のサンプル"}
+```mermaid
 ishikawa
     title 品質課題
     "表示崩れ"
@@ -300,9 +350,11 @@ ishikawa
             "docx"
 ```
 
+CodeBlock: Ishikawa のサンプル
+
 ## Wardley
 
-```{.mermaid caption="Wardley のサンプル"}
+```mermaid
 wardley-beta
     title Publish Flow
     anchor User [0.95, 0.75]
@@ -314,9 +366,11 @@ wardley-beta
     Pandoc -> Output
 ```
 
+CodeBlock: Wardley のサンプル
+
 ## TreeView
 
-```{.mermaid caption="TreeView のサンプル"}
+```mermaid
 treeView-beta
     "docs"
       "sample"
@@ -324,3 +378,5 @@ treeView-beta
         "plantuml.md"
       "README.md"
 ```
+
+CodeBlock: TreeView のサンプル

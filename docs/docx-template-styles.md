@@ -13,7 +13,7 @@ Pandoc が自動生成するため、ここでは docsfw 固有のカスタム �
 |---|---|---|---|---|---|
 | `SourceCode` | Source Code | 段落 | コード ブロック (枠線あり) | なし | Pandoc docx writer |
 | `VerbatimChar` | Verbatim Char | 文字 | ハイライトなしコード ブロック内 run | なし | Pandoc docx writer |
-| `SourceCodeCaption` | Source Code Caption | 段落 | コード ブロックのキャプション | なし | `codeblock-caption.lua` |
+| `SourceCodeCaption` | Source Code Caption | 段落 | コード ブロックのキャプション | なし | `codeblock-caption.lua`、`listing-caption-style.lua` |
 | `InlineCode` | Inline Code | 文字 | インライン コード専用 | `#EAEAEA` | `inline-code-style.lua` |
 | `BlockTextNote` | Block Text Note | 段落 | admonition NOTE | `#F0FAFF` | `admonition.lua` |
 | `BlockTextTip` | Block Text Tip | 段落 | admonition TIP | `#EFFDF2` | `admonition.lua` |
