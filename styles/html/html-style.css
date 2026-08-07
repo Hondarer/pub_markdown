@@ -16,9 +16,6 @@ body {
     padding-left: 20px;
     padding-right: 20px;
   }
-  /* template.css が .navbar-static-top に margin: -20px を付けるため、
-     .nav.pull-right の -35px がその外にはみ出して横スクロールが発生する。
-     幅768px未満ではリセットする。 */
   .navbar .nav.pull-right {
     margin-right: 0; } }
 
@@ -59,14 +56,31 @@ body > *:last-child {
 .navbar-inner {
   min-height: auto; }
 
+/* navbar-static-top は fixed-top と同様に左右 padding を 0 にする。
+   Bootstrap 既定の navbar-inner 左右 20px と .nav.pull-right の負マージン
+   (-35px) が重なると、M (980) / L (1200) / LL (1400) のコンテンツ幅切替直後に
+   右端アイコン (Word 等) が body の overflow-x: hidden で欠ける。
+   container 右端 = アイコン右端に揃え、切替直後から全アイコンを可視にする。 */
+.navbar-static-top .navbar-inner {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .doc-title, .doc-info, .navbar-text {
   font-size: 14px;
   font-weight: normal;
   line-height: normal;
   padding: 2px 20px; }
 
+/* template.css の .doc-title { margin-left: -20px } は navbar-inner の
+   左右 20px padding に食い込ませるためのもの。padding を 0 にしたため打ち消す。 */
+.doc-title {
+  margin-left: 0;
+}
+
+/* 負マージンで右へ押し出さない。container 内に収める。 */
 .navbar .nav.pull-right {
-    margin-right: -35px;
+  margin-right: 0;
 }
 
 /* DOCX ダウンロードリンク (navbar 右側) */
