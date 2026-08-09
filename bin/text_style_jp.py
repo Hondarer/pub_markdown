@@ -272,6 +272,11 @@ def run_tests() -> bool:
         ("> [!WARNING]\n> 注意が必要です。", "> [!WARNING]\n> 注意が必要です。"),
         ("> [!CAUTION]\n> 危険な操作です。", "> [!CAUTION]\n> 危険な操作です。"),
         ("> [!TODO]\n> 未対応タイプです。", "> [!TODO]\n> 未対応タイプです。"),
+        ("> ```c\n> int left;  int right;\n> ```", "> ```c\n> int left;  int right;\n> ```"),
+        ("> ~~~text\n> left  right\n> ~~~", "> ~~~text\n> left  right\n> ~~~"),
+        ("> > ```c\n> > int left;  int right;\n> > ```", "> > ```c\n> > int left;  int right;\n> > ```"),
+        ("> ```c\n> // 第3章\n> ```", "> ```c\n> // 第 3 章\n> ```"),
+        ("> ```text\n> left  right\n> ```\n本文  続き", "> ```text\n> left  right\n> ```\n本文 続き"),
         ("```\ncode  \n```\n本文", "```\ncode  \n```\n\n本文"),
         ("**変更前:**\n```python\ncode\n```", "**変更前:**\n\n```python\ncode\n```"),
         ("**変更前 (makefile):**\n```makefile\ncode\n```", "**変更前 (makefile):**\n\n```makefile\ncode\n```"),
@@ -1169,6 +1174,18 @@ def run_tests() -> bool:
     )
     status = "✓" if passed else "✗"
     print(f"\n{status} style_markdown コードブロック内コメント行番号オフセット: {[(f.line, f.rule) for f in cb_findings]}")
+    if not passed:
+        all_passed = False
+
+    # style_markdown: blockquote 内コードの桁揃えを normalize-spaces の対象外にする
+    c = DiagnosticCollector()
+    result = style_markdown("> ```c\n> int left;  int right; // 第3章\n> ```", collector=c)
+    passed = (
+        result == "> ```c\n> int left;  int right; // 第 3 章\n> ```"
+        and not any(f.rule == "normalize-spaces" for f in c.findings)
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} style_markdown blockquote 内コードの桁揃え保護: {[(f.line, f.rule) for f in c.findings]}")
     if not passed:
         all_passed = False
 

@@ -921,6 +921,20 @@ def _detect_fence_source_mode(info: str) -> Optional[str]:
     return _FENCE_LANG_TO_SOURCE_MODE.get(lang.lower())
 
 
+def _strip_blockquote_prefix(line: str) -> Tuple[str, int]:
+    """行頭の blockquote マーカーを除いた内容と引用階層を返す。"""
+    content = line.lstrip()
+    depth = 0
+
+    while content.startswith(">"):
+        depth += 1
+        content = content[1:]
+        if content.startswith((" ", "\t")):
+            content = content[1:]
+
+    return content.strip(), depth
+
+
 def style_markdown(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
@@ -935,6 +949,7 @@ def style_markdown(
     fence_char = "`"
     fence_len = 0
     fence_nest = 0
+    fence_blockquote_depth = 0
     in_frontmatter = len(lines) > 0 and lines[0].strip() == "---"
     comment_tag: Optional[str] = None
     in_html_comment_block = False
@@ -969,9 +984,10 @@ def style_markdown(
             continue
 
         if in_code_block:
+            fence_content, blockquote_depth = _strip_blockquote_prefix(line)
             close_pat = r"^(" + re.escape(fence_char) + r"{" + str(fence_len) + r",})\s*$"
             open_pat = r"^(" + re.escape(fence_char) + r"{" + str(fence_len) + r",})\S"
-            if re.match(close_pat, stripped):
+            if blockquote_depth == fence_blockquote_depth and re.match(close_pat, fence_content):
                 if fence_nest == 0:
                     in_code_block = False
                     fence_len = 0
@@ -989,7 +1005,7 @@ def style_markdown(
                 result_lines.append(line)
                 code_block_flags.append(True)
                 continue
-            if re.match(open_pat, stripped):
+            if blockquote_depth == fence_blockquote_depth and re.match(open_pat, fence_content):
                 fence_nest += 1
             result_lines.append(line)
             code_block_flags.append(True)
@@ -1009,15 +1025,17 @@ def style_markdown(
                 in_html_comment_block = True
             continue
 
-        match = re.match(r"^(`{3,}|~{3,})", stripped)
+        fence_content, blockquote_depth = _strip_blockquote_prefix(line)
+        match = re.match(r"^(`{3,}|~{3,})", fence_content)
         if match:
             in_code_block = True
             fence_char = match.group(1)[0]
             fence_len = len(match.group(1))
             fence_nest = 0
+            fence_blockquote_depth = blockquote_depth
             result_lines.append(line)
             code_block_flags.append(True)
-            code_block_mode = _detect_fence_source_mode(stripped[match.end():])
+            code_block_mode = _detect_fence_source_mode(fence_content[match.end():])
             code_body_start = len(result_lines)
             continue
 
