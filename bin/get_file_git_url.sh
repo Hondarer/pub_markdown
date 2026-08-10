@@ -29,7 +29,7 @@ resolve_file_git_context() {
     return
   fi
 
-  # 2) ファイルの絶対パスを取得 (シンボリックリンクは実体へ解決)
+  # 2) ファイルの絶対パスを取得 (シンボリック リンクは実体へ解決)
   # .agents/skills 配下のように symlink 経由で発行されるファイルに対応するため、
   # ディレクトリ部を pwd -P で物理パスへ解決する。これにより git の索引上の実体パス
   # (リンク先のリポジトリ / サブモジュール) で追跡・remote を解決できる。
@@ -255,7 +255,7 @@ get_file_git_url() {
   printf '%s\t%s\n' "$url" "$provider"
 }
 
-# スクリプト実行時のエントリポイント
+# スクリプト実行時のエントリ ポイント
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   if [[ "$1" == "--provider" ]]; then
     if [[ -z "$2" ]]; then

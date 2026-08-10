@@ -1,6 +1,6 @@
 # コード ブロックのキャプション
 
-コード ブロックのキャプションは、ブロックの直後に空行をはさんで `CodeBlock:` 行を記載して指定します。
+コード ブロックのキャプションは、ブロックの直後に空行をはさんで `CodeBlock:` 行を記載して指定します。  
 表の `Table:` と同じく、キャプションをフェンスの外に出す記法です。
 
 ````text
@@ -57,7 +57,7 @@ fix-line-break.lua
 
 ## pandoc-crossref がない場合
 
-pandoc-crossref はオプションであり、導入していない環境でも発行できます。
+pandoc-crossref はオプションであり、導入していない環境でも発行できます。  
 `pub_markdown_core.sh` は pandoc-crossref の有無をメタデータ `docsfw-crossref` で Lua フィルターへ通知します。
 
 - pandoc-crossref がある場合、ラベル付きのコード ブロックは `codeblock-caption.lua` では処理せず、pandoc-crossref に委譲します。
@@ -65,7 +65,7 @@ pandoc-crossref はオプションであり、導入していない環境でも�
 
 ## 採番の日本語ラベル
 
-pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。文書のフロントマターで上書きできます。
+pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。文書のフロント マターで上書きできます。
 
 | メタデータ | 既定値 | 用途 |
 |---|---|---|
@@ -85,7 +85,7 @@ pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。
 | ` ```{.mermaid caption="キャプション"} ` | ` ```mermaid ` と `CodeBlock: キャプション` |
 | ` ```text:Sample.txt ` | ` ```text ` と `CodeBlock: Sample.txt` |
 
-廃止した `caption` 属性が残っている場合は、標準エラー出力へ警告を出力したうえで属性を破棄します。キャプションは出力されません。
+廃止した `caption` 属性が残っている場合は、標準エラー出力へ警告を出力したうえで属性を破棄します。キャプションは出力されません。  
 `CodeBlock:` 行を併記している場合は、警告を出力したうえで `CodeBlock:` 行の値を採用します。
 
 ## サンプル

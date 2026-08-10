@@ -35,7 +35,7 @@ CHROME=$(cd $(dirname "$0") && node -e "console.log(require('puppeteer').executa
 if [ ! -x "$CHROME" ]; then
   echo "Chromium not found at: $CHROME" >&2
 
-  # executablePath() の戻り値からキャッシュディレクトリの親ディレクトリを推定
+  # executablePath() の戻り値からキャッシュ ディレクトリの親ディレクトリを推定
   # 例: /home/user/.cache/puppeteer/chrome/linux-142.0.7444.175/chrome-linux64/chrome
   #     → /home/user/.cache/puppeteer/chrome
   PUPPETEER_CACHE_DIR=$(dirname "$(dirname "$CHROME")")
@@ -48,7 +48,7 @@ if [ ! -x "$CHROME" ]; then
     echo "Searching for alternative Chromium in $PUPPETEER_CACHE_DIR..." >&2
 
     if [ -d "$PUPPETEER_CACHE_DIR" ]; then
-      # 各バージョンディレクトリ内の chrome 実行ファイルを探し、バージョンでソート
+      # 各バージョン ディレクトリ内の chrome 実行ファイルを探し、バージョンでソート
       # 元のパスと同じサブパス構造を持つものを優先
       LATEST_CHROME=$(find "$PUPPETEER_CACHE_DIR" -type f -path "*/linux-*/$CHROME_SUBPATH" -executable 2>/dev/null | while read chrome_path; do
         # パスからバージョン番号を抽出 (例: linux-142.0.7444.175 から 142.0.7444.175)
@@ -102,7 +102,7 @@ trap 'rm -f "$FIFO"' EXIT
       PORT=$(echo "$line" | grep -oP 'ws://127\.0\.0\.1:\K[0-9]+')
       PORT_LINE="$line"
 
-      # 該当ポートが完全に使用可能になるまで待機（LISTEN 状態 + /json/version 応答）
+      # 該当ポートが完全に使用可能になるまで待機 (LISTEN 状態 + /json/version 応答)
       for i in {1..50}; do
         if [ "$(ss -tln | awk '{print $1, $4}' | grep -E '^LISTEN\s+127\.0\.0\.1:'"$PORT"'$' | wc -l)" -gt 0 ]; then
           if curl -s --max-time 0.2 "http://127.0.0.1:$PORT/json/version" | grep -q '"webSocketDebuggerUrl"'; then
@@ -117,7 +117,7 @@ trap 'rm -f "$FIFO"' EXIT
       echo "$line" >&3
       BUFFERED_OUTPUT=""
     else
-      # DevTools 行がまだ現れていない間はバッファする
+      # DevTools 行がまだ現れていない間はバッファーする
       if [ -z "$PORT_LINE" ]; then
         BUFFERED_OUTPUT+="$line"$'\n'
       else
@@ -128,6 +128,6 @@ trap 'rm -f "$FIFO"' EXIT
 ) &
 
 # Chrome を起動し、その stderr を FIFO に流す (stdout はそのまま)
-# --no-sandbox: CI/コンテナ環境ではサンドボックスが使用できないため無効化する。
-# このラッパー経由の起動は自動レンダリング用途(Mermaid/SVG変換等)に限られるため安全。
+# --no-sandbox: CI/コンテナー環境ではサンドボックスが使用できないため無効化する。
+# このラッパー経由の起動は自動レンダリング用途 (Mermaid/SVG 変換等) に限られるため安全。
 "$CHROME" --no-sandbox "$@" 2> "$FIFO"

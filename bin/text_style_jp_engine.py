@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Japanese text styling engine shared by multiple frontends."""
 
+import contextlib
 import difflib
 import json
 import os
@@ -20,14 +21,15 @@ _no_space_words: List[str] = []
 _replace_pairs: List[Tuple[str, str]] = []
 _add_space_pairs: List[Tuple[str, str]] = []
 _dict_loaded = False
-_replace_sources: dict = {}    # from_word → 辞書ファイルパス
-_add_space_sources: dict = {}  # from_word → 辞書ファイルパス
+_replace_sources: dict = {}    # from_word → 辞書ファイル パス
+_add_space_sources: dict = {}  # from_word → 辞書ファイル パス
 
 _sudachi_state: Optional[bool] = None
 _sudachi_tok = None
 _KATAKANA_RUN_RE = re.compile(r"[ァ-ヺー]+")
 _KATAKANA_RUN_WITH_SPACES_RE = re.compile(r"[ァ-ヺー]+(?: [ァ-ヺー]+)+")
 _no_space_set: set = set()
+_replace_from_set: set = set()
 
 
 class CharType(Enum):
@@ -85,7 +87,7 @@ class Finding:
         self.original = original  # 変更前テキスト断片
         self.corrected = corrected  # 変更後テキスト断片
         self.rule = rule          # ルール ID
-        self.source = source      # 辞書ファイルパス (辞書ルールのみ)
+        self.source = source      # 辞書ファイル パス (辞書ルールのみ)
         self.message = message    # ルールの説明
 
 
@@ -390,8 +392,8 @@ def load_dictionaries() -> None:
     add_space_words = {}  # compact_word -> add_space 正規形
     no_space_order = []  # no_space として初めて登場した語の挿入順
     replace_map = {}
-    replace_source: dict = {}     # from_word → ファイルパス (出典追跡用)
-    add_space_source: dict = {}   # compact_word → ファイルパス (出典追跡用)
+    replace_source: dict = {}     # from_word → ファイル パス (出典追跡用)
+    add_space_source: dict = {}   # compact_word → ファイル パス (出典追跡用)
 
     file_entries = []  # (fname, dir_index, abs_path)
     for di, dict_dir in enumerate(search_paths):
@@ -439,7 +441,14 @@ def load_dictionaries() -> None:
 
     _drop_inverse_replace_pairs(replace_map, replace_source)
 
-    final_no_space = [w for w in no_space_order if word_kind.get(w) == "no_space"]
+    # replace の見出し語は no_space 保護から外す。両方に属する語 (`チャンネル` など) を
+    # 退避すると、分割後の replace が語へ届かず表記の統一が効かなくなる。
+    # 分割済み表記の連結は _join_katakana_split_by_no_space が
+    # _replace_from_set 側で拾うため、保護を外しても復元機能は失われない。
+    final_no_space = [
+        w for w in no_space_order
+        if word_kind.get(w) == "no_space" and w not in replace_map
+    ]
     final_add_space = [
         t for w, t in add_space_words.items()
         if word_kind.get(w) == "add_space"
@@ -449,6 +458,8 @@ def load_dictionaries() -> None:
     _no_space_set.clear()
     _no_space_set.update(final_no_space)
     _replace_pairs[:] = list(replace_map.items())
+    _replace_from_set.clear()
+    _replace_from_set.update(from_word for from_word, _ in _replace_pairs)
     _replace_sources.clear()
     _replace_sources.update(replace_source)
 
@@ -644,9 +655,15 @@ def insert_space_between_fullwidth_and_halfwidth(text: str) -> str:
 
 def remove_space_before_punctuation(text: str) -> str:
     text = re.sub(r" +([、。，．,;])", r"\1", text)
-    text = re.sub(r" +([?？!！])(?!=)", r"\1", text)
-    text = re.sub(r" +:(?!(?: |=))", ":", text)
-    text = re.sub(r" +\.(?![A-Za-z./\\])", ".", text)
+    # 直後が空白または行末の ? ! は、文末の約物ではなく記号そのものを指している
+    # (「- ! で始まる否定パターン」など) ため、前のスペースを保持する。
+    text = re.sub(r" +([?？!！])(?![=\s])", r"\1", text)
+    # 直後が ASCII の識別子で始まるコロンは、約物ではなくトークンの一部
+    # (「行全体が :key--> の形式」の `:key-->` など) を指すため、前のスペースを保持する。
+    text = re.sub(r" +:(?![ =]|[A-Za-z0-9_])", ":", text)
+    # 直後が空白または行末の . は、文末の約物ではなく記号そのものを指している
+    # (「(数字 + . + 空白)」など) ため、前のスペースを保持する。
+    text = re.sub(r" +\.(?![A-Za-z./\\\s])", ".", text)
     return text
 
 
@@ -655,7 +672,9 @@ def remove_space_around_middle_dot_between_katakana(text: str) -> str:
 
 
 def remove_space_inside_brackets(text: str) -> str:
-    text = re.sub(r"([\(\[{（［｛「『【〔〈《]) +", r"\1", text)
+    # バックスラッシュでエスケープされた括弧 (LaTeX の \[ など) は文字そのものを
+    # 指すため、直後のスペースを保持する。
+    text = re.sub(r"(?<!\\)([\(\[{（［｛「『【〔〈《]) +", r"\1", text)
     text = re.sub(r" +([\)\]}）］｝」』】〕〉》])", r"\1", text)
     return text
 
@@ -668,13 +687,16 @@ def remove_space_before_mm_unit(text: str) -> str:
     return re.sub(r"(\d) +(mm)\b", r"\1\2", text)
 
 
-# ? ! の直後に続いても半角スペースを挿入しない全角文字 (句読点・閉じ括弧・波ダッシュ・三点リーダー等)
+# `? !` の直後に続いても半角スペースを挿入しない全角文字 (句読点・閉じ括弧・波ダッシュ・三点リーダー等)
 _FULLWIDTH_NO_SPACE_AFTER_BANG = "・。、，．！？…‥〜～）］｝」』】〕〉》"
 
 
 def add_space_after_punctuation_before_alnum(text: str) -> str:
-    text = re.sub(r"([?？!！])([A-Za-z0-9])", r"\1 \2", text)
-    # 半角 ? ! の後に日本語 (全角文字) が続く場合もスペースを挿入する。
+    # 開き括弧 (も対象に含める。全角の `？（` は半角化後に `?(` となり、
+    # 英数字と同じく直前の約物との間にスペースが必要になる。
+    # 角括弧は Markdown の画像記法 `![alt](url)` を壊すため対象にしない。
+    text = re.sub(r"([?？!！])([A-Za-z0-9(])", r"\1 \2", text)
+    # 半角 `? !` の後に日本語 (全角文字) が続く場合もスペースを挿入する。
     # 直後が全角の句読点・閉じ括弧などのときは挿入しない。
     text = re.sub(
         r"([?？!！])(?=[^\x00-\x7F])(?![" + re.escape(_FULLWIDTH_NO_SPACE_AFTER_BANG) + r"])",
@@ -897,11 +919,22 @@ def _apply_add_space_pairs(
     candidates = []
 
     def _has_word_boundary(from_word: str, start: int, end: int) -> bool:
-        if from_word and is_halfwidth_alnum(from_word[0]):
+        if not from_word:
+            return True
+        if is_halfwidth_alnum(from_word[0]):
             if start > 0 and is_halfwidth_alnum(text[start - 1]):
                 return False
-        if from_word and is_halfwidth_alnum(from_word[-1]):
+        if is_halfwidth_alnum(from_word[-1]):
             if end < len(text) and is_halfwidth_alnum(text[end]):
+                return False
+        # カタカナで始まる (終わる) 語は、前後にカタカナが続くとき語の一部であり、
+        # そこで区切ると残りが孤立する。「イベント フィルター」を
+        # 「イベント フィルタリング」の先頭に当てると「リング」が取り残される。
+        if _is_full_katakana_char(from_word[0]):
+            if start > 0 and _is_full_katakana_char(text[start - 1]):
+                return False
+        if _is_full_katakana_char(from_word[-1]):
+            if end < len(text) and _is_full_katakana_char(text[end]):
                 return False
         return True
 
@@ -1001,6 +1034,113 @@ def _restore_replacements(text: str, replacements: Sequence[Tuple[str, str]]) ->
 
 _NON_WORD_BOUNDARY_KATAKANA = frozenset("ー・")
 
+_PLAUSIBLE_FRAGMENT_CACHE: dict = {}
+
+
+def _is_plausible_katakana_fragment(text: str, leading: bool) -> bool:
+    """カタカナ列が、それ単独で 1 語として通用するかを判定する。
+
+    no_space 語の保護によってカタカナ連続を区切るとき、区切りの残りが語として
+    通用しない断片であれば、その区切り自体が誤りである。
+    例: 「クオート」を「ク」+「オート」と区切ると「ク」が残る。
+
+    辞書に載る語はこの判定に到達しない (プレースホルダーへ退避済みのため) ので、
+    ここへ来るのは辞書外の文字列である。カタカナ連続の先頭にある 2 文字の辞書外
+    カタカナは、独立した語ではなく長い語の先頭部分であることが多いため退ける
+    (「パーミッション」の「パー」、「シーシャープ」の「シー」、
+    「プリプロセス」の「プリ」)。末尾に残る 2 文字は、直前の辞書語で語頭が
+    説明済みであり、独立した短い語であることが多いため認める
+    (「テストログ」の「ログ」、「ファイルパス」の「パス」)。
+    """
+    cached = _PLAUSIBLE_FRAGMENT_CACHE.get((text, leading))
+    if cached is not None:
+        return cached
+    if len(text) < (3 if leading else 2):
+        _PLAUSIBLE_FRAGMENT_CACHE[(text, leading)] = False
+        return False
+    if not _init_sudachi():
+        _PLAUSIBLE_FRAGMENT_CACHE[(text, leading)] = True
+        return True
+    import sudachipy
+
+    morphemes = _sudachi_tok.tokenize(text, sudachipy.SplitMode.A)
+    result = len(morphemes) == 1 and _is_valid_katakana_segment(morphemes[0])
+    _PLAUSIBLE_FRAGMENT_CACHE[(text, leading)] = result
+    return result
+
+
+def _protect_katakana_run(run: str, mapping: dict, max_len: int, separator: str) -> str:
+    """カタカナ連続 1 件を、no_space 語の左から最長一致で区切って退避する。
+
+    無条件の部分一致で退避すると、語の途中で切れて復元時に誤った境界スペースが
+    入る (「マップ」の退避が「アンマップ」を「アン マップ」にする)。
+    左から最長一致で走査し、no_space 語に該当しない残りが 1 語として通用しない
+    場合は、この連続に対する退避そのものを取りやめる。
+
+    区切りが 2 つ以上になったときは、separator を語境界へ挿入する。
+    復元時の境界判定は隣接文字を見るため、プレースホルダーどうしが隣り合う場合や
+    語が長音で終わる場合に境界を検出できない。
+    語彙の分割を行わない文脈 (コード フェンス内) では separator に空文字を渡す。
+    """
+    segments: List[str] = []
+    pending = ""
+    pos = 0
+    while pos < len(run):
+        matched = ""
+        for length in range(min(max_len, len(run) - pos), 1, -1):
+            candidate = run[pos:pos + length]
+            if candidate in mapping:
+                matched = candidate
+                break
+        if not matched:
+            pending += run[pos]
+            pos += 1
+            continue
+        if pending:
+            if not _is_plausible_katakana_fragment(pending, leading=not segments):
+                return run
+            segments.append(pending)
+            pending = ""
+        segments.append(mapping[matched])
+        pos += len(matched)
+    if pending:
+        if segments and not _is_plausible_katakana_fragment(pending, leading=False):
+            return run
+        segments.append(pending)
+    return separator.join(segments)
+
+
+def _protect_no_space_words(
+    text: str, replacements: List[Tuple[str, str]], separator: str = " "
+) -> str:
+    """no_space 語をプレースホルダーへ退避する。
+
+    カタカナだけで構成される語はカタカナ連続ごとに左から最長一致で退避する。
+    それ以外 (英数字や空白を含む語) は従来どおり単純な部分一致で退避する。
+    """
+    katakana_map = {}
+    protected = text
+    for placeholder, word in replacements:
+        if _KATAKANA_RUN_RE.fullmatch(word):
+            katakana_map[word] = placeholder
+        else:
+            protected = protected.replace(word, placeholder)
+    if not katakana_map:
+        return protected
+    max_len = max(len(word) for word in katakana_map)
+    return _KATAKANA_RUN_RE.sub(
+        lambda m: _protect_katakana_run(m.group(0), katakana_map, max_len, separator),
+        protected,
+    )
+
+
+def _restore_no_space_words(text: str, replacements: List[Tuple[str, str]]) -> str:
+    """no_space 語のプレースホルダーを、境界スペースを補わずに復元する。"""
+    restored = text
+    for placeholder, word in replacements:
+        restored = restored.replace(placeholder, word)
+    return restored
+
 
 def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]) -> str:
     """no_space_words のプレースホルダーを復元し、境界にスペースを補う。
@@ -1096,23 +1236,81 @@ def _init_sudachi() -> bool:
 
 
 def _join_katakana_split_by_no_space(text: str) -> str:
-    """カタカナ列 + 半角スペース + カタカナ列 を、連結形が no_space に登録されていれば結合する。
+    """カタカナ列 + 半角スペース + カタカナ列 を、連結形が辞書にあれば結合する。
 
     ユーザーが誤って「ワークス ペース」「サブ ディレクトリ」のようにスペース入りで
     書いた場合に、no_space 登録された単独カタカナ語へ復元する。
     no_space リストに登録された語が tbx 単独語または社内独自語であれば
     自動的に補正されるため、個別の replace 定義が不要になる。
+
+    連結形が replace の見出し語に一致する場合も結合する。「エラーハンド リング」の
+    ように語の途中で分断されていると、見出し語「エラーハンドリング」に一致せず
+    置換が働かないまま、さらに分割が進むため。
     """
-    if not _no_space_set:
+    if not _no_space_set and not _replace_from_set:
         return text
 
     def _replace(match: re.Match) -> str:
         merged = match.group(0).replace(" ", "")
-        if merged in _no_space_set:
+        if merged in _no_space_set or merged in _replace_from_set:
             return merged
         return match.group(0)
 
     return _KATAKANA_RUN_WITH_SPACES_RE.sub(_replace, text)
+
+
+def _is_valid_katakana_segment(morph) -> bool:
+    """Sudachi の形態素が、カタカナ複合語の分割単位として妥当かを判定する。
+
+    分割の誤りは「スタイリング → スタイ リング」のように意味のない断片を生む。
+    断片を生む分割は棄却して連結形へ戻すほうが安全なため、次を不当とみなす。
+
+    - 1 文字の表層形 (「ク オート」の「ク」)
+    - 未知語 (辞書にない断片。「リストア ップ」の「ップ」)
+    - 接頭辞・接尾辞 (「サブ アイテム」の「サブ」)
+    """
+    surface = morph.surface()
+    if len(surface) < 2:
+        return False
+    if morph.is_oov():
+        return False
+    pos = morph.part_of_speech()
+    if pos and pos[0] == "接頭辞":
+        return False
+    if len(pos) > 1 and "接尾" in pos[1]:
+        return False
+    return True
+
+
+def _merge_invalid_katakana_segments(morphemes: Sequence) -> List[str]:
+    """不当な分割単位を隣接する単位へ結合し、妥当な区切りだけを残す。
+
+    先頭が不当な場合は直後へ、それ以外は直前へ結合する。
+    結合してできた語は再検証しない (分割しない方向は常に安全側のため)。
+    """
+    surfaces = [morph.surface() for morph in morphemes]
+    valid = [_is_valid_katakana_segment(morph) for morph in morphemes]
+
+    merged: List[str] = []
+    pending = ""
+    for surface, is_valid in zip(surfaces, valid):
+        if not is_valid:
+            if merged and not pending:
+                merged[-1] += surface
+            else:
+                pending += surface
+            continue
+        if pending:
+            merged.append(pending + surface)
+            pending = ""
+            continue
+        merged.append(surface)
+    if pending:
+        if merged:
+            merged[-1] += pending
+        else:
+            merged.append(pending)
+    return merged
 
 
 def _split_katakana_with_sudachi(text: str) -> str:
@@ -1123,10 +1321,28 @@ def _split_katakana_with_sudachi(text: str) -> str:
 
     def _replace(m: re.Match) -> str:
         morphemes = _sudachi_tok.tokenize(m.group(0), sudachipy.SplitMode.B)
-        surfaces = [morph.surface() for morph in morphemes]
-        return " ".join(surfaces)
+        return " ".join(_merge_invalid_katakana_segments(morphemes))
 
     return _KATAKANA_RUN_RE.sub(_replace, text)
+
+
+_lexical_styling_enabled = True
+
+
+@contextlib.contextmanager
+def lexical_styling_disabled():
+    """このブロックの間、語彙の置換と分割を行わない。
+
+    コード フェンスの中では、記号と空白の正規化だけを行い、用語は原文のまま残す。
+    対象は replace 辞書、add_space 辞書、SudachiPy によるカタカナ分割。
+    """
+    global _lexical_styling_enabled
+    previous = _lexical_styling_enabled
+    _lexical_styling_enabled = False
+    try:
+        yield
+    finally:
+        _lexical_styling_enabled = previous
 
 
 def style_text(
@@ -1144,48 +1360,56 @@ def style_text(
 
     protected, url_replacements = _protect_urls(protected)
 
-    before = protected
-    protected = _join_katakana_split_by_no_space(protected)
-    if collector is not None:
-        _record_step_changes(before, protected, "dict-no-space-join", collector, message="no_space 語のスペースを結合")
+    if _lexical_styling_enabled:
+        before = protected
+        protected = _join_katakana_split_by_no_space(protected)
+        if collector is not None:
+            _record_step_changes(before, protected, "dict-no-space-join", collector, message="no_space 語のスペースを結合")
 
-    # Sudachi B 分割や no_space 保護で対象文字列が分断される前に、
-    # カタカナ replace を先行適用する。「カテゴリー → カテゴリ」のような逆方向 ー 削除や
-    # 「スライドショ → スライドショー」のような順方向 ー 付与は、分割後に走らせると
-    # from word の連続性が失われて適用されないため、前段で処理しておく。
-    for from_word, to_word in _replace_pairs:
-        protected = _replace_skip_existing(
-            protected, from_word, to_word,
-            collector=collector,
-            source=_replace_sources.get(from_word, ""),
-        )
+        # Sudachi B 分割や no_space 保護で対象文字列が分断される前に、
+        # カタカナ replace を先行適用する。「`カテゴリー → カテゴリ`」のような逆方向 ー 削除や
+        # 「`スライドショ → スライドショー`」のような順方向 ー 付与は、分割後に走らせると
+        # from word の連続性が失われて適用されないため、前段で処理しておく。
+        for from_word, to_word in _replace_pairs:
+            protected = _replace_skip_existing(
+                protected, from_word, to_word,
+                collector=collector,
+                source=_replace_sources.get(from_word, ""),
+            )
 
+    # no_space 語の退避は語彙の置換とは別の役割を持つ。style_prose の全半角境界
+    # スペース挿入から語を守るため、フェンス内でも必ず退避する。
+    # ただしフェンス内では語境界の分割を行わないため、区切りのスペースは入れない。
     sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
-    nosp_replacements = []
-    for idx, word in enumerate(sorted_nosp):
-        placeholder = f"\x00NOSP{idx}\x00"
-        protected = protected.replace(word, placeholder)
-        nosp_replacements.append((placeholder, word))
+    nosp_replacements = [
+        (f"\x00NOSP{idx}\x00", word) for idx, word in enumerate(sorted_nosp)
+    ]
+    protected = _protect_no_space_words(
+        protected, nosp_replacements, separator=" " if _lexical_styling_enabled else ""
+    )
 
     styled = style_prose(protected, collector=collector)
 
-    before = styled
-    styled = _split_katakana_with_sudachi(styled)
-    if collector is not None:
-        _record_step_changes(before, styled, "sudachi-split", collector, message="SudachiPy でカタカナを分割")
+    if _lexical_styling_enabled:
+        before = styled
+        styled = _split_katakana_with_sudachi(styled)
+        if collector is not None:
+            _record_step_changes(before, styled, "sudachi-split", collector, message="SudachiPy でカタカナを分割")
 
-    styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
+        styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
 
-    for placeholder, word in nosp_replacements:
-        styled = styled.replace(word, placeholder)
-    for from_word, to_word in _replace_pairs:
-        styled = _replace_skip_existing(
-            styled, from_word, to_word,
-            collector=collector,
-            source=_replace_sources.get(from_word, ""),
-        )
-    styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
-    styled = _apply_add_space_pairs(styled, collector=collector)
+        styled = _protect_no_space_words(styled, nosp_replacements)
+        for from_word, to_word in _replace_pairs:
+            styled = _replace_skip_existing(
+                styled, from_word, to_word,
+                collector=collector,
+                source=_replace_sources.get(from_word, ""),
+            )
+        styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
+        styled = _apply_add_space_pairs(styled, collector=collector)
+    else:
+        styled = _restore_no_space_words(styled, nosp_replacements)
+
     before = styled
     styled = add_space_before_supplemental_bracket(styled)
     if collector is not None:

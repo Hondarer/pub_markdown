@@ -3,8 +3,8 @@
 # get_file_date FILEPATH
 #   ・git コマンドが使えない           → ファイルの最終更新時刻 (RFC2822)
 #   ・Git 管理下にない                 → ファイルの最終更新時刻 (RFC2822)
-#   ・Git 管理下にあり、変更あり       → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "+"
-#   ・Git 管理下にあり、変更なし       → 最終コミット時刻 (RFC2822) + " " + 最終コミットID
+#   ・Git 管理下にあり、変更あり       → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミット ID + "+"
+#   ・Git 管理下にあり、変更なし       → 最終コミット時刻 (RFC2822) + " " + 最終コミット ID
 get_file_date() {
   local file=$1
 
@@ -39,11 +39,11 @@ get_file_date() {
   # デバッグ用出力
   #echo "repo=$repo" >&2
 
-  # ─── 3) リポジトリルートからの相対パスを計算 ─────────────────────
+  # ─── 3) リポジトリ ルートからの相対パスを計算 ─────────────────────
   local rel
-  # MinGW環境でのパス形式の違いに対応
+  # MinGW 環境でのパス形式の違いに対応
   if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-    # MinGW/MSYS環境: Windowsパス形式をUnix形式に正規化
+    # MinGW/MSYS 環境: Windows パス形式を Unix 形式に正規化
     local unix_repo unix_file
     unix_repo=$(cygpath -u "$repo" 2>/dev/null || echo "$repo" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/\L\1|')
     unix_file=$(cygpath -u "$abs_file" 2>/dev/null || echo "$abs_file" | sed 's|\\|/|g; s|^\([A-Za-z]\):|/\L\1|')
@@ -52,7 +52,7 @@ get_file_date() {
     if [[ "$unix_file" == "$unix_repo"/* ]]; then
       rel="${unix_file#"$unix_repo"/}"
     else
-      # fallback: gitで現在のファイルパスを取得
+      # fallback: git で現在のファイル パスを取得
       rel=$(git -C "$repo" ls-files --full-name -- "$abs_file" 2>/dev/null | head -1)
       if [[ -z "$rel" ]]; then
         #echo ""
@@ -60,11 +60,11 @@ get_file_date() {
       fi
     fi
   else
-    # Linux/Unix環境: 通常の処理
+    # Linux/Unix 環境: 通常の処理
     if [[ "$abs_file" == "$repo"/* ]]; then
       rel="${abs_file#"$repo"/}"
     else
-      # fallback: gitで現在のファイルパスを取得
+      # fallback: git で現在のファイル パスを取得
       rel=$(git -C "$repo" ls-files --full-name -- "$abs_file" 2>/dev/null | head -1)
       if [[ -z "$rel" ]]; then
         #echo ""
@@ -85,17 +85,17 @@ get_file_date() {
 
   # ─── 5) 未コミット差分の有無チェック ─────────────────────────────
   if ! git -C "$repo" diff --quiet HEAD -- "$rel"; then
-    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミットID + "+"
+    # 差分あり → ファイルの最終更新時刻 (RFC2822) + " " + 最終コミット ID + "+"
     local commit_id
     commit_id=$(git -C "$repo" log -1 --format=%h -- "$rel")
     echo "$(LC_TIME=C date -R -r "$abs_file") $commit_id+"
   else
-    # 差分なし → 最終コミットのコミッター日時 (RFC2822) + " " + 最終コミットID
+    # 差分なし → 最終コミットのコミッター日時 (RFC2822) + " " + 最終コミット ID
     git -C "$repo" log -1 --format="%cD %h" -- "$rel"
   fi
 }
 
-# スクリプト実行時のエントリポイント
+# スクリプト実行時のエントリ ポイント
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   if [[ -z "$1" ]]; then
     echo "Usage: $0 <file-path>"

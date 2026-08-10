@@ -67,7 +67,7 @@ def run_tests() -> bool:
         ("10 mm", "10mm"),
         ("ビルド ・ テスト", "ビルド・テスト"),
         ("保存しますか?Excelを使用", "保存しますか? Excel を使用"),
-        # fullwidth-bang: 全角 ？！ → 半角
+        # fullwidth-bang: 全角 `？！` → 半角
         ("本当ですか？", "本当ですか?"),
         ("すごい！", "すごい!"),
         # fullwidth-bang + space-after-punctuation: 半角化後に日本語が続く場合はスペース挿入
@@ -75,6 +75,9 @@ def run_tests() -> bool:
         ("できますか?はい", "できますか? はい"),
         ("すごい！本当", "すごい! 本当"),
         ("保存しますか？Excel", "保存しますか? Excel"),
+        # space-after-punctuation: 開き括弧の前にもスペースを挿入する
+        ("コメント内容行か？（* で始まる行）", "コメント内容行か? (* で始まる行)"),
+        ("すごい！(本当)", "すごい! (本当)"),
         # space-after-punctuation: 全角句読点・閉じ括弧が続く場合はスペースなし
         ("質問？」と言った", "質問?」と言った"),
         ("えっ？。そうか", "えっ?。そうか"),
@@ -87,6 +90,13 @@ def run_tests() -> bool:
         ("hoge (説明)", "hoge (説明)"),
         ("GNU Make(スキルガイド)", "GNU Make (スキルガイド)"),
         ("Markdown(GFM)仕様", "Markdown (GFM) 仕様"),
+        # 前後を空白で挟んだ ? ! . は記号そのものを指すため、前のスペースを保持する
+        ("- ! で始まる否定パターン", "- ! で始まる否定パターン"),
+        ("番号付きリスト (数字 + . + 空白)", "番号付きリスト (数字 + . + 空白)"),
+        ("該当するか ? を確認する", "該当するか ? を確認する"),
+        # 直後が ASCII の識別子で始まるコロンはトークンの一部を指すため、前のスペースを保持する
+        ("行全体が :key--> の形式", "行全体が :key--> の形式"),
+        ("見出しは :caption を使う", "見出しは :caption を使う"),
     ]
 
     markdown_test_cases: List[Tuple[str, str]] = [
@@ -115,6 +125,13 @@ def run_tests() -> bool:
         ("パラグラ フライティング", "パラグラフ ライティング"),
         ("パラ グラフライ ティング", "パラグラフ ライティング"),
         ("パラグラフ ライティング", "パラグラフ ライティング"),
+        # replace の見出し語は no_space 保護から外れるため、分割後も表記が統一される
+        ("チャンネルポインタ", "チャネル ポインター"),
+        ("カスタムマッチャ", "カスタム マッチャー"),
+        # replace の見出し語でない no_space 語は従来どおり保護される
+        ("マルチチャンネル", "マルチチャンネル"),
+        # スペース挿入誤記の連結は replace の見出し語側で復元される
+        ("チャン ネル", "チャネル"),
         ("`カテゴリー` を使う", "`カテゴリー` を使う"),
         ("https://example.com/カテゴリー", "https://example.com/カテゴリー"),
         ("トラブル", "トラブル"),
@@ -205,7 +222,7 @@ def run_tests() -> bool:
         # list-indent: 配下フェンス コード ブロックも delta で追従
         # _insert_blank_around_fences がフェンス直前に空行を挿入する
         ("- a\n  - b\n    ```c\n    x\n    ```", "- a\n    - b\n\n      ```c\n      x\n      ```"),
-        # list-indent: 既に 4 スペースのネストは変更しない
+        # list-indent: すでに 4 スペースのネストは変更しない
         ("- a\n    - b", "- a\n    - b"),
         # list-indent: トップレベル (depth-0) の字下げは変更しない
         (" * - item", " - - item"),
@@ -491,7 +508,7 @@ def run_tests() -> bool:
             "<!--\n## C4\n\n```{.mermaid caption=\"C4 のサンプル\"}\nC4Context\n    title C4 Context のサンプル\n    Person(user, \"利用者\")\n    System(pub, \"pub_markdown\", \"Markdown を発行する\")\n    Rel(user, pub, \"Markdown を発行\")\n```\n\n-->",
             "<!--\n## C4\n\n```{.mermaid caption=\"C4 のサンプル\"}\nC4Context\n    title C4 Context のサンプル\n    Person(user, \"利用者\")\n    System(pub, \"pub_markdown\", \"Markdown を発行する\")\n    Rel(user, pub, \"Markdown を発行\")\n```\n\n-->",
         ),
-        # 見出し行のインラインコード除去
+        # 見出し行のインライン コード除去
         ("## `com_util_tracer_create`", "## com_util_tracer_create"),
         ("### `#ifdef` / `#ifndef`", "### #ifdef / #ifndef"),
         ("# VS Code と `c_cpp_properties.json` の手順", "# VS Code と c_cpp_properties.json の手順"),
@@ -506,13 +523,65 @@ def run_tests() -> bool:
         ),
         ("```makefile\nLIBS += mock_calcbase mock_libc\n```\n補足", "```makefile\nLIBS += mock_calcbase mock_libc\n```\n\n補足"),
         ("例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```", "例:\n\n```makefile\nLIBS += mock_calcbase mock_libc\n```"),
-        # コードブロック内コメントのスタイリング
+        # コード ブロック内コメントのスタイリング
         ("```c\n// 第3章の例\nint x = 0;\n```", "```c\n// 第 3 章の例\nint x = 0;\n```"),
         ("```c\n/** @brief 第3章の例。 */\nint x;\n```", "```c\n/** @brief 第 3 章の例。 */\nint x;\n```"),
         ("```python\nx = 1  # 第3章\n```", "```python\nx = 1  # 第 3 章\n```"),
         ("```makefile\nLIBS += a # 第3章\n```", "```makefile\nLIBS += a # 第 3 章\n```"),
         ("```bash\necho test # 第3章\n```", "```bash\necho test # 第 3 章\n```"),
         ("```{.c}\n// 第3章\n```", "```{.c}\n// 第 3 章\n```"),
+        # フェンス内では語彙の置換と分割を行わず、記号と空白の正規化だけを行う
+        (
+            "```c\n// メモリベースのサブフォルダーファイルと第3章\n```",
+            "```c\n// メモリベースのサブフォルダーファイルと第 3 章\n```",
+        ),
+        # フェンス内でも no_space 語は全半角境界スペースの挿入から保護する
+        (
+            "```cpp\n// [Pre-Assert確認_正常系] - 呼び出されること。\n```",
+            "```cpp\n// [Pre-Assert確認_正常系] - 呼び出されること。\n```",
+        ),
+        # HTML ブロックの行末に明示的改行 (半角スペース 2 つ) を付けない
+        (
+            "<ul>\n    <li><a href=\"x\">依存関係レポート</a></li>\n</ul>",
+            "<ul>\n    <li><a href=\"x\">依存関係レポート</a></li>\n</ul>",
+        ),
+        ("本文のメモリベース", "本文のメモリ ベース"),
+        # 語頭に ! を持つトークンは感嘆符として扱わない
+        ("!include {filename} パターンをチェックする", "!include {filename} パターンをチェックする"),
+        ("※ !dunder! 変換より先に実行する", "※ !dunder! 変換より先に実行する"),
+        ("!linebreak! を改行に変換する", "!linebreak! を改行に変換する"),
+        # カタカナ複合語: no_space 語が長い語の一部として拾われて誤分割しないこと
+        ("スタイリング", "スタイリング"),
+        ("クオート", "クオート"),
+        ("リストアップ", "リストアップ"),
+        ("アンマップ", "アンマップ"),
+        ("サブアイテム", "サブアイテム"),
+        ("ゼロコスト", "ゼロコスト"),
+        ("再センタリングする", "再センタリングする"),
+        # add_space 語を長いカタカナ語の先頭に当てて残りを孤立させない
+        ("イベント フィルタリング", "イベント フィルタリング"),
+        ("イベントフィルタリング", "イベント フィルタリング"),
+        ("イベントフィルタ", "イベント フィルター"),
+        ("メモリベース", "メモリ ベース"),
+        ("フィールドフィルタ", "フィールド フィルター"),
+        # 先頭に残る 2 文字の辞書外カタカナは語の一部とみなして分割しない
+        ("パーミッション", "パーミッション"),
+        ("シーシャープ", "シーシャープ"),
+        ("プリプロセス", "プリプロセス"),
+        ("プリプロセッシング", "プリプロセッシング"),
+        # 末尾に残る 2 文字は独立した語とみなして分割する
+        ("ソートキー", "ソート キー"),
+        ("トップレベルキー", "トップレベル キー"),
+        # 語の途中で分断された既存表記も、replace の見出し語へ再結合してから置換する
+        ("エラーハンドリング", "エラー処理"),
+        ("エラーハンド リング", "エラー処理"),
+        ("エラー ハンド リング", "エラー処理"),
+        # 正しい複合語分割は維持する
+        ("テストログ", "テスト ログ"),
+        ("ファイルパス", "ファイル パス"),
+        ("インラインコード", "インライン コード"),
+        ("サブフォルダーファイル", "サブフォルダー ファイル"),
+        ("トラブルシューティングパフォーマンス", "トラブルシューティング パフォーマンス"),
         # 非対応言語は不変
         ("```json\n// 第3章\n```", "```json\n// 第3章\n```"),
         # 言語なしは不変
@@ -546,6 +615,63 @@ def run_tests() -> bool:
     ]
 
     source_test_cases: List[Tuple[str, str, str]] = [
+        # python: 三重引用符の本文はコメントではないため無変換
+        (
+            "python",
+            'HEADER = b"""/* header */\n#if !defined(X) && !defined(Y)\n#define Z\n"""\n# 第3章の説明\n',
+            'HEADER = b"""/* header */\n#if !defined(X) && !defined(Y)\n#define Z\n"""\n# 第 3 章の説明\n',
+        ),
+        # shell: ヒアドキュメント本文はコメントではないため無変換
+        (
+            "shell",
+            "cat <<'EOT'\n  a { color: #333; text-decoration: none; }\n  # 第3章\nEOT\necho done # 第3章\n",
+            "cat <<'EOT'\n  a { color: #333; text-decoration: none; }\n  # 第3章\nEOT\necho done # 第 3 章\n",
+        ),
+        # shell: <<- はタブ字下げされた終端ワードを許容する
+        (
+            "shell",
+            "cat <<-EOT\n\t# 第3章\n\tEOT\n# 第3章\n",
+            "cat <<-EOT\n\t# 第3章\n\tEOT\n# 第 3 章\n",
+        ),
+        # 語頭に ! を持つトークンはコメント内でも保護する
+        (
+            "shell",
+            "# !dunder! を __ に変換し、!include を展開する\n",
+            "# !dunder! を __ に変換し、!include を展開する\n",
+        ),
+        # 記号列 (否定文字クラス、Markdown リンク、XML タグ) の空白を変更しない
+        (
+            "python",
+            "# [^ ] で括弧前がすでにスペースの場合はスキップする\n",
+            "# [^ ] で括弧前がすでにスペースの場合はスキップする\n",
+        ),
+        (
+            "python",
+            "# Markdown リンク URL ](url) 内の __ を復元する\n",
+            "# Markdown リンク URL ](url) 内の __ を復元する\n",
+        ),
+        (
+            "python",
+            "# ...<fldChar separate/></w:r>(\\s*)<w:r>... を検出する\n",
+            "# ...<fldChar separate/></w:r>(\\s*)<w:r>... を検出する\n",
+        ),
+        # 引用符で囲まれた literal は、括弧前スペースも全半角境界スペースも挿入しない
+        (
+            "cpp",
+            "x; // [状態] - パターン \"^(.+)=(.+)$\" をコンパイルしておく。\n",
+            "x; // [状態] - パターン \"^(.+)=(.+)$\" をコンパイルしておく。\n",
+        ),
+        (
+            "cpp",
+            "x; // [手順] - \"[[:digit:]]+\" で \"あ123い\" を検索する。\n",
+            "x; // [手順] - \"[[:digit:]]+\" で \"あ123い\" を検索する。\n",
+        ),
+        # 引用符の外は従来どおり整形する
+        (
+            "cpp",
+            "x; // 設定を \"有効\" にする。第3章\n",
+            "x; // 設定を \"有効\" にする。第 3 章\n",
+        ),
         (
             "c",
             "const char *label = \"A\u00A0B\"; // 第3章の説明\n",
@@ -1121,7 +1247,7 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
-    # style_markdown: box-drawing 検出テスト (インラインコード外は警告)
+    # style_markdown: box-drawing 検出テスト (インライン コード外は警告)
     c = DiagnosticCollector()
     style_markdown("# 見出し\n罫線文字: ─\n本文", collector=c)
     bd_findings = [f for f in c.findings if f.rule == "box-drawing"]
@@ -1134,7 +1260,7 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
-    # style_markdown: box-drawing インラインコード内は除外
+    # style_markdown: box-drawing インライン コード内は除外
     c = DiagnosticCollector()
     style_markdown("# 見出し\n罫線文字: `─`\n本文", collector=c)
     bd_findings = [f for f in c.findings if f.rule == "box-drawing"]
@@ -1144,7 +1270,7 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
-    # style_markdown: box-drawing ブロッククォート内は警告対象
+    # style_markdown: box-drawing ブロック クォート内は警告対象
     c = DiagnosticCollector()
     style_markdown("> ─", collector=c)
     bd_findings = [f for f in c.findings if f.rule == "box-drawing"]
@@ -1164,7 +1290,7 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
-    # style_markdown: コードブロック内コメントの行番号オフセット検証
+    # style_markdown: コード ブロック内コメントの行番号オフセット検証
     c = DiagnosticCollector()
     result = style_markdown("```c\n// 第3章\n```", collector=c)
     cb_findings = [f for f in c.findings if f.rule == "fullwidth-halfwidth-space"]
@@ -1270,7 +1396,7 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
-    # _format_findings_stylish: 出力フォーマットテスト
+    # _format_findings_stylish: 出力フォーマット テスト
     c = DiagnosticCollector()
     c.set_line(3)
     c.add(5, "第3章", "第 3 章", "fullwidth-halfwidth-space", "", "全角/半角境界スペース")

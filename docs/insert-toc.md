@@ -318,8 +318,8 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ### 概要
 
-`insert-toc.sh` は性能向上のため、ファイル情報と Markdown タイトルをキャッシュ ファイルに保存します。
-キャッシュは `pub_markdown_core.sh` が処理の冒頭で削除するため、 `pub_markdown_core.sh` の実行単位をまたいで共有されません。
+`insert-toc.sh` は性能向上のため、ファイル情報と Markdown タイトルをキャッシュ ファイルに保存します。  
+キャッシュは `pub_markdown_core.sh` が処理の冒頭で削除するため、 `pub_markdown_core.sh` の実行単位をまたいで共有されません。  
 同一実行内の別プロセス (`insert-toc.sh` の複数起動) 間の共有だけを目的としています。
 
 ### キャッシュ ファイル

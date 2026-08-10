@@ -132,7 +132,7 @@ build_defaults_metadata_args() {
         [[ "$d" == "$src_root" ]] && break
         local parent
         parent=$(dirname "$d")
-        [[ "$parent" == "$d" ]] && break   # ファイルシステム ルートに到達
+        [[ "$parent" == "$d" ]] && break   # ファイル システム ルートに到達
         d="$parent"
     done
 
@@ -438,7 +438,7 @@ else
 fi
 
 # pandoc-crossref の有無を Lua フィルターへ通知する。
-# codeblock-caption.lua は、pandoc-crossref がある場合はラベル付きコードブロックの
+# codeblock-caption.lua は、pandoc-crossref がある場合はラベル付きコード ブロックの
 # キャプション生成を pandoc-crossref に委譲し、ない場合は自前で生成する。
 if [ ${#pandoc_crossref_args[@]} -gt 0 ]; then
     crossref_metadata_args=(--metadata "docsfw-crossref=true")
@@ -513,7 +513,7 @@ BROWSER_EXECUTABLE_REPORT_FILE=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
 # Windows (MSYS2) では mktemp が POSIX パスを返すが、
 # pandoc.exe (Win32) の Lua が環境変数のパスを解決できないため
-# cygpath -m で Windows ネイティブ形式 (ドライブレター + 順スラッシュ) に変換する
+# cygpath -m で Windows ネイティブ形式 (ドライブ レター + 順スラッシュ) に変換する
 _pm_plantuml_cache_tmp="$(mktemp -d)"
 if is_windows_host && command -v cygpath >/dev/null 2>&1; then
     export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$(cygpath -m "$_pm_plantuml_cache_tmp")"
@@ -735,7 +735,7 @@ resolve_git_link_target() {
     local git_link_target="$source_file"
     local git_origin_hint
 
-    # doxyfw 生成 md は先頭フロントマターに git-origin (元ソースの workspace 相対パス) を持つ。
+    # doxyfw 生成 md は先頭フロント マターに git-origin (元ソースの workspace 相対パス) を持つ。
     # ヒントがあり実体が存在すれば、md 自身ではなく元ソースに対して Git リンクを解決する。
     git_origin_hint=$(extract_frontmatter_value "$source_file" "git-origin")
     if [[ -n "$git_origin_hint" && -f "${workspaceFolder}/${git_origin_hint}" ]]; then
@@ -1175,7 +1175,7 @@ htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
 htmlDetailsIconSvg="${HOME_DIR}/styles/html/docsfw-details-icon.svg"
 htmlOverviewIconSvg="${HOME_DIR}/styles/html/docsfw-overview-icon.svg"
 htmlDoxygenIconSvg="${HOME_DIR}/styles/html/docsfw-doxygen-icon.svg"
-# Git 単一ページ リンク用 プロバイダ別アイコン (github / gitlab / gitbucket / gitea は git にフォールバック)
+# Git 単一ページ リンク用 プロバイダー別アイコン (github / gitlab / gitbucket / gitea は git にフォールバック)
 htmlGitIconSvgs=(
     "${HOME_DIR}/styles/html/docsfw-github-icon.svg"
     "${HOME_DIR}/styles/html/docsfw-gitlab-icon.svg"
@@ -1745,7 +1745,7 @@ if [ -n "$relativeFile" ]; then
         base_dir="${workspaceFolder}/${relativeFile}"
 
         # ディレクトリ配下の対象ファイル (.md / .yaml / .json) を再帰的に収集
-        # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
+        # ディレクトリ制御マジック ファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
         mapfile -d '' -t files_raw_initial < <(
             find -L "${real_base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
                 ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
@@ -1761,7 +1761,7 @@ if [ -n "$relativeFile" ]; then
 else
     # relativeFile が指定されていない場合: mdRoot 以下の対象ファイル (.md / .yaml / .json) を対象
     # -L を付与してシンボリック リンクも対象にする
-    # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
+    # ディレクトリ制御マジック ファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
     mapfile -d '' -t files_raw_initial < <(
         find -L "${base_dir}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
             ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
@@ -1774,7 +1774,7 @@ else
 
             # 追加ドキュメント サブフォルダー配下の対象ファイルを収集
             # -L を付与してシンボリック リンクも対象にする
-            # ディレクトリ制御マジックファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
+            # ディレクトリ制御マジック ファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
             mapfile -d '' -t subfolder_files < <(
                 find -L "${subfolder_mdroot}" -type f \( -name "*.md" -o -name "*.yaml" -o -name "*.json" \) \
                     ! -name "pubpart.yaml" ! -name "pubchild.yaml" ! -name "publocal.yaml" -print0 | sort -z -u
@@ -1936,14 +1936,14 @@ for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
         copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
-        # DOCX ダウンロードリンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
+        # DOCX ダウンロード リンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlWordIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-word-icon.svg"
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDetailsIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-details-icon.svg"
         copy_if_different_timestamp "${htmlOverviewIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-overview-icon.svg"
         # Doxygen 単一ページ リンク用アイコン (doxygenLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDoxygenIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
-        # Git 単一ページ リンク用 プロバイダ別アイコン (gitLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
+        # Git 単一ページ リンク用 プロバイダー別アイコン (gitLinkEnable の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         for _gitIconSvg in "${htmlGitIconSvgs[@]}"; do
             copy_if_different_timestamp "${_gitIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/$(basename "${_gitIconSvg}")"
         done
@@ -2046,7 +2046,7 @@ for file in "${files[@]}"; do
             )
         fi
 
-        # DOCX ダウンロードリンク メタデータの構築
+        # DOCX ダウンロード リンク メタデータの構築
         # docx 出力が有効な場合のみ、対応する docx への相対 URL とアイコンの URL を HTML に埋め込む
         # (self-contain HTML には渡さない。実在確認はテンプレート内の JavaScript が行う)
         docx_link_metadata_args=()
@@ -2059,7 +2059,7 @@ for file in "${files[@]}"; do
 
         # 概要版/詳細版 切替リンク メタデータの構築
         # details=both の場合のみ渡す (それ以外は切替先ツリーが存在しない)。
-        # 切替先 URL はバリアントコピー最適化と両立させるためビルド時に確定せず、
+        # 切替先 URL はバリアント コピー最適化と両立させるためビルド時に確定せず、
         # テンプレート内の JavaScript が実行時の URL から算出する (実在確認も JavaScript が行う)
         details_link_metadata_args=()
         if [[ "$details" == "both" ]]; then
@@ -2426,7 +2426,7 @@ for file in "${files[@]}"; do
             )
         fi
 
-        # DOCX ダウンロードリンク メタデータの構築
+        # DOCX ダウンロード リンク メタデータの構築
         # docx 出力が有効な場合のみ、対応する docx への相対 URL とアイコンの URL を HTML に埋め込む
         # (self-contain HTML には渡さない。実在確認はテンプレート内の JavaScript が行う)
         docx_link_metadata_args=()
@@ -2439,7 +2439,7 @@ for file in "${files[@]}"; do
 
         # 概要版/詳細版 切替リンク メタデータの構築
         # details=both の場合のみ渡す (それ以外は切替先ツリーが存在しない)。
-        # 切替先 URL はバリアントコピー最適化と両立させるためビルド時に確定せず、
+        # 切替先 URL はバリアント コピー最適化と両立させるためビルド時に確定せず、
         # テンプレート内の JavaScript が実行時の URL から算出する (実在確認も JavaScript が行う)
         details_link_metadata_args=()
         if [[ "$details" == "both" ]]; then
@@ -2512,7 +2512,7 @@ for file in "${files[@]}"; do
         _first_generated_suffix=""
 
         # ディレクトリ階層の publocal / pubpart / pubchild から
-        # フロントマター デフォルト値 (--metadata-file 群) を構築する。
+        # フロント マター デフォルト値 (--metadata-file 群) を構築する。
         # 内容は lang / details に依存しないため 1 回だけ構築する。
         build_defaults_metadata_args "$file"
 
@@ -2564,8 +2564,8 @@ for file in "${files[@]}"; do
                     docx_download_name_encoded=$(printf "%s" "$md_title" | encode_docx_download_name_from_title)
                     docx_download_name_metadata_args=(--metadata "docx-download-name-encoded=${docx_download_name_encoded}")
                 fi
-                # コードフェンス外のレベル 1 見出し (ドキュメント タイトル) のみを本文から取り除く。
-                # sed '/^# /d' はコードフェンス内の行頭 # まで消すため、フェンスを追跡する awk を用いる
+                # コード フェンス外のレベル 1 見出し (ドキュメント タイトル) のみを本文から取り除く。
+                # sed '/^# /d' はコード フェンス内の行頭 # まで消すため、フェンスを追跡する awk を用いる
                 # (フェンス判定の基準は replace-tag.sh に合わせている)。
                 md_body=$(echo "${replaced_md}" | awk '
                     /^```/ { in_code = !in_code }
@@ -2581,7 +2581,7 @@ for file in "${files[@]}"; do
                 export DOCUMENT_DETAILS=$current_details
 
                 echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
-                # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
+                # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                 _pm_pandoc_stderr=$(mktemp)
                 set_job_phase "HTML 生成 lang=${langElement} details=${current_details}"
                 progress_log "HTML 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
@@ -2624,7 +2624,7 @@ for file in "${files[@]}"; do
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
-                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
                         "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
@@ -2659,7 +2659,7 @@ for file in "${files[@]}"; do
                 fi
                 if [[ "$docxOutput" == "true" ]]; then
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
-                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコードフェンス外のレベル 1 見出しを取り除いている。
+                    # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     set_job_phase "DOCX 生成 lang=${langElement} details=${current_details}"
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"

@@ -18,10 +18,10 @@ trap 'rm -f "$tmpfile"' EXIT
 # 各行末の CR を除去する
 sed $'s/\r$//' "$log_file" > "$tmpfile"
 
-# 黄色で囲まれた行（ESC[33m ... ESC[0m）を抽出し、ANSI コードを除去して保存
+# 黄色で囲まれた行 (ESC[33m ... ESC[0m) を抽出し、ANSI コードを除去して保存
 sed -n 's/.*\x1b\[33m\(.*\)\x1b\[0m.*/\1/p' "$tmpfile" > "$warn_file" 2>/dev/null || true
 
-# 既存の warning キーワードも併せて抽出（互換性維持）
+# 既存の warning キーワードも併せて抽出 (互換性維持)
 sed 's/\x1b\[[0-9;]*[mK]//g' "$tmpfile" | \
     grep -Ei '(: warning:?|: 警告:|\[warning\]|^warning:|^警告:)' >> "$warn_file" 2>/dev/null || true
 

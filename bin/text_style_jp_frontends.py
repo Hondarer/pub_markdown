@@ -9,6 +9,7 @@ from text_style_jp_engine import (
     DiagnosticCollector,
     _needs_space_between,
     _record_step_changes,
+    lexical_styling_disabled,
     replace_nbsp_with_space,
     style_text,
 )
@@ -34,7 +35,7 @@ _WAVE_DASH_SPACE_AFTER_ONLY_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)([〜～]
 _INLINE_CODE_IMMEDIATELY_AFTER_COLON_RE = re.compile(r":(?=`+)")
 _SUPPLEMENTAL_LABEL_IMMEDIATELY_AFTER_COLON_RE = re.compile(r"^(\s*(?:>\s*)?補足):(?=\S)")
 _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
-#  @ref は entity 名 (:: ~ . - を含みうる) を、@p/@c/@a/@b/@e/@em は単純な
+#  @ref は entity 名 (`:: ~ . -` を含みうる) を、@p/@c/@a/@b/@e/@em は単純な
 #  C 識別子 1 語を引数に取る。Doxygen はこれらの引数を空白区切りの 1 トークンとして
 #  読み取るため、直後に日本語句読点が空白なしで続くと句読点までが引数に取り込まれ、
 #  意図しない書式 (@p など) や @ref のリンク解決失敗を招く。
@@ -84,17 +85,35 @@ _CODE_LOGICAL_MACRO_EXPRESSION_PATTERN = re.compile(
     r"(?:\s*(?:&&|\|\|)\s*!?[A-Z_][A-Z0-9_]*)+"
     r"(?![A-Za-z0-9_])"
 )
-_CODE_NEGATED_IDENTIFIER_PATTERN = re.compile(r"![A-Z_][A-Z0-9_]*")
+# 語頭に ! を持つトークン。C の否定 (!MACRO) のほか、Doxybook2 や PlantUML の
+# ディレクティブ (!include) や、前処理で使うセンチネル (!dunder!、!linebreak!) を含む。
+# 感嘆符として空白調整の対象になると、!include が「! include」へ壊れる。
+_CODE_NEGATED_IDENTIFIER_PATTERN = re.compile(r"![A-Za-z_][A-Za-z0-9_]*!?")
 _COMMENT_CODE_NEGATION_SPACE_RE = re.compile(r"!\s+([A-Z_][A-Z0-9_]*)")
 _CODE_CALL_PREFIX_PATTERN = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*[ \t]*(?=\()")
 _CODE_BRACKET_QUANTIFIER_PATTERN = re.compile(r"[^\s\[\]`]+[ \t]*\[[^\]\n`]+\][*+?]?")
 _CODE_BIG_O_PATTERN = re.compile(r"\bO\([A-Za-z0-9_+\-*/^ .²³]+\)")
-_CODE_BRACE_BLOCK_PATTERN = re.compile(r"\{[A-Za-z0-9_(),;\"' .!=<>*/+\-]*\}")
+# \x00 は先に退避された引用符などのプレースホルダー。これを許容しないと、
+# ブロック内に文字列リテラルがあるだけで波括弧ブロックとして認識できなくなる。
+_CODE_BRACE_BLOCK_PATTERN = re.compile(r"\{[A-Za-z0-9_(),;:\"'\x00 .!=<>*/+\-]*\}")
+# 正規表現の否定文字クラス。`[^ ]` の空白は意味を持つため、括弧内空白の除去対象から外す。
+_REGEX_NEGATED_CLASS_PATTERN = re.compile(r"\[\^[^\]\n]*\]")
+# Markdown リンクの後半。`URL ](url)` の空白を残し、`](` の直前で詰めない。
+_MARKDOWN_LINK_TAIL_PATTERN = re.compile(r"\]\([^)\n]*\)")
+# 二重引用符で囲まれた文字列。コメント中で引用したコード、正規表現、テスト データ
+# (`"^(.+)=(.+)$"`、`"あ123い"` など) は literal を指すため、スペースの挿入や削除を
+# 行わない。同一行で対が揃うものだけを対象とし、単独の `"` には作用しない。
+_QUOTED_LITERAL_PATTERN = re.compile(r"\"[^\"\n]*\"")
+# XML / HTML タグ。`</w:r>(\s*)` のようなタグ直後の括弧前へスペースを入れない。
+_XML_TAG_PATTERN = re.compile(r"</?[A-Za-z][A-Za-z0-9:_.-]*(?:\s[^<>\n]*?)?/?>")
 _CODE_INLINE_COMMENT_TAIL_PATTERN = re.compile(r"[ \t]+//[^\n]*")
 _CODE_DOT_NUMERIC_SUFFIX_PATTERN = re.compile(r"(?<=\s)\.\d+\b")
 _ASCII_PARENTHETICAL_PATTERN = re.compile(r"\b[A-Za-z0-9_.+-]+(?: [A-Za-z0-9_.+-]+)* \([A-Za-z0-9][A-Za-z0-9 _./+-]*\)")
 _COMMENT_ALIGNMENT_SPACES_PATTERN = re.compile(r"(?<=\S) {2,}(?=\S)")
 _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+# HTML タグで始まる行。Markdown は HTML ブロックの中で改行記法を解釈しないため、
+# 行末に明示的改行 (半角スペース 2 つ) を付けない。
+_HTML_BLOCK_LINE_RE = re.compile(r"^</?[A-Za-z][A-Za-z0-9]*(?:\s[^>]*)?/?>")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
 
 _FENCE_LANG_TO_SOURCE_MODE = {
@@ -114,11 +133,15 @@ _MARKDOWN_PROTECTED_PATTERNS = [
     _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN,
     _DOXYGEN_MATH_PATTERN,
     _FILE_LINK_PATTERN,
+    _CODE_NEGATED_IDENTIFIER_PATTERN,
 ]
 _INLINE_PROTECTED_PATTERNS = [_BACKTICK_PATTERN, _DOXYGEN_MATH_PATTERN]
 _COMMENT_CODE_PROTECTED_PATTERNS = [
     _BACKTICK_PATTERN,
     _DOXYGEN_MATH_PATTERN,
+    # 引用符の対はブラケット系より先に退避する。後回しにすると、先に一致した
+    # ブラケット パターンが引用符の対を分断し、別の範囲を引用符とみなしてしまう。
+    _QUOTED_LITERAL_PATTERN,
     _CODE_BRACE_BLOCK_PATTERN,
     _CODE_OPERATOR_EXPRESSION_PATTERN,
     _CODE_LOGICAL_MACRO_EXPRESSION_PATTERN,
@@ -131,6 +154,9 @@ _COMMENT_CODE_PROTECTED_PATTERNS = [
     _CODE_DOT_NUMERIC_SUFFIX_PATTERN,
     _DOXYGEN_REF_TRAILING_JP_PUNCT_PATTERN,
     _COMMENT_ALIGNMENT_SPACES_PATTERN,
+    _REGEX_NEGATED_CLASS_PATTERN,
+    _MARKDOWN_LINK_TAIL_PATTERN,
+    _XML_TAG_PATTERN,
 ]
 _XML_TAG_RE = re.compile(r"(<[^>]+>)")
 
@@ -732,6 +758,7 @@ def _remove_unnecessary_trailing_spaces(
         curr_is_block = (
             _TABLE_ROW_RE.match(stripped_line)
             or _BLOCKQUOTE_RE.match(stripped_line)
+            or _HTML_BLOCK_LINE_RE.match(stripped_line.lstrip())
             or (_LIST_ITEM_RE.match(stripped_line) and not is_list_continuation)
         )
         next_is_block = (
@@ -740,6 +767,7 @@ def _remove_unnecessary_trailing_spaces(
             or _BLOCKQUOTE_RE.match(next_stripped)
             or _HEADING_RE.match(next_stripped)
             or _CODE_FENCE_RE.match(next_stripped)
+            or _HTML_BLOCK_LINE_RE.match(next_stripped)
         )
 
         if next_stripped and (
@@ -994,7 +1022,9 @@ def style_markdown(
                     if code_block_mode is not None and len(result_lines) > code_body_start:
                         body_text = "\n".join(result_lines[code_body_start:])
                         pre_count = len(collector.findings) if collector is not None else 0
-                        styled_body = style_source_comments(body_text, code_block_mode, collector=collector)
+                        # フェンスの中は用語を原文のまま残し、記号と空白の正規化だけを行う。
+                        with lexical_styling_disabled():
+                            styled_body = style_source_comments(body_text, code_block_mode, collector=collector)
                         if collector is not None:
                             for f in collector.findings[pre_count:]:
                                 f.line += code_body_start
@@ -1560,6 +1590,64 @@ def _style_c_like_comments(
     return "".join(result)
 
 
+_PYTHON_TRIPLE_QUOTES = ('"""', "'''")
+# ヒアドキュメントの開始。here-string (<<<) は対象外。
+_HEREDOC_START_RE = re.compile(r"(?<!<)<<(-?)\s*(\"|')?([A-Za-z_][A-Za-z0-9_]*)\2?(?!<)")
+
+
+def _find_python_comment_start(
+    line: str, triple_state: Optional[str]
+) -> Tuple[Optional[int], Optional[str]]:
+    """Python の行からコメント開始位置を求め、行末時点の三重引用符の状態を返す。
+
+    三重引用符 (docstring や複数行文字列) は行をまたぐため、状態を呼び出し側へ返す。
+    状態を持たないと、文字列本文中の `#` をコメントと誤認して整形してしまう。
+    """
+    idx = 0
+    length = len(line)
+    while idx < length:
+        if triple_state is not None:
+            close = line.find(triple_state, idx)
+            if close < 0:
+                return None, triple_state
+            idx = close + len(triple_state)
+            triple_state = None
+            continue
+
+        char = line[idx]
+        if char == "\\":
+            idx += 2
+            continue
+        if line.startswith(_PYTHON_TRIPLE_QUOTES[0], idx) or line.startswith(_PYTHON_TRIPLE_QUOTES[1], idx):
+            triple_state = line[idx:idx + 3]
+            idx += 3
+            continue
+        if char in "'\"":
+            quote = char
+            idx += 1
+            while idx < length:
+                if line[idx] == "\\":
+                    idx += 2
+                    continue
+                if line[idx] == quote:
+                    idx += 1
+                    break
+                idx += 1
+            continue
+        if char == "#":
+            return idx, triple_state
+        idx += 1
+    return None, triple_state
+
+
+def _find_heredoc_starts(code: str) -> List[Tuple[str, bool]]:
+    """シェルのコード部分からヒアドキュメントの (終端ワード, タブ字下げ許容) を列挙する。"""
+    return [
+        (match.group(3), match.group(1) == "-")
+        for match in _HEREDOC_START_RE.finditer(code)
+    ]
+
+
 def _find_hash_comment_start(line: str, language: str) -> Optional[int]:
     in_single = False
     in_double = False
@@ -1609,14 +1697,35 @@ def _style_hash_comments(
 ) -> str:
     output: List[str] = []
     lines = text.splitlines(keepends=True)
+    triple_state: Optional[str] = None
+    heredoc_queue: List[Tuple[str, bool]] = []
+    active_heredoc: Optional[Tuple[str, bool]] = None
 
     for lineno, line in enumerate(lines):
         body, ending = _split_line_ending(line)
+
+        # ヒアドキュメント本文はコメントではないため、終端まで無変換で出力する。
+        if active_heredoc is not None:
+            terminator, allow_indent = active_heredoc
+            output.append(line)
+            if (body.strip() if allow_indent else body.rstrip()) == terminator:
+                active_heredoc = heredoc_queue.pop(0) if heredoc_queue else None
+            continue
+
         if lineno == 0 and body.startswith("#!"):
             output.append(line)
             continue
 
-        comment_start = _find_hash_comment_start(body, language)
+        if language == "python":
+            comment_start, triple_state = _find_python_comment_start(body, triple_state)
+        else:
+            comment_start = _find_hash_comment_start(body, language)
+            code_part = body if comment_start is None else body[:comment_start]
+            starts = _find_heredoc_starts(code_part)
+            if starts:
+                active_heredoc = starts[0]
+                heredoc_queue = starts[1:]
+
         if comment_start is None:
             output.append(line)
             continue

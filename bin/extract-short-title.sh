@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# extract-short-title.sh - YAML フロントマターから short-title を解決するヘルパー
+# extract-short-title.sh - YAML フロント マターから short-title を解決するヘルパー
 #
 # このスクリプトは source 専用です。直接実行しないでください。
 # 関数 extract_short_title を提供します。
@@ -32,7 +32,7 @@ extract_short_title() {
         return 0
     fi
 
-    # YAML フロントマターを抽出 (先頭 --- ~ 次の --- または ... まで)
+    # YAML フロント マターを抽出 (先頭 --- ~ 次の --- または ... まで)
     # CR を除去してから処理 (Windows 形式のファイルに対応)
     local frontmatter=""
     local in_fm=false
@@ -44,7 +44,7 @@ extract_short_title() {
             if [[ "$line" == "---" ]]; then
                 in_fm=true
             else
-                # フロントマターなし
+                # フロント マターなし
                 break
             fi
             continue
@@ -91,10 +91,10 @@ extract_short_title() {
         # 前後空白除去
         value="${value#"${value%%[![:space:]]*}"}"
         value="${value%"${value##*[![:space:]]}"}"
-        # 囲みダブルクォート除去
+        # 囲みダブル クォート除去
         if [[ "$value" =~ ^\"(.*)\"$ ]]; then
             value="${BASH_REMATCH[1]}"
-        # 囲みシングルクォート除去
+        # 囲みシングル クォート除去
         elif [[ "$value" =~ ^\'(.*)\'$ ]]; then
             value="${BASH_REMATCH[1]}"
         fi

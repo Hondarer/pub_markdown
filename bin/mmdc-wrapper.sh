@@ -2,7 +2,7 @@
 
 SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
 
-# 共有ブラウザが利用可能な場合は mmdc-reuse.js を使用
+# 共有ブラウザーが利用可能な場合は mmdc-reuse.js を使用
 if [[ -n "${PUB_MARKDOWN_BROWSER_WS_FILE}" ]] && [[ -f "${PUB_MARKDOWN_BROWSER_WS_FILE}" ]]; then
     node "${SCRIPT_DIR}/mmdc-reuse.js" "$@"
 else

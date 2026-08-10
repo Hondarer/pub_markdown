@@ -304,7 +304,7 @@ def generate_replacement(indent, data, x, ys):
     else:
         anchor = "middle"
 
-    # font-family: CSS 内のダブルクォートを XML エスケープ
+    # font-family: CSS 内のダブル クォートを XML エスケープ
     ff_escaped = data["font_family"].replace('"', "&quot;")
 
     # <g> 属性

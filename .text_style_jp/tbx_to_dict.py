@@ -125,7 +125,7 @@ def build_add_space_words(compounds):
     compact_map = {}  # compact_word -> 正規形 (スペース数最少のものを保持)
     for compound in compounds:
         compact_word = compound.replace(" ", "")
-        # 同じ from に複数の to: スペース数（分割粒度）が少ない方を優先
+        # 同じ from に複数の to: スペース数 (分割粒度) が少ない方を優先
         if compact_word not in compact_map:
             compact_map[compact_word] = compound
         else:
@@ -199,7 +199,7 @@ def is_safe_reverse_replace(from_word, to_word, all_words):
         if len(word) <= flen:
             continue
         # from_word より長く、from_word で始まる別の語が存在する
-        # 例: from_word = "メモリー", word = "メモリーリーク" のようなケース
+        # 例: from_word = `"メモリー"`, word = `"メモリーリーク"` のようなケース
         # 直後が ー 以外なら誤変換になる
         if word[flen] != "ー":
             return False
@@ -302,7 +302,7 @@ def build_replace_pairs(eer_words, all_words):
             pairs.append({"from": from_word, "to": word})
         else:
             skipped.append((from_word, word))
-    # from キーでソート（アルファベット順、実際はカタカナ順）
+    # from キーでソート (アルファベット順、実際はカタカナ順)
     pairs.sort(key=lambda p: p["from"])
     return pairs, skipped
 
@@ -364,7 +364,7 @@ def main():
         for f, t in sorted(reverse_skipped):
             print(f"    {f} → {t}")
 
-    # 順方向と逆方向を結合（順方向を先に置く: ー 付与は ー 削除より頻度が高く一般的）
+    # 順方向と逆方向を結合 (順方向を先に置く: ー 付与は ー 削除より頻度が高く一般的)
     replace_pairs = forward_replace_pairs + reverse_replace_pairs
 
     no_space_words = build_no_space_words(all_words, all_words, min_length=3)

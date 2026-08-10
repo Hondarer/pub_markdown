@@ -2,26 +2,26 @@
 
 ## 概要
 
-docsfw では、ディレクトリ階層の発行時の振る舞いを制御するためのマジックファイルを提供します。
+docsfw では、ディレクトリ階層の発行時の振る舞いを制御するためのマジック ファイルを提供します。  
 これらはワークスペース全体の設定 (`.vscode/pub_markdown.config.yaml`) とは独立した、ディレクトリ単位の制御ファイルです。
 
-命名とスコープの考え方は、makefw の `makepart.mk` / `makechild.mk` / `makelocal.mk` を踏襲しています。
+命名とスコープの考え方は、makefw の `makepart.mk` / `makechild.mk` / `makelocal.mk` を踏襲しています。  
 makefw 側の詳細は [makeparts.md](../../makefw/docs/makeparts.md) を参照してください。
 
 | ファイル | スコープ | 適用対象 | 現在の用途 |
 |---|---|---|---|
-| `pubpart.yaml` | 階層継承 (親から子に伝播) | 自ディレクトリ + 子階層すべて | フロントマター デフォルト値 |
-| `pubchild.yaml` | 子階層限定 (自身は除く) | 子階層以降のみ (自ディレクトリは除く) | フロントマター デフォルト値 |
-| `publocal.yaml` | 自ディレクトリ限定 | 自ディレクトリのみ | 並び順の指定 / フロントマター デフォルト値 |
+| `pubpart.yaml` | 階層継承 (親から子に伝播) | 自ディレクトリ + 子階層すべて | フロント マター デフォルト値 |
+| `pubchild.yaml` | 子階層限定 (自身は除く) | 子階層以降のみ (自ディレクトリは除く) | フロント マター デフォルト値 |
+| `publocal.yaml` | 自ディレクトリ限定 | 自ディレクトリのみ | 並び順の指定 / フロント マター デフォルト値 |
 
-これらのファイルは、記述する内容がある場合にだけ作成すれば十分です。
+これらのファイルは、記述する内容がある場合にだけ作成すれば十分です。  
 設定が不要なときは、空のファイルを作成する必要はありません。
 
-マジックファイル自身は発行対象には含まれません (HTML や docx として出力されません)。
+マジック ファイル自身は発行対象には含まれません (HTML や docx として出力されません)。
 
 ## publocal.yaml: 並び順の指定
 
-`publocal.yaml` の `order` に、そのディレクトリ直下の子 (ファイル・サブフォルダー) を並べたい順に列挙します。
+`publocal.yaml` の `order` に、そのディレクトリ直下の子 (ファイル・サブフォルダー) を並べたい順に列挙します。  
 この指定は、ナビゲーション ツリーと TOC (目次) の両方の並び順に反映されます。
 
 ```yaml
@@ -62,7 +62,7 @@ order:
 
 ### マージ フォルダー (エイリアス) の並び順
 
-`mergeSubfolderDocs` で取り込んだサブフォルダーは、主 mdRoot (既定 `docs/`) の直下にエイリアス名のフォルダーとして現れます。
+`mergeSubfolderDocs` で取り込んだサブフォルダーは、主 mdRoot (既定 `docs/`) の直下にエイリアス名のフォルダーとして現れます。  
 このエイリアス フォルダー同士の並び順も `publocal.yaml` で指定できます。
 
 主 mdRoot の直下 (`docs/publocal.yaml`) に置き、`order` に **エイリアス名** を列挙します。
@@ -82,13 +82,12 @@ order:
 
 マージ元の各サブフォルダー内部 (例: `app/calc/docs/`) の並び順は、そのサブフォルダーの実ディレクトリに置いた `publocal.yaml` で指定します。
 
-## defaults: フロントマター デフォルト値
+## defaults: フロント マター デフォルト値
 
-マジックファイルの `defaults:` ブロックに `key: value` を書くと、スコープ内の Markdown が
-その属性を自前のフロントマターに持たない場合にだけ、指定した値が pandoc のメタデータとして適用されます。
-ドキュメント自身がフロントマターで同じキーを指定していれば、そちらが優先されます。
+マジック ファイルの `defaults:` ブロックに `key: value` を書くと、スコープ内の Markdown がその属性を自前のフロント マターに持たない場合にだけ、指定した値が pandoc のメタデータとして適用されます。  
+ドキュメント自身がフロント マターで同じキーを指定していれば、そちらが優先されます。
 
-`defaults:` は 3 ファイル (`pubpart.yaml` / `pubchild.yaml` / `publocal.yaml`) のいずれでも使えます。
+`defaults:` は 3 ファイル (`pubpart.yaml` / `pubchild.yaml` / `publocal.yaml`) のいずれでも使えます。  
 `order:` とは独立したブロックであり、`publocal.yaml` には両方を併記できます。
 
 ```yaml
@@ -101,8 +100,7 @@ defaults:
   author: 開発チーム
 ```
 
-任意のフロントマター キーを指定できます (許可リストはありません)。値の解釈 (クォート、コメント、型) は
-pandoc 側の YAML パーサーに委ねます。
+任意のフロント マター キーを指定できます (許可リストはありません)。値の解釈 (クォート、コメント、型) は pandoc 側の YAML パーサーに委ねます。
 
 ### スコープと適用対象
 
@@ -118,13 +116,11 @@ pandoc 側の YAML パーサーに委ねます。
 
 複数のスコープが同じキーを与えた場合は、次の規則で 1 つに決まります。
 
-- ドキュメント自身のフロントマター > 近いディレクトリ > 遠いディレクトリ。
+- ドキュメント自身のフロント マター > 近いディレクトリ > 遠いディレクトリ。
 - 同一ディレクトリ内では `local` > `part` > `child` (`local` が最優先)。
 - `child` は配下にのみ作用するため、宣言したディレクトリ自身のファイルには効きません。
 
-例えば次の配置では、`docs/api/guide.md` の `category` は `publocal.yaml` の `API ガイド` になり、
-`author` は親の `pubpart.yaml` の `開発チーム` を継承します。`guide.md` 自身が `category` を
-書いていれば、その値が最優先で勝ちます。
+例えば次の配置では、`docs/api/guide.md` の `category` は `publocal.yaml` の `API ガイド` になり、`author` は親の `pubpart.yaml` の `開発チーム` を継承します。`guide.md` 自身が `category` を書いていれば、その値が最優先で勝ちます。
 
 ```
 docs/
@@ -136,12 +132,9 @@ docs/
 
 ### 既知の制限
 
-- ナビゲーション ツリーと TOC の見出し (`short-title` 系) は別経路 (`extract_short_title`) で
-  読み込むため、`defaults:` の対象外です。
-- `category` などの値を出力に表示するには、HTML / docx テンプレート側で対応するメタデータ
-  (`$category$` など) を参照している必要があります。本機能は値を pandoc に渡すところまでを担います。
-- `author` / `date` を `defaults:` で与えると pandoc のメタデータに載るため、`autoSetAuthor` /
-  `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。
+- ナビゲーション ツリーと TOC の見出し (`short-title` 系) は別経路 (`extract_short_title`) で読み込むため、`defaults:` の対象外です。
+- `category` などの値を出力に表示するには、HTML / docx テンプレート側で対応するメタデータ (`$category$` など) を参照している必要があります。本機能は値を pandoc に渡すところまでを担います。
+- `author` / `date` を `defaults:` で与えると pandoc のメタデータに載るため、`autoSetAuthor` / `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。
 
 ## 実装上の注意
 

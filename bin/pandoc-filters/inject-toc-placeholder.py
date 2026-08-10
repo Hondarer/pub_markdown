@@ -83,7 +83,7 @@ def inject_into_xml(xml, placeholder):
             modified[0] = True
             return new_para
 
-        # Case B: separate と end が同じ w:r に隣接している場合（pandoc の実際の出力）
+        # Case B: separate と end が同じ w:r に隣接している場合 (pandoc の実際の出力)
         #   ...<fldChar separate/><fldChar end/>...
         #   → ...<fldChar separate/></w:r>[placeholder]<w:r><fldChar end/>...
         new_para, n = re.subn(
@@ -136,12 +136,12 @@ def main():
             if name != 'word/document.xml'
         }
 
-    # プレースホルダを注入
+    # プレースホルダーを注入
     new_xml = inject_into_xml(doc_xml, placeholder)
     if new_xml is None:
         return  # TOC なし、または変更不要
 
-    # DOCX を上書き保存（一時ファイル経由で安全に）
+    # DOCX を上書き保存 (一時ファイル経由で安全に)
     tmp_path = docx_path + '.tmp'
     try:
         with zipfile.ZipFile(tmp_path, 'w') as z:

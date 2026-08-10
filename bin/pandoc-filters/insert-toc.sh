@@ -8,20 +8,20 @@ _INSERT_TOC_SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)
 source "${_INSERT_TOC_SCRIPT_DIR}/../extract-short-title.sh"
 
 source "${_INSERT_TOC_SCRIPT_DIR}/../pub-markdown-skip.sh"
-# キャッシュファイルパス
+# キャッシュ ファイル パス
 CACHE_FILE="/tmp/insert-toc-cache.tsv"
 
 # メモリ内キャッシュ (連想配列)
 # キー: 絶対パス
 # 値: "ファイル名\t種別\tベースタイトル\t言語別タイトル\tshort-titleキャッシュ"
-# short-titleキャッシュ形式: "<key>:<value>|<key>:<value>" (key = lang または lang-details)
+# short-title キャッシュ形式: "<key>:<value>|<key>:<value>" (key = lang または lang-details)
 # 解決済みで値なし: "<key>:" (空値を保持してキャッシュ済みとマーク)
 declare -A memory_cache
 
-# ソート前キーリスト (順序付き配列)
+# ソート前キー リスト (順序付き配列)
 declare -a unsorted_keys
 
-# ソート済みキーリスト (順序付き配列)
+# ソート済みキー リスト (順序付き配列)
 declare -a sorted_keys
 
 # キャッシュ変更フラグ
@@ -49,7 +49,7 @@ progress_log() {
     fi
 }
 
-# 環境変数から追加ドキュメントサブフォルダー設定を取得
+# 環境変数から追加ドキュメント サブフォルダー設定を取得
 # 値はスペース区切りの alias=path リスト (空の場合は機能無効)
 MERGE_SUBFOLDER_DOCS="${MERGE_SUBFOLDER_DOCS:-}"
 # 改行区切りの文字列を配列に変換
@@ -125,26 +125,26 @@ toc_output_cache_path() {
 }
 
 # ========================================
-# メモリベースキャッシュ関数
+# メモリ ベース キャッシュ関数
 # ========================================
 
-# 永続化ファイルからメモリキャッシュに読み込み
+# 永続化ファイルからメモリ キャッシュに読み込み
 load_cache() {
     #echo "# キャッシュ読み込み開始: $CACHE_FILE" >&2
 
     # ファイルが存在しない場合は空のキャッシュで開始
     if [[ ! -f "$CACHE_FILE" ]]; then
-        #echo "# キャッシュファイルなし、空キャッシュで開始" >&2
+        #echo "# キャッシュ ファイルなし、空キャッシュで開始" >&2
         return 0
     fi
 
-    # TSVファイルを連想配列に読み込み
+    # TSV ファイルを連想配列に読み込み
     local count=0
     while IFS=$'\t' read -r abs_path filename type base_title lang_titles short_titles; do
         # 空行やコメント行はスキップ
         [[ -z "$abs_path" || "$abs_path" =~ ^# ]] && continue
 
-        # メモリキャッシュに追加 (short_titles は空でも保持)
+        # メモリ キャッシュに追加 (short_titles は空でも保持)
         memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'"$short_titles"
         #echo "# キャッシュ読み込み: $abs_path ($type)" >&2
         ((count++))
@@ -153,7 +153,7 @@ load_cache() {
     #echo "# キャッシュ読み込み完了: $count エントリ" >&2
 }
 
-# メモリキャッシュを永続化ファイルに保存
+# メモリ キャッシュを永続化ファイルに保存
 save_cache() {
     # 変更がない場合はスキップ
     if [[ "$cache_modified" != "true" ]]; then
@@ -180,7 +180,7 @@ save_cache() {
     #echo "# キャッシュ保存完了: $count エントリ" >&2
 }
 
-# メモリキャッシュにエントリを追加
+# メモリ キャッシュにエントリを追加
 # 引数: 絶対パス ファイル名 種別 ベースタイトル [言語別タイトル]
 add_to_memory_cache() {
     local abs_path="$1"
@@ -191,24 +191,24 @@ add_to_memory_cache() {
 
     # キーがすでに存在する場合はスキップ
     if [[ -n "${memory_cache[$abs_path]:-}" ]]; then
-        #echo "# メモリキャッシュスキップ (既存): $abs_path ($type)" >&2
+        #echo "# メモリ キャッシュ スキップ (既存): $abs_path ($type)" >&2
         return 0
     fi
 
-    # メモリキャッシュに追加 (short_titles は空で初期化)
+    # メモリ キャッシュに追加 (short_titles は空で初期化)
     memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'""
     cache_modified=true
-    #echo "# メモリキャッシュに追加: $abs_path ($type)" >&2
+    #echo "# メモリ キャッシュに追加: $abs_path ($type)" >&2
 }
 
-# メモリキャッシュから絶対パスでエントリを取得
+# メモリ キャッシュから絶対パスでエントリを取得
 # 引数: 絶対パス
 get_from_memory_cache() {
     local abs_path="$1"
     echo "${memory_cache[$abs_path]:-}"
 }
 
-# メモリキャッシュエントリに指定言語のタイトルが存在するかチェック
+# メモリ キャッシュ エントリに指定言語のタイトルが存在するかチェック
 # 引数: 絶対パス 言語コード
 # 戻り値: 0=存在する, 1=存在しない
 has_lang_title_in_memory_cache() {
@@ -221,12 +221,12 @@ has_lang_title_in_memory_cache() {
         return 1  # エントリ自体が存在しない
     fi
 
-    # TSVの4番目のフィールド (言語別タイトル) を取得
+    # TSV の 4 番目のフィールド (言語別タイトル) を取得
     local lang_titles
     IFS=$'\t' read -r _ _ _ lang_titles <<< "$cache_entry"
 
     if [[ -z "$lang_titles" ]]; then
-        return 1  # 言語別タイトルフィールドが空
+        return 1  # 言語別タイトル フィールドが空
     fi
 
     # 指定言語のタイトルが存在するかチェック
@@ -237,7 +237,7 @@ has_lang_title_in_memory_cache() {
     fi
 }
 
-# メモリキャッシュエントリに言語別タイトルを追加
+# メモリ キャッシュ エントリに言語別タイトルを追加
 # 引数: 絶対パス 言語コード タイトル
 update_memory_cache_title() {
     local abs_path="$1"
@@ -271,18 +271,18 @@ update_memory_cache_title() {
         fi
     fi
 
-    # メモリキャッシュを更新 (short_titles を保持)
+    # メモリ キャッシュを更新 (short_titles を保持)
     memory_cache["$abs_path"]="$filename"$'\t'"$type"$'\t'"$base_title"$'\t'"$lang_titles"$'\t'"${short_titles}"
     cache_modified=true
-    #echo "# メモリキャッシュタイトル更新: $abs_path -> $new_lang_title" >&2
+    #echo "# メモリ キャッシュ タイトル更新: $abs_path -> $new_lang_title" >&2
 }
 
 # ========================================
 # short-title キャッシュ関数
 # ========================================
 
-# メモリキャッシュから short-title を取得する
-# 引数: 絶対パス キャッシュキー (例: "ja", "ja-details")
+# メモリ キャッシュから short-title を取得する
+# 引数: 絶対パス キャッシュ キー (例: "ja", "ja-details")
 # 戻り値: 0=キャッシュ済み (値は echo, 空の場合は short-title なし)
 #         1=未キャッシュ
 get_short_title_from_cache() {
@@ -310,8 +310,8 @@ get_short_title_from_cache() {
     return 1
 }
 
-# メモリキャッシュに short-title を書き込む
-# 引数: 絶対パス キャッシュキー 値 (空文字も可: short-title なしの解決済みを表す)
+# メモリ キャッシュに short-title を書き込む
+# 引数: 絶対パス キャッシュ キー 値 (空文字も可: short-title なしの解決済みを表す)
 update_short_title_cache() {
     local abs_path="$1"
     local cache_key="$2"
@@ -346,11 +346,11 @@ update_short_title_cache() {
 }
 
 # ========================================
-# Markdownタイトル抽出関数
+# Markdown タイトル抽出関数
 # ========================================
 
-# Markdownファイルから最初のレベル1見出しを抽出
-# 引数: ファイルパス 言語コード
+# Markdown ファイルから最初のレベル 1 見出しを抽出
+# 引数: ファイル パス 言語コード
 extract_markdown_title() {
     local file_path="$1"
     local lang_code="$2"
@@ -367,14 +367,14 @@ extract_markdown_title() {
     # || [[ -n "$line" ]] で末尾改行なし最終行も読み取る
     while IFS= read -r line || [[ -n "$line" ]]; do
         if ((line_count >= 100)); then break; fi
-        # 言語コードブロックの開始コメント: <!--ja: または <!--ja:--> 形式
+        # 言語コード ブロックの開始コメント: <!--ja: または <!--ja:--> 形式
         if [[ "$line" =~ ^[[:space:]]*\<!--${lang_code}:([[:space:]]*--\>)?[[:space:]]*$ ]]; then
             in_target_lang_block=true
             ((line_count++))
             continue
         fi
 
-        # 言語コードブロックの終了コメント: :ja--> または <!--:ja--> 形式
+        # 言語コード ブロックの終了コメント: :ja--> または <!--:ja--> 形式
         if [[ "$line" =~ ^[[:space:]]*(\<!--[[:space:]]*)?:${lang_code}[[:space:]]*--\>[[:space:]]*$ ]]; then
             in_target_lang_block=false
             # 対象言語のタイトルが見つかった場合は処理終了
@@ -385,7 +385,7 @@ extract_markdown_title() {
             continue
         fi
 
-        # 対象言語ブロック内でレベル1見出しを検索
+        # 対象言語ブロック内でレベル 1 見出しを検索
         if [[ "$in_target_lang_block" == true && "$line" =~ ^#[[:space:]](.*)$ ]]; then
             title="${BASH_REMATCH[1]}"
             # bash parameter expansion でトリム処理
@@ -448,8 +448,8 @@ get_depth_level() {
     fi
 }
 
-# 除外パターンマッチング
-# 引数: ファイルパス 除外パターン配列
+# 除外パターン マッチング
+# 引数: ファイル パス 除外パターン配列
 # パターン形式:
 #   - "pattern/*" : pattern ディレクトリ配下のすべてを除外
 #   - "pattern"   : パスに pattern を含むものを除外 (部分文字列マッチング)
@@ -477,24 +477,24 @@ is_excluded() {
 
         #echo "# is_excluded: パターン処理: '$pattern'" >&2
 
-        # パターンマッチング
+        # パターン マッチング
         if [[ "$pattern" == *"/*" ]]; then
             # ディレクトリ配下すべてを除外するパターン (例: doxybook2/*)
             local dir_pattern="${pattern%/\*}"
-            #echo "# is_excluded: ディレクトリパターン検出: '$dir_pattern'" >&2
+            #echo "# is_excluded: ディレクトリ パターン検出: '$dir_pattern'" >&2
             case "$file_path" in
                 *"/$dir_pattern"/*|*"/$dir_pattern")
-                    #echo "# is_excluded: マッチ！ -> 除外: $file_path" >&2
+                    #echo "# is_excluded: マッチ! -> 除外: $file_path" >&2
                     return 0
                     ;;
             esac
-            #echo "# is_excluded: マッチせず (ディレクトリパターン)" >&2
+            #echo "# is_excluded: マッチせず (ディレクトリ パターン)" >&2
         else
             # 通常の部分文字列マッチング
             #echo "# is_excluded: 部分文字列マッチング: '$pattern'" >&2
             case "$file_path" in
                 *"$pattern"*)
-                    #echo "# is_excluded: マッチ！ -> 除外: $file_path" >&2
+                    #echo "# is_excluded: マッチ! -> 除外: $file_path" >&2
                     return 0
                     ;;
             esac
@@ -526,7 +526,7 @@ generate_toc() {
 
     progress_log "目次対象の絞り込みを開始しました entries=${#sorted_keys[@]}"
 
-    # 第1段階-a: 基準ディレクトリ外・除外パターンによるフィルタ (depth チェックなし)
+    # 第 1 段階-a: 基準ディレクトリ外・除外パターンによるフィルター (depth チェックなし)
     local stage1_keys=()
     for abs_path in "${sorted_keys[@]}"; do
         local entry="${memory_cache[$abs_path]}"
@@ -534,7 +534,7 @@ generate_toc() {
 
         # 1. 基準ディレクトリより上位のエントリを除外
         if [[ "$abs_path" != "$base_dir"/* && "$abs_path" != "$base_dir" ]]; then
-            #echo "# 除外 (上位 / 他ツリーディレクトリ): $abs_path" >&2
+            #echo "# 除外 (上位 / 他ツリー ディレクトリ): $abs_path" >&2
             continue
         fi
 
@@ -544,19 +544,19 @@ generate_toc() {
             continue
         fi
 
-        # 3. 除外パターンチェック
+        # 3. 除外パターン チェック
         if is_excluded "$abs_path" "$exclude_patterns"; then
-            #echo "# 除外 (パターンマッチ): $abs_path" >&2
+            #echo "# 除外 (パターン マッチ): $abs_path" >&2
             continue
         fi
 
         stage1_keys+=("$abs_path")
     done
 
-    # 第1段階-b: stage1_keys のファイルから空ディレクトリ判定用マップと
-    # ディレクトリ index リンク用マップを構築する (depth フィルタ前に行うことで、
+    # 第 1 段階-b: stage1_keys のファイルから空ディレクトリ判定用マップと
+    # ディレクトリ index リンク用マップを構築する (depth フィルター前に行うことで、
     # depth 制限で落ちたファイルの親ディレクトリが空扱いにならないよう保全し、
-    # depth で落ちた index.md 等もフォルダ行のリンク先として参照できるようにする)
+    # depth で落ちた index.md 等もフォルダー行のリンク先として参照できるようにする)
     declare -A directory_has_files=()
     declare -A direct_index_path=()
     declare -A direct_readme_path=()
@@ -590,7 +590,7 @@ generate_toc() {
         fi
     done
 
-    # 第1段階-c: depth 制限フィルタ
+    # 第 1 段階-c: depth 制限フィルター
     # ファイル・ディレクトリとも abs_path 自身の相対スラッシュ数で判定する。
     # これにより depth=N は「basedir からの相対パスのスラッシュ数 ≤ N のエントリを表示」
     # という一貫した意味になる。
@@ -608,14 +608,14 @@ generate_toc() {
         filtered_keys+=("$abs_path")
     done
 
-    #echo "# 第1段階フィルタリング完了: ${#filtered_keys[@]} エントリ" >&2
+    #echo "# 第 1 段階フィルタリング完了: ${#filtered_keys[@]} エントリ" >&2
 
     # PROGRESS
     #printf '%s' "." >&2
 
-    # 第2段階: 空ディレクトリの除去
-    # directory_has_files は depth フィルタ前の stage1_keys から構築済み。
-    # depth 制限で配下ファイルが全て落ちてもディレクトリ自体は保持される。
+    # 第 2 段階: 空ディレクトリの除去
+    # directory_has_files は depth フィルター前の stage1_keys から構築済み。
+    # depth 制限で配下ファイルがすべて落ちてもディレクトリ自体は保持される。
     # exclude パターンで全ファイルが除外されたディレクトリは未登録のため除去される。
     local final_keys=()
 
@@ -639,7 +639,7 @@ generate_toc() {
         fi
     done
 
-    #echo "# 第2段階フィルタリング完了: ${#final_keys[@]} エントリ" >&2
+    #echo "# 第 2 段階フィルタリング完了: ${#final_keys[@]} エントリ" >&2
 
     # フィルタリング結果を sorted_keys に反映
     sorted_keys=("${final_keys[@]}")
@@ -664,7 +664,7 @@ generate_toc() {
     local depth=0
     local indent=""
     # direct_index_path / direct_readme_path / direct_skill_path は
-    # 第1段階-b で stage1_keys (depth フィルタ前) から構築済み。
+    # 第 1 段階-b で stage1_keys (depth フィルター前) から構築済み。
 
     progress_log "目次 Markdown の生成を開始しました entries=${#sorted_keys[@]}"
     for abs_path in "${sorted_keys[@]}"; do
@@ -673,7 +673,7 @@ generate_toc() {
 
         IFS=$'\t' read -r filename type base_title lang_titles _ignored_st <<< "$entry"
 
-        # (lang, details) の組み合わせを表すキャッシュキーを算出
+        # (lang, details) の組み合わせを表すキャッシュ キーを算出
         local _st_cache_key="${lang_code}"
         [[ "$DOCUMENT_DETAILS" == "true" ]] && _st_cache_key="${lang_code}-details"
 
@@ -701,12 +701,12 @@ generate_toc() {
             local file_basename_only="${filename}"
             local file_basename_lower="${file_basename_only,,}"
 
-            # index.md はディレクトリインデックスとして扱われるため、通常のファイルとしては表示しない
+            # index.md はディレクトリ インデックスとして扱われるため、通常のファイルとしては表示しない
             if [[ "$file_basename_lower" == "index.md" ]]; then
                 continue
             fi
 
-            # README.md / SKILL.md は、上位候補がない場合のみディレクトリインデックスとして扱われる
+            # README.md / SKILL.md は、上位候補がない場合のみディレクトリ インデックスとして扱われる
             if [[ "$file_basename_lower" == "readme.md" || "$file_basename_lower" == "skill.md" ]]; then
                 local file_dir_path
                 file_dir_path=$(dirname "$abs_path")
@@ -721,7 +721,7 @@ generate_toc() {
                 fi
             fi
 
-            # Markdownファイルの場合：タイトルとリンクを出力
+            # Markdown ファイルの場合: タイトルとリンクを出力
             local display_title="$base_title"
 
             # 指定言語のタイトルがあれば使用
@@ -747,7 +747,7 @@ generate_toc() {
                 file_relative_path="$basedir_prefix/$file_relative_path"
             fi
 
-            # Markdownリンク形式で出力 (ファイル名 + 説明文)
+            # Markdown リンク形式で出力 (ファイル名 + 説明文)
             echo "${indent}- 📄 [$file_basename_only]($file_relative_path) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$display_title"
 
         elif [[ "$type" == "directory" ]]; then
@@ -756,7 +756,7 @@ generate_toc() {
             # PROGRESS
             #printf '%s' "." >&2
 
-            # ディレクトリインデックスを探す
+            # ディレクトリ インデックスを探す
             # 優先順位: 1. index.md, 2. README.md, 3. SKILL.md (後者 2 つは index.md に読み替え)
             local index_file_found=""
             local index_display_title=""
@@ -861,7 +861,7 @@ generate_toc() {
                 fi
             fi
 
-            # インデックスファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
+            # インデックス ファイルが見つかった場合はリンク付きで出力、そうでなければディレクトリ名のみ
             if [[ -n "$index_file_found" ]]; then
                 echo "${indent}- 📁 [$base_title]($index_relative_path) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$index_display_title"
             else
@@ -918,7 +918,7 @@ scan_directory() {
         local filename
         filename="${path##*/}"
 
-        #echo "# find結果: $path (abs: $abs_path)" >&2
+        #echo "# find 結果: $path (abs: $abs_path)" >&2
 
         if [[ -d "$path" ]]; then
             # ディレクトリの場合
@@ -947,9 +947,9 @@ scan_directory() {
             add_to_memory_cache "$abs_path" "$filename" "file" "$base_title" ""
             unsorted_keys+=("$abs_path")
 
-            # Markdownタイトル抽出 (キャッシュに指定言語のタイトルがない場合のみ)
+            # Markdown タイトル抽出 (キャッシュに指定言語のタイトルがない場合のみ)
             if ! has_lang_title_in_memory_cache "$abs_path" "$lang_code"; then
-                #echo "# Markdownタイトル抽出実行: $abs_path" >&2
+                #echo "# Markdown タイトル抽出実行: $abs_path" >&2
                 local lang_title
                 if lang_title=$(extract_markdown_title "$path" "$lang_code"); then
                     local title
@@ -957,7 +957,7 @@ scan_directory() {
                     update_memory_cache_title "$abs_path" "$lang_code" "$title"
                 fi
             #else
-                #echo "# Markdownタイトル抽出スキップ (キャッシュ済): $abs_path" >&2
+                #echo "# Markdown タイトル抽出スキップ (キャッシュ済): $abs_path" >&2
             fi
         else
             echo "# 不明なタイプ: $abs_path (ディレクトリでもファイルでもない)" >&2
@@ -993,18 +993,18 @@ progress_log "キャッシュ読み込みを終了しました entries=${#memory
 # ディレクトリ探索実行
 scan_directory "$current_scan_dir" "$DEPTH" "$DOCUMENT_LANG" "$current_dir"
 
-# 追加ドキュメントサブフォルダーの探索 (mergeSubfolderDocs が指定されている場合)
+# 追加ドキュメント サブフォルダーの探索 (mergeSubfolderDocs が指定されている場合)
 # 注意: この機能は current_dir が mdRoot の場合のみ有効
 if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_dir" == "${PUB_MARKDOWN_MAIN_MDROOT}" ]]; then
-    #echo "# 追加ドキュメントサブフォルダー探索開始" >&2
+    #echo "# 追加ドキュメント サブフォルダー探索開始" >&2
 
     for entry in "${subfolder_entries[@]}"; do
         parse_subfolder_entry "$entry"
 
-        #echo "# 追加ドキュメントサブフォルダー探索: $subfolder_alias -> $subfolder_docs_src" >&2
+        #echo "# 追加ドキュメント サブフォルダー探索: $subfolder_alias -> $subfolder_docs_src" >&2
 
-        # 追加ドキュメントサブフォルダー配下のファイルを探索
-        # 仮想パスとしてキャッシュに追加(current_dir/subfolder/... として)
+        # 追加ドキュメント サブフォルダー配下のファイルを探索
+        # 仮想パスとしてキャッシュに追加 (current_dir/subfolder/... として)
         if [[ -d "$subfolder_docs_src" ]]; then
             # find コマンドで探索
             progress_log "追加 docs の走査を開始しました alias=${subfolder_alias} dir=${subfolder_docs_src}"
@@ -1027,7 +1027,7 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                 fi
 
                 # ファイル名取得
-                # 追加ドキュメントサブフォルダーのルートディレクトリの場合は alias の最後の部分を使用
+                # 追加ドキュメント サブフォルダーのルート ディレクトリの場合は alias の最後の部分を使用
                 # 例: testfw/gtest -> gtest
                 if [[ "$path" == "$subfolder_docs_src" ]]; then
                     _filename="${subfolder_alias##*/}"
@@ -1035,11 +1035,11 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                     _filename="${path##*/}"
                 fi
 
-                #echo "# 追加ドキュメントサブフォルダーファイル: $path -> $_virtual_abs_path" >&2
+                #echo "# 追加ドキュメント サブフォルダー ファイル: $path -> $_virtual_abs_path" >&2
 
                 if [[ -d "$path" ]]; then
                     # ディレクトリの場合
-                    # 追加ドキュメントサブフォルダーのルートディレクトリの場合は alias の最後の部分を base_title に使用
+                    # 追加ドキュメント サブフォルダーのルート ディレクトリの場合は alias の最後の部分を base_title に使用
                     if [[ "$path" == "$subfolder_docs_src" ]]; then
                         add_to_memory_cache "$_virtual_abs_path" "$_filename" "directory" "${subfolder_alias##*/}" ""
                     else
@@ -1062,7 +1062,7 @@ if [[ -n "$MERGE_SUBFOLDER_DOCS" && ${#subfolder_entries[@]} -gt 0 && "$current_
                     add_to_memory_cache "$_virtual_abs_path" "$_filename" "file" "$_base_title" ""
                     unsorted_keys+=("$_virtual_abs_path")
 
-                    # Markdownタイトル抽出(実パスを使用)
+                    # Markdown タイトル抽出 (実パスを使用)
                     if ! has_lang_title_in_memory_cache "$_virtual_abs_path" "$DOCUMENT_LANG"; then
                         if _lang_title=$(extract_markdown_title "$path" "$DOCUMENT_LANG"); then
                             _title="${_lang_title#*:}"
@@ -1084,7 +1084,7 @@ progress_log "キャッシュ保存を開始しました changed=${cache_modifie
 save_cache
 progress_log "キャッシュ保存を終了しました"
 
-# ディレクトリ制御マジックファイル publocal.yaml の order をディレクトリ単位でキャッシュする。
+# ディレクトリ制御マジック ファイル publocal.yaml の order をディレクトリ単位でキャッシュする。
 # order に列挙された子 (ファイル / サブフォルダー) を先頭にその順で並べ、未列挙は名前順で末尾に置く。
 declare -A _publocal_loaded   # 実ディレクトリ -> 1 (読み込み試行済み)
 declare -A _publocal_index    # "実ディレクトリ<US>name" -> 0 始まりの並び順インデックス
@@ -1163,7 +1163,7 @@ _load_publocal_order() {
     done < "$f"
 }
 
-# order_index_for <親ディレクトリ(仮想)> <名前> -> ORDER_IDX に 0 始まりインデックス、未列挙は 999999
+# order_index_for <親ディレクトリ (仮想)> <名前> -> ORDER_IDX に 0 始まりインデックス、未列挙は 999999
 order_index_for() {
     local vdir="$1" name="$2"
     if [[ -z "$vdir" || "$vdir" == "/" ]]; then
@@ -1182,7 +1182,7 @@ order_index_for() {
 }
 
 # unsorted_keys をソートして sorted_keys に設定
-# カスタムソート: 各階層でファイルとディレクトリを混在させて並べる。
+# カスタム ソート: 各階層でファイルとディレクトリを混在させて並べる。
 # 並び順は「親ディレクトリの publocal.yaml の order を優先 (6 桁ゼロ埋め)、未列挙は名前順」。
 # 結果は SORT_KEY に設定する (連想配列キャッシュを保持するため command substitution を避ける)。
 generate_sort_key() {
@@ -1222,7 +1222,7 @@ generate_sort_key() {
     SORT_KEY="$key"
 }
 
-# ソートキーと元パスのペアを生成してソート
+# ソート キーと元パスのペアを生成してソート
 # generate_sort_key は SORT_KEY に書き込む。同一サブシェル内で呼ぶことで
 # publocal.yaml のディレクトリ単位キャッシュをイテレーション間で共有する。
 mapfile -t sorted_keys < <(
@@ -1233,7 +1233,7 @@ mapfile -t sorted_keys < <(
 )
 progress_log "ソートを終了しました entries=${#sorted_keys[@]}"
 
-# メモリキャッシュ内容を表示
+# メモリ キャッシュ内容を表示
 #echo "# キャッシュ内容" >&2
 #echo "" >&2
 #echo '```' >&2

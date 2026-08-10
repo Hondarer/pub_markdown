@@ -140,7 +140,7 @@ source prepare_puppeteer_env.sh
 npm start
 ```
 
-## エラーハンド リング
+## エラー処理
 
 ### 主要なエラー ケース
 
