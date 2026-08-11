@@ -2,14 +2,14 @@
 
 ## 概要
 
-pub_markdown では、rsvg-convert を独自実装している。  
-このスクリプトは、Pandoc で SVG ファイルを含む DOCX ファイルを生成する際に、標準の `rsvg-convert` の代替として動作する Puppeteer ベースの SVG→PNG 変換ツールである。
+pub_markdown では、rsvg-convert を独自実装しています。  
+このスクリプトは、Pandoc で SVG ファイルを含む DOCX ファイルを生成する際に、標準の `rsvg-convert` の代替として動作する Puppeteer ベースの SVG→PNG 変換ツールです。
 
 ## 背景と目的
 
 ### Pandoc の画像変換の仕組み
 
-Pandoc が Markdown やその他の形式から DOCX ファイルを生成する際、SVG 画像は直接 DOCX に埋め込むことができない。そのため、以下の流れで処理される。
+Pandoc が Markdown やその他の形式から DOCX ファイルを生成する際、SVG 画像は直接 DOCX に埋め込むことができません。そのため、以下の流れで処理されます。
 
 1. **SVG 検出**: ドキュメント内の SVG 画像を識別する
 2. **PNG 変換**: SVG を PNG 形式に変換 (`rsvg-convert` を使用)
@@ -17,7 +17,7 @@ Pandoc が Markdown やその他の形式から DOCX ファイルを生成する
 
 ### 標準 rsvg-convert の課題
 
-従来の `rsvg-convert` には以下の制約がある。
+従来の `rsvg-convert` には以下の制約があります。
 
 - **フォント互換性**: システムにインストールされていないフォントの処理が困難
 - **Web フォント対応**: オンライン フォントや CSS @import の処理が限定的
@@ -25,7 +25,7 @@ Pandoc が Markdown やその他の形式から DOCX ファイルを生成する
 
 ### 本スクリプトの利点
 
-Puppeteer を使用することで以下の改善を実現している。
+Puppeteer を使用することで以下の改善を実現しています。
 
 1. **高いフォント互換性**: Chromium エンジンによる豊富なフォント対応
 2. **高解像度出力**: DPI 設定に基づく高精細 PNG 生成
@@ -65,7 +65,7 @@ rsvg-convert.js     # メインの Node.js スクリプト
 
 ### サポートされるオプション
 
-スクリプトは標準 `rsvg-convert` と互換性のある以下のオプションをサポートする。
+スクリプトは標準 `rsvg-convert` と互換性のある以下のオプションをサポートします。
 
 - `-f png`: 出力形式 (PNG 固定)
 - `--dpi-x N`: 水平解像度 (デフォルト: 96)
@@ -77,11 +77,11 @@ rsvg-convert.js     # メインの Node.js スクリプト
 const scale = Math.max(dpiX, dpiY) * 1.5 / 96;
 ```
 
-指定された DPI の 1.5 倍でレンダリングを行い、高精細な出力を実現している。
+指定された DPI の 1.5 倍でレンダリングを行い、高精細な出力を実現しています。
 
 ### SVG サイズ決定アルゴリズム
 
-優先順位に従って SVG の実際のサイズを決定する。
+優先順位に従って SVG の実際のサイズを決定します。
 
 1. **width/height 属性**: `width="100px" height="50px"` など単位付き値
 2. **viewBox 属性**: `viewBox="0 0 100 50"` の幅・高さ
@@ -89,7 +89,7 @@ const scale = Math.max(dpiX, dpiY) * 1.5 / 96;
 
 ### 単位変換対応
 
-SVG で使用される各種単位を正確にピクセルに変換する。
+SVG で使用される各種単位を正確にピクセルに変換します。
 
 - **px**: そのまま (基準単位)
 - **pt**: 1pt = 1.25px
@@ -102,7 +102,7 @@ SVG で使用される各種単位を正確にピクセルに変換する。
 
 ### Pandoc での利用
 
-通常の Pandoc 使用時に、システムの `rsvg-convert` の代わりに本スクリプトが自動的に呼び出される。
+通常の Pandoc 使用時に、システムの `rsvg-convert` の代わりに本スクリプトが自動的に呼び出されます。
 
 ```bash
 pandoc input.md -o output.docx
@@ -110,7 +110,7 @@ pandoc input.md -o output.docx
 
 ### 直接実行
 
-コマンド ラインから直接 SVG 変換も可能である。
+コマンド ラインから直接 SVG 変換も可能です。
 
 ```bash
 # 標準解像度
@@ -128,7 +128,7 @@ echo "<svg>...</svg>" | node rsvg-convert.js --dpi-x 300 --dpi-y 300
 
 ## エラー処理
 
-主要なエラー ケースと対応を以下に示す。
+主要なエラー ケースと対応を以下に示します。
 
 - **空の STDIN**: 終了コード 2 で異常終了
 - **非 PNG 形式指定**: 終了コード 1 で異常終了  

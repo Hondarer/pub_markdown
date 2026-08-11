@@ -2,13 +2,13 @@
 
 ## 概要
 
-このスクリプト群は、Linux 環境下で Puppeteer を使用する際に発生する WebSocket 接続の競合状態 (race condition) を解決するための非破壊的な待機機構である。Puppeteer の Chromium 起動プロセスを透過的にラップし、DevTools WebSocket が完全に利用可能になるまで適切に待機することで、接続エラーを防止する。
+このスクリプト群は、Linux 環境下で Puppeteer を使用する際に発生する WebSocket 接続の競合状態 (race condition) を解決するための非破壊的な待機機構です。Puppeteer の Chromium 起動プロセスを透過的にラップし、DevTools WebSocket が完全に利用可能になるまで適切に待機することで、接続エラーを防止します。
 
 ## 背景と課題
 
 ### Puppeteer の WebSocket 接続問題
 
-Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブラウザーを制御するが、この通信は WebSocket 接続を通じて行われる。特に WSL 環境や仮想環境では、以下の問題が発生する可能性がある:
+Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブラウザーを制御しますが、この通信は WebSocket 接続を通じて行われます。特に WSL 環境や仮想環境では、以下の問題が発生する可能性があります。
 
 1. **タイミング競合**: Chromium が DevTools WebSocket ポートを開放したことを stderr に出力しても、実際にはまだポートが完全に利用可能でない場合がある
 2. **接続拒否エラー**: `connect ECONNREFUSED 127.0.0.1:{PORT}` エラーが発生し、`puppeteer.launch()` が失敗する
@@ -16,7 +16,7 @@ Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブ�
 
 ### 従来の対処法の問題点
 
-一般的な対処法として以下が提案されることがあるが、それぞれに課題がある:
+一般的な対処法として以下が提案されることがありますが、それぞれに課題があります。
 
 - **固定的な sleep**: 環境により必要な待機時間が異なり、過剰な遅延を生む
 - **Puppeteer オプション調整**: 根本的な解決にならない場合が多い
@@ -62,14 +62,14 @@ prepare_puppeteer_env.sh    # 環境設定用スクリプト
 
 ### 環境変数の管理
 
-スクリプトは以下の環境変数を使用して非破壊的な動作を実現する:
+スクリプトは以下の環境変数を使用して非破壊的な動作を実現します。
 
 - `PUPPETEER_EXECUTABLE_PATH`: Puppeteer が使用する実行可能ファイル パス
 - `ORG_PUPPETEER_EXECUTABLE_PATH`: 元の実行可能ファイル パスの退避用
 
 ### ポート待機アルゴリズム
 
-DevTools WebSocket ポートが完全に利用可能になるまでの確認は、以下の 2 段階で行われる:
+DevTools WebSocket ポートが完全に利用可能になるまでの確認は、以下の 2 段階で行われます。
 
 1. **LISTEN 状態確認**:
 
@@ -85,7 +85,7 @@ DevTools WebSocket ポートが完全に利用可能になるまでの確認は�
 
 ### 出力バッファリング機構
 
-stderr の出力は以下のロジックでバッファリングされる:
+stderr の出力は以下のロジックでバッファリングされます。
 
 - DevTools WebSocket 行が出現するまで、すべての stderr 出力をメモリ上にバッファリング
 - ポートが利用可能になった時点で、バッファーされた出力を一括して Puppeteer に転送
@@ -93,7 +93,7 @@ stderr の出力は以下のロジックでバッファリングされる:
 
 ### FIFO による非同期処理
 
-名前付きパイプ (FIFO) を使用して、Chromium プロセスの stderr 出力を非同期で処理する:
+名前付きパイプ (FIFO) を使用して、Chromium プロセスの stderr 出力を非同期で処理します。
 
 ```bash
 FIFO=$(mktemp -u)
@@ -119,7 +119,7 @@ node your-puppeteer-script.js
 
 ### カスタム Chromium パスの指定
 
-特定の Chromium バイナリを使用したい場合:
+特定の Chromium バイナリを使用したい場合は、以下のように設定します。
 
 ```bash
 export ORG_PUPPETEER_EXECUTABLE_PATH="/path/to/custom/chrome"
@@ -129,7 +129,7 @@ node your-script.js
 
 ### 既存プロジェクトへの統合
 
-既存の Puppeteer プロジェクトに影響を与えることなく導入できる:
+既存の Puppeteer プロジェクトに影響を与えることなく導入できます。
 
 ```bash
 # プロジェクト ディレクトリにスクリプトを配置
@@ -150,7 +150,7 @@ npm start
 
 ### デバッグ支援
 
-スクリプトは以下のデバッグ情報を stderr に出力する:
+スクリプトは以下のデバッグ情報を stderr に出力します。
 
 ```bash
 echo "Chrome wrapper script started." >&2
@@ -158,7 +158,7 @@ echo "Chrome wrapper script started." >&2
 
 ### クリーンアップ処理
 
-プロセス終了時に FIFO ファイルを確実に削除:
+プロセス終了時に FIFO ファイルを確実に削除します。
 
 ```bash
 trap 'rm -f "$FIFO"' EXIT
@@ -196,7 +196,7 @@ chmod +x chrome-wrapper.sh prepare_puppeteer_env.sh
 
 ### ログ出力の確認
 
-デバッグ時は以下の方法で詳細な動作を確認できる:
+デバッグ時は以下の方法で詳細な動作を確認できます。
 
 ```bash
 # stderr の出力を確認
