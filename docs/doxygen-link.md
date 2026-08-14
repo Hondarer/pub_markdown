@@ -10,8 +10,8 @@
 
 リンクは次の条件を満たす場合に表示します。
 
-- `doxygenLinkEnable` が `true` である。
-- Markdown の front matter に `doxygen-page-url` が存在する。
+- `doxygenLinkEnable` が `true` です。
+- Markdown の front matter に `doxygen-page-url` が存在します。
 
 `doxygen-page-url` が存在しない通常の手書き Markdown では、リンクは表示されません。
 

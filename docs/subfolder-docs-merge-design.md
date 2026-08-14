@@ -123,7 +123,7 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 | 元文書の実パス | 元リンク | 仮想配置でのリンク |
 |---|---|---|
-| `.agents/skills/README.md` | `../../docs/general/sync-skills.md` | `../general/sync-skills.md` |
+| `.agents/skills/README.md` | `../../app/example/docs/skill-sync.md` | `../example/skill-sync.md` |
 
 外部 URL、アンカーのみのリンク、公開対象外ファイルへのリンクは読み替えません。
 

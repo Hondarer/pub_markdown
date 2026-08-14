@@ -13,7 +13,7 @@
 
 - ソース ファイルが Git 管理下にある (追跡済み)
 - ソース ファイルが `.gitignore` の対象でない (doxyfw などの生成物 `.md` を除外する)
-- リポジトリの remote URL (`remote.origin.url`) が解決できる
+- リポジトリの remote URL (`remote.origin.url`) が解決できます。
 
 これらを満たさない場合でも、Markdown の front matter に `doxygen-page-url` があれば、Git アイコンのリンク先を Doxygen HTML にフォールバックします。  
 `doxygen-page-url` もない場合はリンクを表示しません。
@@ -28,14 +28,14 @@
 
 解決手順は次のとおりです。実装は `bin/get_file_git_url.sh` にあります。
 
-1. 実体パスから所属リポジトリのルートを取得する。
+1. 実体パスから所属リポジトリのルートを取得します。
 2. リポジトリ ルートからの相対パスを求める。
-3. 追跡済みかどうかを確認する。未追跡なら Doxygen HTML へのフォールバック候補にする。
-4. `.gitignore` 対象かどうかを確認する。対象なら Doxygen HTML へのフォールバック候補にする。
-5. `remote.origin.url` を取得する。空なら Doxygen HTML へのフォールバック候補にする。
-6. remote URL を web ベース URL (`scheme://host/owner/repo`) に正規化する。
-7. host から provider 種別を判定する。
-8. ref を決定する。リンク対象ファイルの最終コミット SHA を用いる。
+3. 追跡済みかどうかを確認します。未追跡なら Doxygen HTML へのフォールバック候補にします。
+4. `.gitignore` 対象かどうかを確認します。対象なら Doxygen HTML へのフォールバック候補にします。
+5. `remote.origin.url` を取得します。空なら Doxygen HTML へのフォールバック候補にします。
+6. remote URL を web ベース URL (`scheme://host/owner/repo`) に正規化します。
+7. host から provider 種別を判定します。
+8. ref を決定します。リンク対象ファイルの最終コミット SHA を用いる。
 9. provider に応じた blob URL を組み立てる。
 
 Git blob URL を組み立てられない場合、docsfw は `doxygen-page-url` から出力 HTML への相対 URL を計算し、その URL を Git アイコンに設定します。  
@@ -56,10 +56,10 @@ Source リンクは `source-file` を `target` に指定し、シングルペー
 | provider | host の判定 | blob URL 形式 |
 |---|---|---|
 | github | `github.com` | `<base>/blob/<ref>/<path>` |
-| gitlab | `gitlab.com` または host に `gitlab` を含む | `<base>/-/blob/<ref>/<path>` |
+| gitlab | `gitlab.com` または host に `gitlab` を含みます。 | `<base>/-/blob/<ref>/<path>` |
 | gitbucket | host に `gitbucket` を含む、または設定で指定 | `<base>/blob/<ref>/<path>` |
 | gitea | 設定で指定 | `<base>/blob/<ref>/<path>` |
-| git (汎用) | 上記いずれにも該当しない | `<base>/blob/<ref>/<path>` |
+| git (汎用) | 上記いずれにも該当しません。 | `<base>/blob/<ref>/<path>` |
 
 GitHub / GitBucket / Gitea は同じ `/blob/` 形式で、GitLab のみ `/-/blob/` 形式です。  
 GitBucket がコンテキスト パス配下 (例: `https://host/gitbucket/owner/repo`) で運用されている場合も、remote URL がそのパスを含んでいれば正しく解決されます。
@@ -113,7 +113,7 @@ doxyfw が生成する `Files/` 配下の Markdown は `.gitignore` 対象のた
 ---
 summary: "calc ライブラリの公開アンブレラ ヘッダー。"
 short-title: "calc.h"
-git-origin: "app/calc/prod/include/calc.h"
+git-origin: "app/example/prod/include/example.h"
 ---
 ```
 

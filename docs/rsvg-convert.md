@@ -11,7 +11,7 @@ pub_markdown では、rsvg-convert を独自実装しています。
 
 Pandoc が Markdown やその他の形式から DOCX ファイルを生成する際、SVG 画像は直接 DOCX に埋め込むことができません。そのため、以下の流れで処理されます。
 
-1. **SVG 検出**: ドキュメント内の SVG 画像を識別する
+1. **SVG 検出**: ドキュメント内の SVG 画像を識別します。
 2. **PNG 変換**: SVG を PNG 形式に変換 (`rsvg-convert` を使用)
 3. **DOCX 埋め込み**: 変換した PNG を DOCX ファイルに埋め込む
 

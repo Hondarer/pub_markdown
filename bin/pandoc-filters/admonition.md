@@ -1,12 +1,12 @@
 # admonition.lua
 
-GitHub 形式の admonition (注意書きブロック) を Pandoc フィルターで変換する。
+GitHub 形式の admonition (注意書きブロック) を Pandoc フィルターで変換します。
 
 ## 概要
 
 `> [!NOTE]` 等の GitHub-style alert 構文を検出し、HTML では色分けされた `<div>` に、  
-docx ではカスタム段落スタイル付き Div に変換する。  
-マッチしない blockquote は従来通りの表示を維持する。
+docx ではカスタム段落スタイル付き Div に変換します。  
+マッチしない blockquote は従来通りの表示を維持します。
 
 ## 対応タイプ
 
@@ -22,7 +22,7 @@ docx ではカスタム段落スタイル付き Div に変換する。
 ## 技術的背景
 
 Pandoc の `-f markdown+hard_line_breaks` には `alerts` 拡張がない (`-f gfm` 専用)。  
-そのため、BlockQuote としてパースされた `[!TYPE]` テキストを Lua フィルターで検出して変換する。
+そのため、BlockQuote としてパースされた `[!TYPE]` テキストを Lua フィルターで検出して変換します。
 
 ### AST 構造
 
@@ -37,12 +37,12 @@ BlockQuote
 ```
 
 フィルターは `BlockQuote.content[1]` (Para/Plain) の先頭 Inline が `[!TYPE]` パターンに  
-マッチするか判定し、マッチした場合は `[!TYPE]` と直後の LineBreak/SoftBreak を除去する。
+マッチするか判定し、マッチした場合は `[!TYPE]` と直後の LineBreak/SoftBreak を除去します。
 
 ## HTML 出力
 
-`<div class="admonition admonition-{type}">` に変換する。  
-タイトル行は種類ごとの記号を付けて `<span class="admonition-title">` で出力する。
+`<div class="admonition admonition-{type}">` に変換します。  
+タイトル行は種類ごとの記号を付けて `<span class="admonition-title">` で出力します。
 
 ```html
 <div class="admonition admonition-note">
@@ -64,14 +64,14 @@ CSS は `styles/html/html-style.css` に定義。左罫線色とタイトル色�
 
 ## docx 出力
 
-`custom-style` 属性付き Div に変換する。  
-見出しには HTML と同じ記号付きタイトルを出力する。  
+`custom-style` 属性付き Div に変換します。  
+見出しには HTML と同じ記号付きタイトルを出力します。  
 テンプレート (`docx-template.dotx`) に対応するスタイルが定義されていれば適用される。  
-未定義の場合は Normal スタイルにフォールバックする。
+未定義の場合は Normal スタイルにフォールバックします。
 
 ### 段落スタイル名
 
-各スタイルは Block Text を基底 (`basedOn`) とする。
+各スタイルは Block Text を基底 (`basedOn`) とします。
 
 | タイプ | custom-style 値 | styleId (Pandoc 生成) | 基底スタイル |
 |---|---|---|---|
@@ -87,7 +87,7 @@ CSS は `styles/html/html-style.css` に定義。左罫線色とタイトル色�
 
 ## フィルター チェーン上の位置
 
-`pub_markdown_core.sh` 内で `pagebreak.lua` の直後に配置する。
+`pub_markdown_core.sh` 内で `pagebreak.lua` の直後に配置します。
 
 - HTML: `pagebreak.lua` → **`admonition.lua`** → `link-to-html.lua`
 - docx: `pagebreak.lua` → **`admonition.lua`** → `toc-pagebreak.lua`
@@ -104,10 +104,10 @@ docx 出力で admonition 内にリスト (箇条書き・番号付きリスト)
 
 **原因**: Pandoc の docx ライターは `custom-style` 付き Div 内の段落 (Para) にスタイルを適用するが、  
 BulletList / OrderedList は独自のリスト スタイル (List Paragraph 等) で段落を生成するため、  
-Div の `custom-style` が適用されない。
+Div の `custom-style` が適用されません。
 
 **影響**: リスト項目が admonition の左罫線・背景色の外側に表示される。
 
-**対応**: Pandoc の構造的な制約のため、現時点では対処しない。  
-admonition 内では段落テキストのみを使用することを推奨する。  
+**対応**: Pandoc の構造的な制約のため、現時点では対処しません。  
+admonition 内では段落テキストのみを使用することを推奨します。  
 HTML 出力ではこの制約はなく、リストも正常に admonition 内に表示される。

@@ -2,18 +2,18 @@
 
 ## 背景
 
-`bin/pub_markdown_core.sh` は `node_modules/.bin` が存在しない場合に自動で `npm ci` を実行する。  
+`bin/pub_markdown_core.sh` は `node_modules/.bin` が存在しない場合に自動で `npm ci` を実行します。  
 コンテナー CI では毎回クリーンなワークスペースが作られるため、毎回 `npm ci` が走り時間がかかる。
 
 さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で  
 **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされる。  
 コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも  
-毎ビルドで発生する。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると  
-postinstall も走らないため、Chrome キャッシュが空のままでは headless レンダリングが失敗する。
+毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると  
+postinstall も走らないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
 
-GitHub Actions では `actions/cache` が利用できるが、Jenkins には同等の標準機能がない。  
+GitHub Actions では `actions/cache` が利用できるが、Jenkins には同等の標準機能がありません。  
 ここでは **固定エージェントおよびコンテナー エージェント** を対象に、  
-ホストのファイル システムを活用した `node_modules` と **Chrome キャッシュ** の永続化方式を説明する。
+ホストのファイル システムを活用した `node_modules` と **Chrome キャッシュ** の永続化方式を説明します。
 
 ## キャッシュ方式の概要
 
@@ -36,15 +36,15 @@ GitHub Actions では `actions/cache` が利用できるが、Jenkins には同�
 | **既定の保存先** | コンテナー内 `$HOME/.cache/puppeteer/chrome/` および `$HOME/.cache/puppeteer/chrome-headless-shell/` |
 | **ホスト永続化先 (例)** | `/var/cache/docsfw-puppeteer/` をコンテナーの `$HOME/.cache/puppeteer` にマウント |
 | **無効化トリガー** | `package-lock.json` の変更 (puppeteer バージョン更新 → Chrome バージョンも変わるため) |
-| **node_modules との関係** | node_modules キャッシュ ヒット時は `npm ci` がスキップされるため、Chrome キャッシュが空だと headless レンダリングが失敗する |
+| **node_modules との関係** | node_modules キャッシュ ヒット時は `npm ci` がスキップされるため、Chrome キャッシュが空だと headless レンダリングが失敗します。 |
 
 `node_modules` のキャッシュだけでは不十分なため、**両方を永続化する必要がある**。
 
 ## 前提条件
 
 - Jenkins エージェントが固定 (ホストのファイル システムが永続する)  
-  コンテナー エージェントの場合はホスト側の永続ディレクトリをマウントして代替する
-- Jenkins の実行ユーザーが `/var/cache/docsfw-node-modules/` および `/var/cache/docsfw-puppeteer/` への書き込み権限を持つ
+  コンテナー エージェントの場合はホスト側の永続ディレクトリをマウントして代替します。
+- Jenkins の実行ユーザーが `/var/cache/docsfw-node-modules/` および `/var/cache/docsfw-puppeteer/` への書き込み権限を持ちます。
 - エージェントの OS・ディストリビューションが統一されている  
   (`node_modules` 内のバイナリはビルド環境に依存するため。Chrome も同様にプラットフォーム固有のバイナリ)
 
@@ -140,16 +140,16 @@ pipeline {
 ## フリースタイル ジョブ (スクリプト記述) サンプル
 
 Jenkinsfile を使わない **フリースタイル プロジェクト** では、「ビルド」セクションの  
-「**シェルの実行**」ステップを複数追加して同等の処理を実現する。
+「**シェルの実行**」ステップを複数追加して同等の処理を実現します。
 
 各ステップは独立したサブシェルで動くため、変数の受け渡しにはワークスペース上の  
-一時ファイル (`${WORKSPACE}/.node_modules_cache_state`) を使う。
+一時ファイル (`${WORKSPACE}/.node_modules_cache_state`) を使用します。
 
 ---
 
 ### ステップ 1 — キャッシュ復元 (ビルド前)
 
-「シェルの実行」に以下を記述する。
+「シェルの実行」に以下を記述します。
 
 ```bash
 #!/bin/bash
@@ -180,7 +180,7 @@ fi
 
 ### ステップ 2 — ドキュメント生成
 
-「シェルの実行」に以下を記述する。
+「シェルの実行」に以下を記述します。
 
 ```bash
 #!/bin/bash
@@ -195,7 +195,7 @@ bash "${DOCSFW_BIN}/pub_markdown_core.sh" \
 
 ### ステップ 3 — キャッシュ保存 (キャッシュ ミス時のみ)
 
-「シェルの実行」に以下を記述する。
+「シェルの実行」に以下を記述します。
 
 ```bash
 #!/bin/bash
@@ -229,7 +229,7 @@ echo "node_modules cached to: ${CACHE_DIR}"
 
 ### ポスト ビルド アクション — 古いキャッシュの清掃
 
-「ビルド後の処置」→「**スクリプトの実行**」、またはビルド ステップの末尾に追加する。
+「ビルド後の処置」→「**スクリプトの実行**」、またはビルド ステップの末尾に追加します。
 
 ```bash
 #!/bin/bash
@@ -268,16 +268,16 @@ rm -f "${STATE_FILE}"
 
 ### Chrome のデフォルト ダウンロード位置
 
-`puppeteer ^24` は `npm ci` の postinstall で以下のパスに Chrome for Testing をダウンロードする。
+`puppeteer ^24` は `npm ci` の postinstall で以下のパスに Chrome for Testing をダウンロードします。
 
 ```text
 $HOME/.cache/puppeteer/chrome/linux-<バージョン>/chrome-linux64/chrome
 $HOME/.cache/puppeteer/chrome-headless-shell/linux-<バージョン>/chrome-headless-shell-linux64/chrome-headless-shell
 ```
 
-`bin/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索する。  
+`bin/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索します。  
 `.puppeteerrc.cjs` は配置していないため、環境変数 `PUPPETEER_CACHE_DIR` を明示しない限り  
-`os.homedir()/.cache/puppeteer` がデフォルトになる。
+`os.homedir()/.cache/puppeteer` がデフォルトになります。
 
 コンテナー CI でホームが毎回リセットされる場合は、ホスト側の永続ディレクトリをマウントして引き継ぐ。
 
@@ -299,7 +299,7 @@ podman run --rm \
 
 - `:Z` は SELinux 環境向け。Ubuntu 等では不要な場合は外す。
 - コンテナー内ユーザーのホームが `/home/jenkins` 以外の場合は、実際のホーム配下の `.cache/puppeteer` を指す。
-- または環境変数で明示する方法も利用できる。
+- または環境変数で明示する方法も利用できます。
 
 ```bash
 podman run --rm \
@@ -313,7 +313,7 @@ podman run --rm \
 
 ### Jenkinsfile コンテナー エージェントでの宣言例
 
-Docker / Podman プラグインを使うコンテナー エージェントでは、`args` でマウントを宣言する。
+Docker / Podman プラグインを使うコンテナー エージェントでは、`args` でマウントを宣言します。
 
 ```groovy
 pipeline {
@@ -334,7 +334,7 @@ pipeline {
 }
 ```
 
-`node_modules` キャッシュも引き続き利用する場合は、`args` に両マウントを追加する。
+`node_modules` キャッシュも引き続き利用する場合は、`args` に両マウントを追加します。
 
 ```groovy
 args '-v /var/cache/docsfw-node-modules:/cache/node-modules ' +
@@ -344,9 +344,9 @@ args '-v /var/cache/docsfw-node-modules:/cache/node-modules ' +
 ### node_modules キャッシュ ヒット時の整合性
 
 node_modules キャッシュがヒットすると `npm ci` がスキップされる。  
-このとき Chrome キャッシュが空だと、headless レンダリング (Mermaid 変換等) が失敗する。
+このとき Chrome キャッシュが空だと、headless レンダリング (Mermaid 変換等) が失敗します。
 
-以下のコマンドでビルド前に Chrome の存在を確認できる。
+以下のコマンドでビルド前に Chrome の存在を確認できます。
 
 ```bash
 ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \
@@ -361,7 +361,7 @@ ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \
 
 オフライン環境で Chrome を事前配置する手順は [puppeteer-offline-chrome.md](puppeteer-offline-chrome.md) を参照。  
 ダウンロード済みの `chrome/` および `chrome-headless-shell/` をホスト永続ディレクトリに配置すれば、  
-コンテナー起動時にそのままマウントされて利用できる。
+コンテナー起動時にそのままマウントされて利用できます。
 
 ## 補足
 
@@ -375,7 +375,7 @@ NODE_MODULES_CACHE_BASE = "/var/cache/${JOB_NAME.replaceAll('[^a-zA-Z0-9_-]', '_
 
 ### キャッシュ保存先ディレクトリの権限設定
 
-Jenkins ユーザー (例: `jenkins`) に書き込み権限を付与する。
+Jenkins ユーザー (例: `jenkins`) に書き込み権限を付与します。
 
 ```bash
 sudo mkdir -p /var/cache/docsfw-node-modules

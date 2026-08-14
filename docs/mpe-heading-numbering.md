@@ -19,7 +19,7 @@ VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示�
 
 1. VS Code で任意の Markdown ファイルを開く
 2. `Ctrl+Shift+P` でコマンド パレットを開く
-3. 「Markdown Preview Enhanced: Customize CSS (Global)」を選択する
+3. 「Markdown Preview Enhanced: Customize CSS (Global)」を選択します。
 
 `style.less` ファイルが開きます。このファイルの CSS を編集します。
 
@@ -110,8 +110,8 @@ h5 {
 
 `::before` 疑似要素を使用して、見出しの前に番号を挿入します。
 
-- `counter-increment` で対応するカウンターを加算する
-- `content` で各階層のカウンター値を連結して表示する
+- `counter-increment` で対応するカウンターを加算します。
+- `content` で各階層のカウンター値を連結して表示します。
 
 ### カウンター変数の対応関係
 

@@ -190,18 +190,18 @@ else
 
 - `PUB_MARKDOWN_BROWSER_REUSE=auto` (デフォルト): `docxOutput=true` かつ対象 Markdown に Mermaid または `.svg` 参照がある場合のみ起動
 - `PUB_MARKDOWN_BROWSER_REUSE=always`: 対象ファイルの内容に関係なく起動
-- `PUB_MARKDOWN_BROWSER_REUSE=off`: 共有ブラウザーを起動しない
+- `PUB_MARKDOWN_BROWSER_REUSE=off`: 共有ブラウザーを起動しません。
 
 起動待機:
 
 - デフォルトは 120 秒
 - `PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC` で秒数を上書き可能
-- エンドポイント ファイルのポーリングは約 1 秒間隔で行う
-- 起動待機中は 10 秒ごとに `.` を出力する
-- WebSocket エンドポイントを書き出す前に、DevTools API (`/json/version`) が `webSocketDebuggerUrl` を返すことを確認する
-- `browser-server.js` が先に終了した場合は、タイムアウトを待たずにフォールバックする
-- フォールバック時は `browser-server.js` の診断ログを警告として出力する
-- 起動に成功した場合は、ラッパーが最終的に選択したブラウザーの実行パスを表示する
+- エンドポイント ファイルのポーリングは約 1 秒間隔で行います。
+- 起動待機中は 10 秒ごとに `.` を出力します。
+- WebSocket エンドポイントを書き出す前に、DevTools API (`/json/version`) が `webSocketDebuggerUrl` を返すことを確認します。
+- `browser-server.js` が先に終了した場合は、タイムアウトを待たずにフォールバックします。
+- フォールバック時は `browser-server.js` の診断ログを警告として出力します。
+- 起動に成功した場合は、ラッパーが最終的に選択したブラウザーの実行パスを表示します。
 
 ```text
 Starting shared browser... done.
@@ -219,9 +219,9 @@ Browser executable: /usr/local/bin/chrome
 
 `browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります:
 
-1. 呼び出し元が `prepare_puppeteer_env.sh` を source し、`PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を設定する
-2. `browser-server.js` が同じ準備処理を適用し、`ORG_PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を退避する
-3. `chrome-wrapper.sh` が退避値を復元し、自身を Chrome として再び起動する
+1. 呼び出し元が `prepare_puppeteer_env.sh` を source し、`PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を設定します。
+2. `browser-server.js` が同じ準備処理を適用し、`ORG_PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を退避します。
+3. `chrome-wrapper.sh` が退避値を復元し、自身を Chrome として再び起動します。
 
 この問題を避けるため、`browser-server.js` は `prepare_puppeteer_env.sh` を経由しません。  
 代わりに `chrome-wrapper.sh` を `puppeteer.launch()` の `executablePath` として直接指定し、`ORG_PUPPETEER_EXECUTABLE_PATH` には元の `PUPPETEER_EXECUTABLE_PATH` が `chrome-wrapper.sh` 自身でない場合だけ渡します。  

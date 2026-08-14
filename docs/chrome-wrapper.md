@@ -11,7 +11,7 @@
 Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブラウザーを制御しますが、この通信は WebSocket 接続を通じて行われます。特に WSL 環境や仮想環境では、以下の問題が発生する可能性があります。
 
 1. **タイミング競合**: Chromium が DevTools WebSocket ポートを開放したことを stderr に出力しても、実際にはまだポートが完全に利用可能でない場合がある
-2. **接続拒否エラー**: `connect ECONNREFUSED 127.0.0.1:{PORT}` エラーが発生し、`puppeteer.launch()` が失敗する
+2. **接続拒否エラー**: `connect ECONNREFUSED 127.0.0.1:{PORT}` エラーが発生し、`puppeteer.launch()` が失敗します。
 3. **非決定的な動作**: 環境やシステム負荷により、成功したり失敗したりする不安定な挙動
 
 ### 従来の対処法の問題点

@@ -1,6 +1,11 @@
 # pub_markdown
 
-Markdown to html and docx with Pandoc.
+Pandoc を使用して、Markdown から HTML と docx を生成します。
+
+## 作業時の入口
+
+- [エージェント向け指示](AGENTS.md)
+- [文書一覧](docs/README.md)
 
 ## 前提環境
 
@@ -24,22 +29,22 @@ Markdown to html and docx with Pandoc.
 
 ### セットアップ
 
-- pandoc に PATH を通す。
-- pandoc-crossref に PATH を通す。
-    - pandoc-crossref はオプション。存在しなくても動作する。
-    - 存在する場合、ラベルを付けた図、リスト、表が採番と相互参照の対象になる。詳細は [コード ブロックのキャプション](docs/codeblock-caption.md) を参照のこと。
-- node.exe に PATH を通す。Linux では nodejs モジュール パッケージに含まれる。
-- bin 配下で、`npm ci` を行う。詳細手順は [how_to_setup_node_modules.md](bin/how_to_setup_node_modules.md) を参照のこと。
+- pandoc へ PATH を設定してください。
+- pandoc-crossref を使用する場合は、PATH を設定してください。
+    - pandoc-crossref がなくても動作します。
+    - pandoc-crossref がある場合は、ラベルを付けた図、リスト、表が採番と相互参照の対象になります。詳細は [コード ブロックのキャプション](docs/codeblock-caption.md) を参照してください。
+- node.exe へ PATH を設定してください。Linux では nodejs モジュール パッケージに含まれます。
+- `bin/` 配下で `npm ci` を実行してください。詳細は [Node.js モジュールの設定](bin/how_to_setup_node_modules.md) を参照してください。
 
 ### Markdown の発行方法
 
-- Visual Studio Code で、タスク "exec pandoc" (Ctrl + Shift + B) を実行する。
-- 現在開いている Markdown のみを対象に発行を行う場合は、タスク "exec pandoc (current file)" を実行する。
-- YAML front matter に `pub_markdown.skip: true` を定義した Markdown は HTML/docx の発行対象および目次生成対象から除外する。
+- Visual Studio Code でタスク `exec pandoc` (Ctrl + Shift + B) を実行してください。
+- 現在開いている Markdown だけを発行する場合は、タスク `exec pandoc (current file)` を実行してください。
+- YAML front matter に `pub_markdown.skip: true` を定義した Markdown は、HTML、docx、目次の生成対象から除外されます。
 
 ### 進捗ログ
 
-長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行する。  
+長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行します。  
 共有ブラウザーの起動待機、対象ファイル収集、各出力形式の生成、TOC 生成の段階が stderr に出力される。
 
 ```bash
@@ -48,13 +53,13 @@ PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/pat
 
 ### 無進捗監視
 
-通常の発行では、時間を基準に Markdown ジョブを停止しない。  
+通常の発行では、時間を基準に Markdown ジョブを停止しません。  
 大きな PlantUML 図や Pandoc の docx 変換は長時間になる場合があるためです。
 
-ハング調査などで無進捗ジョブを停止したい場合だけ、`FILE_PROCESS_TIMEOUT_SEC` に秒数を指定する。  
-タイムアウト時は対象ファイルと最後に記録した工程を出力する。  
-未指定または `0` の場合は監視を無効にする。  
-負数、小数、文字列を指定した場合は、Markdown ジョブを開始せずにエラーで終了する。
+ハング調査などで無進捗ジョブを停止したい場合だけ、`FILE_PROCESS_TIMEOUT_SEC` に秒数を指定します。  
+タイムアウト時は対象ファイルと最後に記録した工程を出力します。  
+未指定または `0` の場合は監視を無効にします。  
+負数、小数、文字列を指定した場合は、Markdown ジョブを開始せずにエラーで終了します。
 
 ```bash
 FILE_PROCESS_TIMEOUT_SEC=300 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
@@ -74,8 +79,8 @@ This project uses the following third-party libraries:
 
 ### 多言語対応時に title を得られない問題
 
-以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができない。  
-Pandoc に渡す前に、第 1 レベルの内容を取得して設定した。  
+以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができません。  
+Pandoc に渡す前に、第 1 レベルの内容を取得して設定しました。  
 (lua フィルターの段階では、`--shift-heading-level-by=-1` が効果を出してしまうため、第 1 レベルの内容は得られない。)
 
 ```html
@@ -95,7 +100,7 @@ This document format requires a nonempty <title> element.
 
 ### PlantUML を docx に取り込んだ際のフォント名
 
-svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されない。  
+svg ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されません。  
 `pub_markdown.config.yaml` の `plantuml.format` が svg の場合は、font-family を、Word で日本語フォントとして解釈されやすい font-family="Segoe UI, メイリオ" に置換するように改修。
 
 ### 多言語ブロック内に : があると Pandoc が正しく解釈しない問題
@@ -110,17 +115,17 @@ replace-tag.sh を行単位処理に再実装し、タグ行と非対象言語�
 
 - テンプレートが Slate 向けのため、Pandoc 向けに変更する必要がある (一部作業中)。
 - Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされない (そもそも複数あることを想定していない)。
-- operationId が重複した場合に、処理が不正となる。
+- operationId が重複した場合に、処理が不正となります。
 
 ### caption に改行を含む場合
 
-plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されない。
+plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されません。
 
 ### 実行時に Error: Failed to launch the browser process! のエラーが発生する場合
 
 Edge を更新後、`Error: Failed to launch the browser process!` が発生する場合がある。
 
-この問題は、Windows を再起動することで解消する。
+この問題は、Windows を再起動することで解消します。
 
 ## ライセンス
 

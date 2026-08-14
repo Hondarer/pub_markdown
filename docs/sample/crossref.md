@@ -5,13 +5,13 @@ pandoc-crossref により、ラベルを付けた図、リスト、表を採番�
 
 ## 画像
 
-[@fig:a_image] に例を示す。
+[@fig:a_image] に例を示します。
 
 ![draw.io のテスト](images/テスト.drawio.svg){#fig:a_image}
 
 ## Mermaid
 
-[@fig:crossref_mermaid] に例を示す。
+[@fig:crossref_mermaid] に例を示します。
 
 ```mermaid
 sequenceDiagram
@@ -23,7 +23,7 @@ CodeBlock: Mermaid の図 {#fig:crossref_mermaid}
 
 ## コード ブロック
 
-[@lst:crossref_listing] に例を示す。
+[@lst:crossref_listing] に例を示します。
 
 ```c
 int main(void)
@@ -36,7 +36,7 @@ CodeBlock: リストとして採番されるコード {#lst:crossref_listing}
 
 ## 表
 
-[@tbl:crossref_table] に例を示す。
+[@tbl:crossref_table] に例を示します。
 
 |No.|内容     |
 |--:|---------|

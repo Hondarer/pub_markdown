@@ -346,7 +346,7 @@ AsyncAPI 1.0 形式については、widdershins により変換できる可能�
 
 Markdown 内のリンクは、.html や .docx への変換時も維持されます。
 
-[サブフォルダーの index へ](subfolder/index.md)
+[サブフォルダーの README へ](subfolder/README.md)
 
 ## コード スニペット
 
