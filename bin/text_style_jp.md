@@ -320,6 +320,23 @@ Markdown では行末の半角スペース 2 つ以上がソフト改行 (line b
 
 コード ブロック内の行は対象外とします。
 
+### C++ テスト エビデンス用コメントの診断
+
+`--mode cpp --dry-run` では、GoogleTest のテスト本体にある GoogleTest / Google Mock マクロへ、テスト エビデンス用コメントが付随しているかを診断します。タグの用途と記載内容は、[テスト コードの各フェーズについての解説](../../testfw/docs/about-test-phase.md) を正本とします。
+
+| 対象 | 必要なタグ |
+|------|-----------|
+| `ON_CALL` | `[状態]` |
+| `EXPECT_CALL` | `[Pre-Assert確認_正常系]` または `[Pre-Assert確認_異常系]` |
+| `WillOnce` / `WillRepeatedly` を伴う `EXPECT_CALL` | `[Pre-Assert手順]` も必要 |
+| その他の `EXPECT_*` / `ASSERT_*` | `[状態確認]`、`[Pre-Assert確認_正常系]`、`[Pre-Assert確認_異常系]`、`[確認_正常系]`、`[確認_異常系]` のいずれか |
+
+タグは対象マクロの文内、文末と同じ行、または空行やコードを挟まない直後のコメント行に記載します。フェーズ構造コメント (`// Arrange`、`// Pre-Assert`、`// Act`、`// Assert`、`// Cleanup`) に到達した場合は、そこで対象マクロとの関連付けを終了します。
+
+`TEST`、`TEST_F`、`TEST_P`、`TYPED_TEST`、`TYPED_TEST_P` の本体だけを診断します。fixture、テスト補助関数、モック実装、C モード、Markdown の C++ コード フェンスは対象外です。対象マクロの文内に入れ子になった `EXPECT_*` / `ASSERT_*` は、外側の文に付随するコメントで説明されるものとして個別に診断しません。
+
+不足コメントは自動修正できないため、入力は変更せずに診断だけを出力します。`--check` と `--in-place` では診断しません。`SUCCEED`、`FAIL`、`ADD_FAILURE`、`GTEST_SKIP` も対象外です。
+
 ## 辞書ファイル
 
 スペース挿入ルールをプロジェクト・ユーザーごとにカスタマイズできます。
@@ -503,7 +520,7 @@ python text_style_jp.py --test
 
 ### dry-run モード
 
-`--dry-run` を指定すると、ファイルを変更せずに「どこが・どのルールで・どの辞書によって変更されるか」を textlint 風フォーマットで表示します。変更が 1 件以上あれば終了コード 1 を返します。NBSP の検出も対象で、Markdown のコード フェンスやソース中の文字列リテラルを含む入力全体を確認します。NBSP は表示上 `\u00A0` として出力されます。
+`--dry-run` を指定すると、ファイルを変更せずに「どこが・どのルールで・どの辞書によって変更または診断されるか」を textlint 風フォーマットで表示します。変更または診断が 1 件以上あれば終了コード 1 を返します。NBSP の検出も対象で、Markdown のコード フェンスやソース中の文字リテラルを含む入力全体を確認します。NBSP は表示上 `\u00A0` として出力されます。自動修正しない診断では、変更前と変更後に同じ対象文字列を表示します。
 
 ```
 file.md
@@ -546,6 +563,10 @@ file.md
 | `heading-inline-code` | 見出しインライン コード除去 (Markdown) |
 | `box-drawing` | 罫線文字 (U+2500-U+257F) の検出警告 (Markdown、自動修正なし) |
 | `list-indent` | リスト ネスト字下げを depth × 4 スペースに正規化 (Markdown) |
+| `test-comment-on-call-state` | `ON_CALL` の `[状態]` コメント不足を診断 (C++、自動修正なし) |
+| `test-comment-expect-call-check` | `EXPECT_CALL` の `[Pre-Assert確認_*]` コメント不足を診断 (C++、自動修正なし) |
+| `test-comment-expect-call-step` | `WillOnce` / `WillRepeatedly` に対応する `[Pre-Assert手順]` コメント不足を診断 (C++、自動修正なし) |
+| `test-comment-assertion-check` | `EXPECT_*` / `ASSERT_*` の確認コメント不足を診断 (C++、自動修正なし) |
 
 辞書ルール (`dict-replace`, `dict-add-space`) の場合は、そのルールが定義された辞書ファイルのベース名が括弧内に表示されます。
 

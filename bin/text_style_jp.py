@@ -1396,6 +1396,208 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # cpp dry-run: テスト コメント不足をマクロ位置へ報告する
+    source = (
+        "TEST_F(sampleTest, missing_comments)\n"
+        "{\n"
+        "    ON_CALL(mock, Run()).WillByDefault(Return(0));\n"
+        "    EXPECT_CALL(mock, Run()).WillOnce(Return(1));\n"
+        "    EXPECT_EQ(1, result);\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    result = style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = (
+        result == source
+        and [f.rule for f in test_comment_findings] == [
+            "test-comment-on-call-state",
+            "test-comment-expect-call-check",
+            "test-comment-expect-call-step",
+            "test-comment-assertion-check",
+        ]
+        and [(f.line, f.column) for f in test_comment_findings]
+        == [(3, 5), (4, 5), (4, 5), (5, 5)]
+    )
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run テストコメント不足検出: "
+        f"{[(f.line, f.column, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: 同一行と直後のコメントにある正規タグを受理する
+    source = (
+        "TEST(sampleTest, valid_comments)\n"
+        "{\n"
+        "    ON_CALL(mock, Run()).WillByDefault(Return(0));\n"
+        "    // [状態] - default\n"
+        "    EXPECT_CALL(mock, Run())\n"
+        "        .WillOnce(Return(1)); // [Pre-Assert確認_正常系] - called\n"
+        "                              // [Pre-Assert手順] - return 1\n"
+        "    EXPECT_CALL(mock, Stop()).Times(0);\n"
+        "    // [Pre-Assert確認_異常系] - not called\n"
+        "    ASSERT_NE(nullptr, state); // [状態確認] - allocated\n"
+        "    EXPECT_EQ(1, before); // [Pre-Assert確認_正常系] - before\n"
+        "    EXPECT_EQ(2, after); // [確認_正常系] - after\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = not test_comment_findings
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run テストコメント正規タグ受理: "
+        f"{[(f.line, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: WillRepeatedly は手順コメントを必要とし、Times は必要としない
+    source = (
+        "TEST_P(sampleTest, action_comments)\n"
+        "{\n"
+        "    EXPECT_CALL(mock, Run()).WillRepeatedly(Return(1));\n"
+        "    // [Pre-Assert確認_正常系] - called\n"
+        "    EXPECT_CALL(mock, Stop()).Times(0); // [Pre-Assert確認_正常系] - not called\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = [f.rule for f in test_comment_findings] == [
+        "test-comment-expect-call-step"
+    ]
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run EXPECT_CALL 動作コメント判定: "
+        f"{[(f.line, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: 前置、空行後、フェーズ境界後、旧タグを関連コメントとみなさない
+    source = (
+        "TYPED_TEST(sampleTest, association_boundaries)\n"
+        "{\n"
+        "    // [確認_正常系] - preceding\n"
+        "    EXPECT_EQ(1, first);\n"
+        "\n"
+        "    // [確認_正常系] - after blank\n"
+        "    EXPECT_EQ(2, second);\n"
+        "    // Assert\n"
+        "    // [確認_正常系] - after phase\n"
+        "    EXPECT_EQ(3, third); // [確認] - legacy\n"
+        "    EXPECT_EQ(4, fourth); // [Pre-Assert確認] - legacy\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule == "test-comment-assertion-check"
+    ]
+    passed = [f.line for f in test_comment_findings] == [4, 7, 10, 11]
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run テストコメント関連範囲: "
+        f"{[(f.line, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: 同じ行の次の文にあるコメントを前の文へ流用しない
+    source = (
+        "TYPED_TEST_P(sampleTest, adjacent_statements)\n"
+        "{\n"
+        "    EXPECT_EQ(1, first); EXPECT_EQ(2, second); // [確認_正常系] - second\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule == "test-comment-assertion-check"
+    ]
+    passed = (
+        len(test_comment_findings) == 1
+        and test_comment_findings[0].line == 3
+        and test_comment_findings[0].column == 5
+    )
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run 同一行の文境界: "
+        f"{[(f.line, f.column, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: 外側の文に入れ子になったアサーションは個別診断しない
+    source = (
+        "TEST(sampleTest, nested_assertion)\n"
+        "{\n"
+        "    EXPECT_CALL(mock, Run(_))\n"
+        "        .WillOnce([](int value) { EXPECT_EQ(1, value); });\n"
+        "    // [Pre-Assert確認_正常系] - receives 1\n"
+        "    // [Pre-Assert手順] - check value\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = not test_comment_findings
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run 入れ子アサーション除外: "
+        f"{[(f.line, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: テスト本体外、コメント、文字列、raw string は検査しない
+    source = (
+        "void SetUp() { ON_CALL(mock, Run()).WillByDefault(Return(0)); }\n"
+        "// TEST(sampleTest, comment) { EXPECT_EQ(1, value); }\n"
+        "const char *normal = \"TEST(sampleTest, string) { EXPECT_EQ(1, value); }\";\n"
+        "const char *raw = R\"tag(TEST(sampleTest, raw) { EXPECT_EQ(1, value); })tag\";\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        f for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = not test_comment_findings
+    status = "✓" if passed else "✗"
+    print(
+        f"\n{status} cpp dry-run テスト本体外と literal 除外: "
+        f"{[(f.line, f.rule) for f in test_comment_findings]}"
+    )
+    if not passed:
+        all_passed = False
+
+    # Markdown コード フェンスと c モードはテスト コメント検査の対象外
+    source = "TEST(sampleTest, missing) { EXPECT_EQ(1, value); }"
+    c_cpp_fence = DiagnosticCollector()
+    style_markdown(f"```cpp\n{source}\n```", collector=c_cpp_fence)
+    c_mode = DiagnosticCollector()
+    style_by_mode(source, "c", collector=c_mode)
+    passed = not any(
+        f.rule.startswith("test-comment-")
+        for f in c_cpp_fence.findings + c_mode.findings
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} cpp dry-run Markdown フェンスと c モード除外")
+    if not passed:
+        all_passed = False
+
     # _format_findings_stylish: 出力フォーマット テスト
     c = DiagnosticCollector()
     c.set_line(3)
@@ -1436,6 +1638,55 @@ def run_tests() -> bool:
     print(f"\n{status} _format_findings_stylish NBSP 表示")
     if not passed:
         all_passed = False
+
+    # CLI dry-run: テスト コメント不足を表示して失敗し、--check では対象外にする
+    source = (
+        "TEST(sampleTest, missing_comment)\n"
+        "{\n"
+        "    EXPECT_EQ(1, result);\n"
+        "}\n"
+    )
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            input_path = os.path.join(tmp_dir, "sample.cc")
+            with open(input_path, "w", encoding="utf-8") as handle:
+                handle.write(source)
+            dry_run_stdout = io.StringIO()
+            with contextlib.redirect_stdout(dry_run_stdout):
+                dry_run_exit_code = main(
+                    [input_path, "--mode", "cpp", "--dry-run"]
+                )
+            check_stdout = io.StringIO()
+            check_stderr = io.StringIO()
+            with contextlib.redirect_stdout(check_stdout):
+                with contextlib.redirect_stderr(check_stderr):
+                    check_exit_code = main(
+                        [input_path, "--mode", "cpp", "--check"]
+                    )
+            with open(input_path, "r", encoding="utf-8") as handle:
+                unchanged = handle.read()
+        dry_run_output = dry_run_stdout.getvalue()
+        passed = (
+            dry_run_exit_code == 1
+            and "test-comment-assertion-check" in dry_run_output
+            and "3:5" in dry_run_output
+            and check_exit_code == 0
+            and check_stdout.getvalue() == ""
+            and check_stderr.getvalue() == ""
+            and unchanged == source
+        )
+    except Exception:
+        passed = False
+        dry_run_output = ""
+        check_exit_code = -1
+        unchanged = ""
+    status = "✓" if passed else "✗"
+    print(f"\n{status} CLI dry-run テストコメント診断")
+    if not passed:
+        all_passed = False
+        print(f"  dry-run 出力: {dry_run_output!r}")
+        print(f"  check 終了コード: {check_exit_code}")
+        print(f"  更新後: {unchanged!r}")
 
     # CLI in-place: 着手時メッセージを先に出力する
     original_cwd = os.getcwd()

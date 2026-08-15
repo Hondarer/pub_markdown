@@ -115,6 +115,29 @@ _CODE_FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
 # 行末に明示的改行 (半角スペース 2 つ) を付けない。
 _HTML_BLOCK_LINE_RE = re.compile(r"^</?[A-Za-z][A-Za-z0-9]*(?:\s[^>]*)?/?>")
 _LEADING_WHITESPACE_RE = re.compile(r"^[ \t]*")
+_CPP_TEST_DEFINITION_RE = re.compile(
+    r"\b(?:TYPED_TEST_P|TYPED_TEST|TEST_P|TEST_F|TEST)\s*\("
+)
+_CPP_TEST_COMMENT_TARGET_RE = re.compile(
+    r"\b(ON_CALL|EXPECT_CALL|(?:EXPECT|ASSERT)_[A-Z0-9_]+)\s*\("
+)
+_CPP_RAW_STRING_START_RE = re.compile(
+    r'(?:u8|u|U|L)?R"([^ ()\\\t\r\n]{0,16})\('
+)
+_TEST_PHASE_COMMENT_RE = re.compile(
+    r"^\s*//\s*(?:Arrange|Pre-Assert|Act|Assert|Cleanup)(?:_[0-9]+)?\s*$"
+)
+_TEST_ON_CALL_STATE_TAG_RE = re.compile(r"\[状態\]")
+_TEST_EXPECT_CALL_CHECK_TAG_RE = re.compile(
+    r"\[Pre-Assert確認_(?:正常系|異常系)\]"
+)
+_TEST_EXPECT_CALL_STEP_TAG_RE = re.compile(r"\[Pre-Assert手順\]")
+_TEST_ASSERTION_CHECK_TAG_RE = re.compile(
+    r"\[(?:状態確認|Pre-Assert確認_(?:正常系|異常系)|確認_(?:正常系|異常系))\]"
+)
+_TEST_EXPECT_CALL_ACTION_RE = re.compile(
+    r"\.\s*Will(?:Once|Repeatedly)\s*\("
+)
 
 _FENCE_LANG_TO_SOURCE_MODE = {
     "c": "c", "h": "c",
@@ -931,6 +954,364 @@ def _find_box_drawing_chars(text: str, collector: "DiagnosticCollector") -> None
                 collector.add(col_idx, ch, ch, "box-drawing")
 
 
+def _mask_cpp_test_scan_text(text: str) -> Tuple[str, List[Tuple[int, int]]]:
+    """C++ のコメントと文字列を空白化し、コメント範囲を返す。"""
+    masked = list(text)
+    comment_ranges: List[Tuple[int, int]] = []
+    index = 0
+
+    def _mask_range(start: int, end: int) -> None:
+        for offset in range(start, end):
+            if text[offset] != "\n":
+                masked[offset] = " "
+
+    while index < len(text):
+        if text.startswith("//", index):
+            end = text.find("\n", index)
+            if end < 0:
+                end = len(text)
+            comment_ranges.append((index, end))
+            _mask_range(index, end)
+            index = end
+            continue
+
+        if text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            end = len(text) if end < 0 else end + 2
+            comment_ranges.append((index, end))
+            _mask_range(index, end)
+            index = end
+            continue
+
+        raw_match = _CPP_RAW_STRING_START_RE.match(text, index)
+        if raw_match is not None and (
+            index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_")
+        ):
+            close_token = ")" + raw_match.group(1) + '"'
+            end = text.find(close_token, raw_match.end())
+            end = len(text) if end < 0 else end + len(close_token)
+            _mask_range(index, end)
+            index = end
+            continue
+
+        if text[index] in {'"', "'"}:
+            end = _consume_c_like_string(text, index, "cpp")
+            _mask_range(index, end)
+            index = end
+            continue
+
+        index += 1
+
+    return "".join(masked), comment_ranges
+
+
+def _find_matching_delimiter(
+    text: str,
+    opening_index: int,
+    opening: str,
+    closing: str,
+    limit: Optional[int] = None,
+) -> Optional[int]:
+    """対応する閉じ区切りの位置を返す。"""
+    depth = 0
+    end = len(text) if limit is None else limit
+    for index in range(opening_index, end):
+        if text[index] == opening:
+            depth += 1
+        elif text[index] == closing:
+            depth -= 1
+            if depth == 0:
+                return index
+    return None
+
+
+def _is_cpp_preprocessor_line(text: str, index: int) -> bool:
+    """index がプリプロセッサーの論理行にあるかを返す。"""
+    line_start = text.rfind("\n", 0, index) + 1
+    logical_start = line_start
+
+    while logical_start > 0:
+        previous_end = logical_start - 1
+        previous_start = text.rfind("\n", 0, previous_end) + 1
+        if not text[previous_start:previous_end].rstrip().endswith("\\"):
+            break
+        logical_start = previous_start
+
+    return text[logical_start:line_start].lstrip().startswith("#") or (
+        logical_start == line_start
+        and text[line_start:index].lstrip().startswith("#")
+    )
+
+
+def _find_cpp_test_bodies(masked: str) -> List[Tuple[int, int]]:
+    """GoogleTest のテスト本体範囲を返す。"""
+    bodies: List[Tuple[int, int]] = []
+    cursor = 0
+
+    while True:
+        match = _CPP_TEST_DEFINITION_RE.search(masked, cursor)
+        if match is None:
+            break
+        cursor = match.end()
+        if _is_cpp_preprocessor_line(masked, match.start()):
+            continue
+
+        opening_paren = masked.find("(", match.start(), match.end())
+        closing_paren = _find_matching_delimiter(
+            masked, opening_paren, "(", ")"
+        )
+        if closing_paren is None:
+            continue
+
+        opening_brace = closing_paren + 1
+        while opening_brace < len(masked) and masked[opening_brace].isspace():
+            opening_brace += 1
+        if opening_brace >= len(masked) or masked[opening_brace] != "{":
+            continue
+
+        closing_brace = _find_matching_delimiter(
+            masked, opening_brace, "{", "}"
+        )
+        if closing_brace is None:
+            continue
+
+        bodies.append((opening_brace + 1, closing_brace))
+        cursor = closing_brace + 1
+
+    return bodies
+
+
+def _find_cpp_statement_end(
+    masked: str,
+    start: int,
+    limit: int,
+) -> Optional[int]:
+    """対象マクロを含む C++ 文の終端直後を返す。"""
+    paren_depth = 0
+    brace_depth = 0
+    bracket_depth = 0
+
+    for index in range(start, limit):
+        char = masked[index]
+        if char == "(":
+            paren_depth += 1
+        elif char == ")":
+            paren_depth -= 1
+        elif char == "{":
+            brace_depth += 1
+        elif char == "}":
+            if brace_depth > 0:
+                brace_depth -= 1
+        elif char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth -= 1
+        elif (
+            char == ";"
+            and paren_depth == 0
+            and brace_depth == 0
+            and bracket_depth == 0
+        ):
+            return index + 1
+
+    return None
+
+
+def _range_has_only_comments_and_whitespace(
+    text: str,
+    start: int,
+    end: int,
+    comment_ranges: Sequence[Tuple[int, int]],
+    require_comment: bool,
+) -> bool:
+    """範囲がコメントと空白だけで構成されるかを返す。"""
+    cursor = start
+    found_comment = False
+
+    for comment_start, comment_end in comment_ranges:
+        if comment_end <= start:
+            continue
+        if comment_start >= end:
+            break
+        visible_start = max(comment_start, start)
+        visible_end = min(comment_end, end)
+        if text[cursor:visible_start].strip():
+            return False
+        cursor = max(cursor, visible_end)
+        found_comment = True
+
+    if text[cursor:end].strip():
+        return False
+    return found_comment or not require_comment
+
+
+def _find_associated_test_comment_end(
+    text: str,
+    statement_end: int,
+    body_end: int,
+    comment_ranges: Sequence[Tuple[int, int]],
+) -> int:
+    """対象文へ付随する後続コメントの終端を返す。"""
+    line_end = text.find("\n", statement_end, body_end)
+    if line_end < 0:
+        line_end = body_end
+
+    if not _range_has_only_comments_and_whitespace(
+        text,
+        statement_end,
+        line_end,
+        comment_ranges,
+        require_comment=False,
+    ):
+        return statement_end
+
+    associated_end = line_end
+    line_start = line_end + 1
+    while line_start < body_end:
+        line_end = text.find("\n", line_start, body_end)
+        if line_end < 0:
+            line_end = body_end
+        line = text[line_start:line_end]
+        if not line.strip() or _TEST_PHASE_COMMENT_RE.match(line):
+            break
+        if not _range_has_only_comments_and_whitespace(
+            text,
+            line_start,
+            line_end,
+            comment_ranges,
+            require_comment=True,
+        ):
+            break
+        associated_end = line_end
+        line_start = line_end + 1
+
+    return associated_end
+
+
+def _collect_comment_text(
+    text: str,
+    start: int,
+    end: int,
+    comment_ranges: Sequence[Tuple[int, int]],
+) -> str:
+    """指定範囲と重なるコメント本文を結合する。"""
+    parts: List[str] = []
+    for comment_start, comment_end in comment_ranges:
+        if comment_end <= start:
+            continue
+        if comment_start >= end:
+            break
+        parts.append(
+            text[max(comment_start, start):min(comment_end, end)]
+        )
+    return "\n".join(parts)
+
+
+def _add_test_comment_finding(
+    text: str,
+    index: int,
+    macro_name: str,
+    rule: str,
+    message: str,
+    collector: "DiagnosticCollector",
+) -> None:
+    """不足コメントを対象マクロの位置へ記録する。"""
+    line_start = text.rfind("\n", 0, index) + 1
+    collector.set_line(text.count("\n", 0, index) + 1)
+    collector.add(
+        index - line_start + 1,
+        macro_name,
+        macro_name,
+        rule,
+        message=message,
+    )
+
+
+def _find_cpp_test_comment_findings(
+    text: str,
+    collector: "DiagnosticCollector",
+) -> None:
+    """GoogleTest / Google Mock マクロの不足コメントを検出する。"""
+    masked, comment_ranges = _mask_cpp_test_scan_text(text)
+
+    for body_start, body_end in _find_cpp_test_bodies(masked):
+        cursor = body_start
+        while cursor < body_end:
+            match = _CPP_TEST_COMMENT_TARGET_RE.search(masked, cursor, body_end)
+            if match is None:
+                break
+            if _is_cpp_preprocessor_line(masked, match.start()):
+                cursor = match.end()
+                continue
+
+            statement_end = _find_cpp_statement_end(
+                masked, match.start(), body_end
+            )
+            if statement_end is None:
+                cursor = match.end()
+                continue
+
+            associated_end = _find_associated_test_comment_end(
+                text,
+                statement_end,
+                body_end,
+                comment_ranges,
+            )
+            comments = _collect_comment_text(
+                text,
+                match.start(),
+                associated_end,
+                comment_ranges,
+            )
+            macro_name = match.group(1)
+
+            if macro_name == "ON_CALL":
+                if _TEST_ON_CALL_STATE_TAG_RE.search(comments) is None:
+                    _add_test_comment_finding(
+                        text,
+                        match.start(),
+                        macro_name,
+                        "test-comment-on-call-state",
+                        "ON_CALL には [状態] コメントが必要",
+                        collector,
+                    )
+            elif macro_name == "EXPECT_CALL":
+                if _TEST_EXPECT_CALL_CHECK_TAG_RE.search(comments) is None:
+                    _add_test_comment_finding(
+                        text,
+                        match.start(),
+                        macro_name,
+                        "test-comment-expect-call-check",
+                        "EXPECT_CALL には [Pre-Assert確認_*] コメントが必要",
+                        collector,
+                    )
+                statement = masked[match.start():statement_end]
+                if (
+                    _TEST_EXPECT_CALL_ACTION_RE.search(statement) is not None
+                    and _TEST_EXPECT_CALL_STEP_TAG_RE.search(comments) is None
+                ):
+                    _add_test_comment_finding(
+                        text,
+                        match.start(),
+                        macro_name,
+                        "test-comment-expect-call-step",
+                        "WillOnce / WillRepeatedly には [Pre-Assert手順] コメントが必要",
+                        collector,
+                    )
+            elif _TEST_ASSERTION_CHECK_TAG_RE.search(comments) is None:
+                _add_test_comment_finding(
+                    text,
+                    match.start(),
+                    macro_name,
+                    "test-comment-assertion-check",
+                    "EXPECT_* / ASSERT_* には確認コメントが必要",
+                    collector,
+                )
+
+            # 外側の文に含まれる入れ子マクロは、外側のコメントで代表する。
+            cursor = statement_end
+
+
 def _detect_fence_source_mode(info: str) -> Optional[str]:
     """フェンス情報文字列 (言語タグ部分) から対応するソースモードを返す。
 
@@ -1140,6 +1521,8 @@ def style_by_mode(
     if mode == "markdown":
         return normalize_blank_lines(style_markdown(text, collector=collector))
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:
+        if mode == "cpp" and collector is not None:
+            _find_cpp_test_comment_findings(text, collector)
         return style_source_comments(text, mode, collector=collector)
     if mode == "text":
         text = replace_nbsp_with_space(text, collector=collector)
