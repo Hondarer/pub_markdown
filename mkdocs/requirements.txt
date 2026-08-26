@@ -1,0 +1,8 @@
+# mkdocs 簡易プレビュー基盤の Python 依存
+# framework/docsfw/mkdocs/.venv へ導入します。
+# 導入手順は README.md を参照してください。
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+markdown-callouts==0.4.0
+pymdown-extensions==11.0.2
+mkdocs-awesome-nav==3.3.0

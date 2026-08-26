@@ -605,31 +605,19 @@ return {
                 end
             end
 
-            -- @startjson, @startyaml に caption が付与できなかったので、caption がなくても対応できるようにする
+            -- caption 行がない場合は、@start<種別> に続く名前をキャプションとして採用する
+            --
+            -- @startjson や @startyaml は caption 行を書けないため、この経路が必要となる。
+            -- 種別を限定すると @startgantt や @startwbs などで名前を拾えないため、
+            -- 挿入位置の探索と同じく @start<種別> 全般を対象とする。
+            -- 名前のない @startuml は %s+ が一致せず、対象外となる。
             if caption == nil then
-                local umlPattern = "^@startuml%s*(.+)%s*$"
-                local mindmapPattern = "^@startmindmap%s*(.+)%s*$"
-                local jsonPattern = "^@startjson%s*(.+)%s*$"
-                local yamlPattern = "^@startyaml%s*(.+)%s*$"
+                local startPattern = "^%s*@start%w+%s+(.+)%s*$"
                 for _, line in ipairs(lines) do
-                    if line:match(umlPattern) then
+                    local startTitle = line:match(startPattern)
+                    if startTitle then
                         -- キャプションの部分を得る
-                        caption = line:match(umlPattern)
-                        break
-                    end
-                    if line:match(mindmapPattern) then
-                        -- キャプションの部分を得る
-                        caption = line:match(mindmapPattern)
-                        break
-                    end
-                    if line:match(jsonPattern) then
-                        -- キャプションの部分を得る
-                        caption = line:match(jsonPattern)
-                        break
-                    end
-                    if line:match(yamlPattern) then
-                        -- キャプションの部分を得る
-                        caption = line:match(yamlPattern)
+                        caption = startTitle
                         break
                     end
                 end
@@ -650,10 +638,17 @@ return {
             end
 
             if not hasBackgroundColor then
-                -- @startuml, @startmindmap, @startjson, @startyaml の後に スタイル設定と "skinparam backgroundColor transparent" を挿入
+                -- @start<種別> の後に スタイル設定と "skinparam backgroundColor transparent" を挿入
+                --
+                -- 種別を限定すると、@startebnf や @startregex のように列挙外の図で
+                -- 該当行が見つからず、@start より前へ挿入される。
+                -- PlantUML の CLI とサーバーは @start より前の行を無視するため実害はないが、
+                -- @plantuml/core (mkdocs 簡易プレビューが使うブラウザー実装) は
+                -- 認識できない指示としてエラー図を返す。
+                -- 双方で同じ結果を得るため、@start<種別> 全般を対象とする。
                 local insertIndex = 1
                 for i, line in ipairs(removeCaptionLines) do
-                    if line:match("^@startuml") or line:match("^@startmindmap") or line:match("^@startjson") or line:match("^@startyaml") then
+                    if line:match("^%s*@start%w+") then
                         insertIndex = i + 1 -- 該当行の次の行に挿入する
                         break
                     end

@@ -1,0 +1,102 @@
+/* mkdocs 簡易プレビュー基盤の追加スタイル。
+   Material 標準にない docsfw 固有の表現だけを補う。 */
+
+/* ------------------------------------------------------------------------ */
+/* 図 (PlantUML / Mermaid)                                                   */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset .docsfw-plantuml,
+.md-typeset .docsfw-mermaid {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.md-typeset .docsfw-plantuml svg,
+.md-typeset .docsfw-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 描画待ちの図は、レイアウトが飛ばないように最小の高さを確保する。 */
+.md-typeset .docsfw-plantuml--pending {
+  min-height: 3rem;
+  background-image: linear-gradient(
+    90deg,
+    var(--md-default-fg-color--lightest) 25%,
+    transparent 25%,
+    transparent 50%,
+    var(--md-default-fg-color--lightest) 50%,
+    var(--md-default-fg-color--lightest) 75%,
+    transparent 75%
+  );
+  background-size: 1.5rem 1.5rem;
+  opacity: 0.35;
+}
+
+.md-typeset .docsfw-plantuml--error {
+  padding: 0.6rem 0.8rem;
+  border-left: 0.2rem solid var(--md-typeset-color);
+  color: var(--md-typeset-color);
+  font-size: 0.75rem;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+/* ------------------------------------------------------------------------ */
+/* キャプション                                                              */
+/* ------------------------------------------------------------------------ */
+
+/* docsfw の Table: / CodeBlock: キャプションに相当する段落。 */
+.md-typeset .docsfw-caption {
+  margin-top: 0.4em;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.md-typeset figcaption.docsfw-caption {
+  margin-top: 0.4em;
+}
+
+/* nl2br が段落末尾に付ける <br> は、キャプションでは余白になるので消す。 */
+.md-typeset .docsfw-caption > br:last-child {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------ */
+/* DEPRECATED admonition                                                     */
+/* ------------------------------------------------------------------------ */
+
+/* Material に deprecated 種別は無いため、docsfw の admonition.lua に合わせて追加する。 */
+:root {
+  --md-admonition-icon--deprecated: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.9 7.9 0 0 1 4 12a8 8 0 0 1 8-8zm0 16a7.9 7.9 0 0 1-4.9-1.69L18.31 7.1A7.9 7.9 0 0 1 20 12a8 8 0 0 1-8 8z"/></svg>');
+}
+
+.md-typeset .admonition.deprecated,
+.md-typeset details.deprecated {
+  border-color: rgb(120, 120, 120);
+}
+
+.md-typeset .deprecated > .admonition-title,
+.md-typeset .deprecated > summary {
+  background-color: rgba(120, 120, 120, 0.1);
+}
+
+.md-typeset .deprecated > .admonition-title::before,
+.md-typeset .deprecated > summary::before {
+  background-color: rgb(120, 120, 120);
+  -webkit-mask-image: var(--md-admonition-icon--deprecated);
+  mask-image: var(--md-admonition-icon--deprecated);
+}
+
+/* ------------------------------------------------------------------------ */
+/* \toc が生成する索引リスト                                                 */
+/* ------------------------------------------------------------------------ */
+
+/* 索引の説明文は <br/> と &nbsp; で字下げされる。行間を詰めて読みやすくする。 */
+.md-typeset ul li > br + span,
+.md-typeset ul li {
+  line-height: 1.6;
+}

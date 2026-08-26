@@ -6,3 +6,6 @@ __pycache__/
 
 # output
 /pages
+
+# mkdocs 簡易プレビューの Python 仮想環境
+/mkdocs/.venv

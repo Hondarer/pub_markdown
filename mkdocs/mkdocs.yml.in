@@ -1,0 +1,99 @@
+# mkdocs 簡易プレビュー基盤の設定テンプレート。
+#
+# bin/vendor_assets.py がこのファイルを pages/preview/mkdocs.yml へ展開します。
+# 展開時に置き換わる差し込み位置は、行全体が置換記号だけの行です。
+# plugins の 1 行は publocal.yaml から .nav.yml を生成した場合にだけ
+# awesome-nav プラグインの行になります。
+# watch の 1 行は mergeSubfolderDocs から作った監視対象の一覧になります。
+#
+# 設計は framework/docsfw/docs/mkdocs-preview-design.md を参照してください。
+
+site_name: c-modernization-kit (preview)
+site_description: docsfw の発行対象を mkdocs でプレビューします
+docs_dir: src
+site_dir: site
+use_directory_urls: true
+
+# ソースを直接編集するため、リンク切れは strict ビルドで検出する。
+validation:
+  links:
+    absolute_links: ignore
+    unrecognized_links: warn
+  nav:
+    omitted_files: ignore
+
+theme:
+  name: material
+  language: ja
+  features:
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - toc.follow
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: ダーク モードへ切り替え
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: ライト モードへ切り替え
+
+markdown_extensions:
+  - tables
+  - footnotes
+  - attr_list
+  - md_in_html
+  - nl2br
+  - admonition
+  # GitHub アラート記法 (> [!NOTE] など) を admonition へ変換する。
+  - github-callouts
+  - toc:
+      permalink: true
+      toc_depth: 3
+      # 見出しの id を GitHub と同じ規則にする。
+      # Python-Markdown の既定は非 ASCII を落とすため、日本語見出しへのリンクが切れる。
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.superfences:
+      custom_fences:
+        - name: plantuml
+          class: docsfw-plantuml
+          format: !!python/name:pymdownx.superfences.fence_div_format
+        - name: mermaid
+          class: docsfw-mermaid
+          format: !!python/name:pymdownx.superfences.fence_div_format
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.mark
+  - pymdownx.arithmatex:
+      generic: true
+
+plugins:
+  - search:
+      lang: ja
+@AWESOME_NAV@
+
+extra_css:
+  - assets/docsfw-preview.css
+
+extra_javascript:
+  # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。
+  - assets/plantuml/viz-global.js
+  - path: assets/docsfw-plantuml.js
+    type: module
+  - assets/mermaid/mermaid.min.js
+  - assets/docsfw-mermaid.js
+  - assets/docsfw-mathjax.js
+  # MathJax は docsfw の pandoc --mathjax と同じく CDN から読み込む。
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+# ステージング元を監視して、mkdocs serve が変更を拾えるようにする。
+# 一覧は mergeSubfolderDocs から生成する。
+watch:
+@WATCH@
