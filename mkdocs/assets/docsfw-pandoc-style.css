@@ -48,6 +48,60 @@
   color: var(--md-default-fg-color--light);
 }
 
+/* 見出しの自動採番。
+   pandoc 発行版は -N (--number-sections) と --shift-heading-level-by=-1 に
+   より、Markdown 上の H1 (文書タイトル) を除いた H2 以降に 1 / 1.1 / 1.1.1 ...
+   と番号を振る (framework/docsfw/docs/mpe-heading-numbering.md も参照)。
+   mkdocs は H1 をページ見出しとして残す構成のため、H1 は対象外のまま
+   H2 から CSS カウンターで同じ番号を再現する。 */
+.md-typeset h1 { counter-reset: docsfw-h2; }
+.md-typeset h2 { counter-reset: docsfw-h3; }
+.md-typeset h3 { counter-reset: docsfw-h4; }
+.md-typeset h4 { counter-reset: docsfw-h5; }
+.md-typeset h5 { counter-reset: docsfw-h6; }
+
+.md-typeset h2::before {
+  counter-increment: docsfw-h2;
+  content: counter(docsfw-h2) " ";
+}
+
+.md-typeset h3::before {
+  counter-increment: docsfw-h3;
+  content: counter(docsfw-h2) "." counter(docsfw-h3) " ";
+}
+
+.md-typeset h4::before {
+  counter-increment: docsfw-h4;
+  content: counter(docsfw-h2) "." counter(docsfw-h3) "." counter(docsfw-h4) " ";
+}
+
+.md-typeset h5::before {
+  counter-increment: docsfw-h5;
+  content: counter(docsfw-h2) "." counter(docsfw-h3) "." counter(docsfw-h4) "." counter(docsfw-h5) " ";
+}
+
+.md-typeset h6::before {
+  counter-increment: docsfw-h6;
+  content: counter(docsfw-h2) "." counter(docsfw-h3) "." counter(docsfw-h4) "." counter(docsfw-h5) "." counter(docsfw-h6) " ";
+}
+
+/* ページ内 TOC (右サイドバー) にも同じ番号を振る。
+   partials/toc.html は入れ子の <ul class="md-nav__list"> で見出し階層を
+   表現するため、複数形の counters() で階層を問わず連結できる。
+   H1 は toc.html 側で既定除外されるため、ここでの除外処理は不要。 */
+.md-nav--secondary .md-nav__list {
+  counter-reset: docsfw-toc-num;
+}
+
+.md-nav--secondary .md-nav__item {
+  counter-increment: docsfw-toc-num;
+}
+
+.md-nav--secondary .md-nav__item > .md-nav__link .md-ellipsis::before {
+  content: counters(docsfw-toc-num, ".") " ";
+  color: var(--md-default-fg-color--light);
+}
+
 /* ------------------------------------------------------------------------ */
 /* 段落・リスト                                                              */
 /* ------------------------------------------------------------------------ */
@@ -81,8 +135,23 @@
   border: 1px solid var(--md-default-fg-color--lightest);
 }
 
-.md-typeset pre,
+/* pymdownx.superfences のコード ブロックは
+   <div class="highlight"><pre><code>...</code></pre></div> という構造になる。
+   枠線は外側の .highlight にだけ付け、内側の pre はブラウザー既定の
+   margin/border を持つため打ち消す (pandoc 版の div.sourceCode > pre と
+   同じ考え方)。両方に枠線を付けると二重の枠と、その間の余白が生じる。 */
 .md-typeset .highlight {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 3px;
+}
+
+.md-typeset .highlight pre {
+  margin: 0;
+  border: none;
+}
+
+/* .highlight を伴わない単独の pre (稀なケース) 向けの保険。 */
+.md-typeset pre:not(.highlight pre) {
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 3px;
 }
@@ -91,14 +160,36 @@
 /* テーブル                                                                  */
 /* ------------------------------------------------------------------------ */
 
+/* mkdocs-material の table:not([class]) は画面表示では常に
+   display: inline-block (display: table になるのは @media print のみ) の
+   ため、table 自身に margin: auto を指定しても中央寄せにならない。
+   inline-block を中央寄せするには、外側のスクロール ラッパー
+   (.md-typeset__table、これも既定で inline-block) を display: block +
+   text-align: center にし、text-align の継承をセル側で打ち消す。 */
+.md-typeset__table {
+  display: block;
+  text-align: center;
+}
+
+/* さらに `html .md-typeset__table table { width: 100% }` という、より
+   詳細度の高いルールが表を常にラッパー幅いっぱいに広げてしまい、
+   text-align: center で寄せる余白そのものが無くなる。
+   `.md-typeset table:not([class])` はこのルールより詳細度が高いため、
+   ここで width: auto を指定して上書きし、内容幅に縮められるようにする。 */
 .md-typeset table:not([class]) {
   border-collapse: collapse;
+  margin: 12px 0;
+  width: auto;
 }
 
 .md-typeset table:not([class]) th,
 .md-typeset table:not([class]) td {
   border: 1px solid var(--md-default-fg-color--lighter);
   padding: 8px;
+  /* .md-typeset__table の text-align: center を打ち消す。
+     表そのものは中央寄せにするが、セル内の文字は左寄せのままにする
+     (pandoc 発行版と同じ挙動)。 */
+  text-align: left;
 }
 
 .md-typeset table:not([class]) th {
