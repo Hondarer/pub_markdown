@@ -173,7 +173,6 @@ C4Context
 ```
 
 CodeBlock: C4 のサンプル
-
 -->
 
 ## Mindmap
@@ -216,7 +215,6 @@ zenuml
 ```
 
 CodeBlock: ZenUML のサンプル
-
 -->
 
 ## Sankey

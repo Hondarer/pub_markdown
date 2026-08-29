@@ -237,6 +237,7 @@ PlantUML の各図種のサンプルを示します。
 @enduml
 ```
 
+<!--
 ## Salt
 
 ```plantuml
@@ -253,6 +254,7 @@ PlantUML の各図種のサンプルを示します。
 }
 @endsalt
 ```
+-->
 
 ## JSON
 
