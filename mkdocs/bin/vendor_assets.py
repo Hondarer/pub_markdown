@@ -23,12 +23,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_preview_docs import (  # noqa: E402
-    parse_config,
-    parse_merge_subfolder_docs,
-    write_if_changed,
-    _posix,
-)
+from stage_preview_docs import write_if_changed  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -111,26 +106,6 @@ def vendor_own_assets(assets_dir):
     return copied
 
 
-def build_watch_list(workspace, preview_dir, config):
-    """``mergeSubfolderDocs`` から mkdocs の ``watch`` 一覧を作る。
-
-    ``app`` 全体を監視するとビルド生成物の更新でも再ビルドが走るため、
-    実際のドキュメント ディレクトリだけを列挙します。
-    """
-    md_root = config.get("mdRoot") or "docs"
-    roots = [os.path.normpath(os.path.join(workspace, md_root))]
-    for _alias, path in parse_merge_subfolder_docs(config.get("mergeSubfolderDocs"), workspace):
-        roots.append(path)
-
-    lines = []
-    for root in roots:
-        if not os.path.isdir(root):
-            continue
-        relative = _posix(os.path.relpath(root, preview_dir))
-        lines.append("  - {}".format(relative))
-    return "\n".join(lines)
-
-
 def has_nav_files(docs_dir):
     """ステージング先に ``.nav.yml`` が 1 つでもあるかどうかを返す。"""
     for dirpath, _dirnames, filenames in os.walk(docs_dir):
@@ -139,7 +114,7 @@ def has_nav_files(docs_dir):
     return False
 
 
-def generate_mkdocs_yml(workspace, preview_dir, config, nav_generated):
+def generate_mkdocs_yml(preview_dir, nav_generated):
     """``mkdocs.yml.in`` から ``pages/preview/mkdocs.yml`` を生成する。"""
     template_path = os.path.join(MKDOCS_DIR, "mkdocs.yml.in")
     with open(template_path, "r", encoding="utf-8") as handle:
@@ -147,7 +122,6 @@ def generate_mkdocs_yml(workspace, preview_dir, config, nav_generated):
 
     replacements = {
         "@AWESOME_NAV@": "  - awesome-nav" if nav_generated else "",
-        "@WATCH@": build_watch_list(workspace, preview_dir, config),
     }
 
     # 置換記号だけの行を差し替える。説明文の中に現れた記号は対象にしない。
@@ -174,8 +148,6 @@ def main(argv=None):
     workspace = os.path.abspath(args.workspace)
     preview_dir = os.path.abspath(args.preview_dir or os.path.join(workspace, "pages", "preview"))
     assets_dir = os.path.join(preview_dir, "src", "assets")
-    config_path = os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
-    config = parse_config(config_path)
 
     try:
         copied = vendor_plantuml(assets_dir)
@@ -186,7 +158,7 @@ def main(argv=None):
         return 1
 
     nav_generated = has_nav_files(os.path.join(preview_dir, "src"))
-    changed = generate_mkdocs_yml(workspace, preview_dir, config, nav_generated)
+    changed = generate_mkdocs_yml(preview_dir, nav_generated)
 
     if not args.quiet:
         print("vendored: {} assets, mkdocs.yml {}".format(copied, "updated" if changed else "unchanged"))

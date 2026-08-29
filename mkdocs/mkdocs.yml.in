@@ -4,7 +4,6 @@
 # 展開時に置き換わる差し込み位置は、行全体が置換記号だけの行です。
 # plugins の 1 行は publocal.yaml から .nav.yml を生成した場合にだけ
 # awesome-nav プラグインの行になります。
-# watch の 1 行は mergeSubfolderDocs から作った監視対象の一覧になります。
 #
 # 設計は framework/docsfw/docs/mkdocs-preview-design.md を参照してください。
 
@@ -108,7 +107,9 @@ extra_javascript:
   # MathJax は docsfw の pandoc --mathjax と同じく CDN から読み込む。
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
-# ステージング元を監視して、mkdocs serve が変更を拾えるようにする。
-# 一覧は mergeSubfolderDocs から生成する。
-watch:
-@WATCH@
+# 元の Markdown の変更を検知し、1 ファイル単位の軽量なステージングを
+# 自動で行う。ステージング結果は docs_dir に書き込まれるため、mkdocs 標準の
+# docs_dir 監視がそれを検知してビルドとブラウザーの自動リロードを行う。
+# 詳細は docs/mkdocs-preview-design.md を参照。
+hooks:
+  - ../../framework/docsfw/mkdocs/bin/preview_autostage_hook.py

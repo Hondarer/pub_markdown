@@ -149,6 +149,7 @@ framework/docsfw/
 |   |   +-- lang_details_filter.py   # replace-tag.sh の Python 移植
 |   |   +-- expand_toc.py            # \toc の展開
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
+|   |   +-- preview_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
 |   |   +-- stop_preview_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- assets/
@@ -176,6 +177,42 @@ pages/preview/
 
 `make cleandocs` は `pages/` 配下から `doxygen` だけを残して削除するため、`pages/preview/` も同時に消えます。  
 これは意図した挙動です。
+
+## mkdocs serve 中の自動ステージング
+
+### 背景
+
+`mkdocs serve` は既定で `docs_dir` (`pages/preview/src/`) だけを監視する。  
+執筆者が実際に編集するのは元の Markdown (`app/*/docs` 等) であり、そのままではステージング (`stage_preview_docs.py`) を手動で再実行しない限り画面へ反映されない。「執筆中の確認用プレビュー」という位置付けからすると、元の Markdown を保存するだけで反映される方が自然なため、`bin/preview_autostage_hook.py` を mkdocs の `hooks:` として追加した。
+
+### mkdocs 側の制約
+
+mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる  
+(`framework/docsfw/mkdocs/.venv/Lib/site-packages/mkdocs/livereload/__init__.py:139-161`)。
+
+このため `preview_autostage_hook.py` は、mkdocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は mkdocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
+
+以前は `mkdocs.yml` の `watch:` に元の Markdown ディレクトリを列挙し、mkdocs 本体の監視に変更検知だけを任せていた (`vendor_assets.py` の `build_watch_list` が生成)。しかし `docs_dir` はステージング先 (`src/`) のままのため、この `watch:` は「元ファイルの変更を検知してビルドをやり直す」だけで、ビルドに使う内容自体は古いステージング済みコピーのままだった。実質的に反映には寄与しない仕組みだったため、`preview_autostage_hook.py` の導入とあわせて `watch:` および `build_watch_list` は削除した。
+
+### ファイル単位の軽量な再ステージングと索引の間引き
+
+`stage_preview_docs.py` の `stage()` は、索引構築 (`build_stage_index`: `collect_sources` によるワークスペース全体の走査、`DocIndex`、実パス→ステージング後パスの対応表 `real_to_staged` の構築) と、書き出し (`write_documents`: 1 ファイルごとに完結する変換とその書き出し) に分かれている。
+
+`preview_autostage_hook.py` は起動時に一度だけ `build_stage_index()` を実行し、結果をプロセス内にキャッシュする。以降は次の方針で振り分ける。
+
+- 既知の Markdown ファイルの内容変更: `stage_single()` でその 1 ファイルだけを再変換・書き出しする。ワークスペース全体の再走査は行わない。
+- ファイルの作成・削除・移動、または `stage_single()` が「索引に無いファイル」を返した場合: ディレクトリ構成やファイル一覧が変わるため、`stage()` によるフル ステージングにフォールバックし、索引も作り直す。
+- 索引 (`\toc` の一覧やリンク解決表) は、単一ファイル再ステージングでは更新しない。対象ファイル自身の内容は最新化されるが、他ページからのリンク表示テキストや `\toc` の一覧は直前のフル ステージング時点のまま遅延する。ズレが蓄積しすぎないよう、単一ファイル再ステージングを 20 回行うごとに 1 回、フル ステージングを挟んで索引を再同期する。
+
+索引の鮮度をこのように間引くのは意図的な設計判断であり、日常的な本文編集の反映速度 (ワークスペース全体を再走査しない軽量さ) を優先している。
+
+### make preview-stage を残す理由
+
+上記の自動ステージングは `mkdocs serve` の実行中にしか働かない (`on_serve` フックのため)。次の経路では、引き続き `make preview-stage` (フル ステージング) が唯一の同期手段であり、削除していない。
+
+- `make preview` が `mkdocs serve` を起動する前の `pages/preview/` 一式 (初回の `src/`、`mkdocs.yml`、vendored assets) の準備。
+- `make preview-build` (`mkdocs serve` を経由しない one-shot ビルドによるリンク切れ検査)。
+- `vendor_assets.py` が扱う JS/CSS アセットや `mkdocs.yml` 自体の更新 (自動ステージングの対象は Markdown のみ)。
 
 ## PlantUML のブラウザー レンダリング
 
@@ -263,7 +300,7 @@ markdown_extensions:
   - pymdownx.arithmatex: { generic: true }
 
 plugins:
-  - search: { lang: ja }
+  - search: { lang: en, separator: "... CJK 文字境界を追加 (後述) ..." }
 ```
 
 `nav:` は記述しません。  

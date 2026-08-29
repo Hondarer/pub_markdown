@@ -719,14 +719,33 @@ def remove_stale(out_dir, keep_relative):
 
 
 # ----------------------------------------------------------------------------
-# メイン
+# 索引 (mkdocs serve 中の 1 ファイル単位の再ステージングでキャッシュとして使い回す)
 # ----------------------------------------------------------------------------
 
-def stage(workspace, out_dir, config_path, quiet=False):
-    """収集から書き出しまでを実行する。
+class StageIndex:
+    """``build_stage_index`` の結果をまとめたコンテナ。
 
-    :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
+    ``mapper``/``index``/``real_to_staged`` はワークスペース全体の走査を経て
+    構築されるため、``on_serve`` フック等はこれをプロセス内にキャッシュし、
+    1 ファイルだけの再ステージング (``stage_single``) に使い回す。
     """
+
+    def __init__(self, workspace, config_path, main_mdroot, subfolders,
+                 mapper, kept, assets, index, real_to_staged, by_real_path):
+        self.workspace = workspace
+        self.config_path = config_path
+        self.main_mdroot = main_mdroot
+        self.subfolders = subfolders
+        self.mapper = mapper
+        self.kept = kept
+        self.assets = assets
+        self.index = index
+        self.real_to_staged = real_to_staged
+        self.by_real_path = by_real_path
+
+
+def build_stage_index(workspace, config_path):
+    """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。"""
     config = parse_config(config_path)
     md_root_name = config.get("mdRoot") or "docs"
     main_mdroot = os.path.normpath(os.path.join(workspace, md_root_name))
@@ -762,39 +781,130 @@ def stage(workspace, out_dir, config_path, quiet=False):
 
     index = DocIndex()
     real_to_staged = {}
+    by_real_path = {}
     for document in kept:
         index.add(document.staged_rel, document.source_name, document.title)
-        real_to_staged[_norm_key(document.real_path)] = document.staged_rel
+        key = _norm_key(document.real_path)
+        real_to_staged[key] = document.staged_rel
+        by_real_path[key] = document
     for real_path, virtual_rel in assets:
         real_to_staged[_norm_key(real_path)] = virtual_rel
 
+    return StageIndex(
+        workspace=workspace,
+        config_path=config_path,
+        main_mdroot=main_mdroot,
+        subfolders=subfolders,
+        mapper=mapper,
+        kept=kept,
+        assets=assets,
+        index=index,
+        real_to_staged=real_to_staged,
+        by_real_path=by_real_path,
+    )
+
+
+def _render_document(document, container):
+    """1 ドキュメント分の変換パイプラインを実行し、書き出す内容を返す。"""
+    body = rewrite_links(document.body, document, container.mapper, container.real_to_staged)
+    body = expand_toc_commands(body, container.index, document.staged_rel)
+    body = strip_collapsible_list_fences(body)
+    body = convert_deprecated_alerts(body)
+    body = convert_captions(body)
+    body = remove_page_breaks(body)
+
+    front_matter = build_front_matter(document)
+    content = (front_matter + "\n" + body) if front_matter else body
+    if not content.endswith("\n"):
+        content += "\n"
+    return content
+
+
+def write_documents(container, out_dir):
+    """索引済みの全ドキュメントとアセットを変換・書き出す。
+
+    :return: ``(更新数, 書き出したステージング相対パスの集合)``。
+    """
     keep_relative = set()
     updated = 0
 
-    for document in kept:
-        body = rewrite_links(document.body, document, mapper, real_to_staged)
-        body = expand_toc_commands(body, index, document.staged_rel)
-        body = strip_collapsible_list_fences(body)
-        body = convert_deprecated_alerts(body)
-        body = convert_captions(body)
-        body = remove_page_breaks(body)
-
-        front_matter = build_front_matter(document)
-        content = (front_matter + "\n" + body) if front_matter else body
-        if not content.endswith("\n"):
-            content += "\n"
-
+    for document in container.kept:
+        content = _render_document(document, container)
         if write_if_changed(os.path.join(out_dir, document.staged_rel), content):
             updated += 1
         keep_relative.add(document.staged_rel)
 
-    for real_path, virtual_rel in assets:
+    for real_path, virtual_rel in container.assets:
         if copy_asset_if_changed(real_path, os.path.join(out_dir, virtual_rel)):
             updated += 1
         keep_relative.add(virtual_rel)
 
+    return updated, keep_relative
+
+
+def stage_single(container, out_dir, real_path):
+    """1 ファイルだけを軽量に再ステージングする。
+
+    ``container`` (``build_stage_index`` の戻り値) にキャッシュされた索引
+    (``mapper``/``index``/``real_to_staged``) をそのまま使い回し、対象ファイル
+    自身の front matter 解析から変換・書き出しまでだけをやり直す。
+    ワークスペース全体の再走査 (``collect_sources``) は行わない。
+
+    索引そのもの (``\\toc`` の一覧やリンク解決表、README/SKILL の index.md
+    昇格判定) は更新しないため、対象ファイル自身のタイトル変更や、対象
+    ファイルへリンクしている他ページの表示は最新化されない。呼び出し元は、
+    新規ファイルの追加やファイル一覧の変化を検知した場合、あるいはこの
+    ズレを解消したい場合に ``build_stage_index`` + ``write_documents`` による
+    フル ステージングへフォールバックすること。
+
+    :return: 書き出した (または意図的にスキップした) 場合は ``True``。
+             対象ファイルが索引に無い (新規ファイル等) 場合は ``None``。
+    """
+    document = container.by_real_path.get(_norm_key(real_path))
+    if document is None:
+        return None
+
+    try:
+        raw = read_text(real_path)
+    except OSError as error:
+        print("Warning: cannot read {}: {}".format(real_path, error))
+        return True
+
+    front_matter, body = split_front_matter(raw)
+    fields = parse_front_matter_fields(front_matter)
+    if is_skipped(fields):
+        # 新たに pub_markdown.skip: true になった場合は書き出さない。
+        # 既存の staged ファイルは、次回のフル ステージングの remove_stale が掃除する。
+        return True
+
+    document.front_matter = front_matter
+    document.fields = fields
+    document.body = filter_lang_details(body, PREVIEW_LANG, PREVIEW_DETAILS)
+    document.title = (
+        resolve_short_title(fields, PREVIEW_LANG, PREVIEW_DETAILS)
+        or first_heading(document.body)
+        or posixpath.splitext(document.source_name)[0]
+    )
+
+    content = _render_document(document, container)
+    write_if_changed(os.path.join(out_dir, document.staged_rel), content)
+    return True
+
+
+# ----------------------------------------------------------------------------
+# メイン
+# ----------------------------------------------------------------------------
+
+def stage(workspace, out_dir, config_path, quiet=False):
+    """収集から書き出しまでを実行する (フル ステージング)。
+
+    :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
+    """
+    container = build_stage_index(workspace, config_path)
+    updated, keep_relative = write_documents(container, out_dir)
+
     staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative})
-    nav_count = generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs)
+    nav_count = generate_nav_files(out_dir, container.main_mdroot, container.subfolders, staged_dirs)
     for staged_dir in staged_dirs:
         candidate = posixpath.join(staged_dir, ".nav.yml") if staged_dir else ".nav.yml"
         if os.path.isfile(os.path.join(out_dir, candidate)):
@@ -804,9 +914,9 @@ def stage(workspace, out_dir, config_path, quiet=False):
 
     if not quiet:
         print("staged: {} documents, {} assets, {} updated, {} removed, {} nav files".format(
-            len(kept), len(assets), updated, removed, nav_count))
+            len(container.kept), len(container.assets), updated, removed, nav_count))
 
-    return len(kept), updated, nav_count
+    return len(container.kept), updated, nav_count
 
 
 def main(argv=None):

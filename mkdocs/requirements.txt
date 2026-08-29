@@ -6,3 +6,6 @@ mkdocs-material==9.7.7
 markdown-callouts==0.4.0
 pymdown-extensions==11.0.2
 mkdocs-awesome-nav==3.3.0
+# preview_autostage_hook.py が独自の Observer を作るため直接依存として明記する
+# (mkdocs 自体の推移的依存として既に導入されているバージョンに合わせる)。
+watchdog==6.0.0
