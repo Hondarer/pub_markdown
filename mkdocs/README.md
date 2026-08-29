@@ -39,11 +39,21 @@ make preview-build
 現状は docsfw でも解決しないリンクが残るため、既定では `--strict` を使用しません。  
 内訳は [設計ドキュメントの「既知の警告」](../docs/mkdocs-preview-design.md) を参照してください。
 
-生成物を消す場合は次を実行します。
+生成物を消す場合は次を実行します。  
+`cleanpreview` は削除の前に、このワークスペースの `mkdocs serve` を停止します。  
+ルートの `make clean` と `make cleandocs` も同じ停止を行います。
 
 ```bash
 make cleanpreview
 ```
+
+serve だけを止めて `pages/preview/` を残す場合は次を実行します。
+
+```bash
+make preview-stop
+```
+
+停止の対象範囲と Windows でのツリー終了は [設計ドキュメント](../docs/mkdocs-preview-design.md) を参照してください。
 
 ## 構成
 
@@ -53,6 +63,7 @@ make cleanpreview
 | `bin/lang_details_filter.py` | `bin/replace-tag.sh` の Python 移植 |
 | `bin/expand_toc.py` | `\toc` の索引展開 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
+| `bin/stop_preview_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
 | `mkdocs.yml.in` | mkdocs 設定のテンプレート |
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
 | `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |

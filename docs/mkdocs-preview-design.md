@@ -149,6 +149,7 @@ framework/docsfw/
 |   |   +-- lang_details_filter.py   # replace-tag.sh の Python 移植
 |   |   +-- expand_toc.py            # \toc の展開
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
+|   |   +-- stop_preview_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- assets/
 |   |   +-- docsfw-plantuml.js       # クライアント側 PlantUML レンダラー
@@ -279,8 +280,19 @@ mkdocs の自動ナビゲーションに任せ、`publocal.yaml` が存在する
 | ターゲット | 内容 |
 |---|---|
 | `preview` | ステージング後に `mkdocs serve` を起動する |
-| `preview-build` | ステージング後に `mkdocs build --strict` を実行する |
-| `cleanpreview` | `pages/preview/` を削除する |
+| `preview-build` | ステージング後に `mkdocs build` を実行する。`PREVIEW_STRICT=1` のときは `--strict` を付ける |
+| `preview-stop` | このワークスペースのプレビュー venv で動いている `mkdocs serve` を停止する |
+| `cleanpreview` | serve を停止してから `pages/preview/` を削除する |
+
+ルートの `make clean` は `cleandocs` を呼び、`cleandocs` と `cleanpreview` は削除の前に `preview-stop` を実行します。  
+`mkdocs serve` は `pages/preview` を監視し続けるため、Windows では削除対象が busy になり `rm -rf` が失敗します。  
+`preview-stop` はこのワークスペースのプレビュー venv をコマンド ラインに含み、かつ引数がちょうど `serve` であるプロセスとその子孫だけを止めます。  
+ポート番号や作業ディレクトリだけでは判定しません。  
+Linux では TERM のあと残っていれば KILL します。プロセス グループ全体へは送りません。`make preview` は端末とグループを共有するためです。  
+Windows では SIGTERM がネイティブの python や watchdog に届かず、親だけが先に死ぬとハンドルが残ります。  
+そのため `/proc/<pid>/winpid` 経由で `taskkill /T /F` し、ツリーごと終了します。  
+停止直後でもハンドルが残ることがあるため、削除は短い間隔で最大 5 回やり直します。  
+対象プロセスが無い、または停止しきれない場合も `preview-stop` 自体は失敗しません。削除できなければ `clean` が失敗します。
 
 Python の依存は `framework/docsfw/mkdocs/.venv` に閉じ込め、`requirements.txt` で固定します。
 
