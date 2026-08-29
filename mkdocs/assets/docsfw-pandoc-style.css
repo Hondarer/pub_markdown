@@ -1,0 +1,125 @@
+/* mkdocs 簡易プレビュー基盤の追加スタイル。
+   pandoc 発行版 (framework/docsfw/styles/html/html-style.css) に見た目を
+   近づけるための、本文タイポグラフィの上書き。
+   ライト/ダーク切替、ナビゲーション、検索など Material の機能は変更しない。 */
+
+/* ------------------------------------------------------------------------ */
+/* フォント                                                                  */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset {
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 見出し                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  margin: 1.25em 0 0.625em;
+  line-height: 1.4;
+}
+
+.md-typeset h1 {
+  font-size: 1.1875rem;
+  font-weight: 700;
+}
+
+.md-typeset h2,
+.md-typeset h3 {
+  font-size: 1.1875rem;
+  font-weight: 400;
+}
+
+.md-typeset h4,
+.md-typeset h5 {
+  font-size: 1.0625rem;
+  font-weight: 400;
+}
+
+.md-typeset h6 {
+  font-size: 1.0625rem;
+  font-weight: 400;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 段落・リスト                                                              */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset p,
+.md-typeset ul,
+.md-typeset ol,
+.md-typeset dl {
+  margin: 0.5em 0;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 引用                                                                      */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset blockquote {
+  border-left: 4px solid var(--md-default-fg-color--lightest);
+  padding: 0 1em;
+  color: var(--md-default-fg-color--light);
+}
+
+/* ------------------------------------------------------------------------ */
+/* コード                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset code {
+  border-radius: 3px;
+}
+
+.md-typeset :not(pre) > code {
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+.md-typeset pre,
+.md-typeset .highlight {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 3px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* テーブル                                                                  */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset table:not([class]) {
+  border-collapse: collapse;
+}
+
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td {
+  border: 1px solid var(--md-default-fg-color--lighter);
+  padding: 8px;
+}
+
+.md-typeset table:not([class]) th {
+  font-weight: 400;
+  background-color: var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class]) tr {
+  background-color: var(--md-default-bg-color);
+}
+
+.md-typeset table:not([class]) tr:hover {
+  background-color: var(--md-default-bg-color);
+}
+
+/* ------------------------------------------------------------------------ */
+/* 水平線                                                                    */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset hr {
+  border: 0 none;
+  height: 1px;
+  background-color: var(--md-default-fg-color--lighter);
+}

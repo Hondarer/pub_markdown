@@ -122,7 +122,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 | 45 | ページ内目次 | 維持 | Material の右サイドバー。`toc_depth: 3` |
 | 46 | サイト内ナビゲーション ツリー | 維持 | Material の左サイドバー。自動生成 |
 | 47 | ページ内目次のナビゲーション ツリーへのマージ | 簡略 | Material は左右分離。`toc.follow` で代替 |
-| 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点あり |
+| 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
 | 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は mkdocs 側に対応する拡張が無いため、`stage_preview_docs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
@@ -310,9 +310,10 @@ Python の依存は `framework/docsfw/mkdocs/.venv` に閉じ込め、`requireme
 
 全文検索について補足します。  
 docsfw は重なり 2-gram のトークナイザーを自前で実装し、日本語の検索精度を確保しています。  
-mkdocs-material の標準検索は lunr と TinySegmenter を使用するため、日本語の長い複合語を取りこぼします。
+mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使用しますが、TinySegmenter には  
+複合語の分割漏れという upstream の既知バグがあり、日本語の長い複合語を取りこぼします。
 
-実測した挙動を次に示します。
+実測した挙動 (`lang: ja` 使用時) を次に示します。
 
 | 検索語 | 結果 |
 |---|---|
@@ -323,6 +324,31 @@ mkdocs-material の標準検索は lunr と TinySegmenter を使用するため�
 
 2 文字程度の語やカタカナ語は引けますが、`同期プリミティブ` のような複合語は引けません。  
 また `同期` が `同梱` にも一致するなど、分かち書きの精度は docsfw の 2-gram より劣ります。
+
+mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、  
+mkdocs-material では直せない」と upstream に帰責しています  
+([squidfunk/mkdocs-material Discussion #3916](https://github.com/squidfunk/mkdocs-material/discussions/3916))。  
+検索クエリのトークン化処理を差し替える機能も、2026 年 8 月時点で未実装です  
+([squidfunk/mkdocs-material Issue #4980](https://github.com/squidfunk/mkdocs-material/issues/4980))。
+
+#### 緩和策 (実装済み)
+
+`mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) をやめ、`separator` の正規表現に  
+「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加している。
+
+lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter の  
+ような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。  
+これにより `同期プリミティブ` のような複合語も検索でヒットするようになる。
+
+再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の  
+2-gram 実装と同程度のノイズ (無関係な部分一致) が生じる。`lang: en` を明示しているのは、  
+Porter stemmer や英語ストップワード フィルターが ASCII 文字列にしか作用しないため日本語トークンへの  
+副作用がなく、かつ `lang: ja` を指定した場合に自動的に読み込まれる TinySegmenter を確実に外すためである。
+
+見直しの合図: 上記 Discussion #3916 または関連 issue で TinySegmenter 側の根本修正が upstream で  
+取り込まれた場合、あるいは mkdocs-material 側でクエリ トークン化のカスタム パイプライン  
+(Issue #4980) が実装された場合は、この緩和策 (`separator` への CJK 境界追加と `lang: en` 指定) を  
+見直すこと。
 
 索引の大きさは 791 ページで約 13 MB です。  
 初回の検索操作から結果が出るまで、ブラウザー上で約 10 秒の索引構築が入ります。  

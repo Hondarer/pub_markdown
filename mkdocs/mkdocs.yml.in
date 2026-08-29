@@ -75,12 +75,27 @@ markdown_extensions:
       generic: true
 
 plugins:
+  # 日本語検索の緩和策。
+  # mkdocs-material の `lang: ja` は lunr-languages 経由で TinySegmenter を
+  # 使うが、TinySegmenter には複合語の分割漏れという upstream の既知バグが
+  # あり (searchable な語が見つからないことがある)、mkdocs-material 側では
+  # 修正できない。
+  # 対策として `lang: ja` をやめ、隣接する CJK 文字 (ひらがな/カタカナ/漢字)
+  # の間に separator の境界を追加し、文字単位に近い粒度で索引と検索クエリの
+  # 双方を分割する。再現率を優先し、ノイズ (無関係な部分一致) の増加は許容
+  # する。詳細は docs/mkdocs-preview-design.md の「全文検索について補足」を
+  # 参照。
+  # upstream で TinySegmenter の分割漏れが修正された場合は、この緩和策を
+  # 見直すこと。
+  # see: https://github.com/squidfunk/mkdocs-material/discussions/3916
   - search:
-      lang: ja
+      lang: en
+      separator: '[\s\-,:!=\[\]()"/]+|(?![^\d])(?=[A-Z][a-z])|(?<=[0-9])(?=[^0-9])|(?<!\d)(?=\d)|(?<=[぀-ヿ㐀-䶿一-鿿豈-﫿])(?=[぀-ヿ㐀-䶿一-鿿豈-﫿])'
 @AWESOME_NAV@
 
 extra_css:
   - assets/docsfw-preview.css
+  - assets/docsfw-pandoc-style.css
 
 extra_javascript:
   # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。
