@@ -145,10 +145,14 @@ function renderBlock(block) {
     };
 
     try {
+      // renderToString の第 4 引数は README に明記が無いが、plantuml.js の
+      // コンパイル済みコード上は render(lines, targetId, {dark}) と同じ
+      // dark フラグを共有しており、ダーク モードの配色切り替えに使える。
       renderToString(
         prepared.text.split("\n"),
         (svg) => finish(svg, false),
-        (error) => finish("PlantUML のレンダリングに失敗しました: " + error, true)
+        (error) => finish("PlantUML のレンダリングに失敗しました: " + error, true),
+        { dark: isDarkScheme() }
       );
     } catch (error) {
       finish("PlantUML のレンダリングに失敗しました: " + error, true);

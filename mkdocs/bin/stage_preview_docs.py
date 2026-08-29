@@ -72,6 +72,8 @@ _LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\
 _CAPTION_RE = re.compile(r"^(Table|CodeBlock):[ \t]*(.*)$")
 _ATTR_TAIL_RE = re.compile(r"\s*\{#([A-Za-z0-9_:.-]+)\}\s*$")
 _DEPRECATED_RE = re.compile(r"^([ \t]*)>[ \t]*\[!DEPRECATED\][ \t]*$")
+_COLLAPSIBLE_OPEN_RE = re.compile(r"^:{3,}[ \t]*\{\.collapsible-list(?:[ \t][^}]*)?\}[ \t]*$")
+_COLLAPSIBLE_CLOSE_RE = re.compile(r"^:{3,}[ \t]*$")
 
 DOCUMENT_LINK_EXTENSIONS = (".md", ".markdown", ".rmd", ".tmd", ".rst")
 
@@ -517,6 +519,55 @@ def convert_deprecated_alerts(text):
     return "\n".join(out)
 
 
+def strip_collapsible_list_fences(text):
+    """``::: {.collapsible-list open-level=N}`` の Pandoc fenced div を取り除く。
+
+    doxybook2 向けテンプレート (``index.tmpl`` など) はこの記法を直接出力するが、
+    mkdocs (Python-Markdown) には対応する拡張が無く、そのまま表示されてしまう。
+    ``\\toc`` 展開 (``expand_toc.py``) が折り畳み表示を実装しないのと同じく、
+    プレビューでは開始行と対応する終了行だけを取り除き、中身のリストは
+    折り畳み無しの通常リストとして表示する。
+    """
+    if ":::" not in text:
+        return text
+
+    lines = text.split("\n")
+    out = []
+    fence = None
+    index = 0
+
+    while index < len(lines):
+        line = lines[index]
+        fence_match = _FENCE_RE.match(line)
+        if fence_match:
+            marker = fence_match.group(1)[0]
+            if fence is None:
+                fence = marker
+            elif fence == marker:
+                fence = None
+            out.append(line)
+            index += 1
+            continue
+
+        if fence is not None:
+            out.append(line)
+            index += 1
+            continue
+
+        if _COLLAPSIBLE_OPEN_RE.match(line):
+            index += 1
+            while index < len(lines) and not _COLLAPSIBLE_CLOSE_RE.match(lines[index]):
+                out.append(lines[index])
+                index += 1
+            index += 1  # 終了行 (:::) を読み飛ばす
+            continue
+
+        out.append(line)
+        index += 1
+
+    return "\n".join(out)
+
+
 def remove_page_breaks(text):
     """``\\newpage`` と ``\\pagebreak`` の行を取り除く。"""
     if "\\newpage" not in text and "\\pagebreak" not in text:
@@ -723,6 +774,7 @@ def stage(workspace, out_dir, config_path, quiet=False):
     for document in kept:
         body = rewrite_links(document.body, document, mapper, real_to_staged)
         body = expand_toc_commands(body, index, document.staged_rel)
+        body = strip_collapsible_list_fences(body)
         body = convert_deprecated_alerts(body)
         body = convert_captions(body)
         body = remove_page_breaks(body)

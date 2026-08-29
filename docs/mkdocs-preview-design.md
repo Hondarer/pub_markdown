@@ -125,7 +125,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点あり |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
-| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替 |
+| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は mkdocs 側に対応する拡張が無いため、`stage_preview_docs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 簡略 | Material の `content.code.copy` |
 | 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
@@ -212,7 +212,10 @@ API は `renderToString(lines, onSuccess, onError)` です。
 - `caption` 行、または `@startuml <名前>` からキャプションを取り、`figcaption` として出力します。優先順は `plantuml.lua:579-644` と同じです。
 - `skinparam backgroundColor transparent` を注入します。処理は `plantuml.lua:663-668` と同じです。
 - `IntersectionObserver` で、ビューポートに入った図だけをレンダリングします。
-- Material のカラー スキームを参照し、ダーク モードの指定を切り替えます。
+- Material のカラー スキームを参照し、ダーク モードの指定を切り替えます。  
+  `data-md-color-scheme` 属性が `slate` のとき、`renderToString(lines, onSuccess, onError, { dark: true })` のように第 4 引数へ `{ dark: true }` を渡します。  
+  この引数は `render(lines, targetId, { dark })` と同じ内部フラグを共有しており、README には `renderToString` 側の記載がありませんが、`plantuml.js` のコンパイル済みコードで動作を確認済みです。  
+  `MutationObserver` (`watchColorScheme()`) がスキーム変更を検知すると、描画済みの図をこのオプション付きで再描画します。
 
 遅延描画は必須です。  
 `app/porter/docs/sequence.md` は 1 ページに 30 個の PlantUML を含み、Doxybook2 のページも各ページにインクルード グラフと呼び出しグラフを持つためです。
