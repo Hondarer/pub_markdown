@@ -228,7 +228,7 @@ docsfw の HTML 出力も同じ方式であるため、`styles/html/html-templat
 `mermaid.min.js` は `bin/node_modules/mermaid/dist/` から取り出して同梱します。
 
 Material にも Mermaid 連携がありますが、こちらは unpkg から `mermaid.min.js` を取得します。  
-docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、
+docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、  
 クラス名を `docsfw-mermaid` として Material 側の処理と競合しないようにしています。
 
 ## mkdocs の設定
@@ -318,7 +318,7 @@ docsfw の `search-index.js` はビルド時に構築するため、この待ち
 
 ## PlantUML の描画差
 
-`@plantuml/core` 1.2026.7 (MIT ライセンス版、ブラウザー) と、ローカルの PlantUML 1.2026.2 (GPL 版、CLI) で
+`@plantuml/core` 1.2026.7 (MIT ライセンス版、ブラウザー) と、ローカルの PlantUML 1.2026.2 (GPL 版、CLI) で  
 [PlantUML ショーケース](sample/plantuml-showcase.md) の 19 図を描画し、SVG の viewBox 面積と text 要素数を比較しました。
 
 結果は次のとおりです。
@@ -340,21 +340,21 @@ Salt を含むページを確認する場合は `make docs` を使用してく�
 `skinparam backgroundColor transparent` とスタイル設定は、`@start<種別>` の行の直後へ挿入します。  
 この規則は docsfw の `bin/pandoc-filters/plantuml.lua` と、プレビューの `assets/docsfw-plantuml.js` で共通です。
 
-もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の
+もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の  
 4 種類だけから探していました。  
 `@startebnf` や `@startregex` では該当行が見つからず、`@start` より前の行へ挿入されます。
 
 PlantUML の CLI とサーバーは `@start` より前の行を無視するため、docsfw では表面化しませんでした。  
 一方 `@plantuml/core` は認識できない指示としてエラー図を返します。
 
-そのため、探索を `@start<種別>` 全般 (Lua は `^%s*@start%w+`、JavaScript は `/^\s*@start\w+/`) へ広げ、
+そのため、探索を `@start<種別>` 全般 (Lua は `^%s*@start%w+`、JavaScript は `/^\s*@start\w+/`) へ広げ、  
 docsfw 側にも同じ対策を入れました。
 
 変更の影響は次のとおり確認済みです。
 
 - ショーケースの 19 図を GPL 版 CLI (1.2026.2) で描画し、すべて成功しました。viewBox は変更前と同一です。
 - `plantuml.lua` を直接通した 19 図も、すべて成功し viewBox が変更前と同一でした。
-- `@startuml` 系の図は挿入位置が変わらないため、キャッシュ キー (SVG のファイル名) も変わりません。
+- `@startuml` 系の図は挿入位置が変わらないため、キャッシュ キー (SVG のファイル名) も変わりません。  
   列挙外の図種だけファイル名が変わるため、既存の出力には古い SVG が残ります。`make cleandocs` で解消します。
 
 ### キャプションの採用範囲
@@ -381,7 +381,7 @@ docsfw 側にも同じ対策を入れました。
 最後の 1 件だけが採用されなくなります。  
 旧実装が空白 1 文字をキャプションとして拾っていたもので、本ワークスペースに該当行はありません。
 
-本ワークスペースで列挙外の図種を名前付きで使っている 5 件 (`@startwbs`, `@startgantt`, `@startsalt`,
+本ワークスペースで列挙外の図種を名前付きで使っている 5 件 (`@startwbs`, `@startgantt`, `@startsalt`,  
 `@startebnf`, `@startregex`) は、いずれも `caption` 行を明示しています。  
 `caption` 行が優先されるため、現時点の出力は変わりません。  
 ショーケースの 19 図を `plantuml.lua` へ通し、キャプションが変更前と一致することを確認しました。
@@ -433,7 +433,7 @@ make preview
 | Mermaid | `framework/docsfw/docs/sample/mermaid-showcase.md` | 描画とサイズ正規化 |
 | キャプション | `framework/docsfw/docs/sample/mermaid-caption.md` | `CodeBlock:` 由来のキャプション |
 | `\toc` の展開 | `docs/README.md` | 索引の内容と越境リンクの解決 |
-| Doxybook2 ページ | `app/com_util/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
+| Doxybook2 ページ | `app/c-platform/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
 | GitHub アラート | 各 app の `coding-guideline.md` | 6 種の表示。特に `DEPRECATED` |
 | 数式 | `app/general/docs/build-design.md` | MathJax の描画 |
 | 日本語パス | `framework/docsfw/docs/sample/日本語を含むサブフォルダ/` | パス解決とナビゲーション表示 |

@@ -303,8 +303,8 @@ def run_tests() -> bool:
         ("  **変更前:**\n```python\ncode\n```", "  **変更前:**\n\n```python\ncode\n```"),
         ("`(タイトル)`", "`(タイトル)`"),
         ("` ```text `", "` ```text `"),
-        ("`<com_util/base/shared_lib_lifecycle.h>` :", "`<com_util/base/shared_lib_lifecycle.h>` :"),
-        (" *  - `<com_util/base/shared_lib_lifecycle.h>` :", " - - `<com_util/base/shared_lib_lifecycle.h>` :"),
+        ("`<cplat/base/shared_lib_lifecycle.h>` :", "`<cplat/base/shared_lib_lifecycle.h>` :"),
+        (" *  - `<cplat/base/shared_lib_lifecycle.h>` :", " - - `<cplat/base/shared_lib_lifecycle.h>` :"),
         ("`1`=あり", "`1`=あり"),
         ("`0`=なし", "`0`=なし"),
         ("`FLAG`==1", "`FLAG`==1"),
@@ -449,7 +449,7 @@ def run_tests() -> bool:
         ),
         ("**固定エージェント**（物理マシン・固定 VM）を対象に", "**固定エージェント** (物理マシン・固定 VM) を対象に"),
         ("LD_PRELOAD に追加するライブラリの絶対パス **(Linux のみ)**", "LD_PRELOAD に追加するライブラリの絶対パス **(Linux のみ)**"),
-        ("**リンク補完の配置先：**\n`/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。", "**リンク補完の配置先:**\n\n`/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。"),
+        ("**リンク補完の配置先：**\n`/INCLUDE` pragma は `mock_cplat.h` ヘッダーに記述します。", "**リンク補完の配置先:**\n\n`/INCLUDE` pragma は `mock_cplat.h` ヘッダーに記述します。"),
         ("**全角コロン：**\n本文", "**全角コロン:**\n\n本文"),
         ("○(RECEIVER → SENDER)", "○ (RECEIVER → SENDER)"),
         ("○(双方向)", "○ (双方向)"),
@@ -509,7 +509,7 @@ def run_tests() -> bool:
             "<!--\n## C4\n\n```{.mermaid caption=\"C4 のサンプル\"}\nC4Context\n    title C4 Context のサンプル\n    Person(user, \"利用者\")\n    System(pub, \"pub_markdown\", \"Markdown を発行する\")\n    Rel(user, pub, \"Markdown を発行\")\n```\n\n-->",
         ),
         # 見出し行のインライン コード除去
-        ("## `com_util_tracer_create`", "## com_util_tracer_create"),
+        ("## `cplat_tracer_create`", "## cplat_tracer_create"),
         ("### `#ifdef` / `#ifndef`", "### #ifdef / #ifndef"),
         ("# VS Code と `c_cpp_properties.json` の手順", "# VS Code と c_cpp_properties.json の手順"),
         ("#### `.vscode/.env.linux` / `.vscode/.env.windows`", "#### .vscode/.env.linux / .vscode/.env.windows"),
@@ -699,8 +699,8 @@ def run_tests() -> bool:
         ),
         (
             "c",
-            "/** `<com_util/base/shared_lib_lifecycle.h>` : */\n",
-            "/** `<com_util/base/shared_lib_lifecycle.h>` : */\n",
+            "/** `<cplat/base/shared_lib_lifecycle.h>` : */\n",
+            "/** `<cplat/base/shared_lib_lifecycle.h>` : */\n",
         ),
         (
             "c",
@@ -754,18 +754,18 @@ def run_tests() -> bool:
         ),
         (
             "c",
-            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
-            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref CPLAT_SYNC_OK 、@ref CPLAT_SYNC_TIMEOUT 、@ref CPLAT_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref CPLAT_SYNC_OK 、@ref CPLAT_SYNC_TIMEOUT 、@ref CPLAT_SYNC_SYSTEM_ERROR のいずれか。 */\n",
         ),
         (
             "c",
-            "/** @return @ref COM_UTIL_SYNC_OK、@ref COM_UTIL_SYNC_TIMEOUT、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
-            "/** @return @ref COM_UTIL_SYNC_OK 、@ref COM_UTIL_SYNC_TIMEOUT 、@ref COM_UTIL_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref CPLAT_SYNC_OK、@ref CPLAT_SYNC_TIMEOUT、@ref CPLAT_SYNC_SYSTEM_ERROR のいずれか。 */\n",
+            "/** @return @ref CPLAT_SYNC_OK 、@ref CPLAT_SYNC_TIMEOUT 、@ref CPLAT_SYNC_SYSTEM_ERROR のいずれか。 */\n",
         ),
         (
             "c",
-            "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT、\n */\n",
-            "/**\n *                  @ref COM_UTIL_SYNC_INVALID_ARGUMENT 、\n */\n",
+            "/**\n *                  @ref CPLAT_SYNC_INVALID_ARGUMENT、\n */\n",
+            "/**\n *                  @ref CPLAT_SYNC_INVALID_ARGUMENT 、\n */\n",
         ),
         # @p/@c/@a/@b/@e/@em は @ref と同様に空白区切りの 1 語を引数に取るため、
         # 直後に空白なしで日本語句読点が続くと Doxygen が句読点まで引数に取り込んでしまう。

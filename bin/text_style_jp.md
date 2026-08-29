@@ -252,7 +252,7 @@ print("第3章")
 | `## @param[<dir>] <parameter-name> { parameter description }` | `## @param[<dir>] <parameter-name> { parameter description }` |
 | `## @f[ ~ @f], @f$ ~ @f$` | `## @f[ ~ @f], @f$ ~ @f$` |
 | `##?=(条件付き代入)` | `## ?= (条件付き代入)` |
-| `**リンク補完の配置先：**` <br>`` `/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。`` | `**リンク補完の配置先:**` <br><br>`` `/INCLUDE` pragma は `mock_com_util.h` ヘッダーに記述します。`` |
+| `**リンク補完の配置先：**` <br>`` `/INCLUDE` pragma は `mock_cplat.h` ヘッダーに記述します。`` | `**リンク補完の配置先:**` <br><br>`` `/INCLUDE` pragma は `mock_cplat.h` ヘッダーに記述します。`` |
 
 #### URL の保護
 
