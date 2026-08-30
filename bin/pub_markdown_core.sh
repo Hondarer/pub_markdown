@@ -380,7 +380,6 @@ if [ $LINUX -eq 1 ]; then
     chmod +x "${SCRIPT_DIR}/mmdc-wrapper.sh"
     chmod +x "${SCRIPT_DIR}/chrome-wrapper.sh"
     chmod +x "${SCRIPT_DIR}/pandoc-filters/insert-toc.sh"
-    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins"
     configure_external_puppeteer_browser
 
     if [ $WSL -eq 1 ]; then
@@ -391,7 +390,6 @@ if [ $LINUX -eq 1 ]; then
         :
     fi
 else
-    WIDDERSHINS="${SCRIPT_DIR}/node_modules/.bin/widdershins.cmd"
     # レジストリから Microsoft Edge のパスを取得
     EDGE_REG_PATH=$(
         reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" /v Path 2>/dev/null \
@@ -446,58 +444,43 @@ else
     crossref_metadata_args=(--metadata "docsfw-crossref=false")
 fi
 
-# セットアップ完了スタンプ。package.json / package-lock.json のハッシュを記録し、
-# npm ci とブラウザーのインストールがすべて成功したときのみ書き込む。
-# node_modules 内に置くことで、npm ci で node_modules が再生成された際に
-# スタンプも消え、再セットアップが強制されて整合する。
-# package-lock.json を利用して固定バージョンでセットアップするため、npm install ではなく npm ci。
-SETUP_STAMP_FILE="${SCRIPT_DIR}/node_modules/.docsfw-setup.stamp"
-
-compute_setup_hash() {
-    {
-        cat "${SCRIPT_DIR}/package.json" "${SCRIPT_DIR}/package-lock.json" 2>/dev/null
-        # 従来モードでは既存スタンプと同じハッシュを維持する。
-        if [[ "$DOCSFW_EXTERNAL_BROWSER" == "true" ]]; then
-            printf '\ndocsfw-external-browser\n'
+# npm コンポーネントの解決と、Linux で外部 Chrome が無い場合のブラウザー導入は別段。
+# npm を省略しても、managed ブラウザーが必要なら npx puppeteer browsers install は実行する。
+ensure_docsfw_node_components() {
+    local node_env
+    node_env="$(node "${SCRIPT_DIR}/resolve-node-components.js" --ensure --export-env)" || return 1
+    eval "$node_env"
+    WIDDERSHINS="${DOCSFW_WIDDERSHINS}"
+    if [[ -n "${DOCSFW_NODE_GLOBAL_ROOTS:-}" ]]; then
+        export NODE_PATH="${DOCSFW_NODE_GLOBAL_ROOTS}${NODE_PATH:+:$NODE_PATH}"
+        if [[ -f "${DOCSFW_PREFER_GLOBAL_MODULES:-}" ]]; then
+            export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--require ${DOCSFW_PREFER_GLOBAL_MODULES}"
         fi
-    } | sha256sum | awk '{print $1}'
+    fi
 }
 
-setup_stamp_valid() {
-    [[ -f "$SETUP_STAMP_FILE" ]] || return 1
-    local expected current
-    expected=$(compute_setup_hash)
-    current=$(cat "$SETUP_STAMP_FILE" 2>/dev/null)
-    [[ -n "$expected" && "$expected" == "$current" ]]
-}
-
-install_node_modules_and_browsers() {
+ensure_puppeteer_browsers() {
+    if [[ "$DOCSFW_EXTERNAL_BROWSER" == "true" ]]; then
+        return 0
+    fi
+    if [[ ${LINUX:-0} -ne 1 ]]; then
+        return 0
+    fi
+    echo "Installing Puppeteer browsers..." >&2
     (
         cd "${SCRIPT_DIR}" || exit 1
-        export PUPPETEER_SKIP_DOWNLOAD=1
-        npm ci || exit 1
-        unset PUPPETEER_SKIP_DOWNLOAD
-        # 外部ブラウザーを使用しない場合だけ Puppeteer 用ブラウザーを導入する。
-        if [[ "$DOCSFW_EXTERNAL_BROWSER" != "true" ]]; then
-            npx puppeteer browsers install chrome || exit 1
-            npx puppeteer browsers install chrome-headless-shell || exit 1
-        fi
+        npx puppeteer browsers install chrome || exit 1
+        npx puppeteer browsers install chrome-headless-shell || exit 1
     )
 }
 
-if ! setup_stamp_valid; then
-    echo "Installing node.js modules..."
-    setup_ok=true
-    install_node_modules_and_browsers || setup_ok=false
-
-    if [[ "$setup_ok" == "true" ]]; then
-        compute_setup_hash > "$SETUP_STAMP_FILE"
-        progress_log "セットアップ完了スタンプを書き込みました: ${SETUP_STAMP_FILE}"
-    else
-        echo "Error: node.js modules / browser setup failed." >&2
-        rm -f "$SETUP_STAMP_FILE"
-        exit 1
-    fi
+if ! ensure_docsfw_node_components; then
+    echo "Error: node.js modules setup failed." >&2
+    exit 1
+fi
+if ! ensure_puppeteer_browsers; then
+    echo "Error: Puppeteer browser setup failed." >&2
+    exit 1
 fi
 
 # node.js の警告を非表示にする
@@ -963,15 +946,10 @@ parse_yaml() {
 }
 
 find_mermaid_js() {
-    local candidate
-    for candidate in \
-        "${SCRIPT_DIR}/node_modules/mermaid/dist/mermaid.min.js" \
-        "${SCRIPT_DIR}/node_modules/@mermaid-js/mermaid-cli/node_modules/mermaid/dist/mermaid.min.js"; do
-        if [[ -f "$candidate" ]]; then
-            echo "$candidate"
-            return 0
-        fi
-    done
+    if [[ -n "${DOCSFW_MERMAID_JS:-}" && -f "${DOCSFW_MERMAID_JS}" ]]; then
+        echo "${DOCSFW_MERMAID_JS}"
+        return 0
+    fi
     return 1
 }
 
@@ -1152,21 +1130,15 @@ fi
 
 mermaidScript=$(find_mermaid_js)
 if [[ "$mermaidScript" == "" ]]; then
-    echo "Error: Mermaid browser bundle does not exist. Please run npm ci in ${SCRIPT_DIR}."
+    echo "Error: Mermaid browser bundle does not exist. Resolve node components in ${SCRIPT_DIR}."
     exit 1
 fi
 
 # 検索・ナビゲーション用アセットのパス解決
-# MiniSearch UMD ブラウザー バンドル (npm ci で node_modules/minisearch/dist/umd/ 以下に配置)
 miniSearchScript=""
-for _ms_candidate in \
-    "${SCRIPT_DIR}/node_modules/minisearch/dist/umd/index.min.js" \
-    "${SCRIPT_DIR}/node_modules/minisearch/dist/umd/index.js"; do
-    if [[ -f "$_ms_candidate" ]]; then
-        miniSearchScript="$_ms_candidate"
-        break
-    fi
-done
+if [[ -n "${DOCSFW_MINISEARCH_JS:-}" && -f "${DOCSFW_MINISEARCH_JS}" ]]; then
+    miniSearchScript="${DOCSFW_MINISEARCH_JS}"
+fi
 
 htmlSearchUiCss="${HOME_DIR}/styles/html/docsfw-ui.css"
 htmlSearchScript="${HOME_DIR}/styles/html/docsfw-search.js"
@@ -1188,7 +1160,7 @@ htmlNavTreeScript="${SCRIPT_DIR}/generate-nav-tree.py"
 
 if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
     if [[ "$miniSearchScript" == "" ]]; then
-        echo "Warning: MiniSearch bundle not found. Please run npm ci in ${SCRIPT_DIR}."
+        echo "Warning: MiniSearch bundle not found. Resolve node components in ${SCRIPT_DIR}."
         echo "         Disabling htmlSearchEnable and htmlNavTreeEnable."
         htmlSearchEnable="false"
         htmlNavTreeEnable="false"

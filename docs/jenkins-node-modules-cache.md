@@ -2,8 +2,9 @@
 
 ## 背景
 
-`bin/pub_markdown_core.sh` は `node_modules/.bin` が存在しない場合に自動で `npm ci` を実行します。  
-コンテナー CI では毎回クリーンなワークスペースが作られるため、毎回 `npm ci` が走り時間がかかる。
+`bin/pub_markdown_core.sh` は `bin/resolve-node-components.js` で npm コンポーネントを解決します。  
+グローバルに必須パッケージが揃っていれば `npm ci` は走りません。  
+コンテナー CI でグローバルが無い場合は、ローカル `node_modules` をキャッシュすると再導入を避けられます。
 
 さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で  
 **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされる。  

@@ -68,11 +68,13 @@ end
 ```lua
 local MMDC_CMD
 if package.config:sub(1,1) == '\\' then -- Windows
-    MMDC_CMD = "\\node_modules\\.bin\\mmdc.cmd"
+    MMDC_CMD = os.getenv("DOCSFW_MMDC") or (root_dir .. "\\node_modules\\.bin\\mmdc.cmd")
 else -- Unix-like systems
-    MMDC_CMD = "/mmdc-wrapper.sh"
+    MMDC_CMD = root_dir .. "/mmdc-wrapper.sh"
 end
 ```
+
+Linux の `mmdc-wrapper.sh` は `DOCSFW_MMDC` が指す `mmdc` を呼び出します。
 
 ### ファイル生成処理
 

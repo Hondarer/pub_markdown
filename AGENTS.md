@@ -12,7 +12,9 @@ Pandoc を中心に、Markdown から HTML や docx を生成するための発�
 ## 作業時の入口
 
 - `bin/pub_markdown_core.sh` - 発行処理の中心スクリプト
+- `bin/resolve-node-components.js` - npm コンポーネントの解決とオンデマンド補完
 - `bin/package.json` - Node.js 依存関係
+- [Node コンポーネント](docs/node-components.md) - 必須パッケージと解決順
 - `bin/pandoc-filters/` - Lua、Python、Shell のフィルター群
 - `bin/prepare_puppeteer_env.sh`、`bin/chrome-wrapper.sh`、`bin/mmdc-wrapper.sh` - ブラウザー依存処理の補助
 - `styles/` - HTML、docx、Widdershins 向けのスタイルやテンプレート
@@ -23,11 +25,12 @@ Pandoc を中心に、Markdown から HTML や docx を生成するための発�
 ## 主要コマンド
 
 ```bash
-cd bin
-npm ci / npm install
-cd ..
 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
 ```
+
+必須 npm コンポーネントは `bin/resolve-node-components.js` が解決します。  
+グローバルにあればそれを使い、欠けていればオンデマンドで導入します。  
+詳細は [Node コンポーネント](docs/node-components.md) を参照してください。
 
 mkdocs 簡易プレビューは、ワークスペース ルートで `make preview` を実行します。  
 設計は [mkdocs 簡易プレビュー基盤](docs/mkdocs-preview-design.md)、利用手順は [mkdocs/README.md](mkdocs/README.md) を参照してください。  
@@ -54,6 +57,6 @@ chcp 65001
 ## 注意点
 
 - Linux と Windows でブラウザー起動経路が異なります。Puppeteer、Edge、Chromium 関連の変更では `pub_markdown_core.sh` とラッパー スクリプトを同時に確認してください。
-- `bin/pub_markdown_core.sh` は `node_modules` がなければ自動で `npm ci` を試みます。依存関係を更新する場合は、`package.json` とスクリプト双方の整合を維持してください。
+- `bin/pub_markdown_core.sh` は `bin/resolve-node-components.js` で npm コンポーネントを解決します。依存関係を更新する場合は、`package.json`、`package-lock.json`、[Node コンポーネント](docs/node-components.md) を同時に更新してください。
 - 出力処理は Pandoc フィルターと `styles/` に分散しています。表示を変更する場合は、CSS とフィルターの影響を確認してください。
 - `styles/html/html-template.html` は Pandoc テンプレートとして処理されるため、インライン JavaScript 内の literal `$` (正規表現の `/foo$/` など) は `$$` にエスケープしてください。エスケープがない場合は「Error compiling template ... expecting "()"」によりページ全体の生成が失敗します。テンプレートに JS を追加した場合は、ビルド ログの「Error compiling template」を必ず確認してください。テンプレートや CSS の変更はタイムスタンプ スキップの対象外であるため、フル ビルドでは `pages` の削除が必要です (`rm -rf pages && bash bin/pub_markdown_core.sh --workspaceFolder="$PWD" --details=both --docxOutput=true`)。オプション名は `--docxOutput=` であり、`--docx=` は指定しても無視されます。

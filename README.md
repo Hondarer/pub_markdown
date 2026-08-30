@@ -34,7 +34,7 @@ Pandoc を使用して、Markdown から HTML と docx を生成します。
     - pandoc-crossref がなくても動作します。
     - pandoc-crossref がある場合は、ラベルを付けた図、リスト、表が採番と相互参照の対象になります。詳細は [コード ブロックのキャプション](docs/codeblock-caption.md) を参照してください。
 - node.exe へ PATH を設定してください。Linux では nodejs モジュール パッケージに含まれます。
-- `bin/` 配下で `npm ci` を実行してください。詳細は [Node.js モジュールの設定](bin/how_to_setup_node_modules.md) を参照してください。
+- Node.js モジュールは発行時に解決します。グローバルにあればそれを使い、無ければオンデマンドで導入します。詳細は [Node.js モジュールの設定](bin/how_to_setup_node_modules.md) と [Node コンポーネント](docs/node-components.md) を参照してください。
 
 ### Markdown の発行方法
 

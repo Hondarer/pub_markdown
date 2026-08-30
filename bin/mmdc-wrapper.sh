@@ -10,5 +10,5 @@ else
     . "${SCRIPT_DIR}/prepare_puppeteer_env.sh"
 
     # Pass all arguments from shell script to mmdc
-    "${SCRIPT_DIR}/node_modules/.bin/mmdc" "$@"
+    "${DOCSFW_MMDC:-${SCRIPT_DIR}/node_modules/.bin/mmdc}" "$@"
 fi

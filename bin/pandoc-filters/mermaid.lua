@@ -265,11 +265,16 @@ return {
             ---------------------------------------------------------------------
 
             local MMDC_CMD
+            local env_mmdc = os.getenv("DOCSFW_MMDC")
             -- Use platform-specific commands to create the directory
             if package.config:sub(1,1) == '\\' then -- Windows
-                MMDC_CMD = "\\node_modules\\.bin\\mmdc.cmd"
+                if env_mmdc and env_mmdc ~= "" then
+                    MMDC_CMD = env_mmdc
+                else
+                    MMDC_CMD = root_dir .. "\\node_modules\\.bin\\mmdc.cmd"
+                end
             else -- Unix-like systems (Linux, macOS, etc.)
-                MMDC_CMD = "/mmdc-wrapper.sh"
+                MMDC_CMD = root_dir .. "/mmdc-wrapper.sh"
             end
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
@@ -300,8 +305,8 @@ return {
                 -- Generating single mermaid chart
                 -- -ms-high-contrast-adjust is in the process of being deprecated. Please see https://blogs.windows.com/msedgedev/2024/04/29/deprecating-ms-high-contrast/ for tips on updating to the new Forced Colors Mode standard.
                 -- [@zenuml/core] Store is a function and is not initiated in 1 second.
-                --io.stderr:write(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"\n", _resource_dir, _root_dir .. MMDC_CMD, _mmd_filename, _image_filename))
-                os.execute(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", _resource_dir, _root_dir .. MMDC_CMD, _mmd_filename, _image_filename))
+                --io.stderr:write(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"\n", _resource_dir, utf8_to_active_cp(MMDC_CMD), _mmd_filename, _image_filename))
+                os.execute(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", _resource_dir, utf8_to_active_cp(MMDC_CMD), _mmd_filename, _image_filename))
 
                 -- mmd ファイル削除
                 os.remove(_mmd_file_path)

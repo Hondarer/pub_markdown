@@ -8,8 +8,8 @@
 - ``mkdocs/assets/`` 配下の自前スクリプトとスタイル
 - ``mkdocs/mkdocs.yml.in`` から生成した ``pages/preview/mkdocs.yml``
 
-いずれも docsfw の ``bin/node_modules`` を参照します。
-``npm ci`` が済んでいない場合はエラーを返します。
+いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
+必須コンポーネントが無ければオンデマンドで導入します。
 
 使用方法:
 
@@ -17,8 +17,10 @@
 """
 
 import argparse
+import json
 import os
 import shutil
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -31,16 +33,11 @@ if hasattr(sys.stdout, "reconfigure"):
 
 MKDOCS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCSFW_DIR = os.path.dirname(MKDOCS_DIR)
-NODE_MODULES = os.path.join(DOCSFW_DIR, "bin", "node_modules")
+RESOLVE_SCRIPT = os.path.join(DOCSFW_DIR, "bin", "resolve-node-components.js")
 
 # @plantuml/core から取り出すファイル。
 # emoji.js と openiconic.js は plantuml.js が必要に応じて読み込むため同じ場所に置く。
 PLANTUML_FILES = ("plantuml.js", "viz-global.js", "emoji.js", "openiconic.js", "LICENSE")
-
-MERMAID_CANDIDATES = (
-    os.path.join("mermaid", "dist", "mermaid.min.js"),
-    os.path.join("@mermaid-js", "mermaid-cli", "node_modules", "mermaid", "dist", "mermaid.min.js"),
-)
 
 OWN_ASSETS = (
     "docsfw-plantuml.js",
@@ -63,12 +60,28 @@ def copy_if_changed(src, dst):
     return True
 
 
-def vendor_plantuml(assets_dir):
+def resolve_node_components():
+    """必須 npm コンポーネントを解決し、欠けていれば導入する。"""
+    result = subprocess.run(
+        ["node", RESOLVE_SCRIPT, "--ensure"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or "node component resolve failed"
+        raise FileNotFoundError(message)
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise FileNotFoundError("node component resolve の JSON を解釈できません: {}".format(error))
+
+
+def vendor_plantuml(assets_dir, source_dir):
     """``@plantuml/core`` のファイルを配置する。"""
-    source_dir = os.path.join(NODE_MODULES, "@plantuml", "core")
-    if not os.path.isdir(source_dir):
+    if not source_dir or not os.path.isdir(source_dir):
         raise FileNotFoundError(
-            "@plantuml/core が見つかりません。framework/docsfw/bin で npm ci を実行してください: {}".format(source_dir)
+            "@plantuml/core が見つかりません。framework/docsfw/bin の node コンポーネントを解決してください"
         )
 
     target_dir = os.path.join(assets_dir, "plantuml")
@@ -83,16 +96,14 @@ def vendor_plantuml(assets_dir):
     return copied
 
 
-def vendor_mermaid(assets_dir):
+def vendor_mermaid(assets_dir, mermaid_js):
     """``mermaid.min.js`` を配置する。"""
-    for candidate in MERMAID_CANDIDATES:
-        src = os.path.join(NODE_MODULES, candidate)
-        if os.path.isfile(src):
-            dst = os.path.join(assets_dir, "mermaid", "mermaid.min.js")
-            return 1 if copy_if_changed(src, dst) else 0
+    if mermaid_js and os.path.isfile(mermaid_js):
+        dst = os.path.join(assets_dir, "mermaid", "mermaid.min.js")
+        return 1 if copy_if_changed(mermaid_js, dst) else 0
 
     raise FileNotFoundError(
-        "mermaid.min.js が見つかりません。framework/docsfw/bin で npm ci を実行してください"
+        "mermaid.min.js が見つかりません。framework/docsfw/bin の node コンポーネントを解決してください"
     )
 
 
@@ -150,8 +161,9 @@ def main(argv=None):
     assets_dir = os.path.join(preview_dir, "src", "assets")
 
     try:
-        copied = vendor_plantuml(assets_dir)
-        copied += vendor_mermaid(assets_dir)
+        resolved = resolve_node_components()
+        copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""))
+        copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
     except FileNotFoundError as error:
         print("Error: {}".format(error), file=sys.stderr)

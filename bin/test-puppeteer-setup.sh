@@ -5,8 +5,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 eval "$(awk '
     /^configure_external_puppeteer_browser\(\)/,/^}/
-    /^compute_setup_hash\(\)/,/^}/
-    /^install_node_modules_and_browsers\(\)/,/^}/
+    /^ensure_puppeteer_browsers\(\)/,/^}/
     /^print_browser_executable\(\)/,/^}/
 ' "${SCRIPT_DIR}/pub_markdown_core.sh")"
 
@@ -40,32 +39,29 @@ configure_external_puppeteer_browser
 [[ "$DOCSFW_EXTERNAL_BROWSER" == "true" ]]
 [[ "$PUPPETEER_EXECUTABLE_PATH" == "/bin/true" ]]
 
-legacy_hash=$(cat "${SCRIPT_DIR}/package.json" "${SCRIPT_DIR}/package-lock.json" | sha256sum | awk '{print $1}')
-DOCSFW_EXTERNAL_BROWSER=false
-[[ "$(compute_setup_hash)" == "$legacy_hash" ]]
-DOCSFW_EXTERNAL_BROWSER=true
-[[ "$(compute_setup_hash)" != "$legacy_hash" ]]
-
 command_log="${tmp_dir}/commands.log"
-npm() {
-    printf 'npm %s skip=%s\n' "$*" "${PUPPETEER_SKIP_DOWNLOAD:-}" >> "$command_log"
-}
 npx() {
-    printf 'npx %s skip=%s\n' "$*" "${PUPPETEER_SKIP_DOWNLOAD:-}" >> "$command_log"
+    printf 'npx %s\n' "$*" >> "$command_log"
 }
 
+LINUX=1
+: > "$command_log"
 DOCSFW_EXTERNAL_BROWSER=true
-install_node_modules_and_browsers
-[[ "$(sed -n '1p' "$command_log")" == "npm ci skip=1" ]]
-[[ "$(wc -l < "$command_log")" -eq 1 ]]
+ensure_puppeteer_browsers
+[[ ! -s "$command_log" ]]
 
 : > "$command_log"
 DOCSFW_EXTERNAL_BROWSER=false
-install_node_modules_and_browsers
-[[ "$(sed -n '1p' "$command_log")" == "npm ci skip=1" ]]
-[[ "$(sed -n '2p' "$command_log")" == "npx puppeteer browsers install chrome skip=" ]]
-[[ "$(sed -n '3p' "$command_log")" == "npx puppeteer browsers install chrome-headless-shell skip=" ]]
-[[ "$(wc -l < "$command_log")" -eq 3 ]]
+ensure_puppeteer_browsers
+[[ "$(sed -n '1p' "$command_log")" == "npx puppeteer browsers install chrome" ]]
+[[ "$(sed -n '2p' "$command_log")" == "npx puppeteer browsers install chrome-headless-shell" ]]
+[[ "$(wc -l < "$command_log")" -eq 2 ]]
+
+: > "$command_log"
+LINUX=0
+DOCSFW_EXTERNAL_BROWSER=false
+ensure_puppeteer_browsers
+[[ ! -s "$command_log" ]]
 
 (
     export PUPPETEER_EXECUTABLE_PATH=/bin/true

@@ -9,7 +9,7 @@ PlantUML と Mermaid はブラウザー上でレンダリングするため、�
 ## 前提
 
 - Python 3.9 以降
-- `framework/docsfw/bin` で `npm ci` が完了していること (`@plantuml/core` と `mermaid` を使用します)
+- Node.js。`@plantuml/core` と `mermaid` は `bin/resolve-node-components.js` が解決します。未配置ならオンデマンドで導入します。詳細は [Node コンポーネント](../docs/node-components.md) を参照してください。
 
 ## 使用方法
 
@@ -84,20 +84,20 @@ make preview-stop
 
 ## 元の Markdown を編集したときの反映
 
-`make preview` で `mkdocs serve` を実行している間は、元の Markdown
+`make preview` で `mkdocs serve` を実行している間は、元の Markdown  
 (`app/*/docs` 等) を保存すると自動的に反映されます。  
-`mkdocs.yml.in` の `hooks:` に登録した `bin/preview_autostage_hook.py` が
-元の Markdown ディレクトリを監視し、変更されたファイルだけを軽量に
-再ステージングします (ワークスペース全体の再走査は行いません)。
-ステージング結果は `mkdocs serve` が監視しているステージング先
-(`pages/preview/src/`) に書き込まれるため、続けて mkdocs 標準の仕組みが
+`mkdocs.yml.in` の `hooks:` に登録した `bin/preview_autostage_hook.py` が  
+元の Markdown ディレクトリを監視し、変更されたファイルだけを軽量に  
+再ステージングします (ワークスペース全体の再走査は行いません)。  
+ステージング結果は `mkdocs serve` が監視しているステージング先  
+(`pages/preview/src/`) に書き込まれるため、続けて mkdocs 標準の仕組みが  
 ビルドとブラウザーの自動リロードを行います。
 
-ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査した
-ときの情報をキャッシュして使い回しているため、対象ファイル自身の内容以外
-(タイトル変更や新規ファイルの追加など) は反映が遅れることがあります。
-ファイルの作成・削除・移動を検知した場合は自動でフル ステージングへ
-切り替わり、また一定回数の軽量な再ステージングごとにも索引を再同期します。
+ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査した  
+ときの情報をキャッシュして使い回しているため、対象ファイル自身の内容以外  
+(タイトル変更や新規ファイルの追加など) は反映が遅れることがあります。  
+ファイルの作成・削除・移動を検知した場合は自動でフル ステージングへ  
+切り替わり、また一定回数の軽量な再ステージングごとにも索引を再同期します。  
 詳細は [設計ドキュメント](../docs/mkdocs-preview-design.md) を参照してください。
 
 ## ステージングだけを実行する
@@ -109,15 +109,15 @@ python3 framework/docsfw/mkdocs/bin/stage_preview_docs.py --workspaceFolder="$PW
 python3 framework/docsfw/mkdocs/bin/vendor_assets.py --workspaceFolder="$PWD"
 ```
 
-`mkdocs serve` を起動する前の準備 (`make preview` の前提) や、
-`make preview-build` (`mkdocs serve` を経由しない one-shot ビルド) では、
+`mkdocs serve` を起動する前の準備 (`make preview` の前提) や、  
+`make preview-build` (`mkdocs serve` を経由しない one-shot ビルド) では、  
 上記のフル ステージングが唯一の同期手段です。  
-また `assets/` (JS/CSS) や `mkdocs.yml` 自体の更新は自動ステージングの対象外
-のため、更新した場合はこのフル ステージングを手動で実行するか、
+また `assets/` (JS/CSS) や `mkdocs.yml` 自体の更新は自動ステージングの対象外  
+のため、更新した場合はこのフル ステージングを手動で実行するか、  
 `make preview` を再起動してください。
 
 ## 対応しない機能
 
-Word (docx) 出力、`en` バリアント、`details=false` バリアント、pandoc-crossref の採番、
+Word (docx) 出力、`en` バリアント、`details=false` バリアント、pandoc-crossref の採番、  
 Git と Doxygen の単一ページ リンク、`file://` での動作は対象外です。  
 詳細は [設計ドキュメント](../docs/mkdocs-preview-design.md) を参照してください。

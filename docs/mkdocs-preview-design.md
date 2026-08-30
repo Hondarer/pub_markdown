@@ -239,8 +239,8 @@ docsfw が使用する GPL 版とは一部の図種やスプライトで結果�
 API は `renderToString(lines, onSuccess, onError)` です。  
 `lines` は行の配列で、レンダリングは非同期です。
 
-配布物は `framework/docsfw/bin/package.json` の依存に追加し、既存の `npm ci` フローに乗せます。  
-`bin/vendor_assets.py` が `node_modules/@plantuml/core/` から必要なファイルだけをステージング先へコピーします。
+配布物は `framework/docsfw/bin/package.json` の依存に追加し、`bin/resolve-node-components.js` の解決対象に乗せます。  
+`bin/vendor_assets.py` が解決済みの `@plantuml/core` から必要なファイルだけをステージング先へコピーします。
 
 ### レンダラーの責務
 
@@ -263,7 +263,7 @@ API は `renderToString(lines, onSuccess, onError)` です。
 `custom_fences` で Mermaid のフェンスを `pre.mermaid` として出力し、`assets/docsfw-mermaid.js` が初期化します。  
 docsfw の HTML 出力も同じ方式であるため、`styles/html/html-template.html` の初期化処理とサイズ正規化 (viewBox から実寸を取り 0.875 倍する処理) をそのまま流用します。
 
-`mermaid.min.js` は `bin/node_modules/mermaid/dist/` から取り出して同梱します。
+`mermaid.min.js` は解決済みの Mermaid バンドルから取り出して同梱します。
 
 Material にも Mermaid 連携がありますが、こちらは unpkg から `mermaid.min.js` を取得します。  
 docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、  
@@ -523,7 +523,7 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 ### docsfw への非干渉
 
 `make docs` が従来どおり成功し、`pages/ja/html/` 等の出力が変わらないことを確認します。  
-`bin/package.json` への依存追加が、既存の `npm ci` とセットアップ スタンプに影響しないことを確認します。
+`bin/package.json` への依存追加が、`bin/resolve-node-components.js` の必須集合と [Node コンポーネント](node-components.md) に反映されることを確認します。
 
 ## 実装状況
 
