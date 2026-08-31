@@ -34,7 +34,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 |---|---|---|
 | 目的 | 正式な発行 | 執筆中の確認 |
 | 出力 | HTML + docx | HTML のみ |
-| バリアント | `ja` / `en` × 通常 / `-details` | `ja` / `details=true` の 1 種類 |
+| バリアント | `ja` / `en` × 通常 / `-details` | 同じ 4 値を `PREVIEW_VARIANT` で 1 つ選ぶ。既定は `ja-details` |
 | PlantUML | ビルド時に SVG 化 | ブラウザー上でレンダリング |
 | 図の再現性 | 正本 | 差異が出る場合がある (後述) |
 
@@ -63,8 +63,8 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植し `lang=ja` 固定 |
-| 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | `details=true` 固定 |
+| 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の言語側を使う |
+| 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の details 側を使う |
 | 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装 |
 | 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | mkdocs は H1 をページ見出しとして扱う |
@@ -110,7 +110,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 | 38 | 実パスと仮想パスの相互変換 | 114 | 維持 | ステージングで書き換える |
 | 39 | `README.md` / `SKILL.md` のリンク正規化 | - | 維持 | ステージングで書き換える |
 | 40 | Git 単一ページ リンク | フロント マター 392 | 対象外 | 将来対応の候補 |
-| 41 | Doxygen 単一ページ リンク | フロント マター 523 | 対象外 | 将来対応の候補 |
+| 41 | Doxygen 単一ページ リンク | フロント マター 523 | 簡略 | `doxygen-page-url` を `/doxygen/` へ写し、見出し横の操作ボタンへ出す。ヘッダー右端の完全再現はしない |
 
 ### 出力とナビゲーション
 
@@ -150,13 +150,19 @@ framework/docsfw/
 |   |   +-- expand_toc.py            # \toc の展開
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
 |   |   +-- preview_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
+|   |   +-- preview_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
 |   |   +-- stop_preview_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
+|   +-- theme/
+|   |   +-- partials/actions.html    # Doxygen 単一ページ リンクのボタン
 |   +-- assets/
 |   |   +-- docsfw-plantuml.js       # クライアント側 PlantUML レンダラー
 |   |   +-- docsfw-mermaid.js        # Mermaid 初期化
 |   |   +-- docsfw-mathjax.js        # MathJax の設定
 |   |   +-- docsfw-preview.css       # 追加スタイル
+|   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
+|   +-- tests/
+|   |   +-- test_preview_doxygen.py  # リンク変換と静的サーブの純関数テスト
 |   +-- requirements.txt
 |   +-- README.md                    # 利用手順
 +-- docs/
@@ -171,6 +177,7 @@ framework/docsfw/
 ```text
 pages/preview/
 +-- mkdocs.yml     # mkdocs.yml.in から生成される実際の設定
++-- theme/         # Material の custom_dir 上書き
 +-- src/           # ステージング済み Markdown (docs_dir)
 +-- site/          # mkdocs build の出力 (serve 時は未使用)
 ```
@@ -214,6 +221,56 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 - `make preview-build` (`mkdocs serve` を経由しない one-shot ビルドによるリンク切れ検査)。
 - `vendor_assets.py` が扱う JS/CSS アセットや `mkdocs.yml` 自体の更新 (自動ステージングの対象は Markdown のみ)。
 
+## Doxygen HTML の静的サーブ
+
+`make doxy` は Doxygen HTML と依存関係レポートを `pages/doxygen/` へ出します。  
+このツリーは約 244 MB、約 1.8 万ファイルです。  
+プレビューはこれを Markdown 変換せず、`make preview` (`mkdocs serve`) の `/doxygen/` としてそのまま返します。
+
+`make preview` は `make doxy` に依存しません。  
+`pages/doxygen/` が無いときはマウントを省略し、プレビュー本体は起動します。
+
+### コピーしない理由
+
+`docs_dir` へコピーすると、mkdocs が毎回 1.8 万ファイルを走査し、Material テーマで包んでしまいます。  
+シンボリック リンクとジャンクションは、プレビュー基盤が Windows で使わないと決めている手段です。  
+`pages/preview/site/doxygen/` へネストするとパスが伸び、Windows の MAX_PATH に当たりやすくなります。
+
+そのため配信の正本は `mkdocs serve` の WSGI マウントだけです。  
+`bin/preview_doxygen_hook.py` が `PATH_INFO` の `/doxygen/` を横取りし、`pages/doxygen/` を直接開きます。  
+livereload 用の JavaScript は挿入しません。Doxygen と Cytoscape の HTML を改変しないためです。
+
+URL は POSIX のまま扱い、ファイルを開くときだけ OS のパスへ結合します。  
+`posixpath.normpath` で `..` を潰したあと `/` で分割し、`os.path.join(root, *parts)` します。  
+結合結果が `pages/doxygen/` の外なら 404 です。ドライブが違う `ValueError` も 404 です。
+
+`make preview-build` の `site/` には Doxygen ツリーを入れません。  
+閲覧の正本は `make preview` です。
+
+### 本文リンクの書き換え
+
+README や依存関係レポートのリンクは、docsfw の発行レイアウト (`pages/ja/html/<alias>/...`) を前提に `../../../doxygen/` と書かれています。  
+mkdocs は `use_directory_urls: true` で、かつ `ja/html/` 相当の階層が無いため、この相対パスは段数が合いません。
+
+`stage_preview_docs.py` はフェンス外の `(?:\.\./)+doxygen/` を `/doxygen/` へ置き換えます。  
+Markdown リンクと生 HTML の `href` の両方が対象です。  
+絶対リンクは `validation.links.absolute_links: ignore` のため、`pages/doxygen/` が無くてもリンク検査の警告にはなりません。
+
+### Doxygen 単一ページ リンク
+
+doxyfw は Doxybook2 の Markdown へ `doxygen-page-url: "pages/doxygen/...html"` を埋め込みます。  
+docsfw の発行ではナビバー右の Doxygen アイコンになります。
+
+プレビューでは `pages/doxygen/` を `/doxygen/` へ写し、Material のページ操作ボタン (見出し横) へ出します。  
+`target="doxygen-page"` で、単一ページと依存関係レポートが同じタブを再利用します。  
+`doxygenLinkEnable` は `.vscode/pub_markdown.config.yaml` を読み、未指定なら有効です。  
+リンク先ファイルの存在は確認しません。
+
+ヘッダー右端への配置は、Material の `header.html` を丸ごと上書きすることになり、テーマ更新で壊れやすいため採用しません。  
+Git 単一ページ リンクは対象外のままです。
+
+アイコン画像は `styles/html/docsfw-doxygen-icon.svg` を `vendor_assets.py` が実ファイルとしてコピーします。
+
 ## PlantUML のブラウザー レンダリング
 
 ### 採用するライブラリ
@@ -256,7 +313,7 @@ API は `renderToString(lines, onSuccess, onError)` です。
   `MutationObserver` (`watchColorScheme()`) がスキーム変更を検知すると、描画済みの図をこのオプション付きで再描画します。
 
 遅延描画は必須です。  
-`app/porter/docs/sequence.md` は 1 ページに 30 個の PlantUML を含み、Doxybook2 のページも各ページにインクルード グラフと呼び出しグラフを持つためです。
+`app/example/docs/sequence.md` のような 1 ページに多数の PlantUML を含む文書や、Doxybook2 のページは各ページにインクルード グラフと呼び出しグラフを持つためです。
 
 ## Mermaid
 
@@ -316,8 +373,8 @@ mkdocs の自動ナビゲーションに任せ、`publocal.yaml` が存在する
 
 | ターゲット | 内容 |
 |---|---|
-| `preview` | ステージング後に `mkdocs serve` を起動する |
-| `preview-build` | ステージング後に `mkdocs build` を実行する。`PREVIEW_STRICT=1` のときは `--strict` を付ける |
+| `preview` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`PREVIEW_VARIANT` で言語と details を選ぶ (既定 `ja-details`) |
+| `preview-build` | ステージング後に `mkdocs build` を実行する。`PREVIEW_STRICT=1` のときは `--strict` を付ける。バリアントは `preview` と同じ |
 | `preview-stop` | このワークスペースのプレビュー venv で動いている `mkdocs serve` を停止する |
 | `cleanpreview` | serve を停止してから `pages/preview/` を削除する |
 
@@ -331,16 +388,44 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 停止直後でもハンドルが残ることがあるため、削除は短い間隔で最大 5 回やり直します。  
 対象プロセスが無い、または停止しきれない場合も `preview-stop` 自体は失敗しません。削除できなければ `clean` が失敗します。
 
+`make preview` はステージングの前に同じ停止処理を `--require-stopped` 付きで実行します。  
+先に動いていたこのワークスペースの `mkdocs serve` が消えるまで待ち、消えてからステージングします。  
+バリアントが違うと `pages/preview/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、旧バリアントと新バリアントが混ざります。  
+止めきれなければステージングへ進まず失敗します。`preview-stop` と `cleanpreview` は、停止しきれなくても失敗しません。  
+停止とステージングはレシピ内で順に実行し、`make -j` でも同時に走らないようにします。  
+先に起動した側の `make preview` は、`mkdocs serve` が止まった時点で終了します。
+
 Python の依存は `framework/docsfw/mkdocs/.venv` に閉じ込め、`requirements.txt` で固定します。
+
+### バリアントの指定
+
+`make docs` と同じ 4 値を、起動時に 1 つだけ選びます。同時に 4 系統は出しません。
+
+| `PREVIEW_VARIANT` | 言語 | 詳細ブロック | `make docs` の出力に相当 |
+|---|---|---|---|
+| `ja` | ja | 除く | `pages/ja/html/` |
+| `ja-details` (既定) | ja | 残す | `pages/ja-details/html/` |
+| `en` | en | 除く | `pages/en/html/` |
+| `en-details` | en | 残す | `pages/en-details/html/` |
+
+```bash
+make preview
+make preview PREVIEW_VARIANT=en
+make preview-build PREVIEW_VARIANT=ja
+```
+
+選んだ値はステージングと `mkdocs.yml` の `extra.preview_variant` に書き、serve 中の自動ステージングも同じフィルターを使います。  
+切り替えるときは `make preview` を再起動します。後から起動した `make preview` が、先に動いていた serve を止めて置き換わります。  
+ページ内の概要 / 詳細切替リンクは出しません。
 
 ## 対応しない機能
 
 次の機能が必要な場合は `make docs` で docsfw を使用します。
 
 - Word (docx) 出力と、docx 専用フィルター、rsvg-convert、共有ブラウザー
-- `en` バリアントと `details=false` バリアント
+- 4 バリアントの同時出力と、ページ内の概要 / 詳細切替リンク
 - pandoc-crossref による図表とリストの採番、および相互参照
-- Git 単一ページ リンクと Doxygen 単一ページ リンク
+- Git 単一ページ リンク
 - self-contained HTML と `file://` での動作
 - OpenAPI からの Markdown 生成
 - MiniSearch と CJK bigram による日本語全文検索
@@ -476,13 +561,12 @@ docsfw の `make docs` は 4 バリアントの HTML と docx を生成するた
 
 #### 既知の警告
 
-現在のビルドでは 60 件の警告が出ます。  
-いずれもステージングの不具合ではなく、ソース側に元からあるリンクです。  
+Doxygen HTML への本文リンクは `/doxygen/` へ書き換えるため、この検査の対象外です。  
+残る警告はステージングの不具合ではなく、ソース側に元からあるリンクです。  
 docsfw の発行でも同じリンクは解決しません。
 
 | 件数 | 内容 | 備考 |
 |---:|---|---|
-| 24 | `../../../doxygen/*.html` | docsfw の出力レイアウトを前提としたリンク。`pages/preview/site/` では届かない |
 | 19 | Doxybook2 が生成した `Classes/`, `Namespaces/`, `Modules/` への相対リンク | 生成時点で相対パスが誤っている |
 | 11 | `../prod/` 配下のファイルへのリンク | ドキュメント ツリーの外 |
 | 6 | `../../README.md`, `../../AGENTS.md`, `../bin/text_style_jp.md` など | ドキュメント ツリーの外 |
@@ -503,14 +587,17 @@ make preview
 
 | 確認対象 | ページ | 確認内容 |
 |---|---|---|
-| PlantUML の多量描画 | `app/porter/docs/sequence.md` | 遅延描画がスクロールに追従すること |
+| PlantUML の多量描画 | `app/example/docs/sequence.md` | 遅延描画がスクロールに追従すること |
 | PlantUML の図種 | `framework/docsfw/docs/sample/plantuml-showcase.md` | 図種ごとの描画結果と docsfw との差異 |
 | Mermaid | `framework/docsfw/docs/sample/mermaid-showcase.md` | 描画とサイズ正規化 |
 | キャプション | `framework/docsfw/docs/sample/mermaid-caption.md` | `CodeBlock:` 由来のキャプション |
 | `\toc` の展開 | `docs/README.md` | 索引の内容と越境リンクの解決 |
-| Doxybook2 ページ | `app/c-platform/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
+| Doxybook2 ページ | `app/example/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
+| Doxygen HTML | `/doxygen/example_public/index.html` | `make doxy` 済みなら無変換で表示されること |
+| 依存関係レポート | `/doxygen/example_internal/dependency/index.html` | Cytoscape の HTML と付随 JS がそのまま読み込まれること |
+| Doxygen 単一ページ リンク | `doxygen-page-url` を持つ Doxybook2 ページ | 見出し横のアイコンが `/doxygen/...` を `target="doxygen-page"` で開くこと |
 | GitHub アラート | 各 app の `coding-guideline.md` | 6 種の表示。特に `DEPRECATED` |
-| 数式 | `app/general/docs/build-design.md` | MathJax の描画 |
+| 数式 | `app/example/docs/build-design.md` | MathJax の描画 |
 | 日本語パス | `framework/docsfw/docs/sample/日本語を含むサブフォルダ/` | パス解決とナビゲーション表示 |
 | 検索 | 任意 | 日本語語句での検索 |
 
@@ -518,7 +605,9 @@ make preview
 
 Windows の Git Bash と Python でも `make preview-build` が通ることを確認します。  
 ステージングは Python で実装するため、シェル スクリプトへの依存を持ちません。  
-シンボリック リンクは Windows で不安定なため使用せず、実ファイルのコピーで構成します。
+シンボリック リンクは Windows で不安定なため使用せず、実ファイルのコピーで構成します。  
+`pages/doxygen/` もコピーせず、`make preview` の WSGI が直接読みます。Windows でもジャンクションは使いません。  
+`make preview-build` の `site/` には Doxygen ツリーを入れないため、Doxygen HTML の閲覧確認は `make preview` で行います。
 
 ### docsfw への非干渉
 
@@ -535,6 +624,7 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 | 3 | mkdocs 設定とテーマ資産 | 完了 |
 | 4 | PlantUML のクライアント レンダラー | 完了 |
 | 5 | make 統合と文書化 | 完了 |
+| 6 | Doxygen HTML の静的サーブと単一ページ リンク | 完了 |
 
 ### 実装で判明したこと
 
@@ -550,5 +640,4 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 ### 未着手の課題
 
 - Salt 図が `@plantuml/core` で描画できません。
-- Doxygen HTML へのリンクがプレビューでは解決しません。`pages/doxygen` がステージング ツリーの外にあるためです。
 - `publocal.yaml` の `order:` に対応する `.nav.yml` の生成は実装済みですが、対象ファイルが存在しないため未検証です。

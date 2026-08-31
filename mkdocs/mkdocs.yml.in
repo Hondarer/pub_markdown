@@ -7,7 +7,7 @@
 #
 # 設計は framework/docsfw/docs/mkdocs-preview-design.md を参照してください。
 
-site_name: c-modernization-kit (preview)
+site_name: c-modernization-kit (preview @PREVIEW_VARIANT@)
 site_description: docsfw の発行対象を mkdocs でプレビューします
 docs_dir: src
 site_dir: site
@@ -23,7 +23,8 @@ validation:
 
 theme:
   name: material
-  language: ja
+  custom_dir: theme
+  language: @PREVIEW_THEME_LANGUAGE@
   features:
     - navigation.indexes
     - navigation.top
@@ -92,9 +93,13 @@ plugins:
       separator: '[\s\-,:!=\[\]()"/]+|(?![^\d])(?=[A-Z][a-z])|(?<=[0-9])(?=[^0-9])|(?<!\d)(?=\d)|(?<=[぀-ヿ㐀-䶿一-鿿豈-﫿])(?=[぀-ヿ㐀-䶿一-鿿豈-﫿])'
 @AWESOME_NAV@
 
+extra:
+  preview_variant: "@PREVIEW_VARIANT@"
+
 extra_css:
   - assets/docsfw-preview.css
   - assets/docsfw-pandoc-style.css
+  - assets/docsfw-doxygen-link.css
 
 extra_javascript:
   # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。
@@ -107,9 +112,11 @@ extra_javascript:
   # MathJax は docsfw の pandoc --mathjax と同じく CDN から読み込む。
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
+# Doxygen HTML の静的サーブと単一ページ リンクを先に登録する。
 # 元の Markdown の変更を検知し、1 ファイル単位の軽量なステージングを
 # 自動で行う。ステージング結果は docs_dir に書き込まれるため、mkdocs 標準の
 # docs_dir 監視がそれを検知してビルドとブラウザーの自動リロードを行う。
 # 詳細は docs/mkdocs-preview-design.md を参照。
 hooks:
+  - ../../framework/docsfw/mkdocs/bin/preview_doxygen_hook.py
   - ../../framework/docsfw/mkdocs/bin/preview_autostage_hook.py

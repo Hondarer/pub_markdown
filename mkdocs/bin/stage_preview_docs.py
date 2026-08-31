@@ -19,6 +19,7 @@ docsfw の ``bin/pub_markdown_core.sh`` が発行時に行う入力側の処理�
 使用方法:
 
     python3 stage_preview_docs.py --workspaceFolder=/path/to/workspace
+    python3 stage_preview_docs.py --workspaceFolder=/path/to/workspace --variant en
 """
 
 import argparse
@@ -37,8 +38,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-PREVIEW_LANG = "ja"
-PREVIEW_DETAILS = True
+DEFAULT_PREVIEW_VARIANT = "ja-details"
+PREVIEW_VARIANTS = ("ja", "ja-details", "en", "en-details")
 
 MARKDOWN_EXTENSIONS = (".md", ".markdown")
 ASSET_EXTENSIONS = (
@@ -54,6 +55,8 @@ VENDORED_FILES = (
     "assets/docsfw-mermaid.js",
     "assets/docsfw-mathjax.js",
     "assets/docsfw-preview.css",
+    "assets/docsfw-doxygen-link.css",
+    "assets/docsfw-doxygen-icon.svg",
 )
 
 # 既定の環境変数。.vscode/settings.json の定義と一致させる。
@@ -74,8 +77,27 @@ _ATTR_TAIL_RE = re.compile(r"\s*\{#([A-Za-z0-9_:.-]+)\}\s*$")
 _DEPRECATED_RE = re.compile(r"^([ \t]*)>[ \t]*\[!DEPRECATED\][ \t]*$")
 _COLLAPSIBLE_OPEN_RE = re.compile(r"^:{3,}[ \t]*\{\.collapsible-list(?:[ \t][^}]*)?\}[ \t]*$")
 _COLLAPSIBLE_CLOSE_RE = re.compile(r"^:{3,}[ \t]*$")
+_DOXYGEN_REL_RE = re.compile(r"(?:\.\./)+doxygen/")
 
 DOCUMENT_LINK_EXTENSIONS = (".md", ".markdown", ".rmd", ".tmd", ".rst")
+
+
+def parse_preview_variant(variant):
+    """バリアント名を ``(lang, details, variant)`` へ分解する。
+
+    ``ja`` / ``en`` は詳細ブロックを除き、``*-details`` は残します。
+    ``make docs`` の出力ディレクトリ名と同じ 4 値だけを受け付けます。
+    """
+    name = (variant or DEFAULT_PREVIEW_VARIANT).strip()
+    if name not in PREVIEW_VARIANTS:
+        raise ValueError(
+            "unknown preview variant: {} (expected {})".format(
+                name, ", ".join(PREVIEW_VARIANTS)
+            )
+        )
+    if name.endswith("-details"):
+        return name[: -len("-details")], True, name
+    return name, False, name
 
 
 # ----------------------------------------------------------------------------
@@ -399,6 +421,19 @@ def rewrite_links(text, document, mapper, real_to_staged):
     return _apply_outside_fences(text, lambda line: _LINK_RE.sub(replace, line))
 
 
+def rewrite_doxygen_preview_links(text):
+    """docsfw 発行レイアウト向けの Doxygen 相対リンクを ``/doxygen/`` へ写す。
+
+    ``../../../doxygen/cplat_public/index.html`` や生 HTML の
+    ``href="../../../../doxygen/.../dependency/index.html"`` が対象。
+    mkdocs は ``use_directory_urls: true`` のため ``../`` の段数が合わず、
+    サイトルート絶対パスへ置き換えて WSGI マウントへ届ける。
+    """
+    if "doxygen/" not in text:
+        return text
+    return _apply_outside_fences(text, lambda line: _DOXYGEN_REL_RE.sub("/doxygen/", line))
+
+
 def _split_link_suffix(target):
     """リンク先を ``(パス, 区切り, アンカーやクエリ)`` に分割する。"""
     match = re.match(r"^([^#?]*)(.*)$", target)
@@ -577,13 +612,13 @@ def remove_page_breaks(text):
     )
 
 
-def build_front_matter(document):
+def build_front_matter(document, lang, details):
     """``short-title`` を ``title`` として補ったフロント マターを組み立てる。
 
     mkdocs はナビゲーションとページ タイトルに ``title`` を使用します。
     docsfw の ``short-title`` は索引とナビゲーションだけに効くため、完全には一致しません。
     """
-    short_title = resolve_short_title(document.fields, PREVIEW_LANG, PREVIEW_DETAILS)
+    short_title = resolve_short_title(document.fields, lang, details)
     if not short_title or document.fields.get("title"):
         return document.front_matter
 
@@ -731,7 +766,8 @@ class StageIndex:
     """
 
     def __init__(self, workspace, config_path, main_mdroot, subfolders,
-                 mapper, kept, assets, index, real_to_staged, by_real_path):
+                 mapper, kept, assets, index, real_to_staged, by_real_path,
+                 lang, details, variant):
         self.workspace = workspace
         self.config_path = config_path
         self.main_mdroot = main_mdroot
@@ -742,9 +778,13 @@ class StageIndex:
         self.index = index
         self.real_to_staged = real_to_staged
         self.by_real_path = by_real_path
+        self.lang = lang
+        self.details = details
+        self.variant = variant
 
 
-def build_stage_index(workspace, config_path):
+def build_stage_index(workspace, config_path, lang="ja", details=True,
+                      variant=DEFAULT_PREVIEW_VARIANT):
     """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。"""
     config = parse_config(config_path)
     md_root_name = config.get("mdRoot") or "docs"
@@ -769,9 +809,9 @@ def build_stage_index(workspace, config_path):
 
         document.front_matter = front_matter
         document.fields = fields
-        document.body = filter_lang_details(body, PREVIEW_LANG, PREVIEW_DETAILS)
+        document.body = filter_lang_details(body, lang, details)
         document.title = (
-            resolve_short_title(fields, PREVIEW_LANG, PREVIEW_DETAILS)
+            resolve_short_title(fields, lang, details)
             or first_heading(document.body)
             or posixpath.splitext(document.source_name)[0]
         )
@@ -801,19 +841,23 @@ def build_stage_index(workspace, config_path):
         index=index,
         real_to_staged=real_to_staged,
         by_real_path=by_real_path,
+        lang=lang,
+        details=details,
+        variant=variant,
     )
 
 
 def _render_document(document, container):
     """1 ドキュメント分の変換パイプラインを実行し、書き出す内容を返す。"""
     body = rewrite_links(document.body, document, container.mapper, container.real_to_staged)
+    body = rewrite_doxygen_preview_links(body)
     body = expand_toc_commands(body, container.index, document.staged_rel)
     body = strip_collapsible_list_fences(body)
     body = convert_deprecated_alerts(body)
     body = convert_captions(body)
     body = remove_page_breaks(body)
 
-    front_matter = build_front_matter(document)
+    front_matter = build_front_matter(document, container.lang, container.details)
     content = (front_matter + "\n" + body) if front_matter else body
     if not content.endswith("\n"):
         content += "\n"
@@ -879,9 +923,9 @@ def stage_single(container, out_dir, real_path):
 
     document.front_matter = front_matter
     document.fields = fields
-    document.body = filter_lang_details(body, PREVIEW_LANG, PREVIEW_DETAILS)
+    document.body = filter_lang_details(body, container.lang, container.details)
     document.title = (
-        resolve_short_title(fields, PREVIEW_LANG, PREVIEW_DETAILS)
+        resolve_short_title(fields, container.lang, container.details)
         or first_heading(document.body)
         or posixpath.splitext(document.source_name)[0]
     )
@@ -895,12 +939,15 @@ def stage_single(container, out_dir, real_path):
 # メイン
 # ----------------------------------------------------------------------------
 
-def stage(workspace, out_dir, config_path, quiet=False):
+def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
+          variant=DEFAULT_PREVIEW_VARIANT):
     """収集から書き出しまでを実行する (フル ステージング)。
 
     :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
     """
-    container = build_stage_index(workspace, config_path)
+    container = build_stage_index(
+        workspace, config_path, lang=lang, details=details, variant=variant
+    )
     updated, keep_relative = write_documents(container, out_dir)
 
     staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative})
@@ -913,8 +960,8 @@ def stage(workspace, out_dir, config_path, quiet=False):
     removed = remove_stale(out_dir, keep_relative)
 
     if not quiet:
-        print("staged: {} documents, {} assets, {} updated, {} removed, {} nav files".format(
-            len(container.kept), len(container.assets), updated, removed, nav_count))
+        print("staged: variant {}, {} documents, {} assets, {} updated, {} removed, {} nav files".format(
+            container.variant, len(container.kept), len(container.assets), updated, removed, nav_count))
 
     return len(container.kept), updated, nav_count
 
@@ -927,6 +974,11 @@ def main(argv=None):
     parser.add_argument("--configFile", dest="config", default=None,
                         help="既定は <workspaceFolder>/.vscode/pub_markdown.config.yaml")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--variant",
+        default=DEFAULT_PREVIEW_VARIANT,
+        help="ja / ja-details / en / en-details (default: ja-details)",
+    )
     args = parser.parse_args(argv)
 
     workspace = os.path.abspath(args.workspace)
@@ -935,7 +987,16 @@ def main(argv=None):
     os.makedirs(out_dir, exist_ok=True)
 
     try:
-        stage(workspace, os.path.abspath(out_dir), config_path, quiet=args.quiet)
+        lang, details, variant = parse_preview_variant(args.variant)
+        stage(
+            workspace,
+            os.path.abspath(out_dir),
+            config_path,
+            quiet=args.quiet,
+            lang=lang,
+            details=details,
+            variant=variant,
+        )
     except ValueError as error:
         print("Error: {}".format(error), file=sys.stderr)
         return 1

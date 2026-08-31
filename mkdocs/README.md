@@ -23,11 +23,28 @@ make preview
 その後、ステージングを行い `mkdocs serve` を起動します。  
 ブラウザーで <http://127.0.0.1:8000/> を開いてください。
 
+`make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを無変換で開けます。  
+Doxybook2 の各ページからは、見出し横の Doxygen アイコンで対応する単一ページへ飛べます。  
+`make preview` は `make doxy` に依存しません。`pages/doxygen/` が無くてもプレビュー本体は起動します。  
+Doxygen HTML の閲覧は `make preview` が正本です。`make preview-build` の `site/` には入れません。
+
 アドレスを変える場合は `PREVIEW_ADDR` を指定します。
 
 ```bash
 make preview PREVIEW_ADDR=0.0.0.0:8100
 ```
+
+言語と詳細ブロックは `PREVIEW_VARIANT` で選びます。既定は `ja-details` です。  
+値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。1 回の起動では 1 つだけ出します。
+
+```bash
+make preview PREVIEW_VARIANT=en
+make preview-build PREVIEW_VARIANT=ja
+```
+
+切り替えるときは `make preview` を再起動してください。  
+2 つ目の `make preview` を起動すると、先に動いていたこのワークスペースの serve が消えるまで待ってからステージングします。  
+止めきれなければ起動しません。後から起動した側が残ります。
 
 リンク切れの確認だけを行う場合は次を実行します。
 
@@ -63,12 +80,15 @@ make preview-stop
 | `bin/lang_details_filter.py` | `bin/replace-tag.sh` の Python 移植 |
 | `bin/expand_toc.py` | `\toc` の索引展開 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
+| `bin/preview_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
 | `bin/stop_preview_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
 | `mkdocs.yml.in` | mkdocs 設定のテンプレート |
+| `theme/partials/actions.html` | Doxygen 単一ページ リンクのボタン |
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
 | `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
 | `assets/docsfw-preview.css` | 追加スタイル |
+| `assets/docsfw-doxygen-link.css` | Doxygen アイコンのサイズ |
 | `requirements.txt` | Python 依存 |
 
 生成物は `pages/preview/` に出力します。
@@ -109,6 +129,13 @@ python3 framework/docsfw/mkdocs/bin/stage_preview_docs.py --workspaceFolder="$PW
 python3 framework/docsfw/mkdocs/bin/vendor_assets.py --workspaceFolder="$PWD"
 ```
 
+バリアントを変えるときは、両方に `--variant` を付けます。
+
+```bash
+python3 framework/docsfw/mkdocs/bin/stage_preview_docs.py --workspaceFolder="$PWD" --variant=en
+python3 framework/docsfw/mkdocs/bin/vendor_assets.py --workspaceFolder="$PWD" --variant=en
+```
+
 `mkdocs serve` を起動する前の準備 (`make preview` の前提) や、  
 `make preview-build` (`mkdocs serve` を経由しない one-shot ビルド) では、  
 上記のフル ステージングが唯一の同期手段です。  
@@ -118,6 +145,6 @@ python3 framework/docsfw/mkdocs/bin/vendor_assets.py --workspaceFolder="$PWD"
 
 ## 対応しない機能
 
-Word (docx) 出力、`en` バリアント、`details=false` バリアント、pandoc-crossref の採番、  
-Git と Doxygen の単一ページ リンク、`file://` での動作は対象外です。  
+Word (docx) 出力、4 バリアントの同時出力、pandoc-crossref の採番、  
+Git 単一ページ リンク、`file://` での動作は対象外です。  
 詳細は [設計ドキュメント](../docs/mkdocs-preview-design.md) を参照してください。

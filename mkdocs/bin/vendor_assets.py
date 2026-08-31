@@ -6,6 +6,7 @@
 - ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
 - ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
 - ``mkdocs/assets/`` 配下の自前スクリプトとスタイル
+- Doxygen 単一ページ リンク用の SVG と theme 上書き
 - ``mkdocs/mkdocs.yml.in`` から生成した ``pages/preview/mkdocs.yml``
 
 いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
@@ -25,7 +26,11 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_preview_docs import write_if_changed  # noqa: E402
+from stage_preview_docs import (  # noqa: E402
+    DEFAULT_PREVIEW_VARIANT,
+    parse_preview_variant,
+    write_if_changed,
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -45,7 +50,10 @@ OWN_ASSETS = (
     "docsfw-mathjax.js",
     "docsfw-preview.css",
     "docsfw-pandoc-style.css",
+    "docsfw-doxygen-link.css",
 )
+
+DOXYGEN_ICON_SRC = os.path.join(DOCSFW_DIR, "styles", "html", "docsfw-doxygen-icon.svg")
 
 
 def copy_if_changed(src, dst):
@@ -117,6 +125,35 @@ def vendor_own_assets(assets_dir):
     return copied
 
 
+def vendor_doxygen_icon(assets_dir):
+    """docsfw の Doxygen アイコン SVG をプレビュー資産へコピーする。"""
+    if not os.path.isfile(DOXYGEN_ICON_SRC):
+        print("Warning: Doxygen アイコンが見つかりません: {}".format(DOXYGEN_ICON_SRC))
+        return 0
+    dst = os.path.join(assets_dir, "docsfw-doxygen-icon.svg")
+    return 1 if copy_if_changed(DOXYGEN_ICON_SRC, dst) else 0
+
+
+def vendor_theme(preview_dir):
+    """Material の custom_dir 上書きを ``pages/preview/theme/`` へコピーする。"""
+    src_dir = os.path.join(MKDOCS_DIR, "theme")
+    dst_dir = os.path.join(preview_dir, "theme")
+    if not os.path.isdir(src_dir):
+        return 0
+    copied = 0
+    for dirpath, _dirnames, filenames in os.walk(src_dir):
+        rel_dir = os.path.relpath(dirpath, src_dir)
+        for filename in filenames:
+            src = os.path.join(dirpath, filename)
+            if rel_dir == os.curdir:
+                dst = os.path.join(dst_dir, filename)
+            else:
+                dst = os.path.join(dst_dir, rel_dir, filename)
+            if copy_if_changed(src, dst):
+                copied += 1
+    return copied
+
+
 def has_nav_files(docs_dir):
     """ステージング先に ``.nav.yml`` が 1 つでもあるかどうかを返す。"""
     for dirpath, _dirnames, filenames in os.walk(docs_dir):
@@ -125,8 +162,9 @@ def has_nav_files(docs_dir):
     return False
 
 
-def generate_mkdocs_yml(preview_dir, nav_generated):
+def generate_mkdocs_yml(preview_dir, nav_generated, variant=DEFAULT_PREVIEW_VARIANT):
     """``mkdocs.yml.in`` から ``pages/preview/mkdocs.yml`` を生成する。"""
+    lang, _details, variant_name = parse_preview_variant(variant)
     template_path = os.path.join(MKDOCS_DIR, "mkdocs.yml.in")
     with open(template_path, "r", encoding="utf-8") as handle:
         template = handle.read()
@@ -145,7 +183,10 @@ def generate_mkdocs_yml(preview_dir, nav_generated):
         else:
             lines.append(line)
 
-    return write_if_changed(os.path.join(preview_dir, "mkdocs.yml"), "\n".join(lines))
+    text = "\n".join(lines)
+    text = text.replace("@PREVIEW_VARIANT@", variant_name)
+    text = text.replace("@PREVIEW_THEME_LANGUAGE@", lang)
+    return write_if_changed(os.path.join(preview_dir, "mkdocs.yml"), text)
 
 
 def main(argv=None):
@@ -154,6 +195,11 @@ def main(argv=None):
     parser.add_argument("--previewDir", dest="preview_dir", default=None,
                         help="既定は <workspaceFolder>/pages/preview")
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument(
+        "--variant",
+        default=DEFAULT_PREVIEW_VARIANT,
+        help="ja / ja-details / en / en-details (default: ja-details)",
+    )
     args = parser.parse_args(argv)
 
     workspace = os.path.abspath(args.workspace)
@@ -161,16 +207,19 @@ def main(argv=None):
     assets_dir = os.path.join(preview_dir, "src", "assets")
 
     try:
+        _lang, _details, variant = parse_preview_variant(args.variant)
         resolved = resolve_node_components()
         copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""))
         copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
-    except FileNotFoundError as error:
+        copied += vendor_doxygen_icon(assets_dir)
+        copied += vendor_theme(preview_dir)
+    except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)
         return 1
 
     nav_generated = has_nav_files(os.path.join(preview_dir, "src"))
-    changed = generate_mkdocs_yml(preview_dir, nav_generated)
+    changed = generate_mkdocs_yml(preview_dir, nav_generated, variant=variant)
 
     if not args.quiet:
         print("vendored: {} assets, mkdocs.yml {}".format(copied, "updated" if changed else "unchanged"))

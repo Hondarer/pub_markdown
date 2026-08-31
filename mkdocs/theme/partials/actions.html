@@ -1,0 +1,25 @@
+{# mkdocs-material の partials/actions.html を上書きし、Doxygen 単一ページ リンクを足す。 #}
+{% if page.edit_url %}
+  {% if "content.action.edit" in features %}
+    <a href="{{ page.edit_url }}" title="{{ lang.t('action.edit') }}" class="md-content__button md-icon" rel="edit">
+      {% set icon = config.theme.icon.edit or "material/file-edit-outline" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+    </a>
+  {% endif %}
+  {% if "content.action.view" in features %}
+    {% if "/blob/" in page.edit_url %}
+      {% set part = "blob" %}
+    {% else %}
+      {% set part = "edit" %}
+    {% endif %}
+    <a href="{{ page.edit_url | replace(part, 'raw') }}" title="{{ lang.t('action.view') }}" class="md-content__button md-icon">
+      {% set icon = config.theme.icon.view or "material/file-eye-outline" %}
+      {% include ".icons/" ~ icon ~ ".svg" %}
+    </a>
+  {% endif %}
+{% endif %}
+{% if doxygen_preview_url %}
+  <a href="{{ doxygen_preview_url }}" title="Doxygen" aria-label="Doxygen" class="md-content__button" target="doxygen-page">
+    <img src="{{ 'assets/docsfw-doxygen-icon.svg' | url }}" alt="Doxygen" class="docsfw-doxygen-icon" />
+  </a>
+{% endif %}

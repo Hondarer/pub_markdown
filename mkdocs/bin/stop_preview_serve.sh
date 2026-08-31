@@ -1,6 +1,9 @@
 #!/bin/bash
 # このワークスペースの mkdocs serve を停止する。
-# ルート makefile の preview-stop / cleandocs / cleanpreview から呼ぶ。
+# ルート makefile の preview / preview-stop / cleandocs / cleanpreview から呼ぶ。
+# make preview は起動前に --require-stopped 付きでこれを呼び、
+# 先に動いていた serve が消えてからステージングする。
+# preview-stop / clean は停止しきれなくても失敗しない。
 #
 # 対象は、プレビュー venv のパスをコマンドラインに含み、かつ引数が
 # ちょうど serve であるプロセスとその子孫に限る。
@@ -14,17 +17,22 @@
 set -u
 
 usage() {
-    echo "Usage: $0 --venv <preview-venv-dir>" >&2
+    echo "Usage: $0 --venv <preview-venv-dir> [--require-stopped]" >&2
     exit 2
 }
 
 venv=""
+require_stopped=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --venv)
             [ "$#" -ge 2 ] || usage
             venv=$2
             shift 2
+            ;;
+        --require-stopped)
+            require_stopped=1
+            shift
             ;;
         -h|--help)
             usage
@@ -220,6 +228,9 @@ wait_until_gone() {
 
 if [ ! -d /proc ]; then
     printf 'WARNING: /proc が無いため mkdocs serve を停止できません\n' >&2
+    if [ "$require_stopped" -eq 1 ]; then
+        exit 1
+    fi
     exit 0
 fi
 
@@ -264,4 +275,17 @@ fi
 
 # Windows のハンドル解放遅延に備える。
 sleep 0.5
+
+# 停止対象の PID だけでなく、いまも serve と判定できるプロセスが残っていないか確認する。
+mapfile -t leftover_pids < <(list_serve_pids | unique_pids)
+if [ "${#leftover_pids[@]}" -gt 0 ]; then
+    for pid in "${leftover_pids[@]}"; do
+        printf 'WARNING: preview mkdocs serve が残っています (pid %s)\n' "$pid" >&2
+    done
+    if [ "$require_stopped" -eq 1 ]; then
+        printf 'ERROR: 既存の mkdocs serve を止めきれなかったため、プレビューを起動しません\n' >&2
+        exit 1
+    fi
+fi
+
 exit 0

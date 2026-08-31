@@ -33,9 +33,11 @@ import threading
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from stage_preview_docs import (  # noqa: E402
+    DEFAULT_PREVIEW_VARIANT,
     build_stage_index,
     parse_config,
     parse_merge_subfolder_docs,
+    parse_preview_variant,
     stage,
     stage_single,
 )
@@ -77,15 +79,28 @@ def _source_roots(workspace, config_path):
     return [root for root in roots if os.path.isdir(root)]
 
 
+def _preview_lang_details(config):
+    """生成済み ``mkdocs.yml`` の ``extra.preview_variant`` から言語と details を取る。"""
+    extra = config.get("extra") or {}
+    variant = extra.get("preview_variant") or DEFAULT_PREVIEW_VARIANT
+    lang, details, name = parse_preview_variant(variant)
+    return lang, details, name
+
+
 class _AutoStager:
     """索引をキャッシュしつつ、単一ファイル再ステージングとフル ステージングを仲介する。"""
 
-    def __init__(self, workspace, config_path, out_dir):
+    def __init__(self, workspace, config_path, out_dir, lang, details, variant):
         self._workspace = workspace
         self._config_path = config_path
         self._out_dir = out_dir
+        self._lang = lang
+        self._details = details
+        self._variant = variant
         self._lock = threading.Lock()
-        self._container = build_stage_index(workspace, config_path)
+        self._container = build_stage_index(
+            workspace, config_path, lang=lang, details=details, variant=variant
+        )
         self._since_full_restage = 0
 
     def _full_restage_locked(self):
@@ -93,8 +108,22 @@ class _AutoStager:
         # remove_stale) をそのまま使う。索引の再構築は 2 度になるが、
         # フル ステージングは構成変化時と一定間隔ごとの再同期にしか
         # 発生しないため、単純さと正しさ (remove_stale による掃除) を優先する。
-        stage(self._workspace, self._out_dir, self._config_path, quiet=True)
-        self._container = build_stage_index(self._workspace, self._config_path)
+        stage(
+            self._workspace,
+            self._out_dir,
+            self._config_path,
+            quiet=True,
+            lang=self._lang,
+            details=self._details,
+            variant=self._variant,
+        )
+        self._container = build_stage_index(
+            self._workspace,
+            self._config_path,
+            lang=self._lang,
+            details=self._details,
+            variant=self._variant,
+        )
         self._since_full_restage = 0
         log.info("フル ステージングを実行しました (索引を再同期)。")
 
@@ -171,8 +200,9 @@ def on_serve(server, config, builder=None, **kwargs):
 
     workspace, config_path = _workspace_and_config(config)
     out_dir = config["docs_dir"]
+    lang, details, variant = _preview_lang_details(config)
 
-    stager = _AutoStager(workspace, config_path, out_dir)
+    stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant)
     handler = _make_handler(stager)
 
     from watchdog.observers.polling import PollingObserver
