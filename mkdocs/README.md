@@ -81,6 +81,7 @@ make preview-stop
 | `bin/expand_toc.py` | `\toc` の索引展開 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
 | `bin/preview_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
+| `bin/preview_versioned_hook.py` | 再生成中の完成済み版の配信と版切り替え |
 | `bin/stop_preview_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
 | `mkdocs.yml.in` | mkdocs 設定のテンプレート |
 | `theme/partials/actions.html` | Doxygen 単一ページ リンクのボタン |
@@ -112,6 +113,12 @@ make preview-stop
 ステージング結果は `mkdocs serve` が監視しているステージング先  
 (`pages/preview/src/`) に書き込まれるため、続けて mkdocs 標準の仕組みが  
 ビルドとブラウザーの自動リロードを行います。
+
+再生成中の通常の HTTP 要求には、直前に完成した版を返します。  
+次版は別の一時ディレクトリへ生成し、正常に完了した場合だけサイト全体を  
+切り替えます。  
+生成に失敗した場合も、ブラウザーでは直前の完成済み版を操作できます。  
+詳細は [設計ドキュメントの「再生成中の配信」](../docs/mkdocs-preview-design.md) を参照してください。
 
 ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査した  
 ときの情報をキャッシュして使い回しているため、対象ファイル自身の内容以外  

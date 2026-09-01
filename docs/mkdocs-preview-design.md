@@ -151,6 +151,7 @@ framework/docsfw/
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
 |   |   +-- preview_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
 |   |   +-- preview_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
+|   |   +-- preview_versioned_hook.py  # 完成済み版を維持する無停止再生成
 |   |   +-- stop_preview_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- theme/
@@ -163,6 +164,7 @@ framework/docsfw/
 |   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
 |   +-- tests/
 |   |   +-- test_preview_doxygen.py  # リンク変換と静的サーブの純関数テスト
+|   |   +-- test_preview_versioned.py  # 再生成中の配信と版切り替えのテスト
 |   +-- requirements.txt
 |   +-- README.md                    # 利用手順
 +-- docs/
@@ -220,6 +222,29 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 - `make preview` が `mkdocs serve` を起動する前の `pages/preview/` 一式 (初回の `src/`、`mkdocs.yml`、vendored assets) の準備。
 - `make preview-build` (`mkdocs serve` を経由しない one-shot ビルドによるリンク切れ検査)。
 - `vendor_assets.py` が扱う JS/CSS アセットや `mkdocs.yml` 自体の更新 (自動ステージングの対象は Markdown のみ)。
+
+## 再生成中の配信
+
+### mkdocs 側の待機動作
+
+mkdocs 1.6.1 の `LiveReloadServer` は、ファイル変更を検知すると再生成の開始時刻を記録し、再生成が完了するまで通常の HTTP 要求を待機させます。  
+同じ出力ディレクトリを消去して再生成する途中の内容を配信しないための動作ですが、再生成に時間がかかると、表示済みページから別ページへの移動や CSS などの取得も完了待ちになります。
+
+`bin/preview_versioned_hook.py` は、初回生成で完成した出力を公開版として保持します。  
+変更検知後の生成先は別の一時ディレクトリとし、生成が正常に完了した場合だけ公開版を次版へ切り替えます。  
+生成に失敗した場合は候補版を破棄し、直前の公開版を配信し続けます。
+
+### HTTP 要求と版の寿命
+
+通常の HTTP 要求は、要求開始時の公開版を参照し、mkdocs の再生成完了を待ちません。  
+HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使用するため、次版の公開後に mkdocs 標準の通知でブラウザーを再読み込みします。
+
+公開版の切り替え時に旧版からファイルを送信中の場合は、その応答が閉じるまで旧版のディレクトリを残します。  
+応答が完了して参照数がゼロになった版だけを削除するため、Windows でも使用中のファイルを削除しません。  
+初回生成物の一時ディレクトリは mkdocs 自身が所有するためフックから削除せず、フックが生成した一時ディレクトリだけを終了時に回収します。
+
+`/livereload/` は mkdocs 標準の長時間ポーリングへ委譲します。  
+`/doxygen/` は `preview_doxygen_hook.py` の静的配信へ委譲するため、版管理の対象に含めません。
 
 ## Doxygen HTML の静的サーブ
 

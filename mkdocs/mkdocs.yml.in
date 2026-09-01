@@ -119,4 +119,5 @@ extra_javascript:
 # 詳細は docs/mkdocs-preview-design.md を参照。
 hooks:
   - ../../framework/docsfw/mkdocs/bin/preview_doxygen_hook.py
+  - ../../framework/docsfw/mkdocs/bin/preview_versioned_hook.py
   - ../../framework/docsfw/mkdocs/bin/preview_autostage_hook.py
