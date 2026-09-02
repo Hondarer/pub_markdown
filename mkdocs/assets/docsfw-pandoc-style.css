@@ -9,6 +9,8 @@
 
 .md-typeset {
   font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -17,33 +19,35 @@
 
 .md-typeset h1,
 .md-typeset h2,
-.md-typeset h3,
+.md-typeset h3 {
+  margin: 1.25em 0 0.625em;
+  font-size: 19px;
+  line-height: 40px;
+}
+
 .md-typeset h4,
 .md-typeset h5,
 .md-typeset h6 {
   margin: 1.25em 0 0.625em;
-  line-height: 1.4;
+  font-size: 17px;
+  line-height: 20px;
 }
 
 .md-typeset h1 {
-  font-size: 1.1875rem;
   font-weight: 700;
 }
 
 .md-typeset h2,
 .md-typeset h3 {
-  font-size: 1.1875rem;
   font-weight: 400;
 }
 
 .md-typeset h4,
 .md-typeset h5 {
-  font-size: 1.0625rem;
   font-weight: 400;
 }
 
 .md-typeset h6 {
-  font-size: 1.0625rem;
   font-weight: 400;
   color: var(--md-default-fg-color--light);
 }
@@ -114,6 +118,15 @@
 }
 
 /* ------------------------------------------------------------------------ */
+/* 定義リスト                                                                */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset dl dt {
+  font-size: 14px;
+  line-height: 21px;
+}
+
+/* ------------------------------------------------------------------------ */
 /* 引用                                                                      */
 /* ------------------------------------------------------------------------ */
 
@@ -133,6 +146,8 @@
 
 .md-typeset :not(pre) > code {
   border: 1px solid var(--md-default-fg-color--lightest);
+  font-size: 15px;
+  line-height: 22.5px;
 }
 
 /* pymdownx.superfences のコード ブロックは
@@ -154,6 +169,15 @@
 .md-typeset pre:not(.highlight pre) {
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 3px;
+}
+
+/* コードブロック本文。pandoc 発行版は pre / .highlight pre / pre code の
+   3段階でサイズを持たせているが、最終描画は pre code の指定で確定するため、
+   ここでは最終値のみを code 要素へ直接指定する。 */
+.md-typeset .highlight pre code,
+.md-typeset pre:not(.highlight pre) code {
+  font-size: 14px;
+  line-height: 19px;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -180,6 +204,8 @@
   display: table;
   margin: 12px auto;
   width: auto;
+  font-size: 15px;
+  line-height: 22.5px;
 }
 
 .md-typeset table:not([class]) th,
@@ -190,6 +216,10 @@
      表そのものは中央寄せにするが、セル内の文字は左寄せのままにする
      (pandoc 発行版と同じ挙動)。 */
   text-align: left;
+}
+
+.md-typeset table:not([class]) td {
+  line-height: 20px;
 }
 
 .md-typeset table:not([class]) th {
@@ -213,4 +243,36 @@
   border: 0 none;
   height: 1px;
   background-color: var(--md-default-fg-color--lighter);
+}
+
+/* ------------------------------------------------------------------------ */
+/* admonition・展開要素 (pymdownx.admonition / pymdownx.details)             */
+/* ------------------------------------------------------------------------ */
+
+.md-typeset .admonition,
+.md-typeset details {
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 左右 TOC (左ナビ .md-nav--primary / 右ページ内目次 .md-nav--secondary)     */
+/* ------------------------------------------------------------------------ */
+
+.md-nav--primary .md-nav__link,
+.md-nav--primary .md-nav__title,
+.md-nav--secondary .md-nav__link,
+.md-nav--secondary .md-nav__title {
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+/* 見出しにインライン装飾 (コード表記など) が含まれる場合、Material のテーマ
+   partials はテキストを <span class="md-typeset"> で包む。Material 本体は
+   この span に個別の font-size を当てるため、念のため合わせて上書きする。 */
+.md-nav__link .md-typeset,
+.md-nav__title .md-typeset {
+  font-size: 14px;
+  line-height: 21px;
 }
