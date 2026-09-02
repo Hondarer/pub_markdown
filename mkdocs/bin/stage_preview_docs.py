@@ -23,6 +23,7 @@ docsfw の ``bin/pub_markdown_core.sh`` が発行時に行う入力側の処理�
 """
 
 import argparse
+from dataclasses import dataclass
 import os
 import posixpath
 import re
@@ -891,6 +892,29 @@ def write_documents(container, out_dir):
     return updated, keep_relative
 
 
+@dataclass(frozen=True)
+class StageSingleResult:
+    """単一ファイル ステージングの結果。"""
+
+    found: bool
+    updated: bool
+
+
+@dataclass(frozen=True)
+class StageResult:
+    """構築済み索引を使った全体ステージングの結果。"""
+
+    document_count: int
+    updated: int
+    removed: int
+    nav_count: int
+
+    @property
+    def changed(self):
+        """ステージング先に変更があったかどうかを返す。"""
+        return self.updated > 0 or self.removed > 0 or self.nav_count > 0
+
+
 def stage_single(container, out_dir, real_path):
     """1 ファイルだけを軽量に再ステージングする。
 
@@ -906,25 +930,24 @@ def stage_single(container, out_dir, real_path):
     ズレを解消したい場合に ``build_stage_index`` + ``write_documents`` による
     フル ステージングへフォールバックすること。
 
-    :return: 書き出した (または意図的にスキップした) 場合は ``True``。
-             対象ファイルが索引に無い (新規ファイル等) 場合は ``None``。
+    :return: 対象の有無と、ステージング先を更新したかどうか。
     """
     document = container.by_real_path.get(_norm_key(real_path))
     if document is None:
-        return None
+        return StageSingleResult(found=False, updated=False)
 
     try:
         raw = read_text(real_path)
     except OSError as error:
         print("Warning: cannot read {}: {}".format(real_path, error))
-        return True
+        return StageSingleResult(found=True, updated=False)
 
     front_matter, body = split_front_matter(raw)
     fields = parse_front_matter_fields(front_matter)
     if is_skipped(fields):
         # 新たに pub_markdown.skip: true になった場合は書き出さない。
         # 既存の staged ファイルは、次回のフル ステージングの remove_stale が掃除する。
-        return True
+        return StageSingleResult(found=True, updated=False)
 
     document.front_matter = front_matter
     document.fields = fields
@@ -936,23 +959,19 @@ def stage_single(container, out_dir, real_path):
     )
 
     content = _render_document(document, container)
-    write_if_changed(os.path.join(out_dir, document.staged_rel), content)
-    return True
+    updated = write_if_changed(os.path.join(out_dir, document.staged_rel), content)
+    return StageSingleResult(found=True, updated=updated)
 
 
 # ----------------------------------------------------------------------------
 # メイン
 # ----------------------------------------------------------------------------
 
-def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
-          variant=DEFAULT_PREVIEW_VARIANT):
-    """収集から書き出しまでを実行する (フル ステージング)。
+def stage_index(container, out_dir, quiet=False):
+    """構築済み索引から全ドキュメントをステージングする。
 
-    :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
+    :return: ステージング先の更新、削除、ナビゲーション生成を含む結果。
     """
-    container = build_stage_index(
-        workspace, config_path, lang=lang, details=details, variant=variant
-    )
     updated, keep_relative = write_documents(container, out_dir)
 
     staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative} | {""})
@@ -968,7 +987,25 @@ def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
         print("staged: variant {}, {} documents, {} assets, {} updated, {} removed, {} nav files".format(
             container.variant, len(container.kept), len(container.assets), updated, removed, nav_count))
 
-    return len(container.kept), updated, nav_count
+    return StageResult(
+        document_count=len(container.kept),
+        updated=updated,
+        removed=removed,
+        nav_count=nav_count,
+    )
+
+
+def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
+          variant=DEFAULT_PREVIEW_VARIANT):
+    """収集から書き出しまでを実行する (フル ステージング)。
+
+    :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
+    """
+    container = build_stage_index(
+        workspace, config_path, lang=lang, details=details, variant=variant
+    )
+    result = stage_index(container, out_dir, quiet=quiet)
+    return result.document_count, result.updated, result.nav_count
 
 
 def main(argv=None):

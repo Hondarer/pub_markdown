@@ -1,29 +1,5 @@
 #!/usr/bin/env python3
-"""mkdocs serve 中に、元の Markdown の変更を検知してステージングし直す。
-
-``mkdocs serve`` は既定で ``docs_dir`` (``pages/preview/src/``) だけを監視する。
-執筆中に編集するのは元の Markdown (``app/*/docs`` 等) であり、そのままでは
-ステージング (``stage_preview_docs.py``) を手動で再実行しない限り反映されない。
-
-mkdocs 1.6.1 の ``LiveReloadServer.watch(path, func=None)`` は、変更された
-ファイルのパスを受け取れるカスタム コールバックを渡せない (``func`` は
-``None`` かビルダー本体のみ、それ以外は ``TypeError``)。そのため、この
-hook は mkdocs 本体の Observer とは別に、自前の ``watchdog`` Observer を
-``on_serve`` イベントで登録し、変更されたファイルを 1 件ずつ捕捉する。
-
-変更が既知の Markdown 1 件の内容変更であれば、``stage_single`` による軽量な
-単一ファイル再ステージングだけを行う。ファイルの作成/削除/移動など構成が
-変わる変更では、索引 (``\\toc`` の一覧やリンク解決表) を作り直すフル
-ステージングにフォールバックする。索引の鮮度は意図的に間引いており、
-一定回数の単一ファイル再ステージングごとにもフル ステージングを挟んで
-再同期する。
-
-ステージング結果は ``docs_dir`` に書き込まれるため、mkdocs 標準の
-``docs_dir`` 監視がそれを検知し、通常どおりページの再ビルドとブラウザーの
-自動リロードを行う。
-
-設計は docs/mkdocs-preview-design.md を参照。
-"""
+"""元の Markdown を再ステージングし、mkdocs の完成版を最終状態へ収束させる。"""
 
 import logging
 import os
@@ -38,7 +14,7 @@ from stage_preview_docs import (  # noqa: E402
     parse_config,
     parse_merge_subfolder_docs,
     parse_preview_variant,
-    stage,
+    stage_index,
     stage_single,
 )
 
@@ -48,18 +24,13 @@ if hasattr(sys.stdout, "reconfigure"):
 
 log = logging.getLogger("mkdocs.preview_autostage")
 
-# 変更の連続保存をまとめるためのデバウンス間隔。
 _DEBOUNCE_SECONDS = 0.4
-
-# 単一ファイル再ステージングをこの回数行うごとに、索引再同期のためフル
-# ステージングを 1 回挟む。索引の鮮度は間引いてよいという前提での簡易な目安。
-_FULL_RESTAGE_EVERY = 20
-
+_INDEX_RESTAGE_DELAY_SECONDS = 120.0
 _MARKDOWN_EXTENSIONS = (".md", ".markdown")
 
 
 def _workspace_and_config(config):
-    """``mkdocs.yml`` の位置 (``pages/preview/``) からワークスペース ルートを逆算する。"""
+    """``mkdocs.yml`` の位置からワークスペース ルートを逆算する。"""
     preview_dir = os.path.dirname(os.path.abspath(config["config_file_path"]))
     workspace = os.path.dirname(os.path.dirname(preview_dir))
     config_path = os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
@@ -67,10 +38,7 @@ def _workspace_and_config(config):
 
 
 def _source_roots(workspace, config_path):
-    """``mdRoot`` と ``mergeSubfolderDocs`` から、元 Markdown の監視対象ディレクトリを求める。
-
-    ``stage_preview_docs.py`` の ``build_stage_index`` が使う規則と同じもの。
-    """
+    """元 Markdown の監視対象ディレクトリを求める。"""
     pm_config = parse_config(config_path)
     md_root = pm_config.get("mdRoot") or "docs"
     roots = [os.path.normpath(os.path.join(workspace, md_root))]
@@ -80,7 +48,7 @@ def _source_roots(workspace, config_path):
 
 
 def _preview_lang_details(config):
-    """生成済み ``mkdocs.yml`` の ``extra.preview_variant`` から言語と details を取る。"""
+    """生成済み設定から言語、details、バリアント名を取得する。"""
     extra = config.get("extra") or {}
     variant = extra.get("preview_variant") or DEFAULT_PREVIEW_VARIANT
     lang, details, name = parse_preview_variant(variant)
@@ -88,60 +56,263 @@ def _preview_lang_details(config):
 
 
 class _AutoStager:
-    """索引をキャッシュしつつ、単一ファイル再ステージングとフル ステージングを仲介する。"""
+    """変更、索引、ステージング出力、公開サイトの世代を管理する。"""
 
-    def __init__(self, workspace, config_path, out_dir, lang, details, variant):
+    def __init__(self, workspace, config_path, out_dir, lang, details, variant,
+                 timer_factory=threading.Timer,
+                 restage_delay=_INDEX_RESTAGE_DELAY_SECONDS):
         self._workspace = workspace
         self._config_path = config_path
         self._out_dir = out_dir
         self._lang = lang
         self._details = details
         self._variant = variant
-        self._lock = threading.Lock()
+        self._timer_factory = timer_factory
+        self._restage_delay = restage_delay
+
+        self._state_lock = threading.RLock()
+        self._stage_lock = threading.Lock()
         self._container = build_stage_index(
             workspace, config_path, lang=lang, details=details, variant=variant
         )
-        self._since_full_restage = 0
 
-    def _full_restage_locked(self):
-        # 既存の stage() (build_stage_index + write_documents + nav 生成 +
-        # remove_stale) をそのまま使う。索引の再構築は 2 度になるが、
-        # フル ステージングは構成変化時と一定間隔ごとの再同期にしか
-        # 発生しないため、単純さと正しさ (remove_stale による掃除) を優先する。
-        stage(
-            self._workspace,
-            self._out_dir,
-            self._config_path,
-            quiet=True,
-            lang=self._lang,
-            details=self._details,
-            variant=self._variant,
-        )
-        self._container = build_stage_index(
-            self._workspace,
-            self._config_path,
-            lang=self._lang,
-            details=self._details,
-            variant=self._variant,
-        )
-        self._since_full_restage = 0
-        log.info("フル ステージングを実行しました (索引を再同期)。")
+        self._detected_generation = 0
+        self._staged_generation = 0
+        self._index_generation = 0
+        self._next_output_epoch = 0
+        self._latest_output_epoch = 0
+        self._published_output_epoch = 0
+        self._active_batches = 0
 
-    def handle_modified(self, real_path):
-        with self._lock:
-            result = stage_single(self._container, self._out_dir, real_path)
-            if result is None:
-                # 索引に無いファイル。新規追加などの構成変化とみなしフル ステージングへ。
-                self._full_restage_locked()
+        self._waiting_for_publish = False
+        self._required_publish_epoch = 0
+        self._timer = None
+        self._timer_token = 0
+        self._timer_kind = None
+        self._request_rebuild = None
+        self._closed = False
+
+    def set_rebuild_request(self, callback):
+        """LiveReload のサイト再生成要求コールバックを設定する。"""
+        self._request_rebuild = callback
+
+    def note_modified(self):
+        """内容変更を処理待ちとして記録し、その世代を返す。"""
+        with self._state_lock:
+            self._detected_generation += 1
+            generation = self._detected_generation
+            if not self._waiting_for_publish and self._timer is None:
+                self._schedule_locked("index")
+            return generation
+
+    def note_structural_change(self):
+        """作成、削除、移動を記録し、遅延中の索引再同期を取り消す。"""
+        with self._state_lock:
+            self._detected_generation += 1
+            self._cancel_timer_locked()
+            return self._detected_generation
+
+    def _schedule_locked(self, kind):
+        if self._closed or self._timer is not None:
+            return
+        self._timer_token += 1
+        token = self._timer_token
+        timer = self._timer_factory(
+            self._restage_delay,
+            lambda: self._timer_fired(token, kind),
+        )
+        timer.daemon = True
+        self._timer = timer
+        self._timer_kind = kind
+        timer.start()
+        log.info("%d 秒後に%sを予約しました。",
+                 int(self._restage_delay),
+                 "サイト再生成" if kind == "site" else "索引再同期")
+
+    def _cancel_timer_locked(self):
+        self._timer_token += 1
+        if self._timer is not None:
+            self._timer.cancel()
+        self._timer = None
+        self._timer_kind = None
+
+    def _timer_fired(self, token, kind):
+        with self._state_lock:
+            if self._closed or token != self._timer_token:
+                return
+            self._timer = None
+            self._timer_kind = None
+
+        if kind == "site":
+            self._request_site_rebuild()
+            return
+
+        with self._state_lock:
+            generation = self._detected_generation
+        self._full_restage(generation, "遅延した索引再同期")
+
+    def _begin_batch(self):
+        with self._state_lock:
+            self._next_output_epoch += 1
+            epoch = self._next_output_epoch
+            self._active_batches += 1
+            return epoch
+
+    def _finish_batch(self, epoch, updated):
+        with self._state_lock:
+            self._active_batches -= 1
+            if updated:
+                self._latest_output_epoch = max(self._latest_output_epoch, epoch)
+
+    def handle_modified(self, real_path, generation):
+        """既知ファイルを単一ファイル単位で再ステージングする。"""
+        epoch = self._begin_batch()
+        result = None
+        try:
+            with self._stage_lock:
+                result = stage_single(self._container, self._out_dir, real_path)
+        except Exception:
+            log.exception("単一ファイルの再ステージングに失敗しました: %s", real_path)
+        finally:
+            self._finish_batch(epoch, bool(result and result.updated))
+
+        request_rebuild = False
+        if result is not None:
+            with self._state_lock:
+                self._staged_generation = max(self._staged_generation, generation)
+                request_rebuild = self._evaluate_wait_locked()
+
+        if request_rebuild:
+            self._request_site_rebuild()
+
+        if result is not None and not result.found:
+            with self._state_lock:
+                self._cancel_timer_locked()
+            self._full_restage(generation, "索引にないファイルの検出")
+
+    def handle_structural_change(self, generation):
+        """ファイル構成の変更を即時に全体再同期する。"""
+        self._full_restage(generation, "ファイル構成の変更")
+
+    def _full_restage(self, generation, reason):
+        epoch = self._begin_batch()
+        result = None
+        try:
+            with self._stage_lock:
+                new_container = build_stage_index(
+                    self._workspace,
+                    self._config_path,
+                    lang=self._lang,
+                    details=self._details,
+                    variant=self._variant,
+                )
+                result = stage_index(new_container, self._out_dir, quiet=True)
+                self._container = new_container
+        except Exception:
+            log.exception("%sに失敗しました。", reason)
+        finally:
+            self._finish_batch(epoch, bool(result and result.changed))
+
+        if result is None:
+            with self._state_lock:
+                if not self._closed and self._timer is None:
+                    self._schedule_locked("index")
+            return
+
+        request_rebuild = False
+        with self._state_lock:
+            self._staged_generation = max(self._staged_generation, generation)
+            self._index_generation = max(self._index_generation, generation)
+            self._waiting_for_publish = True
+            self._required_publish_epoch = self._latest_output_epoch
+            request_rebuild = self._evaluate_wait_locked()
+
+        log.info("%sを実行しました (索引世代 %d)。", reason, generation)
+        if request_rebuild:
+            self._request_site_rebuild()
+
+    def _complete_cycle_locked(self):
+        self._waiting_for_publish = False
+        self._required_publish_epoch = 0
+        if self._detected_generation > self._index_generation and self._timer is None:
+            self._schedule_locked("index")
+
+    def _evaluate_wait_locked(self):
+        """公開待ちを評価し、サイト再生成が必要かどうかを返す。"""
+        if not self._waiting_for_publish or self._active_batches > 0:
+            return False
+        if self._staged_generation < self._detected_generation:
+            return False
+        caught_up = (
+            self._published_output_epoch >= self._required_publish_epoch
+            and self._published_output_epoch >= self._latest_output_epoch
+        )
+        if caught_up:
+            self._complete_cycle_locked()
+            return False
+        return True
+
+    def wrap_builder(self, builder):
+        """完成版の公開後にサイト生成完了を記録する関数を返す。"""
+        def tracked_builder(*args, **kwargs):
+            with self._state_lock:
+                snapshot = self._latest_output_epoch
+                started_during_batch = self._active_batches > 0
+            succeeded = False
+            try:
+                result = builder(*args, **kwargs)
+                succeeded = True
+                return result
+            finally:
+                self.site_build_finished(snapshot, started_during_batch, succeeded)
+
+        return tracked_builder
+
+    def site_build_finished(self, snapshot, started_during_batch, succeeded):
+        """完成版公開後に公開世代を進め、必要なら次周期を予約する。"""
+        request_rebuild = False
+        with self._state_lock:
+            if succeeded and not started_during_batch:
+                self._published_output_epoch = max(self._published_output_epoch, snapshot)
+
+            if not self._waiting_for_publish:
                 return
 
-            self._since_full_restage += 1
-            if self._since_full_restage >= _FULL_RESTAGE_EVERY:
-                self._full_restage_locked()
+            if succeeded and not started_during_batch:
+                request_rebuild = self._evaluate_wait_locked()
+            elif not succeeded and self._staged_generation >= self._detected_generation \
+                    and self._timer is None:
+                self._schedule_locked("site")
+            elif self._active_batches == 0 \
+                    and self._staged_generation >= self._detected_generation:
+                request_rebuild = True
 
-    def handle_structural_change(self):
-        with self._lock:
-            self._full_restage_locked()
+        if request_rebuild:
+            self._request_site_rebuild()
+
+    def _request_site_rebuild(self):
+        callback = self._request_rebuild
+        if callback is not None and not self._closed:
+            callback()
+
+    def close(self):
+        """未実行タイマーを取り消し、新しい処理の予約を止める。"""
+        with self._state_lock:
+            self._closed = True
+            self._cancel_timer_locked()
+
+    def state(self):
+        """テストと診断用に現在の世代と待機状態を返す。"""
+        with self._state_lock:
+            return {
+                "detected": self._detected_generation,
+                "staged": self._staged_generation,
+                "indexed": self._index_generation,
+                "output": self._latest_output_epoch,
+                "published": self._published_output_epoch,
+                "waiting_for_publish": self._waiting_for_publish,
+                "timer_kind": self._timer_kind,
+            }
 
 
 def _is_markdown(path):
@@ -156,13 +327,26 @@ def _make_handler(stager):
             super().__init__()
             self._timers = {}
             self._timers_lock = threading.Lock()
+            self._closed = False
 
         def _debounced(self, key, action):
             with self._timers_lock:
+                if self._closed:
+                    return
                 existing = self._timers.get(key)
                 if existing is not None:
                     existing.cancel()
-                timer = threading.Timer(_DEBOUNCE_SECONDS, action)
+                timer = None
+
+                def invoke():
+                    try:
+                        action()
+                    finally:
+                        with self._timers_lock:
+                            if self._timers.get(key) is timer:
+                                self._timers.pop(key, None)
+
+                timer = threading.Timer(_DEBOUNCE_SECONDS, invoke)
                 timer.daemon = True
                 self._timers[key] = timer
                 timer.start()
@@ -171,7 +355,8 @@ def _make_handler(stager):
             if event.is_directory or not _is_markdown(event.src_path):
                 return
             real_path = os.path.abspath(event.src_path)
-            self._debounced(real_path, lambda: stager.handle_modified(real_path))
+            generation = stager.note_modified()
+            self._debounced(real_path, lambda: stager.handle_modified(real_path, generation))
 
         def on_created(self, event):
             self._on_structural(event)
@@ -185,25 +370,49 @@ def _make_handler(stager):
         def _on_structural(self, event):
             path = getattr(event, "dest_path", "") or event.src_path
             if event.is_directory or _is_markdown(path):
-                self._debounced("__structural__", stager.handle_structural_change)
+                generation = stager.note_structural_change()
+                self._debounced(
+                    "__structural__",
+                    lambda: stager.handle_structural_change(generation),
+                )
+
+        def close(self):
+            with self._timers_lock:
+                self._closed = True
+                for timer in self._timers.values():
+                    timer.cancel()
+                self._timers.clear()
 
     return _Handler()
 
 
-# mkdocs の on_shutdown はパラメーターを受け取らないため、on_serve で
-# 起動した Observer への参照をモジュール グローバルに保持しておく。
+def _request_server_rebuild(server):
+    """LiveReloadServer へスレッド安全にサイト再生成を要求する。"""
+    with server._rebuild_cond:
+        server._want_rebuild = True
+        server._rebuild_cond.notify_all()
+
+
 _observer = None
+_handler = None
+_stager = None
 
 
 def on_serve(server, config, builder=None, **kwargs):
-    global _observer
+    global _observer, _handler, _stager
 
     workspace, config_path = _workspace_and_config(config)
     out_dir = config["docs_dir"]
     lang, details, variant = _preview_lang_details(config)
 
     stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant)
+    stager.set_rebuild_request(lambda: _request_server_rebuild(server))
     handler = _make_handler(stager)
+
+    # preview_versioned_hook が先に設定した builder を包む。この関数から
+    # 戻った時点は、候補サイトの生成だけでなく完成版の公開も完了している。
+    if server.builder is not None:
+        server.builder = stager.wrap_builder(server.builder)
 
     from watchdog.observers.polling import PollingObserver
 
@@ -213,14 +422,22 @@ def on_serve(server, config, builder=None, **kwargs):
     observer.daemon = True
     observer.start()
 
-    # 強制終了など on_shutdown が呼ばれない経路でも、daemon スレッドのため
-    # プロセス終了時に残らない。
     _observer = observer
-
+    _handler = handler
+    _stager = stager
     return server
 
 
 def on_shutdown(**kwargs):
+    global _observer, _handler, _stager
+
+    if _stager is not None:
+        _stager.close()
+    if _handler is not None:
+        _handler.close()
     if _observer is not None:
         _observer.stop()
         _observer.join()
+    _observer = None
+    _handler = None
+    _stager = None
