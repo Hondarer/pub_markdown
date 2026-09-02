@@ -227,10 +227,7 @@ plantuml とします。
 
 以下の Chrome 拡張機能により、GitBucket での PlantUML 図形のレンダリングが可能です。
 
-> [!WARNING]
-> 企業内のイントラネット環境等で利用する場合、PlantUML サーバーの指定を必ず行うようにしてください。
-
-- [Pegmatite-gitbucket](https://chromewebstore.google.com/detail/pegmatite-gitbucket/gkdjfofhecooaojkhbohidojebbpcene)
+- [PlantUML In-Place Preview](https://chromewebstore.google.com/detail/plantuml-in-place-preview/gkdjfofhecooaojkhbohidojebbpcene)
 
 ## Mermaid
 
