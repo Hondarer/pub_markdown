@@ -13,10 +13,12 @@ HTML への単一ページ リンクをテンプレートへ渡す。
 
 from __future__ import annotations
 
+import json
 import logging
 import mimetypes
 import os
 import posixpath
+import re
 import sys
 import wsgiref.util
 
@@ -32,6 +34,11 @@ log = logging.getLogger("mkdocs.preview_doxygen")
 
 DOXYGEN_URL_PREFIX = "/doxygen"
 DOXYGEN_PAGES_PREFIX = "pages/doxygen/"
+DEPENDENCY_DATA_JS = "dependency-data.js"
+DEPENDENCY_DATA_PREFIX = "window.DoxyfwDependencyData = "
+PUBLISHED_PAGE_TEMPLATE_RE = re.compile(
+    r"^(?:\.\./)+\{variant\}/html/(?P<relative>[^?#]+?)/?$"
+)
 
 
 def doxygen_page_url_to_preview(value):
@@ -125,6 +132,50 @@ def guess_doxygen_content_type(path):
     return "application/octet-stream"
 
 
+def dependency_page_template_to_preview(value):
+    """発行用 Page URL テンプレートを preview の基底 URL へ変換する。"""
+    if not value:
+        return None
+    match = PUBLISHED_PAGE_TEMPLATE_RE.fullmatch(str(value).strip().replace("\\", "/"))
+    if match is None:
+        return None
+    relative = match.group("relative").strip("/")
+    parts = relative.split("/")
+    if not parts or any(part in ("", ".", "..") for part in parts):
+        return None
+    return "/" + "/".join(parts)
+
+
+def rewrite_dependency_data_for_preview(content):
+    """dependency-data.js へ preview Page URL をメモリー上で追加する。"""
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        return content
+    stripped = text.strip()
+    if not stripped.startswith(DEPENDENCY_DATA_PREFIX) or not stripped.endswith(";"):
+        return content
+    payload = stripped[len(DEPENDENCY_DATA_PREFIX):-1]
+    try:
+        data = json.loads(payload)
+    except (TypeError, ValueError):
+        return content
+    if not isinstance(data, dict):
+        return content
+    preview_template = dependency_page_template_to_preview(data.get("pageUrlTemplate"))
+    if preview_template is None:
+        return content
+    data["previewPageUrlTemplate"] = preview_template
+    rewritten = DEPENDENCY_DATA_PREFIX + json.dumps(data, ensure_ascii=False, indent=2) + ";\n"
+    return rewritten.encode("utf-8")
+
+
+def is_dependency_data_js_url(url_path):
+    """依存関係レポートの dependency-data.js かどうかを返す。"""
+    parts = url_path_to_rel_parts(url_path)
+    return parts is not None and len(parts) >= 2 and parts[-2:] == ("dependency", DEPENDENCY_DATA_JS)
+
+
 def serve_doxygen(root, url_path, environ, start_response):
     """``pages/doxygen`` からファイルを返す WSGI アプリ断片。"""
     if url_path == DOXYGEN_URL_PREFIX:
@@ -142,6 +193,15 @@ def serve_doxygen(root, url_path, environ, start_response):
         return [b"404 Not Found"]
 
     content_type = guess_doxygen_content_type(fs_path)
+    if is_dependency_data_js_url(url_path):
+        with open(fs_path, "rb") as handle:
+            content = rewrite_dependency_data_for_preview(handle.read())
+        start_response(
+            "200 OK",
+            [("Content-Type", content_type), ("Content-Length", str(len(content)))],
+        )
+        return [content]
+
     content_length = os.path.getsize(fs_path)
     handle = open(fs_path, "rb")
     start_response(

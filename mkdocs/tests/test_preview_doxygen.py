@@ -10,12 +10,15 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from preview_doxygen_hook import (  # noqa: E402
+    dependency_page_template_to_preview,
     doxygen_page_url_to_preview,
     find_doxygen_root,
     guess_doxygen_content_type,
     is_doxygen_link_enabled,
+    is_dependency_data_js_url,
     is_doxygen_url_path,
     resolve_doxygen_file,
+    rewrite_dependency_data_for_preview,
     serve_doxygen,
     url_path_to_rel_parts,
 )
@@ -72,6 +75,60 @@ class DoxygenPageUrlTest(unittest.TestCase):
             doxygen_page_url_to_preview("pages\\doxygen\\calc_public\\calc_8h.html"),
             "/doxygen/calc_public/calc_8h.html",
         )
+
+
+class DependencyPagePreviewUrlTest(unittest.TestCase):
+    def test_converts_published_template(self):
+        self.assertEqual(
+            dependency_page_template_to_preview(
+                "../../../{variant}/html/c-platform/doxybook2_internal"
+            ),
+            "/c-platform/doxybook2_internal",
+        )
+        self.assertEqual(
+            dependency_page_template_to_preview(
+                "../../../{variant}/html/日本語/app docs/"
+            ),
+            "/日本語/app docs",
+        )
+
+    def test_rejects_unrecognized_or_unsafe_template(self):
+        for value in (
+            "",
+            "/{variant}/html/calc/doxybook2",
+            "../../../{variant}/html/../secret",
+            "../../../{variant}/html/calc//doxybook2",
+            "../../../{variant}/html/calc/doxybook2?x=1",
+        ):
+            self.assertIsNone(dependency_page_template_to_preview(value))
+
+    def test_rewrites_dependency_data_js(self):
+        source = (
+            'window.DoxyfwDependencyData = {"pageUrlTemplate": '
+            '"../../../{variant}/html/calc/doxybook2", "functions": []};\n'
+        ).encode("utf-8")
+        rewritten = rewrite_dependency_data_for_preview(source).decode("utf-8")
+        self.assertIn('"previewPageUrlTemplate": "/calc/doxybook2"', rewritten)
+        self.assertIn('"pageUrlTemplate": "../../../{variant}/html/calc/doxybook2"', rewritten)
+
+    def test_keeps_malformed_and_unrecognized_data(self):
+        samples = (
+            b"not javascript",
+            b"window.DoxyfwDependencyData = {broken};\n",
+            b'window.DoxyfwDependencyData = {"pageUrlTemplate": ""};\n',
+            b"\xff",
+        )
+        for source in samples:
+            self.assertEqual(rewrite_dependency_data_for_preview(source), source)
+
+    def test_identifies_dependency_data_url_only(self):
+        self.assertTrue(
+            is_dependency_data_js_url(
+                "/doxygen/calc_internal/dependency/dependency-data.js"
+            )
+        )
+        self.assertFalse(is_dependency_data_js_url("/doxygen/calc_internal/dependency/index.html"))
+        self.assertFalse(is_dependency_data_js_url("/doxygen/dependency-data.js"))
 
 
 class DoxygenLinkEnableTest(unittest.TestCase):
@@ -186,6 +243,30 @@ class ServeDoxygenTest(unittest.TestCase):
             self.assertTrue(captured["status"].startswith("200"))
             self.assertEqual(captured["headers"]["Content-Type"], "application/javascript")
             self.assertIn(b"DoxyfwDependencyData", body)
+
+    def test_rewrites_dependency_page_template_in_js_response(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dep = os.path.join(tmp, "calc_internal", "dependency")
+            os.makedirs(dep)
+            js_path = os.path.join(dep, "dependency-data.js")
+            with open(js_path, "wb") as handle:
+                handle.write(
+                    b'window.DoxyfwDependencyData = {"pageUrlTemplate": '
+                    b'"../../../{variant}/html/calc/doxybook2_internal"};\n'
+                )
+
+            captured, start_response = self._start_response()
+            result = serve_doxygen(
+                tmp,
+                "/doxygen/calc_internal/dependency/dependency-data.js",
+                {},
+                start_response,
+            )
+            body = b"".join(result)
+            self.assertEqual(captured["status"], "200 OK")
+            self.assertEqual(captured["headers"]["Content-Type"], "application/javascript")
+            self.assertEqual(int(captured["headers"]["Content-Length"]), len(body))
+            self.assertIn(b'"previewPageUrlTemplate": "/calc/doxybook2_internal"', body)
 
     def test_redirects_directory_and_root(self):
         with tempfile.TemporaryDirectory() as tmp:

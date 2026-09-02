@@ -23,8 +23,9 @@ make preview
 その後、ステージングを行い `mkdocs serve` を起動します。  
 ブラウザーで <http://127.0.0.1:8000/> を開いてください。
 
-`make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを無変換で開けます。  
+`make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを開けます。  
 Doxybook2 の各ページからは、見出し横の Doxygen アイコンで対応する単一ページへ飛べます。  
+依存関係レポートの Page リンクからは、起動中の preview にある Doxybook2 ページを開けます。  
 `make preview` は `make doxy` に依存しません。`pages/doxygen/` が無くてもプレビュー本体は起動します。  
 Doxygen HTML の閲覧は `make preview` が正本です。`make preview-build` の `site/` には入れません。
 

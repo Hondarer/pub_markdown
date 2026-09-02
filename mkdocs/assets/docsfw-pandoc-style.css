@@ -160,12 +160,11 @@
 /* テーブル                                                                  */
 /* ------------------------------------------------------------------------ */
 
-/* mkdocs-material の table:not([class]) は画面表示では常に
-   display: inline-block (display: table になるのは @media print のみ) の
-   ため、table 自身に margin: auto を指定しても中央寄せにならない。
-   inline-block を中央寄せするには、外側のスクロール ラッパー
-   (.md-typeset__table、これも既定で inline-block) を display: block +
-   text-align: center にし、text-align の継承をセル側で打ち消す。 */
+/* mkdocs-material は JavaScript の実行後に table をスクロール ラッパーへ
+   移すため、ラッパーだけを中央寄せすると、初期描画では左寄せになる。
+   table 自身も display: table と左右 auto margin で中央寄せし、
+   JavaScript の実行前後で配置が変わらないようにする。
+   ラッパーは幅の広い表のスクロール領域として block のまま維持する。 */
 .md-typeset__table {
   display: block;
   text-align: center;
@@ -178,7 +177,8 @@
    ここで width: auto を指定して上書きし、内容幅に縮められるようにする。 */
 .md-typeset table:not([class]) {
   border-collapse: collapse;
-  margin: 12px 0;
+  display: table;
+  margin: 12px auto;
   width: auto;
 }
 

@@ -250,7 +250,7 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 
 `make doxy` は Doxygen HTML と依存関係レポートを `pages/doxygen/` へ出します。  
 このツリーは約 244 MB、約 1.8 万ファイルです。  
-プレビューはこれを Markdown 変換せず、`make preview` (`mkdocs serve`) の `/doxygen/` としてそのまま返します。
+プレビューはこれを Markdown 変換せず、`make preview` (`mkdocs serve`) の `/doxygen/` として配信します。
 
 `make preview` は `make doxy` に依存しません。  
 `pages/doxygen/` が無いときはマウントを省略し、プレビュー本体は起動します。
@@ -263,7 +263,8 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 
 そのため配信の正本は `mkdocs serve` の WSGI マウントだけです。  
 `bin/preview_doxygen_hook.py` が `PATH_INFO` の `/doxygen/` を横取りし、`pages/doxygen/` を直接開きます。  
-livereload 用の JavaScript は挿入しません。Doxygen と Cytoscape の HTML を改変しないためです。
+livereload 用の JavaScript は挿入せず、Doxygen と Cytoscape の HTML を改変しません。  
+依存関係レポートの `dependency-data.js` だけは、Page リンクを preview のページへ向けるため、HTTP 応答をメモリ上で補正します。
 
 URL は POSIX のまま扱い、ファイルを開くときだけ OS のパスへ結合します。  
 `posixpath.normpath` で `..` を潰したあと `/` で分割し、`os.path.join(root, *parts)` します。  
@@ -271,6 +272,18 @@ URL は POSIX のまま扱い、ファイルを開くときだけ OS のパス�
 
 `make preview-build` の `site/` には Doxygen ツリーを入れません。  
 閲覧の正本は `make preview` です。
+
+### 依存関係レポートの Page リンク
+
+依存関係レポートの通常の Page リンクは、docsfw の発行レイアウトを前提とした `../../../{variant}/html/<alias>/<doxybook>/Files/<file>.html` 形式です。  
+preview には言語階層と `html/` 階層がなく、`use_directory_urls: true` によりページ URL の末尾も `.html` ではなく `/` になるため、そのままでは開けません。
+
+`preview_doxygen_hook.py` は `dependency/dependency-data.js` の HTTP 応答を JSON として読み、標準の発行用テンプレートから `/<alias>/<doxybook>` を導出して `previewPageUrlTemplate` を追加します。  
+ディスク上の `dependency-data.js` とダウンロード用の `dependency-data.json` は変更しません。  
+JSON が不正な場合や発行用テンプレートを認識できない場合は、元の JavaScript をそのまま返します。
+
+依存関係レポートは `previewPageUrlTemplate` がある場合、Page リンクを `/<alias>/<doxybook>/Files/<file>/` 形式にします。  
+preview は起動時に選んだ `PREVIEW_VARIANT` のみを生成するため、依存関係レポートのページ種別メニューは表示しません。
 
 ### 本文リンクの書き換え
 
@@ -619,7 +632,8 @@ make preview
 | `\toc` の展開 | `docs/README.md` | 索引の内容と越境リンクの解決 |
 | Doxybook2 ページ | `app/example/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
 | Doxygen HTML | `/doxygen/example_public/index.html` | `make doxy` 済みなら無変換で表示されること |
-| 依存関係レポート | `/doxygen/example_internal/dependency/index.html` | Cytoscape の HTML と付随 JS がそのまま読み込まれること |
+| 依存関係レポート | `/doxygen/example_internal/dependency/index.html` | Cytoscape の HTML と付随アセットが読み込まれること |
+| 依存関係レポートの Page リンク | `/doxygen/example_internal/dependency/index.html` | 起動中の preview にあるファイル ページと関数アンカーを開くこと |
 | Doxygen 単一ページ リンク | `doxygen-page-url` を持つ Doxybook2 ページ | 見出し横のアイコンが `/doxygen/...` を `target="doxygen-page"` で開くこと |
 | GitHub アラート | 各 app の `coding-guideline.md` | 6 種の表示。特に `DEPRECATED` |
 | 数式 | `app/example/docs/build-design.md` | MathJax の描画 |
