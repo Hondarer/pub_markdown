@@ -613,16 +613,19 @@ def remove_page_breaks(text):
 
 
 def build_front_matter(document, lang, details):
-    """``short-title`` を ``title`` として補ったフロント マターを組み立てる。
+    """ナビゲーション用の ``title`` を補ったフロント マターを組み立てる。
 
     mkdocs はナビゲーションとページ タイトルに ``title`` を使用します。
     docsfw の ``short-title`` は索引とナビゲーションだけに効くため、完全には一致しません。
+    索引ページでは、フォルダーの表示名に使えるように最初の H1 も補完対象にします。
     """
-    short_title = resolve_short_title(document.fields, lang, details)
-    if not short_title or document.fields.get("title"):
+    title = resolve_short_title(document.fields, lang, details)
+    if not title and posixpath.basename(document.staged_rel).lower() == "index.md":
+        title = first_heading(document.body)
+    if not title or document.fields.get("title"):
         return document.front_matter
 
-    escaped = short_title.replace("\\", "\\\\").replace('"', '\\"')
+    escaped = title.replace("\\", "\\\\").replace('"', '\\"')
     title_line = 'title: "{}"'.format(escaped)
 
     if not document.front_matter:
@@ -695,32 +698,34 @@ def parse_publocal_order(path):
 def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
     """``publocal.yaml`` の ``order:`` を mkdocs-awesome-nav の ``.nav.yml`` へ変換する。
 
-    本ワークスペースには現在 ``publocal.yaml`` が存在しないため、この経路は
-    将来 ``order:`` を導入したときのためのフックです。
+    ルートには索引ページのタイトルをフォルダー表示名として使う設定を常に生成します。
+    ``publocal.yaml`` に ``order:`` があるディレクトリでは、並び順も生成します。
 
     :return: 生成した ``.nav.yml`` の数。
     """
     mapper = PathMapper(main_mdroot, subfolders)
     generated = 0
 
-    for staged_dir in staged_dirs:
+    for staged_dir in sorted(set(staged_dirs) | {""}):
         real_dir = mapper.virtual_to_real(staged_dir)
         publocal = os.path.join(real_dir, "publocal.yaml")
-        if not os.path.isfile(publocal):
-            continue
-        order = parse_publocal_order(publocal)
-        if not order:
+        order = parse_publocal_order(publocal) if os.path.isfile(publocal) else []
+        if staged_dir and not order:
             continue
 
-        entries = []
-        for name in order:
-            if name.lower() in ("readme.md", "skill.md"):
-                name = "index.md"
-            entries.append("  - {}".format(name))
-        entries.append("  - ...")
+        lines = []
+        if not staged_dir:
+            lines.append("use_index_title: true")
+        if order:
+            lines.append("nav:")
+            for name in order:
+                if name.lower() in ("readme.md", "skill.md"):
+                    name = "index.md"
+                lines.append("  - {}".format(name))
+            lines.append("  - ...")
 
         target = os.path.join(out_dir, staged_dir, ".nav.yml") if staged_dir else os.path.join(out_dir, ".nav.yml")
-        if write_if_changed(target, "nav:\n" + "\n".join(entries) + "\n"):
+        if write_if_changed(target, "\n".join(lines) + "\n"):
             generated += 1
 
     return generated
@@ -950,7 +955,7 @@ def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
     )
     updated, keep_relative = write_documents(container, out_dir)
 
-    staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative})
+    staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative} | {""})
     nav_count = generate_nav_files(out_dir, container.main_mdroot, container.subfolders, staged_dirs)
     for staged_dir in staged_dirs:
         candidate = posixpath.join(staged_dir, ".nav.yml") if staged_dir else ".nav.yml"

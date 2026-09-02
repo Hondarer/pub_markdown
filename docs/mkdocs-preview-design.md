@@ -398,8 +398,11 @@ plugins:
   - search: { lang: en, separator: "... CJK 文字境界を追加 (後述) ..." }
 ```
 
-`nav:` は記述しません。  
-mkdocs の自動ナビゲーションに任せ、`publocal.yaml` が存在する場合だけ `.nav.yml` をステージング時に生成します。
+`mkdocs.yml` には `nav:` を記述しません。  
+ステージング時にルートの `.nav.yml` へ `use_index_title: true` を設定し、各フォルダーの `index.md` にある `title` を展開可能なフォルダーの表示名に使用します。  
+README または SKILL を `index.md` へ正規化するときに `title` がなければ、選択中の言語と details を反映した最初の H1 を `title` として補います。  
+索引ページや有効なタイトルがないフォルダーでは、フォルダー名を使用します。  
+`publocal.yaml` に `order:` が存在する場合は、同じ `.nav.yml` に並び順も生成します。
 
 `nl2br` は docsfw の `-f markdown+hard_line_breaks` に相当します。  
 本ワークスペースの Markdown は一文一行で記述し、行末の半角空白 2 個による強制改行を 371 ファイルで使用しているため、この拡張が必要です。
@@ -675,8 +678,9 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 - `.venv` は docsfw の `.gitignore` に追加しました。
 - `skinparam` の挿入位置の不備は docsfw 側にも存在したため、`plantuml.lua` にも同じ対策を入れました。
 - キャプションの採用範囲も同様に `@start<種別>` 全般へ広げ、両ルートをそろえました。
+- `mkdocs-awesome-nav` の `use_index_title` により、README から生成した索引ページのタイトルをフォルダー表示名に使用できます。
 
 ### 未着手の課題
 
 - Salt 図が `@plantuml/core` で描画できません。
-- `publocal.yaml` の `order:` に対応する `.nav.yml` の生成は実装済みですが、対象ファイルが存在しないため未検証です。
+- `publocal.yaml` の `order:` に対応する `.nav.yml` の生成は実装済みですが、実際の発行対象には `publocal.yaml` が存在しません。
