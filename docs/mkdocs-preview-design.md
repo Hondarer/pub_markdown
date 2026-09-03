@@ -429,6 +429,125 @@ README または SKILL を `index.md` へ正規化するときに `title` がな
 `nl2br` は docsfw の `-f markdown+hard_line_breaks` に相当します。  
 本ワークスペースの Markdown は一文一行で記述し、行末の半角空白 2 個による強制改行を 371 ファイルで使用しているため、この拡張が必要です。
 
+## 配色の一致
+
+### 正とする側
+
+`make docs` (pandoc) の配色を正とし、`make preview` の CSS だけを調整します。  
+docsfw は正式な発行の正本であり、プレビューは執筆中の確認用だからです。  
+`assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を pandoc 発行版へ寄せるためのファイルです。  
+配色もこのファイルに集約します。
+
+例外は見出しの色です。  
+こちらは Material の色を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+詳細は「見出しの色」を参照してください。
+
+`mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
+Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
+`extra_css` は Material の `palette.css` より後に読まれるため、属性セレクター 1 個どうしでも後勝ちで上書きできます。
+
+### 色の対応
+
+| 用途 | pandoc (正) | 出典 | preview `default` | preview `slate` |
+|---|---|---|---|---|
+| 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
+| 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
+| ナビ ホバーと現在ページ | `#1A5FAA` | `styles/html/docsfw-ui.css` | `#1A5FAA` | `#9CC7EA` |
+| ヘッダー背景 | `#FFFFFF`〜`#F2F2F2` | Bootstrap `.navbar-inner` | `#F7F7F7` | `#1F2129` |
+| ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
+| ヘッダー文字 | 濃色 | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
+| NOTE | `#1F6FEB` | `bin/pandoc-filters/admonition.lua` | 同左 | `#58A6FF` |
+| TIP | `#238636` | 同上 | 同左 | `#3FB950` |
+| IMPORTANT | `#8957E5` | 同上 | 同左 | `#A371F7` |
+| WARNING | `#9A6700` | 同上 | 同左 | `#D29922` |
+| CAUTION | `#DA3633` | 同上 | 同左 | `#F85149` |
+| DEPRECATED | `#6A737D` | 同上 | 同左 | `#8B949E` |
+| コード背景 | `#F8F8F8` | `html-style.css` の `code, tt` | 同左 | Material 既定 |
+| コード文字 | `black` | 同上 | 同左 | Material 既定 |
+| `==mark==` | `#FFFF00` | `html-style.css` の `mark` | 同左 | Material 既定 |
+
+pandoc 発行版はライト固定のため、`slate` に対応する正はありません。  
+そこで、色相を保ったまま明度を上げた値を使います。  
+admonition の 6 色は、pandoc が採用している GitHub のライト色に対応する GitHub のダーク色をそのまま当てます。  
+コード背景と `==mark==` は暗背景で成立しないため、`slate` では Material の既定に任せます。
+
+### ヘッダーを淡色にする理由
+
+pandoc 発行版のヘッダーは Bootstrap の `.navbar-inner` で、白から `#F2F2F2` への淡いグラデーションに濃い文字です。  
+Material の既定は indigo の単色バーであり、本文リンクを `#4183C4` に合わせると、ヘッダーの indigo だけが別系統の青として残ります。  
+`--md-primary-fg-color` 系を上書きして淡色に寄せ、`.md-header` へ下端の境界線を足します。
+
+淡色ヘッダーでは、Material が濃色ヘッダーを前提に指定している検索フォームの背景 (`#00000042`) では入力文字が読めません。  
+`default` のときだけ薄いティントへ変更します。
+
+### admonition の実装
+
+`github-callouts` は `NOTE` / `TIP` / `WARNING` を Material と同名のクラスへ写し、`CAUTION` は `danger` へ写します。  
+そのため `caution` ではなく `danger` を対象にします。
+
+`IMPORTANT` は同名のクラスのまま出力されますが、Material に `important` は存在せず、既定の admonition として Note と同じ色で描画されます。  
+`deprecated` と同じく、アイコンを含む定義を `assets/docsfw-preview.css` へ追加します。  
+色は `assets/docsfw-pandoc-style.css` が `--docsfw-admonition-*` で供給し、`docsfw-preview.css` 側は `var()` のフォールバックを持たせて単体でも成立させます。
+
+見出し帯の淡いティントは `color-mix()` で基準色から導きます。  
+未対応の環境では宣言ごと無視され、Material の既定色に戻るだけで表示は壊れません。
+
+### スクロール バー
+
+Material は、スクロール バーにホバーしたとき thumb をアクセント色で着色します。  
+対象は本文のコード ブロック、検索結果、左サイドバー、ツールヒントの 4 か所です。  
+pandoc 発行版はスクロール バーに手を入れず、ブラウザーの既定のままです。  
+そこでホバー時の着色をやめ、通常時と同じ `--md-default-fg-color--lighter` に固定します。
+
+Material は標準の `scrollbar-color` と `::-webkit-scrollbar-thumb` の 2 通りで指定しています。  
+Chrome と Edge は `scrollbar-color` に対応しており、そちらが `::-webkit-scrollbar` 系の擬似要素より優先されます。  
+`::-webkit-scrollbar-thumb:hover` だけを上書きしても着色は消えないため、両方を上書きします。
+
+上書きは Material と同じセレクターで行い、詳細度をそろえます。  
+Material 側の指定は `@media (min-width: 60em)` の中にもありますが、メディア クエリは詳細度を変えないため、後から読まれる `extra_css` が勝ちます。
+
+### 見出しの色
+
+ここだけは Material を正とし、pandoc 側を合わせます。  
+Material の見出しは灰色系で、pandoc の黒より本文との差が穏やかなためです。
+
+Material は次の 2 色を使います。
+
+| 対象 | Material の変数 | 白地での値 |
+|---|---|---|
+| Markdown の H1 (ページ見出し)、H5、H6 | `--md-default-fg-color--light` | `#757575` |
+| Markdown の H2 - H4 | `--md-default-fg-color` | `#212121` |
+
+pandoc は `--shift-heading-level-by=-1` により Markdown の H1 をページ見出しへ移します。  
+そのため HTML の見出しレベルが 1 つずれ、対応は次のようになります。
+
+| Markdown | pandoc の HTML | 色 |
+|---|---|---|
+| H1 | `html-template.html` の `<H1>`、`html-simple-template.html` の `h1.title` | `#757575` |
+| H2 - H4 | `h1` - `h3` | `#212121` |
+| H5、H6 | `h4`、`h5` | `#757575` |
+
+ページ見出しは `.span9 > h1`、`.span12 > h1`、`h1.title` で指定します。  
+本文の見出しより詳細度が高いため、要素セレクターの指定を後から打ち消せます。
+
+本文の文字色はそろえません。  
+pandoc は Bootstrap の `#333333`、Material は `#212121` ですが、見出しほどの差ではありません。
+
+### リンクのホバー
+
+ホバー時は下線ありに統一します。
+
+pandoc 発行版は、本文リンクが Bootstrap の `a:hover`、ナビゲーション ツリーが `docsfw-ui.css` の `#docsfw-tree a:hover` で、いずれも下線を引きます。  
+Material は色を変えるだけで下線を引かないため、`.md-typeset a` と `.md-nav__link` のホバーとフォーカスに `text-decoration: underline` を足します。
+
+見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。
+
+### 一致させない項目
+
+- admonition の形状。pandoc は左罫線のみでブロック全体を淡く着色し、Material は全周の罫線と見出し帯で表現します。
+- admonition のアイコン。pandoc は絵文字、Material は SVG のマスクです。
+- `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、プレビューに対応物がありません。
+
 ## make からの起動
 
 ワークスペースのルート `makefile` に次のターゲットを追加します。  
@@ -692,6 +811,7 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 | 4 | PlantUML のクライアント レンダラー | 完了 |
 | 5 | make 統合と文書化 | 完了 |
 | 6 | Doxygen HTML の静的サーブと単一ページ リンク | 完了 |
+| 7 | 配色の pandoc への一致 | 完了 |
 
 ### 実装で判明したこと
 
@@ -704,6 +824,8 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 - `skinparam` の挿入位置の不備は docsfw 側にも存在したため、`plantuml.lua` にも同じ対策を入れました。
 - キャプションの採用範囲も同様に `@start<種別>` 全般へ広げ、両ルートをそろえました。
 - `mkdocs-awesome-nav` の `use_index_title` により、README から生成した索引ページのタイトルをフォルダー表示名に使用できます。
+- `github-callouts` は `CAUTION` を `danger` クラスへ写します。`IMPORTANT` は同名のまま出力されますが、Material に `important` は存在しないため、既定の admonition として描画されます。
+- `extra_css` は Material の `palette.css` より後に読まれます。属性セレクター 1 個どうしでも後勝ちになるため、パレットの CSS 変数はここで上書きできます。
 
 ### 未着手の課題
 

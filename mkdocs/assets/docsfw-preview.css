@@ -67,27 +67,52 @@
 }
 
 /* ------------------------------------------------------------------------ */
-/* DEPRECATED admonition                                                     */
+/* IMPORTANT / DEPRECATED admonition                                         */
 /* ------------------------------------------------------------------------ */
 
-/* Material に deprecated 種別は無いため、docsfw の admonition.lua に合わせて追加する。 */
+/* Material に important と deprecated の種別は無いため、docsfw の
+   admonition.lua に合わせて追加する。
+   github-callouts は NOTE / TIP / WARNING を Material と同名のクラスへ、
+   CAUTION を danger へ写すが、IMPORTANT は同名のまま出すため Material 側に
+   受け手が無く、既定の admonition として描画されてしまう。
+
+   色は docsfw-pandoc-style.css が --docsfw-admonition-* で供給する。
+   このファイル単体でも成立するよう、var() のフォールバックを置く。 */
 :root {
+  --md-admonition-icon--important: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
   --md-admonition-icon--deprecated: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.9 7.9 0 0 1 4 12a8 8 0 0 1 8-8zm0 16a7.9 7.9 0 0 1-4.9-1.69L18.31 7.1A7.9 7.9 0 0 1 20 12a8 8 0 0 1-8 8z"/></svg>');
+}
+
+.md-typeset .admonition.important,
+.md-typeset details.important {
+  border-color: var(--docsfw-admonition-important, rgb(137, 87, 229));
+}
+
+.md-typeset .important > .admonition-title,
+.md-typeset .important > summary {
+  background-color: color-mix(in srgb, var(--docsfw-admonition-important, rgb(137, 87, 229)) 10%, transparent);
+}
+
+.md-typeset .important > .admonition-title::before,
+.md-typeset .important > summary::before {
+  background-color: var(--docsfw-admonition-important, rgb(137, 87, 229));
+  -webkit-mask-image: var(--md-admonition-icon--important);
+  mask-image: var(--md-admonition-icon--important);
 }
 
 .md-typeset .admonition.deprecated,
 .md-typeset details.deprecated {
-  border-color: rgb(120, 120, 120);
+  border-color: var(--docsfw-admonition-deprecated, rgb(120, 120, 120));
 }
 
 .md-typeset .deprecated > .admonition-title,
 .md-typeset .deprecated > summary {
-  background-color: rgba(120, 120, 120, 0.1);
+  background-color: color-mix(in srgb, var(--docsfw-admonition-deprecated, rgb(120, 120, 120)) 10%, transparent);
 }
 
 .md-typeset .deprecated > .admonition-title::before,
 .md-typeset .deprecated > summary::before {
-  background-color: rgb(120, 120, 120);
+  background-color: var(--docsfw-admonition-deprecated, rgb(120, 120, 120));
   -webkit-mask-image: var(--md-admonition-icon--deprecated);
   mask-image: var(--md-admonition-icon--deprecated);
 }

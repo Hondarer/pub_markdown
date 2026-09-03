@@ -221,26 +221,45 @@ h5 tt, h5 code {
 h6 tt, h6 code {
   font-size: inherit; }
 
+/* 見出しの色は mkdocs プレビュー (Material) に合わせる。
+   Material は Markdown の H1 (ページ見出し) と H5 / H6 を
+   --md-default-fg-color--light (rgba(0,0,0,.54) = 白地で #757575)、
+   その間の見出しを --md-default-fg-color (rgba(0,0,0,.87) = 白地で #212121)
+   にする。
+   pandoc は --shift-heading-level-by=-1 で Markdown の H1 をページ見出し
+   (テンプレートの <H1>) へ移すため、HTML の h1 - h3 が Markdown の H2 - H4、
+   h4 以降が Markdown の H5 以降に対応する。 */
 h1 {
   font-size: 19px;
-  color: black; }
+  color: #212121; }
 
 h2 {
   font-size: 19px;
-  color: black; }
+  color: #212121; }
 
 h3 {
-  font-size: 19px; }
+  font-size: 19px;
+  color: #212121; }
 
 h4 {
-  font-size: 17px; }
+  font-size: 17px;
+  color: #757575; }
 
 h5 {
-  font-size: 17px; }
+  font-size: 17px;
+  color: #757575; }
 
 h6 {
-  color: #777777;
-  font-size: 17px; }
+  font-size: 17px;
+  color: #757575; }
+
+/* ページ見出し (Markdown の H1)。
+   html-template.html は .span9 / .span12 の直下に <H1> を置き、
+   html-simple-template.html は #title-block-header に h1.title を置く。 */
+.span9 > h1,
+.span12 > h1,
+h1.title {
+  color: #757575; }
 
 .toc {
   margin-right: 8px;

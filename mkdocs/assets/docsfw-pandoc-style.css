@@ -1,7 +1,8 @@
 /* mkdocs 簡易プレビュー基盤の追加スタイル。
    pandoc 発行版 (framework/docsfw/styles/html/html-style.css) に見た目を
-   近づけるための、本文タイポグラフィの上書き。
-   ライト/ダーク切替、ナビゲーション、検索など Material の機能は変更しない。 */
+   近づけるための、本文タイポグラフィと配色の上書き。
+   ライト/ダーク切替、ナビゲーション、検索といった Material の機能そのものは
+   変更せず、色だけを pandoc 発行版に合わせる。 */
 
 /* ------------------------------------------------------------------------ */
 /* フォント                                                                  */
@@ -275,4 +276,254 @@
 .md-nav__title .md-typeset {
   font-size: 14px;
   line-height: 21px;
+}
+
+/* ------------------------------------------------------------------------ */
+/* 色                                                                        */
+/* ------------------------------------------------------------------------ */
+
+/* Material の既定パレット (indigo) ではなく、pandoc 発行版の色を使う。
+   mkdocs.yml の palette には primary / accent を指定せず、ここで CSS 変数を
+   上書きする。Material の名前付きパレットに #4183C4 は無く、変数の上書きなら
+   ライト (default) とダーク (slate) の双方を 1 か所で扱えるため。
+   extra_css は palette.css より後に読まれるので、同じ詳細度 (属性セレクター
+   1 個) でもこちらが勝つ。
+
+   淡色のティントは color-mix() で基準色から導く。未対応の環境では宣言ごと
+   無視され、Material の既定色に戻るだけで表示は壊れない。 */
+
+/* ライト。pandoc 発行版はライト固定のため、こちらが基準となる。 */
+[data-md-color-scheme="default"] {
+  /* 本文リンクは html-style.css の a { color: #4183C4 }。
+     ホバーは html-style.css に指定が無く、Bootstrap (template.css) の
+     a:hover { color: #005580 } が効いている。 */
+  --md-typeset-a-color: #4183c4;
+  --md-accent-fg-color: #005580;
+  --md-accent-fg-color--transparent: rgba(0, 85, 128, 0.1);
+
+  /* 左ナビと目次は docsfw-ui.css の #1A5FAA (ホバーと現在ページ)。
+     本文リンクのホバーとは別の色なので、専用の変数に分ける。 */
+  --docsfw-nav-accent: #1a5faa;
+
+  /* ヘッダーは Bootstrap の .navbar-inner
+     (#FFFFFF〜#F2F2F2 のグラデーション、下端 #D4D4D4、濃い文字)。
+     Material のヘッダーは単色のため、グラデーションの中間色を使う。 */
+  --md-primary-fg-color: #f7f7f7;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark: #d4d4d4;
+  --md-primary-bg-color: rgba(0, 0, 0, 0.87);
+  --md-primary-bg-color--light: rgba(0, 0, 0, 0.54);
+
+  /* admonition は bin/pandoc-filters/admonition.lua の色定義。 */
+  --docsfw-admonition-note: #1f6feb;
+  --docsfw-admonition-tip: #238636;
+  --docsfw-admonition-important: #8957e5;
+  --docsfw-admonition-warning: #9a6700;
+  --docsfw-admonition-danger: #da3633;
+  --docsfw-admonition-deprecated: #6a737d;
+
+  /* コードは html-style.css の code, tt / .highlight pre。 */
+  --md-code-bg-color: #f8f8f8;
+  --md-code-fg-color: #000000;
+
+  /* ==mark== は html-style.css の mark (不透明の黄色)。 */
+  --md-typeset-mark-color: #ffff00;
+}
+
+/* ダーク。pandoc 発行版に対応する出力は無いため、ライトの各色と同じ色相の
+   まま明度を上げた値を使う。admonition の 6 色は、pandoc が採用している
+   GitHub のライト色に対応する GitHub のダーク色をそのまま当てる。
+   コード背景と ==mark== は、暗背景では成立しないので Material の既定に任せる。 */
+[data-md-color-scheme="slate"] {
+  --md-typeset-a-color: #6ea9dd;
+  --md-accent-fg-color: #9cc7ea;
+  --md-accent-fg-color--transparent: rgba(156, 199, 234, 0.1);
+
+  --docsfw-nav-accent: #9cc7ea;
+
+  --md-primary-fg-color: #1f2129;
+  --md-primary-fg-color--light: #2b2e39;
+  --md-primary-fg-color--dark: #14161c;
+  --md-primary-bg-color: rgba(255, 255, 255, 0.87);
+  --md-primary-bg-color--light: rgba(255, 255, 255, 0.54);
+
+  --docsfw-admonition-note: #58a6ff;
+  --docsfw-admonition-tip: #3fb950;
+  --docsfw-admonition-important: #a371f7;
+  --docsfw-admonition-warning: #d29922;
+  --docsfw-admonition-danger: #f85149;
+  --docsfw-admonition-deprecated: #8b949e;
+}
+
+/* ------------------------------------------------------------------------ */
+/* ヘッダー                                                                  */
+/* ------------------------------------------------------------------------ */
+
+/* Bootstrap の .navbar-inner が持つ下端の境界線に相当する。 */
+.md-header {
+  border-bottom: 1px solid var(--md-primary-fg-color--dark);
+}
+
+/* Material の検索フォームは、色の濃いヘッダーを前提に背景を #00000042 と
+   している。淡色ヘッダーでは入力文字が読めなくなるため、薄いティントへ
+   変える。
+   この指定が効くのは min-width: 60em の、検索フォームがヘッダーの中に
+   置かれる場合だけ。それ未満の幅では検索がオーバーレイになり、背景は
+   --md-default-bg-color のままでよい。 */
+@media screen and (min-width: 60em) {
+  [data-md-color-scheme="default"] .md-search__form {
+    background-color: rgba(0, 0, 0, 0.07);
+  }
+
+  [data-md-color-scheme="default"] .md-search__form:hover {
+    background-color: rgba(0, 0, 0, 0.14);
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* ナビゲーションと目次の色                                                  */
+/* ------------------------------------------------------------------------ */
+
+/* Material は本文リンクと同じ --md-accent-fg-color を使うが、pandoc 発行版は
+   本文リンクのホバー (#005580) とナビの色 (#1A5FAA) を分けている。 */
+.md-nav__link:hover,
+.md-nav__link:focus {
+  color: var(--docsfw-nav-accent);
+}
+
+.md-nav__link--active,
+.md-nav__item .md-nav__link--active code {
+  color: var(--docsfw-nav-accent);
+}
+
+/* ------------------------------------------------------------------------ */
+/* リンクのホバー                                                            */
+/* ------------------------------------------------------------------------ */
+
+/* pandoc 発行版は、本文リンクが Bootstrap の a:hover で、ナビゲーション
+   ツリーが docsfw-ui.css の #docsfw-tree a:hover で、いずれもホバー時に
+   下線を引く。Material は色だけを変えて下線を引かないため、そろえる。
+   見出しのアンカー (.headerlink) は本文リンクではないので対象外にする。 */
+
+.md-typeset a:hover,
+.md-typeset a:focus {
+  text-decoration: underline;
+}
+
+.md-typeset a.headerlink:hover,
+.md-typeset a.headerlink:focus {
+  text-decoration: none;
+}
+
+.md-nav__link:hover,
+.md-nav__link:focus {
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------------------------ */
+/* スクロールバー                                                            */
+/* ------------------------------------------------------------------------ */
+
+/* Material はスクロールバーにホバーしたとき、thumb を --md-accent-fg-color で
+   着色する。pandoc 発行版はスクロールバーに一切手を入れず、ブラウザーの既定
+   のままなので、ホバーでの着色をやめて通常時と同じ色に固定する。
+
+   Material は標準の scrollbar-color と ::-webkit-scrollbar-thumb の 2 通りで
+   指定している。Chrome と Edge は scrollbar-color に対応しており、そちらが
+   ::-webkit-scrollbar 系の擬似要素より優先されるため、両方を上書きしないと
+   ホバー時の着色が残る。
+   セレクターは Material と同じものを使い、詳細度をそろえる。
+   Material 側の指定は @media (min-width: 60em) の中にもあるが、メディア
+   クエリは詳細度を変えないので、後から読まれるこちらが勝つ。 */
+
+.md-typeset pre > code:hover {
+  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+}
+
+.md-search__scrollwrap:hover {
+  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+}
+
+.md-sidebar__scrollwrap:focus-within,
+.md-sidebar__scrollwrap:hover {
+  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+}
+
+.md-typeset pre > code::-webkit-scrollbar-thumb:hover,
+.md-search__scrollwrap::-webkit-scrollbar-thumb:hover,
+.md-tooltip2__inner::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md-default-fg-color--lighter);
+}
+
+.md-sidebar__scrollwrap:focus-within::-webkit-scrollbar-thumb:hover,
+.md-sidebar__scrollwrap:hover::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md-default-fg-color--lighter);
+}
+
+/* ------------------------------------------------------------------------ */
+/* admonition の色                                                           */
+/* ------------------------------------------------------------------------ */
+
+/* github-callouts は CAUTION を danger クラスへ写すため、caution ではなく
+   danger を対象にする。Material に無い important と deprecated の定義は
+   docsfw-preview.css にあり、色だけをここで供給する。 */
+
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: var(--docsfw-admonition-note);
+}
+
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary {
+  background-color: color-mix(in srgb, var(--docsfw-admonition-note) 10%, transparent);
+}
+
+.md-typeset .note > .admonition-title::before,
+.md-typeset .note > summary::before {
+  background-color: var(--docsfw-admonition-note);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: var(--docsfw-admonition-tip);
+}
+
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+  background-color: color-mix(in srgb, var(--docsfw-admonition-tip) 10%, transparent);
+}
+
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .tip > summary::before {
+  background-color: var(--docsfw-admonition-tip);
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--docsfw-admonition-warning);
+}
+
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: color-mix(in srgb, var(--docsfw-admonition-warning) 10%, transparent);
+}
+
+.md-typeset .warning > .admonition-title::before,
+.md-typeset .warning > summary::before {
+  background-color: var(--docsfw-admonition-warning);
+}
+
+.md-typeset .admonition.danger,
+.md-typeset details.danger {
+  border-color: var(--docsfw-admonition-danger);
+}
+
+.md-typeset .danger > .admonition-title,
+.md-typeset .danger > summary {
+  background-color: color-mix(in srgb, var(--docsfw-admonition-danger) 10%, transparent);
+}
+
+.md-typeset .danger > .admonition-title::before,
+.md-typeset .danger > summary::before {
+  background-color: var(--docsfw-admonition-danger);
 }
