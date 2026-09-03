@@ -11,6 +11,7 @@
 - **ファイル**: `📄 [ファイル名](パス) <br/>     説明文`
 - **フォルダー** (index.md あり): `📁 [フォルダ名](パス) <br/>     説明文`
 - **フォルダー** (index.md なし): `📁 フォルダ名`
+- **ネストした項目**: 1 階層あたり半角スペース 4 個で字下げする
 
 ファイル名/フォルダー名がリンク テキストとして表示され、Markdown ファイル内の最初の見出し (`# タイトル`) が説明文として表示されます。
 
@@ -152,7 +153,7 @@ project/
 ```markdown
 - 📄 [guide.md](docs/guide.md) <br/>     ガイド
 - 📁 [api](docs/api/index.md) <br/>     API
-  - 📄 [reference.md](docs/api/reference.md) <br/>     リファレンス
+    - 📄 [reference.md](docs/api/reference.md) <br/>     リファレンス
 ```
 
 **注意**: 生成されるリンクは、`\toc` コマンドが記述されているファイルからの相対パスになります。
@@ -181,8 +182,8 @@ project/
 
 ```markdown
 - 📁 [docs](index.md) <br/>     Document of c-modernization-kit
-  - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
-  - 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
+    - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
+    - 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
 ```
 
 **exclude-basedir=true**:
@@ -267,13 +268,13 @@ local defaults = {
 - 📄 [build-design.md](build-design.md) <br/>     ビルド設計
 - 📄 [intro.md](intro.md) <br/>     イントロダクション
 - 📁 reference
-  - 📄 [api.md](reference/api.md) <br/>     API リファレンス
+    - 📄 [api.md](reference/api.md) <br/>     API リファレンス
 - 📁 [skill-guide](skill-guide/index.md) <br/>     スキル ガイド
-  - 📄 [overview.md](skill-guide/overview.md) <br/>     概要
+    - 📄 [overview.md](skill-guide/overview.md) <br/>     概要
 - 📄 [source-style-guideline.md](source-style-guideline.md) <br/>     ソース スタイル
 - 📁 [tutorial](tutorial/index.md) <br/>     チュートリアル
-  - 📄 [advanced.md](tutorial/advanced.md) <br/>     応用
-  - 📄 [basics.md](tutorial/basics.md) <br/>     基本操作
+    - 📄 [advanced.md](tutorial/advanced.md) <br/>     応用
+    - 📄 [basics.md](tutorial/basics.md) <br/>     基本操作
 
 ## 詳細
 ```

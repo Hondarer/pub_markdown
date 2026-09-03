@@ -12,7 +12,7 @@ c-modernization-kit で実際に使用されているパラメーターだけを
     exclude-basedir   基準ディレクトリ自体を索引に出さない。
     open-level        docsfw では折り畳みの初期展開段数。本実装では無視する。
 
-出力の書式は insert-toc.sh と同じです。
+出力の書式は insert-toc.sh と同じです。ネストした項目は 4 スペースで字下げします。
 
     - 📄 [ファイル名](パス) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;タイトル
     - 📁 [フォルダー名](パス) <br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;タイトル
@@ -155,7 +155,7 @@ class DocIndex:
 
 def _entry_line(indent, icon, label, link, title):
     """索引の 1 行を組み立てる。"""
-    prefix = "  " * indent
+    prefix = "    " * indent
     if link is None:
         return "{}- {} {}".format(prefix, icon, label)
     line = "{}- {} [{}]({})".format(prefix, icon, label, link)

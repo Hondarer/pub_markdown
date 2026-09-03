@@ -57,8 +57,9 @@ make preview-build
 ```
 
 `PREVIEW_STRICT=1` を付けると `mkdocs build --strict` になり、警告が 1 件でもあれば失敗します。  
-現状は docsfw でも解決しないリンクが残るため、既定では `--strict` を使用しません。  
-内訳は [設計ドキュメントの「既知の警告」](../docs/mkdocs-preview-design.md) を参照してください。
+ステージング後の論理ツリー外を参照する相対リンクは、外部ファイルを追加せず、表示文字列と元のパスを残した非リンクの参照へ変換します。  
+そのため、リンク検査を厳密に行う場合は `PREVIEW_STRICT=1` を指定できます。  
+リンク解決の規則は [設計ドキュメント](../docs/mkdocs-preview-design.md) を参照してください。
 
 生成物を消す場合は次を実行します。  
 `cleanpreview` は削除の前に、このワークスペースの `mkdocs serve` を停止します。  

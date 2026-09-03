@@ -65,7 +65,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 |---|---|---|---|---|
 | 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の言語側を使う |
 | 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の details 側を使う |
-| 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装 |
+| 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | mkdocs は H1 をページ見出しとして扱う |
 
@@ -622,20 +622,23 @@ make preview-build
 791 ファイルのステージングは約 1.4 秒、`mkdocs build` は約 53 秒、合計で約 55 秒です。  
 docsfw の `make docs` は 4 バリアントの HTML と docx を生成するため、これより桁違いに長くかかります。
 
-#### 既知の警告
+#### リンク検証
 
-Doxygen HTML への本文リンクは `/doxygen/` へ書き換えるため、この検査の対象外です。  
-残る警告はステージングの不具合ではなく、ソース側に元からあるリンクです。  
-docsfw の発行でも同じリンクは解決しません。
+Doxygen HTML への本文リンクは `/doxygen/` へ書き換えるため、MkDocs の文書リンク検査では扱いません。  
+その他の相対リンクは、ステージング後の論理ツリーに存在する対象だけを有効なリンクとして残します。
 
-| 件数 | 内容 | 備考 |
-|---:|---|---|
-| 19 | Doxybook2 が生成した `Classes/`, `Namespaces/`, `Modules/` への相対リンク | 生成時点で相対パスが誤っている |
-| 11 | `../prod/` 配下のファイルへのリンク | ドキュメント ツリーの外 |
-| 6 | `../../README.md`, `../../AGENTS.md`, `../bin/text_style_jp.md` など | ドキュメント ツリーの外 |
+`README.md` と `SKILL.md` は、同じディレクトリの優先順位に従って `index.md` へ読み替えた後の論理パスへ書き換えます。  
+論理ツリー外の README、AGENTS、ソース コード、ヘッダー、ディレクトリ、未生成ファイルへの参照は、プレビューへ対象ファイルを追加せず、表示文字列と元のパスを残した非リンクの参照へ変換します。
 
-このほか、見出しへのアンカー リンクの不一致が 6 件あります。  
-いずれもリンク先のアンカーに半角空白が含まれており、GitHub でも解決しません。
+この変換により、プレビューは公開対象外のファイルを誤って公開せず、元の参照情報も保持します。  
+リンク切れの確認は次の strict ビルドで行えます。
+
+```bash
+make preview-build PREVIEW_STRICT=1
+```
+
+存在しない相対リンクを別のファイルへ推測して書き換えることはありません。  
+リンク先が論理ツリーに存在しない場合は、原文側の参照先を修正するか、対象ファイルを正式な発行対象へ追加してください。
 
 見出しの id は `pymdownx.slugs.slugify` で GitHub と同じ規則にそろえています。  
 Python-Markdown の既定では非 ASCII が落ちるため、この設定がないと日本語見出しへのリンクが約 35 件切れます。

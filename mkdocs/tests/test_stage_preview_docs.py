@@ -11,8 +11,10 @@ sys.path.insert(0, BIN_DIR)
 
 from stage_preview_docs import (  # noqa: E402
     Document,
+    PathMapper,
     build_front_matter,
     generate_nav_files,
+    rewrite_links,
 )
 
 
@@ -91,6 +93,60 @@ class GenerateNavFilesTest(unittest.TestCase):
                     handle.read(),
                     "use_index_title: true\nnav:\n  - index.md\n  - guide\n  - ...\n",
                 )
+
+
+class RewriteLinksTest(unittest.TestCase):
+    def _document(self, body):
+        document = Document(
+            "/workspace/docs/guide/source.md",
+            "guide/source.md",
+        )
+        document.body = body
+        return document
+
+    def test_rewrites_link_to_logical_tree_target(self):
+        document = self._document("[入口](../README.md)\n")
+        mapper = PathMapper("/workspace/docs", [])
+        real_to_staged = {
+            os.path.normcase(os.path.normpath("/workspace/docs/README.md")): "index.md",
+        }
+
+        self.assertEqual(
+            rewrite_links(document.body, document, mapper, real_to_staged),
+            "[入口](../index.md)\n",
+        )
+
+    def test_renders_unresolved_relative_reference_without_link(self):
+        document = self._document(
+            "[README](../../../README.md)\n"
+            "[ヘッダー](../prod/include/)\n"
+            "[サンプル](file_copy_sample.c)\n"
+        )
+        mapper = PathMapper("/workspace/docs", [])
+
+        self.assertEqual(
+            rewrite_links(document.body, document, mapper, {}),
+            "README (`../../../README.md`)\n"
+            "ヘッダー (`../prod/include/`)\n"
+            "サンプル (`file_copy_sample.c`)\n",
+        )
+
+    def test_keeps_non_relative_and_image_links(self):
+        document = self._document(
+            "[外部](https://example.com/docs)\n"
+            "[見出し](#section)\n"
+            "[Doxygen](../../../doxygen/example/index.html)\n"
+            "![画像](missing.png)\n"
+            "```md\n"
+            "[コード](../outside.md)\n"
+            "```\n"
+        )
+        mapper = PathMapper("/workspace/docs", [])
+
+        self.assertEqual(
+            rewrite_links(document.body, document, mapper, {}),
+            document.body,
+        )
 
 
 if __name__ == "__main__":

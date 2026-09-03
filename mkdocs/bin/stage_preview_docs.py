@@ -392,6 +392,10 @@ def rewrite_links(text, document, mapper, real_to_staged):
     docsfw の ``link-to-html.lua`` と同じく、まず ``\\toc`` を含むファイル自身の
     実パスを基準に解決し、見つからない場合は仮想パス経由で解決します。
     ``.md`` 拡張子は mkdocs が解決するため、そのまま残します。
+
+    論理ツリー外の相対リンクは、プレビューへ外部ファイルを追加せず、表示文字列
+    と元のリンク先を残した非リンクの参照へ変換します。画像リンクは表示を壊さ
+    ないため、この変換の対象外です。
     """
     source_dir_real = os.path.dirname(document.real_path)
     source_dir_virtual = posixpath.dirname(document.virtual_rel)
@@ -416,9 +420,17 @@ def rewrite_links(text, document, mapper, real_to_staged):
     def replace(match):
         bang, label, target = match.group(1), match.group(2), match.group(3)
         rewritten = resolve(target)
-        if rewritten is None:
+        if rewritten is not None:
+            return "{}[{}]({})".format(bang, label, rewritten)
+
+        path, _, _ = _split_link_suffix(target)
+        if (
+            bang
+            or not _is_relative_link_path(path)
+            or _DOXYGEN_REL_RE.match(path)
+        ):
             return match.group(0)
-        return "{}[{}]({})".format(bang, label, rewritten)
+        return "{} (`{}`)".format(label, target)
 
     return _apply_outside_fences(text, lambda line: _LINK_RE.sub(replace, line))
 
@@ -440,6 +452,13 @@ def _split_link_suffix(target):
     """リンク先を ``(パス, 区切り, アンカーやクエリ)`` に分割する。"""
     match = re.match(r"^([^#?]*)(.*)$", target)
     return match.group(1), "", match.group(2)
+
+
+def _is_relative_link_path(path):
+    """通常の相対ファイル参照として扱えるパスかどうかを返す。"""
+    return bool(path) and not path.startswith("/") and not re.match(
+        r"^[A-Za-z][A-Za-z0-9+.-]*:", path
+    )
 
 
 def _apply_outside_fences(text, transform):

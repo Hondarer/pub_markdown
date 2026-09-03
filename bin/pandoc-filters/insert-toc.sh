@@ -691,10 +691,11 @@ generate_toc() {
             depth=$((${#temp} - ${#temp_no_slash}))
         fi
 
-        # インデント文字列を更新
+        # インデント文字列を更新。1 階層あたり 4 スペース。
+        # text_style_jp の list-indent と Python-Markdown に合わせる。
         indent=""
         for ((i=0; i<depth; i++)); do
-            indent="  $indent"
+            indent="    $indent"
         done
 
         if [[ "$type" == "file" ]]; then
