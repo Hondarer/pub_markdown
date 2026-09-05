@@ -483,6 +483,9 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 | ヘッダー背景 | `#FFFFFF`〜`#F2F2F2` | Bootstrap `.navbar-inner` | `#F7F7F7` | `#1F2129` |
 | ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
 | ヘッダー文字 | 濃色 | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
+| フッター背景 | - | ヘッダーからの流用 | `#F7F7F7` | `#1F2129` |
+| フッター上端 | - | 同上 | `#D4D4D4` | `#14161C` |
+| フッター文字 | - | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
 | NOTE | `#1F6FEB` | `bin/pandoc-filters/admonition.lua` | 同左 | `#58A6FF` |
 | TIP | `#238636` | 同上 | 同左 | `#3FB950` |
 | IMPORTANT | `#8957E5` | 同上 | 同左 | `#A371F7` |
@@ -503,7 +506,7 @@ pandoc 発行版はライト固定のため、`slate` に対応する正はあ�
 admonition の 6 色は、pandoc が採用している GitHub のライト色に対応する GitHub のダーク色をそのまま当てます。  
 コード背景と `==mark==` は暗背景で成立しないため、`slate` では Material の既定に任せます。
 
-### ヘッダーを淡色にする理由
+### ヘッダーとフッターを淡色にする理由
 
 pandoc 発行版のヘッダーは Bootstrap の `.navbar-inner` で、白から `#F2F2F2` への淡いグラデーションに濃い文字です。  
 Material の既定は indigo の単色バーであり、本文リンクを `#4183C4` に合わせると、ヘッダーの indigo だけが別系統の青として残ります。  
@@ -511,6 +514,24 @@ Material の既定は indigo の単色バーであり、本文リンクを `#418
 
 淡色ヘッダーでは、Material が濃色ヘッダーを前提に指定している検索フォームの背景 (`#00000042`) では入力文字が読めません。  
 `default` のときだけ薄いティントへ変更します。
+
+フッターも同じ淡色にそろえます。  
+Material の既定は `.md-footer` に `rgba(0,0,0,.87)`、その全面を覆う `.md-footer-meta` に `rgba(0,0,0,.32)` を重ねるため、白地のページの下に黒帯が出ます。
+
+pandoc 発行版の HTML に `<footer>` は無く、フッターには正とする対応先が存在しません。  
+そのため、ヘッダーと同じ値を流用します。  
+`--md-footer-bg-color` 系を上書きし、`.md-footer` へ上端の境界線を足すと、ページの上端と下端が同じ色でそろいます。
+
+背景の 2 変数には同じ値を指定してください。  
+`.md-footer-meta` は `.md-footer` の全面を覆うため、値が違うと帯が 2 色に分かれて見えます。
+
+フッターの文字は 3 段階です。  
+`--md-footer-fg-color` (ホバー時のリンク)、`--md-footer-fg-color--light` (リンク)、`--md-footer-fg-color--lighter` (「Made with」の地の文) の順に淡くなります。  
+不透明度は `--md-primary-bg-color` 系と同じ 0.87 と 0.54 にそろえ、いちばん淡い段は 0.32 とします。
+
+前後ページのリンク (`.md-footer__inner`) は出しません。  
+`mkdocs.yml.in` の `features` に `navigation.footer` を入れていないためです。  
+フッターに出るのは「Made with Material for MkDocs」だけです。
 
 ### admonition の実装
 

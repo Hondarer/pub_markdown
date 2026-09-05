@@ -341,6 +341,18 @@ body {
   --md-primary-bg-color: rgba(0, 0, 0, 0.87);
   --md-primary-bg-color--light: rgba(0, 0, 0, 0.54);
 
+  /* フッターはヘッダーと同じ淡色にそろえる。pandoc 発行版に <footer> は
+     無いため、対応する正が存在しない。
+     Material の既定は .md-footer に rgba(0,0,0,.87)、その全面を覆う
+     .md-footer-meta に rgba(0,0,0,.32) を重ねるため、白地のページでは
+     黒帯になる。背景の 2 変数を同じ値にしないと帯が 2 色に分かれる。
+     文字は --md-primary-bg-color と同じ不透明度の系列にそろえる。 */
+  --md-footer-bg-color: #f7f7f7;
+  --md-footer-bg-color--dark: #f7f7f7;
+  --md-footer-fg-color: rgba(0, 0, 0, 0.87);
+  --md-footer-fg-color--light: rgba(0, 0, 0, 0.54);
+  --md-footer-fg-color--lighter: rgba(0, 0, 0, 0.32);
+
   /* admonition は bin/pandoc-filters/admonition.lua の色定義。 */
   --docsfw-admonition-note: #1f6feb;
   --docsfw-admonition-tip: #238636;
@@ -383,6 +395,12 @@ body {
   --md-primary-bg-color: rgba(255, 255, 255, 0.87);
   --md-primary-bg-color--light: rgba(255, 255, 255, 0.54);
 
+  --md-footer-bg-color: #1f2129;
+  --md-footer-bg-color--dark: #1f2129;
+  --md-footer-fg-color: rgba(255, 255, 255, 0.87);
+  --md-footer-fg-color--light: rgba(255, 255, 255, 0.54);
+  --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.32);
+
   --docsfw-admonition-note: #58a6ff;
   --docsfw-admonition-tip: #3fb950;
   --docsfw-admonition-important: #a371f7;
@@ -414,6 +432,17 @@ body {
   [data-md-color-scheme="default"] .md-search__form:hover {
     background-color: rgba(0, 0, 0, 0.14);
   }
+}
+
+/* ------------------------------------------------------------------------ */
+/* フッター                                                                  */
+/* ------------------------------------------------------------------------ */
+
+/* ヘッダー下端の境界線と対になる。淡色の帯だけでは本文との境目が分からない。
+   背景と同じく --md-primary-fg-color--dark を使うため、ページの上端と下端が
+   同じ色の罫線でそろう。 */
+.md-footer {
+  border-top: 1px solid var(--md-primary-fg-color--dark);
 }
 
 /* ------------------------------------------------------------------------ */
