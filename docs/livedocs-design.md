@@ -406,7 +406,7 @@ API は `renderToString(lines, onSuccess, onError)` です。
 
 枠と余白は `assets/docsfw-livedocs.css` の `.docsfw-figure` が与えます。  
 キャプションの色は静的発行の `figcaption` と同じく本文色 (`--md-typeset-color`) です。  
-枠線は `--md-default-fg-color--lightest` で、静的発行側もこの色を白地で解決した `rgba(0, 0, 0, 0.07)` へそろえています。
+枠線は `--md-default-fg-color--lighter` で、静的発行側もこの色を白地で解決した `rgba(0, 0, 0, 0.32)` へそろえています。
 
 ## SVG のダウンロード
 

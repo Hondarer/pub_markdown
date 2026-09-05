@@ -134,7 +134,7 @@
    横スクロールが効かなくなる。block のまま text-align で中央へ寄せる。 */
 .md-typeset .docsfw-figure {
   display: block;
-  border: 1px solid var(--md-default-fg-color--lightest);
+  border: 1px solid var(--md-default-fg-color--lighter);
   border-radius: 3px;
   padding: 8px;
   margin: 15px 0;
@@ -318,8 +318,7 @@
   margin: 0;
 }
 
-/* ボタンは本文の枠ではなく操作部品のため、枠線は図の枠 (--lightest) ではなく
-   視認できる --lighter を使う。 */
+/* 枠線は図の枠と同じ --lighter。背景を敷くことで図と区別する。 */
 .md-typeset .docsfw-svg-dl {
   position: absolute;
   top: 4px;

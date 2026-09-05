@@ -188,7 +188,7 @@ body {
      Material の既定では inner pre の margin を 0 にしているため、
      外側の .highlight 側で上下余白を戻す必要がある。 */
   margin: 0.75em 0;
-  border: 1px solid var(--md-default-fg-color--lightest);
+  border: 1px solid var(--md-default-fg-color--lighter);
   border-radius: 3px;
 }
 
@@ -200,7 +200,7 @@ body {
 /* .highlight を伴わない単独の pre (稀なケース) 向けの保険。 */
 .md-typeset pre:not(.highlight pre) {
   margin: 0.75em 0;
-  border: 1px solid var(--md-default-fg-color--lightest);
+  border: 1px solid var(--md-default-fg-color--lighter);
   border-radius: 3px;
 }
 
