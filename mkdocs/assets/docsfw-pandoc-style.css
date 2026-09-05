@@ -185,6 +185,10 @@ body {
    margin/border を持つため打ち消す (pandoc 版の div.sourceCode > pre と
    同じ考え方)。両方に枠線を付けると二重の枠と、その間の余白が生じる。 */
 .md-typeset .highlight {
+  /* 連続する fenced code block の間にも明確な余白を残す。
+     Material の既定では inner pre の margin を 0 にしているため、
+     外側の .highlight 側で上下余白を戻す必要がある。 */
+  margin: 0.75em 0;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 3px;
 }
@@ -196,6 +200,7 @@ body {
 
 /* .highlight を伴わない単独の pre (稀なケース) 向けの保険。 */
 .md-typeset pre:not(.highlight pre) {
+  margin: 0.75em 0;
   border: 1px solid var(--md-default-fg-color--lightest);
   border-radius: 3px;
 }
