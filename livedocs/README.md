@@ -115,6 +115,10 @@ make stopdocs
 `mkdocs.yml` の `site_name` へバリアント名とともに展開します。  
 未指定の場合はワークスペース フォルダー名を使います。
 
+`mkdocs.yml` の `hooks:` に書くパスは、`vendor_assets.py` が docsfw の実際の配置と  
+生成先から求めます。docsfw をワークスペース内の既定位置以外へ置いた場合や、  
+`--livedocsDir` で生成先を変えた場合も、生成後のパスは実ファイルを指します。
+
 ## 元の Markdown を編集したときの反映
 
 `make servedocs` で `mkdocs serve` を実行している間は、元の Markdown  

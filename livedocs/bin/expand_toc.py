@@ -2,7 +2,7 @@
 r"""``\toc`` コマンドをディレクトリ横断の索引リストへ展開する。
 
 docsfw の ``bin/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち、
-c-modernization-kit で実際に使用されているパラメーターだけを再実装します。
+動的発行で実際に使用されているパラメーターだけを再実装します。
 
 対応するパラメーターを次に示します。
 

@@ -17,14 +17,16 @@ PANDOC = shutil.which("pandoc")
 @unittest.skipUnless(PANDOC, "pandoc is required")
 class LinkFilterTest(unittest.TestCase):
     def setUp(self):
+        # フィルターへ渡すサブフォルダー マッピングと入力ファイルの位置は、
+        # パス計算の入力としてだけ使う組み立て値であり、実在は前提としない。
         self.environment = os.environ.copy()
         self.environment.update(
             {
                 "PUB_MARKDOWN_MAIN_MDROOT": os.path.join(WORKSPACE_ROOT, "docs"),
                 "SUBFOLDER_DOCS_PATHS": "\n".join(
                     [
-                        "c-modernization-kit|app/c-modernization-kit/docs|{}".format(
-                            os.path.join(WORKSPACE_ROOT, "app", "c-modernization-kit", "docs")
+                        "sample-workspace|app/sample-workspace/docs|{}".format(
+                            os.path.join(WORKSPACE_ROOT, "app", "sample-workspace", "docs")
                         ),
                         "general|app/general/docs|{}".format(
                             os.path.join(WORKSPACE_ROOT, "app", "general", "docs")
@@ -56,7 +58,7 @@ class LinkFilterTest(unittest.TestCase):
 
     def test_html_filter_rewrites_resolved_link_and_unlinks_external_reference(self):
         source_file = os.path.join(
-            WORKSPACE_ROOT, "app", "c-modernization-kit", "docs", "github-actions.md"
+            WORKSPACE_ROOT, "app", "sample-workspace", "docs", "github-actions.md"
         )
         html = self._run(
             "link-to-html.lua",
@@ -76,7 +78,7 @@ class LinkFilterTest(unittest.TestCase):
 
     def test_readme_link_uses_logical_index_path(self):
         source_file = os.path.join(
-            WORKSPACE_ROOT, "app", "c-modernization-kit", "docs", "github-actions.md"
+            WORKSPACE_ROOT, "app", "sample-workspace", "docs", "github-actions.md"
         )
         html = self._run(
             "link-to-html.lua",
@@ -92,7 +94,7 @@ class LinkFilterTest(unittest.TestCase):
 
     def test_docx_filter_uses_docx_target_and_unlinks_external_reference(self):
         source_file = os.path.join(
-            WORKSPACE_ROOT, "app", "c-modernization-kit", "docs", "github-actions.md"
+            WORKSPACE_ROOT, "app", "sample-workspace", "docs", "github-actions.md"
         )
         native = self._run(
             "link-to-docx.lua",

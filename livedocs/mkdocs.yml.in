@@ -4,6 +4,8 @@
 # 展開時に置き換わる差し込み位置は、行全体が置換記号だけの行です。
 # site_name はワークスペース側の .vscode/pub_markdown.config.yaml の
 # siteName から与えます。未指定の場合はワークスペース フォルダー名を使います。
+# hooks の位置は docsfw の実際の配置から求めます。docsfw の位置や
+# 生成先を既定から変えても、生成後のパスは実ファイルを指します。
 # plugins の 1 行は publocal.yaml から .nav.yml を生成した場合にだけ
 # awesome-nav プラグインの行になります。
 #
@@ -126,6 +128,6 @@ extra_javascript:
 # docs_dir 監視がそれを検知してビルドとブラウザーの自動リロードを行う。
 # 詳細は docs/livedocs-design.md を参照。
 hooks:
-  - ../../framework/docsfw/livedocs/bin/livedocs_doxygen_hook.py
-  - ../../framework/docsfw/livedocs/bin/livedocs_versioned_hook.py
-  - ../../framework/docsfw/livedocs/bin/livedocs_autostage_hook.py
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_doxygen_hook.py
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_versioned_hook.py
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_autostage_hook.py

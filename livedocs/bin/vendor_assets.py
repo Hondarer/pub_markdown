@@ -177,6 +177,22 @@ def resolve_site_name(workspace, config_path):
     return os.path.basename(os.path.normpath(workspace))
 
 
+def resolve_hooks_dir(livedocs_dir):
+    """``hooks:`` に書く ``livedocs/bin`` の位置を ``mkdocs.yml`` から見て求める。
+
+    mkdocs は ``hooks`` を設定ファイルのディレクトリ基準で解決する。
+    docsfw の実際の配置 (``MKDOCS_DIR``) から求めるため、docsfw の位置と
+    ``--livedocsDir`` の指定にそのまま追随する。
+    """
+    hooks_dir = os.path.join(MKDOCS_DIR, "bin")
+    try:
+        hooks_ref = os.path.relpath(hooks_dir, livedocs_dir)
+    except ValueError:
+        # Windows で livedocs_dir と docsfw が別ドライブにある場合は相対化できない
+        hooks_ref = hooks_dir
+    return hooks_ref.replace(os.sep, "/")
+
+
 def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VARIANT,
                         site_name=""):
     """``mkdocs.yml.in`` から ``pages/livedocs/mkdocs.yml`` を生成する。"""
@@ -200,6 +216,7 @@ def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VA
             lines.append(line)
 
     text = "\n".join(lines)
+    text = text.replace("@LIVEDOCS_HOOKS_DIR@", resolve_hooks_dir(livedocs_dir))
     text = text.replace("@LIVEDOCS_SITE_NAME@", site_name)
     text = text.replace("@LIVEDOCS_VARIANT@", variant_name)
     text = text.replace("@LIVEDOCS_THEME_LANGUAGE@", lang)
