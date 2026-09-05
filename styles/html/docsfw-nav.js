@@ -279,7 +279,7 @@
       var homeId     = isCurrRoot ? ' id="docsfw-current-node"' : '';
       homeHtml = (
         '<div class="docsfw-home-link"' + homeId + '>' +
-          '<a href="' + esc(href(nav.url)) + '"' + homeCls + '>🏠 ' + esc(nav.title || 'Home') + '</a>' +
+          '<a href="' + esc(href(nav.url)) + '"' + homeCls + '> ' + esc(nav.title || 'Home') + '</a>' +
         '</div>'
       );
     }
