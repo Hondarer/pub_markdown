@@ -134,18 +134,31 @@ local function virtual_to_real_path(virtual_path)
   return virtual_path
 end
 
-local function same_dir_has(path, filename)
+local function find_same_dir_file(path, filename)
   local dir = dirname(path)
   local ok, entries = pcall(pandoc.system.list_directory, dir)
   if not ok then
-    return false
+    return nil
   end
   for _, candidate in ipairs(entries) do
     if candidate:lower() == filename then
-      return true
+      return dir .. "/" .. candidate
     end
   end
-  return false
+  return nil
+end
+
+local function resolve_document_file(path)
+  if file_exists(path) then
+    return path
+  end
+  -- TOC は README.md / SKILL.md の発行先を index.md として参照する。
+  if basename(path):lower() == "index.md" then
+    return find_same_dir_file(path, "index.md")
+      or find_same_dir_file(path, "readme.md")
+      or find_same_dir_file(path, "skill.md")
+  end
+  return nil
 end
 
 local function is_relative_local_path(path)
@@ -177,11 +190,11 @@ local function rewrite_document_path(target)
     return target, false
   end
 
-  local real_target = normalize_path(dirname(source_file) .. "/" .. path)
-  if not file_exists(real_target) then
+  local real_target = resolve_document_file(normalize_path(dirname(source_file) .. "/" .. path))
+  if real_target == nil then
     local virtual_target = normalize_path(dirname(source_virtual) .. "/" .. path)
-    real_target = virtual_to_real_path(virtual_target)
-    if not file_exists(real_target) then
+    real_target = resolve_document_file(virtual_to_real_path(virtual_target))
+    if real_target == nil then
       return target, false
     end
   end
@@ -192,11 +205,11 @@ local function rewrite_document_path(target)
   end
 
   local target_name = basename(real_target):lower()
-  if target_name == "readme.md" then
+  if target_name == "readme.md" and not find_same_dir_file(real_target, "index.md") then
     target_virtual = dirname(target_virtual) .. "/index.md"
   elseif target_name == "skill.md"
-    and not same_dir_has(real_target, "index.md")
-    and not same_dir_has(real_target, "readme.md") then
+    and not find_same_dir_file(real_target, "index.md")
+    and not find_same_dir_file(real_target, "readme.md") then
     target_virtual = dirname(target_virtual) .. "/index.md"
   end
 
@@ -232,13 +245,14 @@ function M.rewrite_link(el, extension)
     return unresolved_link(el)
   end
 
-  el.target = rewritten
-  el.target = string.gsub(el.target, "%.md", extension)
+  local rewritten_path, suffix = split_suffix(rewritten)
+  el.target = string.gsub(rewritten_path, "%.[mM][dD]$", extension)
   el.target = string.gsub(el.target, "%.Rmd", extension)
   el.target = string.gsub(el.target, "%.Tmd", extension)
   el.target = string.gsub(el.target, "%.rst", extension)
   el.target = string.gsub(el.target, "%.yaml", extension)
   el.target = string.gsub(el.target, "%.json", extension)
+  el.target = el.target .. suffix
   return el
 end
 
