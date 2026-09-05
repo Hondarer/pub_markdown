@@ -110,6 +110,10 @@ make stopdocs
 `pages/` はワークスペースの `.gitignore` で除外済みです。  
 `make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に消えます。
 
+サイト名は、ワークスペースの `.vscode/pub_markdown.config.yaml` の `siteName` を読み、  
+`mkdocs.yml` の `site_name` へバリアント名とともに展開します。  
+未指定の場合はワークスペース フォルダー名を使います。
+
 ## 元の Markdown を編集したときの反映
 
 `make servedocs` で `mkdocs serve` を実行している間は、元の Markdown  

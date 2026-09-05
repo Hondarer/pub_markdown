@@ -313,6 +313,46 @@ div#docsfw-current-node {
    flattens each link to a single text node, so the section number is part of
    the link text and takes the link's own color. */
 
+/* --- Heading permalinks ----------------------------------------------- */
+
+/* docsfw-nav.js appends <a class="headerlink">¶</a> to every heading that
+   has an id, matching the anchor mkdocs Material renders from its toc
+   permalink option. Hidden until the heading is hovered or targeted.
+
+   Keyed on #docsfw-content so the id raises specificity above Bootstrap's
+   a:hover (0,1,1), which would otherwise repaint the anchor and underline it.
+   No transition: the color and opacity switch instantly, as elsewhere in the
+   static output. */
+#docsfw-content .headerlink {
+  color: #adadad;
+  display: inline-block;
+  margin-left: 11px;
+  opacity: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+#docsfw-content :hover > .headerlink,
+#docsfw-content :target > .headerlink,
+#docsfw-content .headerlink:focus {
+  opacity: 1;
+}
+
+#docsfw-content :target > .headerlink,
+#docsfw-content .headerlink:hover,
+#docsfw-content .headerlink:focus {
+  color: #005580;
+  text-decoration: none;
+}
+
+/* The anchor is an affordance for the screen; it would print as a stray mark
+   because opacity: 0 still reserves its space. */
+@media print {
+  #docsfw-content .headerlink {
+    display: none;
+  }
+}
+
 /* --- Hamburger button (mobile only) ----------------------------------- */
 
 #docsfw-hamburger {

@@ -4,7 +4,8 @@
  * 2. Places the page-local TOC on the right at wide widths and in the combined
  *    navigation drawer below 1400px.
  * 3. Tracks the current heading in the page-local TOC.
- * 4. Controls the off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
+ * 4. Appends a permalink anchor to each heading in the page body.
+ * 5. Controls the off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
  *
  * Dependencies (loaded before this file via <script defer>):
  *   nav-tree.js → window.__DOCSFW_NAV__
@@ -185,6 +186,29 @@
     }
   }
 
+  /**
+   * Append a permalink anchor to every heading in the page body, matching the
+   * "\u00B6" that mkdocs Material renders from its toc permalink option.
+   * Headings without an id have no anchor target, so they are skipped; that
+   * includes the page title, which the template emits as a plain <H1>.
+   */
+  function initHeaderLinks() {
+    var content = document.getElementById('docsfw-content');
+    if (!content) { return; }
+
+    var headings = content.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
+    for (var i = 0; i < headings.length; i++) {
+      var heading = headings[i];
+      if (heading.querySelector('a.headerlink')) { continue; }
+      var link = document.createElement('a');
+      link.className = 'headerlink';
+      link.setAttribute('href', '#' + heading.id);
+      link.setAttribute('title', 'Permanent link');
+      link.textContent = '\u00B6';
+      heading.appendChild(link);
+    }
+  }
+
   function initTocTracking() {
     var pageToc = document.getElementById('docsfw-page-toc');
     var content = document.getElementById('docsfw-content');
@@ -321,6 +345,9 @@
   // ---------------------------------------------------------------------------
 
   function init() {
+    // Runs before the branching below, so the anchors are added on every path.
+    initHeaderLinks();
+
     var container = document.getElementById('docsfw-tree');
     var nav       = window.__DOCSFW_NAV__;
     var current   = window.__DOCSFW_CURRENT__;

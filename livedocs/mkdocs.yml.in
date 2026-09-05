@@ -2,12 +2,14 @@
 #
 # bin/vendor_assets.py がこのファイルを pages/livedocs/mkdocs.yml へ展開します。
 # 展開時に置き換わる差し込み位置は、行全体が置換記号だけの行です。
+# site_name はワークスペース側の .vscode/pub_markdown.config.yaml の
+# siteName から与えます。未指定の場合はワークスペース フォルダー名を使います。
 # plugins の 1 行は publocal.yaml から .nav.yml を生成した場合にだけ
 # awesome-nav プラグインの行になります。
 #
 # 設計は framework/docsfw/docs/livedocs-design.md を参照してください。
 
-site_name: c-modernization-kit (@LIVEDOCS_VARIANT@)
+site_name: @LIVEDOCS_SITE_NAME@ (@LIVEDOCS_VARIANT@)
 site_description: docsfw の発行対象を mkdocs で動的発行します
 docs_dir: src
 site_dir: site

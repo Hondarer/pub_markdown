@@ -565,6 +565,12 @@ body {
   text-decoration: none;
 }
 
+/* 静的発行の見出しアンカーは瞬時に現れる。Material の
+   transition: color .25s, opacity 125ms を止めて同じ見え方にする。 */
+.md-typeset .headerlink {
+  transition: none;
+}
+
 .md-nav__link[for]:hover,
 .md-nav__link[for]:focus,
 .md-nav__link[href]:hover,

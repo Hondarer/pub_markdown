@@ -28,6 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from stage_livedocs import (  # noqa: E402
     DEFAULT_LIVEDOCS_VARIANT,
+    parse_config,
     parse_livedocs_variant,
     write_if_changed,
 )
@@ -163,7 +164,20 @@ def has_nav_files(docs_dir):
     return False
 
 
-def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VARIANT):
+def resolve_site_name(workspace, config_path):
+    """``site_name`` に使う名前をワークスペース側の設定から解決する。
+
+    ``.vscode/pub_markdown.config.yaml`` の ``siteName`` を優先し、
+    未指定ならワークスペース フォルダー名を使う。
+    """
+    site_name = (parse_config(config_path).get("siteName") or "").strip()
+    if site_name:
+        return site_name
+    return os.path.basename(os.path.normpath(workspace))
+
+
+def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VARIANT,
+                        site_name=""):
     """``mkdocs.yml.in`` から ``pages/livedocs/mkdocs.yml`` を生成する。"""
     lang, _details, variant_name = parse_livedocs_variant(variant)
     template_path = os.path.join(MKDOCS_DIR, "mkdocs.yml.in")
@@ -185,6 +199,7 @@ def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VA
             lines.append(line)
 
     text = "\n".join(lines)
+    text = text.replace("@LIVEDOCS_SITE_NAME@", site_name)
     text = text.replace("@LIVEDOCS_VARIANT@", variant_name)
     text = text.replace("@LIVEDOCS_THEME_LANGUAGE@", lang)
     return write_if_changed(os.path.join(livedocs_dir, "mkdocs.yml"), text)
@@ -195,6 +210,8 @@ def main(argv=None):
     parser.add_argument("--workspaceFolder", dest="workspace", required=True)
     parser.add_argument("--livedocsDir", dest="livedocs_dir", default=None,
                         help="既定は <workspaceFolder>/pages/livedocs")
+    parser.add_argument("--configFile", dest="config", default=None,
+                        help="既定は <workspaceFolder>/.vscode/pub_markdown.config.yaml")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
         "--variant",
@@ -205,6 +222,7 @@ def main(argv=None):
 
     workspace = os.path.abspath(args.workspace)
     livedocs_dir = os.path.abspath(args.livedocs_dir or os.path.join(workspace, "pages", "livedocs"))
+    config_path = args.config or os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
     assets_dir = os.path.join(livedocs_dir, "src", "assets")
 
     try:
@@ -220,7 +238,9 @@ def main(argv=None):
         return 1
 
     nav_generated = has_nav_files(os.path.join(livedocs_dir, "src"))
-    changed = generate_mkdocs_yml(livedocs_dir, nav_generated, variant=variant)
+    site_name = resolve_site_name(workspace, config_path)
+    changed = generate_mkdocs_yml(livedocs_dir, nav_generated, variant=variant,
+                                  site_name=site_name)
 
     if not args.quiet:
         print("vendored: {} assets, mkdocs.yml {}".format(copied, "updated" if changed else "unchanged"))

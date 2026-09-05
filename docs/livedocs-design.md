@@ -429,6 +429,11 @@ plugins:
   - search: { lang: en, separator: "... CJK 文字境界を追加 (後述) ..." }
 ```
 
+`site_name` は `siteName` と選択中のバリアント名から組み立てます。  
+`siteName` は `.vscode/pub_markdown.config.yaml` を読み、未指定ならワークスペース フォルダー名です。  
+docsfw はサブモジュールとして任意のワークスペースから使うため、テンプレートにワークスペース名を持ちません。  
+静的発行はサイト名の概念を持たず、タイトルをページ単位で扱うため、この設定は動的発行だけが読みます。
+
 `theme.font` は `false` にします。  
 本文と等幅のフォントは `extra_css` 側で与えるため、Material 既定の Google Fonts (Roboto / Roboto Mono) は不要です。  
 詳細は「フォント」を参照してください。
@@ -712,7 +717,8 @@ Material の既定のうち、次の 3 つは打ち消す必要があります�
 静的発行は、本文リンクが Bootstrap の `a:hover`、ナビゲーション ツリーが `docsfw-ui.css` の `#docsfw-tree a:hover` で、いずれも下線を引きます。  
 Material は色を変えるだけで下線を引かないため、`.md-typeset a` と `.md-nav__link` のホバーとフォーカスに `text-decoration: underline` を足します。
 
-見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。
+見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。  
+アンカーは静的発行でも `docsfw-nav.js` が付与します。仕様は [見出し書式](heading-style.md) を正本とし、Material 側は遷移だけを打ち消します。
 
 ナビゲーションの色と下線は、Material と同じ形のセレクターで指定します。  
 `.md-nav__link:hover` の詳細度 (0,2,0) では、Material が左ナビの現在ページへ当てる `.md-nav--primary .md-nav__item--active > .md-nav__link:hover` (0,4,0) に負け、ナビの色 `#1A5FAA` ではなく本文リンクのホバー色 `#005580` が出るためです。  

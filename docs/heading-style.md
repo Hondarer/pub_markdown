@@ -112,8 +112,30 @@ mkdocs 側では、次の Material 既定を打ち消す必要があります。
 いずれも Markdown の H2 から採番し、H1 は対象外です。  
 番号は見出しの `color` を継承するため、色を変更しても追随します。
 
+## 見出しのアンカー
+
+どちらの出力も、見出しの末尾に `¶` のパーマリンクを表示します。  
+mkdocs は Material の `toc.permalink` が `<a class="headerlink">` を生成し、pandoc は `styles/html/docsfw-nav.js` が同じ構造を実行時に付与します。
+
+| 項目 | 仕様 |
+|---|---|
+| 文字 | `¶` (`U+00B6`) |
+| リンク先 | 見出しの `id` (`href="#<id>"`) |
+| `title` | `Permanent link` |
+| 通常 | `opacity: 0` で非表示。左に 11px の余白 |
+| 見出しのホバーと `:target` | `opacity: 1` で出現 |
+| 色 | `#ADADAD`。アンカー自体のホバーとフォーカスで `#005580`、下線なし |
+| 印刷 | `display: none` |
+
+`opacity` と色は瞬時に切り替えます。  
+Material は既定で `transition: color .25s, opacity 125ms` を持ちますが、静的発行に対応する指定がないため打ち消します。
+
+ページ タイトルの見出しにはアンカーを付けません。  
+静的発行のタイトルはテンプレートが `id` のない `<H1>` として出力するため、リンク先がありません。
+
+GitHub 由来の `a.anchor` は `styles/html/html-style.css` に定義が残っていますが、生成物に該当要素はなく、見出し左側へ重ねる別形式のため使用しません。
+
 ## 一致させない項目
 
 - 見出し内のリンクの色。pandoc は Bootstrap の `h1 a { color: #333 }`、mkdocs は `.md-typeset a` の `#4183C4` です。
-- 見出しのアンカー。pandoc は `a.anchor`、mkdocs は Material の `.headerlink` で、構造が異なります。
 - ダーク モードの実際の色。静的発行はライト固定です。mkdocs は Material の変数を通して切り替わります。

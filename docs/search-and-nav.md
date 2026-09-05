@@ -216,6 +216,18 @@ mkdocs Material の `md-nav__link--passed` と同じ意味論で、現在の見�
 - **フォールバック**: 現在ページがツリーにない場合は、狭い画面のドロワー末尾に目次を表示します。
 - **見出し無しページ**: `$toc$` が出力されないため、右サイドバーとドロワー内の区切り線を表示しません。
 
+### 見出しのパーマリンク
+
+`docsfw-nav.js` は `<main id="docsfw-content">` 内の `id` を持つ見出しへ、`<a class="headerlink" href="#<id>" title="Permanent link">¶</a>` を追加します。  
+mkdocs Material の `toc.permalink` が生成するアンカーに合わせるためです。
+
+生成物の HTML には含めず実行時に付与します。  
+`docsfw-nav.js` は外部アセットなので、`.md` を再変換しなくても反映されます。  
+また `build-search-index.mjs` は HTML から h1 - h3 の見出しテキストを索引化するため、実体として埋め込むと索引に `¶` が混入します。
+
+すでに `a.headerlink` を持つ見出しは対象外です。  
+表示仕様は [見出し書式](heading-style.md) を参照してください。
+
 ### 狭い画面の展開ボタンとドロワー
 
 1400px 未満では、全体ナビゲーションとページ内目次を一つの左ドロワーで提供します。
