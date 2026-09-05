@@ -93,6 +93,7 @@ make preview-stop
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
 | `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
+| `assets/docsfw-responsive-nav.js` | Pandoc HTML と共通の左右ナビゲーション配置 |
 | `assets/docsfw-preview.css` | 追加スタイル |
 | `assets/docsfw-doxygen-link.css` | Doxygen アイコンのサイズ |
 | `requirements.txt` | Python 依存 |

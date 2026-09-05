@@ -48,6 +48,7 @@ OWN_ASSETS = (
     "docsfw-plantuml.js",
     "docsfw-mermaid.js",
     "docsfw-mathjax.js",
+    "docsfw-responsive-nav.js",
     "docsfw-preview.css",
     "docsfw-pandoc-style.css",
     "docsfw-doxygen-link.css",

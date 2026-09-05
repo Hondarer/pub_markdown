@@ -2,6 +2,118 @@
    Material 標準にない docsfw 固有の表現だけを補う。 */
 
 /* ------------------------------------------------------------------------ */
+/* Pandoc HTML と共通のナビゲーション配置                            */
+/* ------------------------------------------------------------------------ */
+
+@media screen and (min-width: 1400px) {
+  .md-grid {
+    max-width: 1370px;
+  }
+
+  .md-sidebar--primary {
+    width: 240px;
+  }
+
+  .md-sidebar--secondary {
+    width: 210px;
+  }
+
+  .md-main__inner > .md-content > .md-content__inner {
+    margin-left: 25px !important;
+    margin-right: 25px !important;
+  }
+
+  [dir="ltr"] .md-sidebar--primary .md-sidebar__inner {
+    padding-right: 10px;
+  }
+
+  [dir="rtl"] .md-sidebar--primary .md-sidebar__inner {
+    padding-left: 10px;
+  }
+
+  [dir="ltr"] .md-sidebar--secondary .md-sidebar__inner {
+    padding-right: 0;
+  }
+
+  [dir="rtl"] .md-sidebar--secondary .md-sidebar__inner {
+    padding-left: 0;
+  }
+}
+
+@media screen and (max-width: 1399px) {
+  .md-grid {
+    max-width: 902px;
+  }
+
+  .md-main__inner > .md-content > .md-content__inner {
+    margin-left: 16px !important;
+    margin-right: 16px !important;
+  }
+
+  .md-sidebar--primary {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: calc(-1 * min(80vw, 320px));
+    width: min(80vw, 320px);
+    height: 100%;
+    background-color: var(--md-default-bg-color);
+    transform: translateX(0);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
+    z-index: 5;
+  }
+
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    overflow-y: auto;
+    scroll-snap-type: none;
+  }
+
+  [dir="ltr"] .md-sidebar--primary .md-sidebar__inner {
+    padding-right: 10px;
+  }
+
+  [dir="rtl"] .md-sidebar--primary .md-sidebar__inner {
+    padding-left: 10px;
+  }
+
+  [data-md-toggle="drawer"]:checked ~ .md-container .md-sidebar--primary {
+    box-shadow: var(--md-shadow-z3);
+    transform: translateX(min(80vw, 320px));
+  }
+
+  .md-sidebar--secondary {
+    display: none !important;
+  }
+
+  .md-header__button[for="__drawer"] {
+    display: inline-flex;
+  }
+
+  .md-header__button[for="__toc"] {
+    display: none;
+  }
+
+  .docsfw-combined-toc {
+    margin: 0.8rem 0.6rem 0;
+    padding-top: 0.6rem;
+    border-top: 0.05rem solid var(--md-default-fg-color--lightest);
+  }
+
+  .docsfw-combined-toc .md-nav__title {
+    display: block;
+    position: static;
+    height: auto;
+    padding: 0 0 0.4rem;
+    background: none;
+    box-shadow: none;
+    pointer-events: none;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
 /* 図 (PlantUML / Mermaid)                                                   */
 /* ------------------------------------------------------------------------ */
 

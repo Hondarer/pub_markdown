@@ -55,6 +55,7 @@ VENDORED_FILES = (
     "assets/docsfw-plantuml.js",
     "assets/docsfw-mermaid.js",
     "assets/docsfw-mathjax.js",
+    "assets/docsfw-responsive-nav.js",
     "assets/docsfw-preview.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-doxygen-link.css",

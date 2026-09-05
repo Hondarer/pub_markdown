@@ -121,7 +121,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 | 44 | docx 出力 | 対象外 | 本基盤の要件どおり |
 | 45 | ページ内目次 | 維持 | Material の右サイドバー。`toc_depth: 3` |
 | 46 | サイト内ナビゲーション ツリー | 維持 | Material の左サイドバー。自動生成 |
-| 47 | ページ内目次のナビゲーション ツリーへのマージ | 簡略 | Material は左右分離。`toc.follow` で代替 |
+| 47 | ページ内目次のナビゲーション ツリーへのマージ | 維持 | 1400px 以上は左右分離、未満は左ドロワーへ統合 |
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
@@ -160,6 +160,7 @@ framework/docsfw/
 |   |   +-- docsfw-plantuml.js       # クライアント側 PlantUML レンダラー
 |   |   +-- docsfw-mermaid.js        # Mermaid 初期化
 |   |   +-- docsfw-mathjax.js        # MathJax の設定
+|   |   +-- docsfw-responsive-nav.js # 共通レイアウトと単一ドロワーの制御
 |   |   +-- docsfw-preview.css       # 追加スタイル
 |   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
 |   +-- tests/
@@ -715,11 +716,17 @@ Material は色を変えるだけで下線を引かないため、`.md-typeset a
 カードが消えれば見えない余白になるだけで、TOC の字下げと横幅、本文の開始位置が変わらないためです。
 
 `.well` はテンプレート内で TOC にしか使われていないため、この指定の影響は TOC に閉じます。  
-モバイル (`max-width: 767px`) では `styles/html/docsfw-ui.css` の `#TOC.span3 .well` がすでに枠と角丸と影を外していましたが、背景色は残っていました。  
-今回の指定でモバイルの `.well` も透過になり、ドロワーの白背景がそのまま見えます。
+1400px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
 
-TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) はそのままにします。  
-ナビゲーション ツリーとページ内目次を 1 列に同居させる docsfw 固有の構成のためのもので、Material に対応物がないためです。
+TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) は、狭い画面で文書ツリーとページ内目次を区切るために使用します。
+
+### ナビゲーションの幅と切り替え
+
+Pandoc HTML と mkdocs プレビューは、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
+全体幅は 1370px です。
+
+1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
+画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
 ### 一致させない項目
 

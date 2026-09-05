@@ -24,33 +24,6 @@
     <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/script.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/diversen/pandoc-bootstrap-adaptive-template@959c3622/jquery.sticky-kit.js"></script>
 
-    <style type="text/css">
-        /* TOC をビューポートに固定し、コンテンツが長い場合はスクロール可能にする。
-           sticky-kit (CDN) に依存せず CSS position: sticky で実現する。
-
-           ページ下端での TOC ずれ対策:
-           - navbar-static-top の高さ分だけ sticky container (.row) の外側に
-             スクロール余白が生じるため、navbar の margin-bottom を 0 に。
-           - Bootstrap の .well の margin-bottom も余分なスクロール高を生む
-             ため 0 に。これにより sticky 範囲がスクロール最下端と一致する。 */
-        @media (min-width: 768px) {
-            #TOC {
-                position: sticky;
-                top: 0;
-                height: 100vh;
-                overflow-y: scroll;
-                box-sizing: border-box;
-            }
-            /* navbar の下マージンを除去してスクロール高を .row 範囲に収める */
-            .navbar { margin-bottom: 0 !important; }
-            /* .well の下マージンを上に揃える */
-            #TOC .well { margin-bottom: 10px !important; }
-        }
-        @media (max-width: 767px) {
-            #TOC { overflow-y: hidden; }
-        }
-    </style>
-
     <meta name="generator" content="pandoc" />
 $for(author-meta)$
   <meta name="author" content="$author-meta$" />
@@ -83,7 +56,7 @@ $endif$
 $for(header-includes)$
   $header-includes$
 $endfor$
-$if(search-enable)$
+$if(docsfw-ui-enable)$
   <link rel="stylesheet" href="${search-base}docsfw-ui.css" />
 $endif$
 </head>
@@ -123,53 +96,33 @@ $endif$
     </div>
   </div>
   $endif$
-  <div class="container">
-    <div class="row">
-      $if(homelink)$
-      <div id="$idprefix$TOC" class="span3">
+  <div class="container docsfw-layout-container">
+    <div class="row docsfw-layout">
+      $if(docsfw-ui-enable)$
+      <aside id="docsfw-primary-sidebar" class="span3 docsfw-primary-sidebar" aria-label="文書ナビゲーション">
         <div class="well toc">
 
         $if(search-enable)$
         <div id="docsfw-home-container"></div>
         <div id="docsfw-search-container"></div>
         <nav id="docsfw-tree"></nav>
+        $endif$
         <hr class="docsfw-toc-separator" />
-        $endif$
-
-        $if(toc)$
-        $if(search-enable)$
-        <div id="docsfw-page-toc" hidden>
-        $toc$
-        </div>
-        $else$
-        $toc$
-        $endif$
-        $endif$
 
         </div>
-      </div>
-      $else$
+      </aside>
+      $endif$
       $if(toc)$
-      <div id="$idprefix$TOC" class="span3">
+      <aside id="$idprefix$TOC" class="docsfw-secondary-sidebar" aria-label="ページ内目次">
         <div class="well toc">
-
-        $if(search-enable)$
-        <div id="docsfw-home-container"></div>
-        <div id="docsfw-search-container"></div>
-        <nav id="docsfw-tree"></nav>
-        <hr class="docsfw-toc-separator" />
-        <div id="docsfw-page-toc" hidden>
+        <div id="docsfw-page-toc" class="docsfw-page-toc">
         $toc$
         </div>
-        $else$
-        $toc$
-        $endif$
 
         </div>
-      </div>
+      </aside>
       $endif$
-      $endif$
-      <div class="span$if(homelink)$9$else$$if(toc)$9$else$12$endif$$endif$">
+      <div class="docsfw-main-content">
 
       $if(title)$
           <H1>$title$</H1>
@@ -996,10 +949,12 @@ $if(details-switch-root)$
   })();
   </script>
 $endif$
-$if(search-enable)$
+$if(docsfw-ui-enable)$
+  $if(search-enable)$
   <!-- Search results overlay (positioned by docsfw-ui.css) -->
   <div id="docsfw-search-results"></div>
-  <!-- Hamburger button and backdrop for mobile off-canvas nav drawer -->
+  $endif$
+  <!-- Navigation button and backdrop for the combined narrow-screen drawer -->
   <button id="docsfw-hamburger" aria-label="ナビゲーション" aria-expanded="false">&#8250;</button>
   <div id="docsfw-nav-backdrop"></div>
   <!-- Pass context to client-side scripts -->
@@ -1007,11 +962,15 @@ $if(search-enable)$
     window.__DOCSFW_BASE__    = "$search-base$";
     window.__DOCSFW_CURRENT__ = "$search-current$";
   </script>
-  <!-- nav-tree.js sets __DOCSFW_NAV__; docsfw-nav.js renders it -->
+  <!-- nav-tree.js sets __DOCSFW_NAV__; docsfw-nav.js renders and places navigation -->
+  $if(search-enable)$
   <script defer src="${search-base}nav-tree.js"></script>
+  $endif$
   <script defer src="${search-base}docsfw-nav.js"></script>
+  $if(search-enable)$
   <!-- docsfw-search.js lazy-loads the heavy index on first user interaction -->
   <script defer src="${search-base}docsfw-search.js"></script>
+  $endif$
 $endif$
   <!-- SVG ダウンロード ボタン: 本文 (#docsfw-content) 内の相対パス参照の .svg 画像に
        ホバー時のみ右上にダウンロードリンクを重ねる。data URI (self-contain) や外部 URL は対象外 -->

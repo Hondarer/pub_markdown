@@ -7,8 +7,34 @@ body {
   background-color: white;
   overflow-x: hidden; }
 
-.span9 {
+.docsfw-main-content {
   margin-bottom: 20px; }
+
+/* Pandoc HTML と mkdocs の共通レイアウト仕様。
+   1400px 以上では 240px / 870px / 210px の三列とし、列間を 25px 空ける。
+   1400px 未満では本文を最大 870px で中央配置し、ナビゲーションは
+   docsfw-ui.css の単一ドロワーへ移す。 */
+.docsfw-layout-container {
+  width: 870px;
+  max-width: 100%;
+}
+
+.docsfw-layout {
+  margin-left: 0;
+}
+
+.docsfw-main-content {
+  width: 100%;
+  min-width: 0;
+}
+
+.docsfw-secondary-sidebar {
+  display: none;
+}
+
+.docsfw-secondary-sidebar[hidden] {
+  display: none;
+}
 
 /* 幅768px未満では Bootstrap が期待する 20px に戻す
    (html-style.css が template.css より後に読まれるため上書きが必要) */
@@ -20,8 +46,6 @@ body {
   .navbar .nav.pull-right {
     margin-right: 0; } }
 
-/* LL 幅では TOC を広げる。
-   本文 .span9 は Bootstrap の L 幅 (870px) のまま維持する。 */
 @media (min-width: 1400px) {
   body {
     padding-left: 15px;
@@ -35,9 +59,43 @@ body {
     width: 1370px;
   }
 
-  .span3 {
-    width: 470px;
+  .docsfw-layout {
+    display: grid;
+    grid-template-columns: 240px 870px 210px;
+    grid-template-areas: "primary content secondary";
+    column-gap: 25px;
   }
+
+  .docsfw-primary-sidebar {
+    grid-area: primary;
+  }
+
+  .docsfw-main-content {
+    grid-area: content;
+  }
+
+  .docsfw-secondary-sidebar {
+    display: block;
+    grid-area: secondary;
+  }
+
+  .docsfw-primary-sidebar,
+  .docsfw-secondary-sidebar {
+    position: sticky;
+    top: 0;
+    width: auto;
+    height: 100vh;
+    margin-left: 0;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .docsfw-primary-sidebar .well,
+  .docsfw-secondary-sidebar .well {
+    margin-bottom: 10px !important;
+  }
+
+  .navbar { margin-bottom: 0 !important; }
 }
 
 header > hr {
@@ -250,7 +308,7 @@ h6 tt, h6 code {
    階層は太さで表し、Markdown の H1 - H3 を bold、H4 - H6 を normal にする。
    pandoc は --shift-heading-level-by=-1 で Markdown の H1 をページ見出し
    (テンプレートの <H1>) へ移すため、HTML の h1 - h5 が Markdown の H2 - H6 に
-   対応する。ページ見出しも .span9 / .span12 直下の h1 として出るため、
+   対応する。ページ見出しも .docsfw-main-content 直下の h1 として出るため、
    h1 は Markdown の H1 と H2 の両方を受け持つ。
    line-height は CDN の Bootstrap template.css と同じ値だが、外部 CSS への
    暗黙の依存を残さないため明示する。 */
@@ -271,7 +329,8 @@ h4, h5, h6 {
    装飾を外して見た目をそろえる。
    padding は Bootstrap の 19px のまま残す。カードが消えれば見えない余白に
    なるだけで、TOC の字下げと横幅は変わらない。 */
-#TOC > .well {
+#TOC > .well,
+#docsfw-primary-sidebar > .well {
   background-color: transparent;
   border: none;
   border-radius: 0;

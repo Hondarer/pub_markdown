@@ -1,8 +1,10 @@
 /*!
  * docsfw-nav.js
  * 1. Renders the global navigation tree from window.__DOCSFW_NAV__ into #docsfw-tree.
- * 2. Merges the page-local TOC (#docsfw-page-toc) into the current page's tree node.
- * 3. Controls the mobile off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
+ * 2. Places the page-local TOC on the right at wide widths and in the combined
+ *    navigation drawer below 1400px.
+ * 3. Tracks the current heading in the page-local TOC.
+ * 4. Controls the off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
  *
  * Dependencies (loaded before this file via <script defer>):
  *   nav-tree.js → window.__DOCSFW_NAV__
@@ -118,71 +120,136 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Merge page-local TOC into the current tree node
+  // Place the page-local TOC for the current viewport
   // ---------------------------------------------------------------------------
 
   /**
-   * Move #docsfw-page-toc into the current page's node in the rendered tree.
-   *
-   * - If the current node is found and there is a page TOC, the TOC is wrapped
-   *   in <div class="docsfw-page-toc"> and injected into the node. The separator
-   *   <hr class="docsfw-toc-separator"> is also removed (now redundant).
-   * - If the current node is not found (page not in tree, or no tree), the page
-   *   TOC is shown in place by removing its "hidden" attribute (fallback).
-   * - If there is no page TOC at all (page has no headings), only the separator
-   *   is removed.
+   * Place #docsfw-page-toc in the right sidebar or the combined drawer.
+   * The same element is moved so heading tracking survives viewport changes.
    */
-  function mergeTocIntoCurrentNode() {
+  function placePageToc(wideLayout) {
     var sep     = document.querySelector('.docsfw-toc-separator');
     var pageToc = document.getElementById('docsfw-page-toc');
+    var secondary = document.getElementById('TOC');
+    var primary = document.getElementById('docsfw-primary-sidebar');
 
     if (!pageToc) {
-      // No page TOC: remove the separator and stop.
       if (sep) { sep.remove(); }
+      if (secondary) { secondary.hidden = true; }
+      return;
+    }
+
+    if (!pageToc.querySelector('a[href^="#"]')) {
+      pageToc.hidden = true;
+      if (secondary) { secondary.hidden = true; }
+      if (sep) { sep.hidden = true; }
+      return;
+    }
+
+    pageToc.removeAttribute('hidden');
+    if (secondary) { secondary.hidden = false; }
+
+    if (wideLayout && secondary) {
+      var secondaryWell = secondary.querySelector('.well');
+      if (secondaryWell && pageToc.parentNode !== secondaryWell) {
+        secondaryWell.appendChild(pageToc);
+      }
+      if (sep) { sep.hidden = true; }
       return;
     }
 
     var currentNode = document.getElementById('docsfw-current-node');
-
-    if (!currentNode) {
-      // Current page not in tree (or no tree): show TOC in place.
-      pageToc.removeAttribute('hidden');
-      return;
-    }
-
-    // Remove separator — TOC is now part of the tree.
-    if (sep) { sep.remove(); }
-
-    // Wrap the TOC content and inject it into the current node.
-    var wrapper = document.createElement('div');
-    wrapper.className = 'docsfw-page-toc';
-    while (pageToc.firstChild) {
-      wrapper.appendChild(pageToc.firstChild);
-    }
-
-    if (currentNode.tagName === 'DETAILS') {
-      // Directory node: insert as a direct child of <details>, immediately
-      // before the child-pages <div>. This keeps the page-toc outside the
-      // 11px-padded wrapper, so the indicator border aligns with <summary>.
+    if (currentNode && currentNode.tagName === 'DETAILS') {
       var inner = currentNode.querySelector(':scope > div');
       if (inner) {
-        currentNode.insertBefore(wrapper, inner);
+        currentNode.insertBefore(pageToc, inner);
       } else {
-        currentNode.appendChild(wrapper);
+        currentNode.appendChild(pageToc);
       }
-    } else {
-      // Leaf node (<div>): append after the link.
-      currentNode.appendChild(wrapper);
+    } else if (currentNode) {
+      currentNode.appendChild(pageToc);
+    } else if (primary) {
+      var primaryWell = primary.querySelector('.well');
+      if (primaryWell) { primaryWell.appendChild(pageToc); }
     }
 
-    // Strip inline formatting (<code>, <em>, <strong>, etc.) from TOC links
-    // so the nav tree shows plain text regardless of heading markup.
-    var tocLinks = wrapper.querySelectorAll('a');
+    if (sep) { sep.hidden = false; }
+  }
+
+  function normalizeTocLinks() {
+    var pageToc = document.getElementById('docsfw-page-toc');
+    if (!pageToc) { return; }
+    var tocLinks = pageToc.querySelectorAll('a');
     for (var li = 0; li < tocLinks.length; li++) {
       tocLinks[li].textContent = tocLinks[li].textContent;
     }
+  }
 
-    pageToc.remove();
+  function initTocTracking() {
+    var pageToc = document.getElementById('docsfw-page-toc');
+    var content = document.getElementById('docsfw-content');
+    if (!pageToc || !content) { return; }
+
+    var links = Array.prototype.slice.call(pageToc.querySelectorAll('a[href^="#"]'));
+    var entries = links.map(function (link) {
+      var hash = link.getAttribute('href').slice(1);
+      var id;
+      try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
+      return { link: link, heading: document.getElementById(id) };
+    }).filter(function (entry) { return !!entry.heading; });
+
+    if (!entries.length) { return; }
+
+    var activeLink = null;
+    var scheduled = false;
+
+    function revealInSidebar(link) {
+      var sidebar = link.closest('.docsfw-primary-sidebar, .docsfw-secondary-sidebar');
+      if (!sidebar) { return; }
+      var sidebarRect = sidebar.getBoundingClientRect();
+      var linkRect = link.getBoundingClientRect();
+      if (linkRect.top < sidebarRect.top || linkRect.bottom > sidebarRect.bottom) {
+        sidebar.scrollTop += linkRect.top - sidebarRect.top - sidebar.clientHeight / 2;
+      }
+    }
+
+    function activate(link) {
+      if (activeLink === link) { return; }
+      for (var i = 0; i < links.length; i++) {
+        links[i].classList.toggle('docsfw-toc-active', links[i] === link);
+        if (links[i] === link) {
+          links[i].setAttribute('aria-current', 'location');
+        } else {
+          links[i].removeAttribute('aria-current');
+        }
+      }
+      activeLink = link;
+      revealInSidebar(link);
+    }
+
+    function update() {
+      scheduled = false;
+      var selected = entries[0];
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].heading.getBoundingClientRect().top <= 32) {
+          selected = entries[i];
+        } else {
+          break;
+        }
+      }
+      activate(selected.link);
+    }
+
+    function scheduleUpdate() {
+      if (!scheduled) {
+        scheduled = true;
+        window.requestAnimationFrame(update);
+      }
+    }
+
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('hashchange', scheduleUpdate);
+    update();
   }
 
   // ---------------------------------------------------------------------------
@@ -192,7 +259,7 @@
   function initHamburger() {
     var btn      = document.getElementById('docsfw-hamburger');
     var backdrop = document.getElementById('docsfw-nav-backdrop');
-    var sidebar  = document.getElementById('TOC');
+    var sidebar  = document.getElementById('docsfw-primary-sidebar');
 
     if (!btn) { return; }
 
@@ -251,22 +318,29 @@
     var container = document.getElementById('docsfw-tree');
     var nav       = window.__DOCSFW_NAV__;
     var current   = window.__DOCSFW_CURRENT__;
+    var wideLayout = window.matchMedia('(min-width: 1400px)');
+    var onLayoutChange = function (event) { placePageToc(event.matches); };
+    if (wideLayout.addEventListener) {
+      wideLayout.addEventListener('change', onLayoutChange);
+    } else {
+      wideLayout.addListener(onLayoutChange);
+    }
 
     if (!container) {
-      // No tree container: show page TOC in place if it exists.
-      var pt = document.getElementById('docsfw-page-toc');
-      if (pt) { pt.removeAttribute('hidden'); }
+      placePageToc(wideLayout.matches);
+      normalizeTocLinks();
+      initTocTracking();
       initHamburger();
       return;
     }
 
     if (!nav) {
-      // nav-tree.js not yet generated (first build); hide tree, show page TOC.
+      // nav-tree.js not yet generated (first build); hide tree and keep the
+      // page-local TOC available in the responsive layout.
       container.style.display = 'none';
-      var pt2 = document.getElementById('docsfw-page-toc');
-      if (pt2) { pt2.removeAttribute('hidden'); }
-      var sep2 = document.querySelector('.docsfw-toc-separator');
-      if (sep2) { sep2.remove(); }
+      placePageToc(wideLayout.matches);
+      normalizeTocLinks();
+      initTocTracking();
       initHamburger();
       return;
     }
@@ -288,8 +362,9 @@
     if (homeContainer) { homeContainer.innerHTML = homeHtml; }
     container.innerHTML = renderNode(nav, current, true);
 
-    // Merge the page-local TOC into the current node.
-    mergeTocIntoCurrentNode();
+    placePageToc(wideLayout.matches);
+    normalizeTocLinks();
+    initTocTracking();
 
     // Scroll the current node into view within the sidebar (desktop).
     var currentNode = document.getElementById('docsfw-current-node');

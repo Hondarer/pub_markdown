@@ -1993,13 +1993,16 @@ for langElement in ${lang}; do
         for _gitIconSvg in "${htmlGitIconSvgs[@]}"; do
             copy_if_different_timestamp "${_gitIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/$(basename "${_gitIconSvg}")"
         done
-        # 検索・ナビゲーション用静的アセットの配置
+        # レスポンシブ目次用静的アセットの配置
+        if [[ "$htmlTocEnable" == "true" || "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            copy_if_different_timestamp "${htmlNavScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-nav.js"
+            copy_if_different_timestamp "${htmlSearchUiCss}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-ui.css"
+        fi
+        # 検索・全体ナビゲーション用静的アセットの配置
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             copy_if_different_timestamp "${miniSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/minisearch.min.js"
             copy_if_different_timestamp "${htmlTokenizeScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-tokenize.js"
             copy_if_different_timestamp "${htmlSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-search.js"
-            copy_if_different_timestamp "${htmlNavScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-nav.js"
-            copy_if_different_timestamp "${htmlSearchUiCss}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-ui.css"
         fi
     done
 done
@@ -2101,6 +2104,13 @@ while ((${#_pending_files[@]} > 0)); do
 
         # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        ui_metadata_args=()
+        if [[ "$htmlTocEnable" == "true" || "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            ui_metadata_args=(--metadata "docsfw-ui-enable=true")
+            if [[ "$htmlSearchEnable" != "true" && "$htmlNavTreeEnable" != "true" ]]; then
+                ui_metadata_args+=(--metadata "search-base=${up_dir}")
+            fi
+        fi
         search_metadata_args=()
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             _search_current="${publish_file%.*}.html"
@@ -2174,7 +2184,7 @@ while ((${#_pending_files[@]} > 0)); do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2206,7 +2216,7 @@ while ((${#_pending_files[@]} > 0)); do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/fix-line-break.lua" \
@@ -2481,6 +2491,13 @@ while ((${#_pending_files[@]} > 0)); do
 
         # 検索・ナビゲーション メタデータの構築
         # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        ui_metadata_args=()
+        if [[ "$htmlTocEnable" == "true" || "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            ui_metadata_args=(--metadata "docsfw-ui-enable=true")
+            if [[ "$htmlSearchEnable" != "true" && "$htmlNavTreeEnable" != "true" ]]; then
+                ui_metadata_args+=(--metadata "search-base=${up_dir}")
+            fi
+        fi
         search_metadata_args=()
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
             _search_current="${publish_file%.*}.html"
@@ -2657,7 +2674,7 @@ while ((${#_pending_files[@]} > 0)); do
                 build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
                 build_git_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$up_dir"
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2693,7 +2710,7 @@ while ((${#_pending_files[@]} > 0)); do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \

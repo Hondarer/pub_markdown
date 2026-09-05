@@ -278,6 +278,12 @@ div#docsfw-current-node {
   text-decoration: underline;
 }
 
+.docsfw-page-toc a.docsfw-toc-active,
+.docsfw-page-toc a[aria-current="location"] {
+  color: #1a5faa;
+  font-weight: bold;
+}
+
 /* Section numbers: muted */
 .docsfw-page-toc .toc-section-number {
   color: #aaa;
@@ -306,9 +312,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   display: block;
 }
 
-/* ---- Mobile-only overrides (≤ 767px) --------------------------------- */
+/* ---- Combined drawer below the three-column breakpoint ------------------ */
 
-@media (max-width: 767px) {
+@media (max-width: 1399px) {
 
   /* Hamburger button: fixed expander, slides to drawer's right edge when open */
   #docsfw-hamburger {
@@ -342,7 +348,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   /* Off-canvas sidebar: slide in from left */
-  #TOC.span3 {
+  #docsfw-primary-sidebar {
     position: fixed !important;
     top: 0;
     left: 0;
@@ -361,12 +367,12 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     padding-top: 8px;
   }
 
-  body.docsfw-nav-open #TOC.span3 {
+  body.docsfw-nav-open #docsfw-primary-sidebar {
     transform: translateX(0);
   }
 
   /* Make the .well inside the drawer flush */
-  #TOC.span3 .well {
+  #docsfw-primary-sidebar .well {
     margin-bottom: 0;
     border-radius: 0;
     border: none;
@@ -388,8 +394,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 }
 
-/* Desktop: hide hamburger and backdrop */
-@media (min-width: 768px) {
+/* Three-column layout: hide hamburger and backdrop */
+@media (min-width: 1400px) {
   #docsfw-hamburger    { display: none !important; }
   #docsfw-nav-backdrop { display: none !important; }
 }
