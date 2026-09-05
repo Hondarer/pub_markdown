@@ -691,6 +691,14 @@ generate_toc() {
             depth=$((${#temp} - ${#temp_no_slash}))
         fi
 
+        # exclude-basedir=true の場合は基準ディレクトリ自身を出力しないため、
+        # 直下の項目を索引の最上位 (階層 0) として扱う。4 スペースの
+        # Markdown リスト字下げでは、ここを 1 階層のままにすると最初の行が
+        # インデント コード ブロックとして解釈され、索引全体がリストにならない。
+        if [[ "$EXCLUDE_BASEDIR" == "true" && "$depth" -gt 0 ]]; then
+            depth=$((depth - 1))
+        fi
+
         # インデント文字列を更新。1 階層あたり 4 スペース。
         # text_style_jp の list-indent と Python-Markdown に合わせる。
         indent=""
