@@ -1,14 +1,14 @@
-# mkdocs 簡易プレビュー基盤の設定テンプレート。
+# mkdocs による動的発行の設定テンプレート。
 #
-# bin/vendor_assets.py がこのファイルを pages/preview/mkdocs.yml へ展開します。
+# bin/vendor_assets.py がこのファイルを pages/livedocs/mkdocs.yml へ展開します。
 # 展開時に置き換わる差し込み位置は、行全体が置換記号だけの行です。
 # plugins の 1 行は publocal.yaml から .nav.yml を生成した場合にだけ
 # awesome-nav プラグインの行になります。
 #
-# 設計は framework/docsfw/docs/mkdocs-preview-design.md を参照してください。
+# 設計は framework/docsfw/docs/livedocs-design.md を参照してください。
 
-site_name: c-modernization-kit (preview @PREVIEW_VARIANT@)
-site_description: docsfw の発行対象を mkdocs でプレビューします
+site_name: c-modernization-kit (@LIVEDOCS_VARIANT@)
+site_description: docsfw の発行対象を mkdocs で動的発行します
 docs_dir: src
 site_dir: site
 use_directory_urls: true
@@ -24,7 +24,7 @@ validation:
 theme:
   name: material
   custom_dir: theme
-  language: @PREVIEW_THEME_LANGUAGE@
+  language: @LIVEDOCS_THEME_LANGUAGE@
   # 本文と等幅のフォントは assets/docsfw-pandoc-style.css が
   # --md-text-font-family と --md-code-font-family で与えるため、
   # Material 既定の Google Fonts (Roboto / Roboto Mono) は取得しない。
@@ -87,7 +87,7 @@ plugins:
   # 対策として `lang: ja` をやめ、隣接する CJK 文字 (ひらがな/カタカナ/漢字)
   # の間に separator の境界を追加し、文字単位に近い粒度で索引と検索クエリの
   # 双方を分割する。再現率を優先し、ノイズ (無関係な部分一致) の増加は許容
-  # する。詳細は docs/mkdocs-preview-design.md の「全文検索について補足」を
+  # する。詳細は docs/livedocs-design.md の「全文検索について補足」を
   # 参照。
   # upstream で TinySegmenter の分割漏れが修正された場合は、この緩和策を
   # 見直すこと。
@@ -98,10 +98,10 @@ plugins:
 @AWESOME_NAV@
 
 extra:
-  preview_variant: "@PREVIEW_VARIANT@"
+  livedocs_variant: "@LIVEDOCS_VARIANT@"
 
 extra_css:
-  - assets/docsfw-preview.css
+  - assets/docsfw-livedocs.css
   - assets/docsfw-pandoc-style.css
   - assets/docsfw-doxygen-link.css
 
@@ -121,8 +121,8 @@ extra_javascript:
 # 元の Markdown の変更を検知し、1 ファイル単位の軽量なステージングを
 # 自動で行う。ステージング結果は docs_dir に書き込まれるため、mkdocs 標準の
 # docs_dir 監視がそれを検知してビルドとブラウザーの自動リロードを行う。
-# 詳細は docs/mkdocs-preview-design.md を参照。
+# 詳細は docs/livedocs-design.md を参照。
 hooks:
-  - ../../framework/docsfw/mkdocs/bin/preview_doxygen_hook.py
-  - ../../framework/docsfw/mkdocs/bin/preview_versioned_hook.py
-  - ../../framework/docsfw/mkdocs/bin/preview_autostage_hook.py
+  - ../../framework/docsfw/livedocs/bin/livedocs_doxygen_hook.py
+  - ../../framework/docsfw/livedocs/bin/livedocs_versioned_hook.py
+  - ../../framework/docsfw/livedocs/bin/livedocs_autostage_hook.py

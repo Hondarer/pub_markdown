@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mkdocs プレビューから pages/doxygen を無変換でサーブする。
+"""mkdocs による動的発行から pages/doxygen を無変換でサーブする。
 
 ``mkdocs serve`` の WSGI に ``/doxygen/`` をマウントし、``pages/doxygen/``
 をそのまま返す。Markdown 変換もコピーもシンボリック リンクも使わない。
@@ -8,7 +8,7 @@ Windows でも同じ経路で、ジャンクションや MAX_PATH を増やさ�
 ``doxygen-page-url`` フロント マターがあるページでは、対応する Doxygen
 HTML への単一ページ リンクをテンプレートへ渡す。
 
-設計は docs/mkdocs-preview-design.md を参照。
+設計は docs/livedocs-design.md を参照。
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ import wsgiref.util
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_preview_docs import parse_config  # noqa: E402
+from stage_livedocs import parse_config  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-log = logging.getLogger("mkdocs.preview_doxygen")
+log = logging.getLogger("mkdocs.livedocs_doxygen")
 
 DOXYGEN_URL_PREFIX = "/doxygen"
 DOXYGEN_PAGES_PREFIX = "pages/doxygen/"
@@ -41,8 +41,8 @@ PUBLISHED_PAGE_TEMPLATE_RE = re.compile(
 )
 
 
-def doxygen_page_url_to_preview(value):
-    """workspace 相対の ``doxygen-page-url`` をプレビューの絶対パスへ変換する。
+def doxygen_page_url_to_livedocs(value):
+    """workspace 相対の ``doxygen-page-url`` を動的発行の絶対パスへ変換する。
 
     ``pages/doxygen/calc_public/calc_8h.html`` -> ``/doxygen/calc_public/calc_8h.html``
     変換できない値は ``None`` を返す。
@@ -132,8 +132,8 @@ def guess_doxygen_content_type(path):
     return "application/octet-stream"
 
 
-def dependency_page_template_to_preview(value):
-    """発行用 Page URL テンプレートを preview の基底 URL へ変換する。"""
+def dependency_page_template_to_livedocs(value):
+    """発行用 Page URL テンプレートを動的発行の基底 URL へ変換する。"""
     if not value:
         return None
     match = PUBLISHED_PAGE_TEMPLATE_RE.fullmatch(str(value).strip().replace("\\", "/"))
@@ -146,8 +146,8 @@ def dependency_page_template_to_preview(value):
     return "/" + "/".join(parts)
 
 
-def rewrite_dependency_data_for_preview(content):
-    """dependency-data.js へ preview Page URL をメモリー上で追加する。"""
+def rewrite_dependency_data_for_livedocs(content):
+    """dependency-data.js へ動的発行の Page URL をメモリー上で追加する。"""
     try:
         text = content.decode("utf-8")
     except UnicodeDecodeError:
@@ -162,10 +162,10 @@ def rewrite_dependency_data_for_preview(content):
         return content
     if not isinstance(data, dict):
         return content
-    preview_template = dependency_page_template_to_preview(data.get("pageUrlTemplate"))
-    if preview_template is None:
+    livedocs_template = dependency_page_template_to_livedocs(data.get("pageUrlTemplate"))
+    if livedocs_template is None:
         return content
-    data["previewPageUrlTemplate"] = preview_template
+    data["livedocsPageUrlTemplate"] = livedocs_template
     rewritten = DEPENDENCY_DATA_PREFIX + json.dumps(data, ensure_ascii=False, indent=2) + ";\n"
     return rewritten.encode("utf-8")
 
@@ -195,7 +195,7 @@ def serve_doxygen(root, url_path, environ, start_response):
     content_type = guess_doxygen_content_type(fs_path)
     if is_dependency_data_js_url(url_path):
         with open(fs_path, "rb") as handle:
-            content = rewrite_dependency_data_for_preview(handle.read())
+            content = rewrite_dependency_data_for_livedocs(handle.read())
         start_response(
             "200 OK",
             [("Content-Type", content_type), ("Content-Length", str(len(content)))],
@@ -212,9 +212,9 @@ def serve_doxygen(root, url_path, environ, start_response):
 
 
 def _workspace_and_config(config):
-    """``mkdocs.yml`` の位置 (``pages/preview/``) からワークスペース ルートを逆算する。"""
-    preview_dir = os.path.dirname(os.path.abspath(config["config_file_path"]))
-    workspace = os.path.dirname(os.path.dirname(preview_dir))
+    """``mkdocs.yml`` の位置 (``pages/livedocs/``) からワークスペース ルートを逆算する。"""
+    livedocs_dir = os.path.dirname(os.path.abspath(config["config_file_path"]))
+    workspace = os.path.dirname(os.path.dirname(livedocs_dir))
     config_path = os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
     return workspace, config_path
 
@@ -223,7 +223,7 @@ _doxygen_link_enabled = None
 
 
 def on_page_context(context, page, config, nav=None, **kwargs):
-    """``doxygen-page-url`` をプレビュー URL としてテンプレートへ渡す。"""
+    """``doxygen-page-url`` を動的発行の URL としてテンプレートへ渡す。"""
     global _doxygen_link_enabled
     if _doxygen_link_enabled is None:
         _workspace, config_path = _workspace_and_config(config)
@@ -232,8 +232,8 @@ def on_page_context(context, page, config, nav=None, **kwargs):
     url = None
     if _doxygen_link_enabled and page is not None:
         meta = getattr(page, "meta", None) or {}
-        url = doxygen_page_url_to_preview(meta.get("doxygen-page-url"))
-    context["doxygen_preview_url"] = url
+        url = doxygen_page_url_to_livedocs(meta.get("doxygen-page-url"))
+    context["doxygen_livedocs_url"] = url
     return context
 
 

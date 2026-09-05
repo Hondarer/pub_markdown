@@ -1,17 +1,21 @@
-# mkdocs 簡易プレビュー基盤
+# 動的発行基盤 (mkdocs)
 
 ## 概要
 
-`bin/pub_markdown_core.sh` による発行処理とは別に、執筆中の確認を目的とした軽量なプレビュー基盤を mkdocs で提供します。  
-PlantUML はビルド時に画像化せず、ブラウザー上の JavaScript でレンダリングします。  
-Word (docx) 出力は対象外とし、サイト内ナビゲーションとページ内目次は維持します。
+docsfw は 2 本の発行系を持ちます。  
+`bin/pub_markdown_core.sh` による静的発行と、mkdocs による動的発行です。  
+この文書は動的発行の設計を定めます。
+
+静的発行は、図をビルド時に画像化した self-contained な HTML と docx を、4 バリアント同時に出力します。  
+動的発行は、図をブラウザー上の JavaScript でレンダリングする HTML を 1 バリアント出力し、Web サーバーからの配信を前提とします。  
+どちらもサイト内ナビゲーションとページ内目次を持ちます。
 
 ### 背景
 
-docsfw の発行パイプラインは、成果物の品質を優先した構成です。  
+静的発行のパイプラインは、成果物の品質を優先した構成です。  
 Pandoc、Lua フィルター 18 本、Node.js (Puppeteer、mermaid-cli、MiniSearch)、Python 後処理を 1 本のシェル スクリプト (2837 行) が統合しています。
 
-このため、執筆中に 1 ページの見た目を確認する用途にはコストが見合いません。  
+この構成では、1 ページの見た目を確認するだけでもワークスペース全体のビルド コストがかかります。  
 c-modernization-kit ワークスペースにおける発行対象の実測値を次に示します。
 
 | 指標 | 実測値 |
@@ -23,20 +27,23 @@ c-modernization-kit ワークスペースにおける発行対象の実測値を
 | 出力バリアント | `ja` / `en` × 通常 / `-details` の 4 種類 |
 
 PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに Puppeteer 経由で PNG に変換されます。  
-プレビュー基盤では、この図生成コストをブラウザー側へ移すことで、ビルド時間を Markdown の変換だけに切り詰めます。
+動的発行では、この図生成コストをブラウザー側へ移すことで、ビルド時間を Markdown の変換だけに切り詰めます。  
+配信を前提にすることで初めて成立する設計であり、これが静的発行と別系統になっている理由です。
 
 ### 位置付け
 
-本基盤は docsfw を置き換えるものではありません。  
-docsfw は HTML と docx の正式な発行の正本であり続けます。
+動的発行は静的発行を置き換えるものではありません。  
+静的発行は HTML と docx の正本であり続け、配布可能な成果物を必要とする用途はすべてこちらが担います。  
+動的発行は、配信を前提とすることで得られる短いビルド時間、保存に追従する再生成、Doxygen HTML との統合を担います。
 
-| | docsfw (`make docs`) | mkdocs プレビュー (`make preview`) |
+| | 静的発行 (`make docs`) | 動的発行 (`make livedocs` / `make servedocs`) |
 |---|---|---|
-| 目的 | 正式な発行 | 執筆中の確認 |
-| 出力 | HTML + docx | HTML のみ |
-| バリアント | `ja` / `en` × 通常 / `-details` | 同じ 4 値を `PREVIEW_VARIANT` で 1 つ選ぶ。既定は `ja-details` |
+| 成果物 | HTML + docx | HTML |
+| 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
+| バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 同じ 4 値を `LIVEDOCS_VARIANT` で 1 つ選ぶ。既定は `ja-details` |
 | PlantUML | ビルド時に SVG 化 | ブラウザー上でレンダリング |
 | 図の再現性 | 正本 | 差異が出る場合がある (後述) |
+| 変更の反映 | 再実行 | `mkdocs serve` 中は保存に追従 |
 
 ## docsfw ファンクション ポイントと対応方針
 
@@ -44,7 +51,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 
 - **維持**: 同等の機能を実現します。
 - **簡略**: 目的は満たしますが、実装または見た目が変わります。
-- **対象外**: プレビューでは実現しません。
+- **対象外**: 動的発行では実現しません。
 
 ### 入力と発行対象の決定
 
@@ -63,8 +70,8 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の言語側を使う |
-| 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`PREVIEW_VARIANT` の details 側を使う |
+| 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の言語側を使う |
+| 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
 | 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | mkdocs は H1 をページ見出しとして扱う |
@@ -125,7 +132,7 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
-| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は mkdocs 側に対応する拡張が無いため、`stage_preview_docs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
+| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は mkdocs 側に対応する拡張が無いため、`stage_livedocs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 簡略 | Material の `content.code.copy` |
 | 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
@@ -143,16 +150,16 @@ docsfw は HTML と docx の正式な発行の正本であり続けます。
 
 ```text
 framework/docsfw/
-+-- mkdocs/
++-- livedocs/
 |   +-- bin/
-|   |   +-- stage_preview_docs.py    # ステージング (収集、前処理、リンク書き換え)
+|   |   +-- stage_livedocs.py    # ステージング (収集、前処理、リンク書き換え)
 |   |   +-- lang_details_filter.py   # replace-tag.sh の Python 移植
 |   |   +-- expand_toc.py            # \toc の展開
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
-|   |   +-- preview_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
-|   |   +-- preview_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
-|   |   +-- preview_versioned_hook.py  # 完成済み版を維持する無停止再生成
-|   |   +-- stop_preview_serve.sh    # このワークスペースの mkdocs serve を停止する
+|   |   +-- livedocs_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
+|   |   +-- livedocs_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
+|   |   +-- livedocs_versioned_hook.py  # 完成済み版を維持する無停止再生成
+|   |   +-- stop_livedocs_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- theme/
 |   |   +-- partials/actions.html    # Doxygen 単一ページ リンクのボタン
@@ -161,55 +168,55 @@ framework/docsfw/
 |   |   +-- docsfw-mermaid.js        # Mermaid 初期化
 |   |   +-- docsfw-mathjax.js        # MathJax の設定
 |   |   +-- docsfw-responsive-nav.js # 共通レイアウトと単一ドロワーの制御
-|   |   +-- docsfw-preview.css       # 追加スタイル
+|   |   +-- docsfw-livedocs.css       # 追加スタイル
 |   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
 |   +-- tests/
-|   |   +-- test_preview_doxygen.py  # リンク変換と静的サーブの純関数テスト
-|   |   +-- test_preview_versioned.py  # 再生成中の配信と版切り替えのテスト
+|   |   +-- test_livedocs_doxygen.py  # リンク変換と静的サーブの純関数テスト
+|   |   +-- test_livedocs_versioned.py  # 再生成中の配信と版切り替えのテスト
 |   +-- requirements.txt
 |   +-- README.md                    # 利用手順
 +-- docs/
-    +-- mkdocs-preview-design.md     # この文書 (設計の正本)
+    +-- livedocs-design.md     # この文書 (設計の正本)
 ```
 
 ### 生成物
 
-生成物はワークスペースの `pages/preview/` 以下に出します。  
+生成物はワークスペースの `pages/livedocs/` 以下に出します。  
 `/pages/` はワークスペースの `.gitignore` で除外済みのため、追加の設定は不要です。
 
 ```text
-pages/preview/
+pages/livedocs/
 +-- mkdocs.yml     # mkdocs.yml.in から生成される実際の設定
 +-- theme/         # Material の custom_dir 上書き
 +-- src/           # ステージング済み Markdown (docs_dir)
 +-- site/          # mkdocs build の出力 (serve 時は未使用)
 ```
 
-`make cleandocs` は `pages/` 配下から `doxygen` だけを残して削除するため、`pages/preview/` も同時に消えます。  
+`make cleandocs` は `pages/` 配下から `doxygen` だけを残して削除するため、`pages/livedocs/` も同時に消えます。  
 これは意図した挙動です。
 
 ## mkdocs serve 中の自動ステージング
 
 ### 背景
 
-`mkdocs serve` は既定で `docs_dir` (`pages/preview/src/`) だけを監視する。  
-執筆者が実際に編集するのは元の Markdown (`app/*/docs` 等) であり、そのままではステージング (`stage_preview_docs.py`) を手動で再実行しない限り画面へ反映されない。「執筆中の確認用プレビュー」という位置付けからすると、元の Markdown を保存するだけで反映される方が自然なため、`bin/preview_autostage_hook.py` を mkdocs の `hooks:` として追加した。
+`mkdocs serve` は既定で `docs_dir` (`pages/livedocs/src/`) だけを監視する。  
+執筆者が実際に編集するのは元の Markdown (`app/*/docs` 等) であり、そのままではステージング (`stage_livedocs.py`) を手動で再実行しない限り画面へ反映されない。配信を前提とする発行系である以上、元の Markdown を保存するだけで反映される方が自然なため、`bin/livedocs_autostage_hook.py` を mkdocs の `hooks:` として追加した。
 
 ### mkdocs 側の制約
 
 mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる  
 (`framework/docsfw/mkdocs/.venv/Lib/site-packages/mkdocs/livereload/__init__.py:139-161`)。
 
-このため `preview_autostage_hook.py` は、mkdocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は mkdocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
+このため `livedocs_autostage_hook.py` は、mkdocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は mkdocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
 
-以前は `mkdocs.yml` の `watch:` に元の Markdown ディレクトリを列挙し、mkdocs 本体の監視に変更検知だけを任せていた (`vendor_assets.py` の `build_watch_list` が生成)。しかし `docs_dir` はステージング先 (`src/`) のままのため、この `watch:` は「元ファイルの変更を検知してビルドをやり直す」だけで、ビルドに使う内容自体は古いステージング済みコピーのままだった。実質的に反映には寄与しない仕組みだったため、`preview_autostage_hook.py` の導入とあわせて `watch:` および `build_watch_list` は削除した。
+以前は `mkdocs.yml` の `watch:` に元の Markdown ディレクトリを列挙し、mkdocs 本体の監視に変更検知だけを任せていた (`vendor_assets.py` の `build_watch_list` が生成)。しかし `docs_dir` はステージング先 (`src/`) のままのため、この `watch:` は「元ファイルの変更を検知してビルドをやり直す」だけで、ビルドに使う内容自体は古いステージング済みコピーのままだった。実質的に反映には寄与しない仕組みだったため、`livedocs_autostage_hook.py` の導入とあわせて `watch:` および `build_watch_list` は削除した。
 
 ### ファイル単位の軽量な再ステージングと索引の遅延同期
 
-`stage_preview_docs.py` の `stage()` は、索引構築 (`build_stage_index`: `collect_sources` によるワークスペース全体の走査、`DocIndex`、実パス→ステージング後パスの対応表 `real_to_staged` の構築) と、構築済み索引からの書き出し (`stage_index`) に分かれています。  
+`stage_livedocs.py` の `stage()` は、索引構築 (`build_stage_index`: `collect_sources` によるワークスペース全体の走査、`DocIndex`、実パス→ステージング後パスの対応表 `real_to_staged` の構築) と、構築済み索引からの書き出し (`stage_index`) に分かれています。  
 自動再同期は構築した索引をそのまま書き出しへ渡すため、1 回の全体再同期で索引を二度構築しません。
 
-`preview_autostage_hook.py` は起動時に一度だけ `build_stage_index()` を実行し、結果をプロセス内にキャッシュします。  
+`livedocs_autostage_hook.py` は起動時に一度だけ `build_stage_index()` を実行し、結果をプロセス内にキャッシュします。  
 以降は次の方針で処理します。
 
 - 既知の Markdown ファイルの内容変更では、`stage_single()` でその 1 ファイルだけを再変換して書き出します。ワークスペース全体は再走査しません。
@@ -223,7 +230,7 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 ファイル監視のイベントを受信した時点で変更世代を進めるため、デバウンス待ちや処理ロック待ちの変更も未処理として残ります。
 
 索引再同期でステージング先が変化した場合は、その出力世代を含むサイトが完成版として公開されるまで再同期を完了扱いにしません。  
-`preview_autostage_hook.py` は `preview_versioned_hook.py` が設定したサイト生成関数を包むため、候補サイトの生成だけでなく完成版の公開後に完了を記録します。  
+`livedocs_autostage_hook.py` は `livedocs_versioned_hook.py` が設定したサイト生成関数を包むため、候補サイトの生成だけでなく完成版の公開後に完了を記録します。  
 公開前に呼ばれる mkdocs の `on_post_build` は完了判定に使用しません。
 
 サイト再生成中にステージング先が変化した場合、mkdocs 1.6.1 の `LiveReloadServer` は `_want_rebuild` を保持し、現在の生成後にもう一度生成します。  
@@ -238,12 +245,12 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 索引処理に失敗した場合は、既存の索引キャッシュと公開サイトを維持し、120 秒後に再試行します。  
 サイト生成または完成版の公開に失敗した場合は公開世代を進めず、直前の完成版を配信しながら 120 秒後にサイト再生成を再要求します。
 
-### make preview-stage を残す理由
+### make livedocs-stage を残す理由
 
-上記の自動ステージングは `mkdocs serve` の実行中にしか働かない (`on_serve` フックのため)。次の経路では、引き続き `make preview-stage` (フル ステージング) が唯一の同期手段であり、削除していない。
+上記の自動ステージングは `mkdocs serve` の実行中にしか働かない (`on_serve` フックのため)。次の経路では、引き続き `make livedocs-stage` (フル ステージング) が唯一の同期手段であり、削除していない。
 
-- `make preview` が `mkdocs serve` を起動する前の `pages/preview/` 一式 (初回の `src/`、`mkdocs.yml`、vendored assets) の準備。
-- `make preview-build` (`mkdocs serve` を経由しない one-shot ビルドによるリンク切れ検査)。
+- `make servedocs` が `mkdocs serve` を起動する前の `pages/livedocs/` 一式 (初回の `src/`、`mkdocs.yml`、vendored assets) の準備。
+- `make livedocs` (`mkdocs serve` を経由しない one-shot ビルドによるリンク切れ検査)。
 - `vendor_assets.py` が扱う JS/CSS アセットや `mkdocs.yml` 自体の更新 (自動ステージングの対象は Markdown のみ)。
 
 ## 再生成中の配信
@@ -253,7 +260,7 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 mkdocs 1.6.1 の `LiveReloadServer` は、ファイル変更を検知すると再生成の開始時刻を記録し、再生成が完了するまで通常の HTTP 要求を待機させます。  
 同じ出力ディレクトリを消去して再生成する途中の内容を配信しないための動作ですが、再生成に時間がかかると、表示済みページから別ページへの移動や CSS などの取得も完了待ちになります。
 
-`bin/preview_versioned_hook.py` は、初回生成で完成した出力を公開版として保持します。  
+`bin/livedocs_versioned_hook.py` は、初回生成で完成した出力を公開版として保持します。  
 変更検知後の生成先は別の一時ディレクトリとし、生成が正常に完了した場合だけ公開版を次版へ切り替えます。  
 生成に失敗した場合は候補版を破棄し、直前の公開版を配信し続けます。
 
@@ -267,53 +274,53 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 初回生成物の一時ディレクトリは mkdocs 自身が所有するためフックから削除せず、フックが生成した一時ディレクトリだけを終了時に回収します。
 
 `/livereload/` は mkdocs 標準の長時間ポーリングへ委譲します。  
-`/doxygen/` は `preview_doxygen_hook.py` の静的配信へ委譲するため、版管理の対象に含めません。
+`/doxygen/` は `livedocs_doxygen_hook.py` の静的配信へ委譲するため、版管理の対象に含めません。
 
 ## Doxygen HTML の静的サーブ
 
 `make doxy` は Doxygen HTML と依存関係レポートを `pages/doxygen/` へ出します。  
 このツリーは約 244 MB、約 1.8 万ファイルです。  
-プレビューはこれを Markdown 変換せず、`make preview` (`mkdocs serve`) の `/doxygen/` として配信します。
+動的発行はこれを Markdown 変換せず、`make servedocs` (`mkdocs serve`) の `/doxygen/` として配信します。
 
-`make preview` は `make doxy` に依存しません。  
-`pages/doxygen/` が無いときはマウントを省略し、プレビュー本体は起動します。
+`make servedocs` は `make doxy` に依存しません。  
+`pages/doxygen/` が無いときはマウントを省略し、配信本体は起動します。
 
 ### コピーしない理由
 
 `docs_dir` へコピーすると、mkdocs が毎回 1.8 万ファイルを走査し、Material テーマで包んでしまいます。  
-シンボリック リンクとジャンクションは、プレビュー基盤が Windows で使わないと決めている手段です。  
-`pages/preview/site/doxygen/` へネストするとパスが伸び、Windows の MAX_PATH に当たりやすくなります。
+シンボリック リンクとジャンクションは、動的発行が Windows で使わないと決めている手段です。  
+`pages/livedocs/site/doxygen/` へネストするとパスが伸び、Windows の MAX_PATH に当たりやすくなります。
 
 そのため配信の正本は `mkdocs serve` の WSGI マウントだけです。  
-`bin/preview_doxygen_hook.py` が `PATH_INFO` の `/doxygen/` を横取りし、`pages/doxygen/` を直接開きます。  
+`bin/livedocs_doxygen_hook.py` が `PATH_INFO` の `/doxygen/` を横取りし、`pages/doxygen/` を直接開きます。  
 livereload 用の JavaScript は挿入せず、Doxygen と Cytoscape の HTML を改変しません。  
-依存関係レポートの `dependency-data.js` だけは、Page リンクを preview のページへ向けるため、HTTP 応答をメモリ上で補正します。
+依存関係レポートの `dependency-data.js` だけは、Page リンクを動的発行のページへ向けるため、HTTP 応答をメモリ上で補正します。
 
 URL は POSIX のまま扱い、ファイルを開くときだけ OS のパスへ結合します。  
 `posixpath.normpath` で `..` を潰したあと `/` で分割し、`os.path.join(root, *parts)` します。  
 結合結果が `pages/doxygen/` の外なら 404 です。ドライブが違う `ValueError` も 404 です。
 
-`make preview-build` の `site/` には Doxygen ツリーを入れません。  
-閲覧の正本は `make preview` です。
+`make livedocs` の `site/` には Doxygen ツリーを入れません。  
+閲覧の正本は `make servedocs` です。
 
 ### 依存関係レポートの Page リンク
 
 依存関係レポートの通常の Page リンクは、docsfw の発行レイアウトを前提とした `../../../{variant}/html/<alias>/<doxybook>/Files/<file>.html` 形式です。  
-preview には言語階層と `html/` 階層がなく、`use_directory_urls: true` によりページ URL の末尾も `.html` ではなく `/` になるため、そのままでは開けません。
+動的発行には言語階層と `html/` 階層がなく、`use_directory_urls: true` によりページ URL の末尾も `.html` ではなく `/` になるため、そのままでは開けません。
 
-`preview_doxygen_hook.py` は `dependency/dependency-data.js` の HTTP 応答を JSON として読み、標準の発行用テンプレートから `/<alias>/<doxybook>` を導出して `previewPageUrlTemplate` を追加します。  
+`livedocs_doxygen_hook.py` は `dependency/dependency-data.js` の HTTP 応答を JSON として読み、標準の発行用テンプレートから `/<alias>/<doxybook>` を導出して `livedocsPageUrlTemplate` を追加します。  
 ディスク上の `dependency-data.js` とダウンロード用の `dependency-data.json` は変更しません。  
 JSON が不正な場合や発行用テンプレートを認識できない場合は、元の JavaScript をそのまま返します。
 
-依存関係レポートは `previewPageUrlTemplate` がある場合、Page リンクを `/<alias>/<doxybook>/Files/<file>/` 形式にします。  
-preview は起動時に選んだ `PREVIEW_VARIANT` のみを生成するため、依存関係レポートのページ種別メニューは表示しません。
+依存関係レポートは `livedocsPageUrlTemplate` がある場合、Page リンクを `/<alias>/<doxybook>/Files/<file>/` 形式にします。  
+動的発行は起動時に選んだ `LIVEDOCS_VARIANT` のみを生成するため、依存関係レポートのページ種別メニューは表示しません。
 
 ### 本文リンクの書き換え
 
 README や依存関係レポートのリンクは、docsfw の発行レイアウト (`pages/ja/html/<alias>/...`) を前提に `../../../doxygen/` と書かれています。  
 mkdocs は `use_directory_urls: true` で、かつ `ja/html/` 相当の階層が無いため、この相対パスは段数が合いません。
 
-`stage_preview_docs.py` はフェンス外の `(?:\.\./)+doxygen/` を `/doxygen/` へ置き換えます。  
+`stage_livedocs.py` はフェンス外の `(?:\.\./)+doxygen/` を `/doxygen/` へ置き換えます。  
 Markdown リンクと生 HTML の `href` の両方が対象です。  
 絶対リンクは `validation.links.absolute_links: ignore` のため、`pages/doxygen/` が無くてもリンク検査の警告にはなりません。
 
@@ -322,7 +329,7 @@ Markdown リンクと生 HTML の `href` の両方が対象です。
 doxyfw は Doxybook2 の Markdown へ `doxygen-page-url: "pages/doxygen/...html"` を埋め込みます。  
 docsfw の発行ではナビバー右の Doxygen アイコンになります。
 
-プレビューでは `pages/doxygen/` を `/doxygen/` へ写し、Material のページ操作ボタン (見出し横) へ出します。  
+動的発行では `pages/doxygen/` を `/doxygen/` へ写し、Material のページ操作ボタン (見出し横) へ出します。  
 `target="doxygen-page"` で、単一ページと依存関係レポートが同じタブを再利用します。  
 `doxygenLinkEnable` は `.vscode/pub_markdown.config.yaml` を読み、未指定なら有効です。  
 リンク先ファイルの存在は確認しません。
@@ -439,9 +446,9 @@ README または SKILL を `index.md` へ正規化するときに `title` がな
 
 ### 正とする側
 
-`make docs` (pandoc) の配色を正とし、`make preview` の CSS だけを調整します。  
-docsfw は正式な発行の正本であり、プレビューは執筆中の確認用だからです。  
-`assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を pandoc 発行版へ寄せるためのファイルです。  
+`make docs` (pandoc) の配色を正とし、`make servedocs` の CSS だけを調整します。  
+静的発行が成果物の正本であり、動的発行はその配色に従うためです。  
+`assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を 静的発行へ寄せるためのファイルです。  
 配色もこのファイルに集約します。
 
 例外が 4 つあります。  
@@ -457,7 +464,7 @@ Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存�
 
 ### フォント
 
-本文と等幅のフォントは pandoc 発行版を正とします。  
+本文と等幅のフォントは 静的発行を正とします。  
 本文は `styles/html/html-style.css` の `body`、等幅は同じく `code, tt` の指定に合わせます。
 
 指定は `assets/docsfw-pandoc-style.css` の `body` で、Material の CSS 変数 `--md-text-font-family` と `--md-code-font-family` を上書きして行います。  
@@ -476,7 +483,7 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 
 ### 色の対応
 
-| 用途 | pandoc (正) | 出典 | preview `default` | preview `slate` |
+| 用途 | pandoc (正) | 出典 | 動的発行 `default` | 動的発行 `slate` |
 |---|---|---|---|---|
 | 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
 | 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
@@ -503,14 +510,14 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 本文と見出しの 2 行だけは pandoc を正とせず、[見出し書式](heading-style.md) を正本とします。  
 表には、その正本が定めるライトでの値を載せています。
 
-pandoc 発行版はライト固定のため、`slate` に対応する正はありません。  
+静的発行はライト固定のため、`slate` に対応する正はありません。  
 そこで、色相を保ったまま明度を上げた値を使います。  
 admonition の 6 色は、pandoc が採用している GitHub のライト色に対応する GitHub のダーク色をそのまま当てます。  
 コード背景と `==mark==` は暗背景で成立しないため、`slate` では Material の既定に任せます。
 
 ### ヘッダーとフッターを淡色のフラットにする理由
 
-pandoc 発行版のヘッダーは Bootstrap の `.navbar-inner` です。  
+静的発行のヘッダーは Bootstrap の `.navbar-inner` です。  
 Bootstrap の既定は、白から `#F2F2F2` への淡いグラデーション、四辺の枠、角丸、外側の影を持つカード風の帯でした。  
 `styles/html/html-style.css` でこれらを外し、単色 `#F7F7F7` の帯に下端 1px の境界線 (`#D4D4D4`) だけを残すフラットな表現へ変更しています。  
 `text-shadow: 0 1px 0 #FFFFFF` も、グラデーションの上で文字を浮かせるための指定であり、フラットな帯では不要なため外します。
@@ -519,7 +526,7 @@ Material の既定は indigo の単色バーであり、本文リンクを `#418
 `--md-primary-fg-color` 系を上書きして同じ淡色に寄せ、`.md-header` へ下端の境界線を足します。
 
 Material はスクロール時に JavaScript で `.md-header--shadow` を付け、ヘッダーの下へ影を落とします。  
-pandoc 発行版と表現をそろえるため、`.md-header--shadow` の `box-shadow` を `none` で打ち消します。  
+静的発行と表現をそろえるため、`.md-header--shadow` の `box-shadow` を `none` で打ち消します。  
 `transition` は残すため、ヘッダーの表示と非表示の動きは変わりません。
 
 淡色ヘッダーでは、Material が濃色ヘッダーを前提に指定している検索フォームの背景 (`#00000042`) では入力文字が読めません。  
@@ -528,7 +535,7 @@ pandoc 発行版と表現をそろえるため、`.md-header--shadow` の `box-s
 フッターも同じ淡色にそろえます。  
 Material の既定は `.md-footer` に `rgba(0,0,0,.87)`、その全面を覆う `.md-footer-meta` に `rgba(0,0,0,.32)` を重ねるため、白地のページの下に黒帯が出ます。
 
-pandoc 発行版の HTML に `<footer>` は無く、フッターには正とする対応先が存在しません。  
+静的発行の HTML に `<footer>` は無く、フッターには正とする対応先が存在しません。  
 そのため、ヘッダーと同じ値を流用します。  
 `--md-footer-bg-color` 系を上書きし、`.md-footer` へ上端の境界線を足すと、ページの上端と下端が同じ色でそろいます。
 
@@ -549,15 +556,15 @@ pandoc 発行版の HTML に `<footer>` は無く、フッターには正とす�
 そのため `caution` ではなく `danger` を対象にします。
 
 `IMPORTANT` は同名のクラスのまま出力されますが、Material に `important` は存在せず、既定の admonition として Note と同じ色で描画されます。  
-`deprecated` と同じく、アイコンを含む定義を `assets/docsfw-preview.css` へ追加します。  
-色は `assets/docsfw-pandoc-style.css` が `--docsfw-admonition-*` で供給し、`docsfw-preview.css` 側は `var()` のフォールバックを持たせて単体でも成立させます。
+`deprecated` と同じく、アイコンを含む定義を `assets/docsfw-livedocs.css` へ追加します。  
+色は `assets/docsfw-pandoc-style.css` が `--docsfw-admonition-*` で供給し、`docsfw-livedocs.css` 側は `var()` のフォールバックを持たせて単体でも成立させます。
 
 見出し帯の淡いティントは `color-mix()` で基準色から導きます。  
 未対応の環境では宣言ごと無視され、Material の既定色に戻るだけで表示は壊れません。
 
 #### 形状とアイコンを Material に合わせる
 
-admonition は、配色だけでなく形状とアイコンも Material を正とし、pandoc 発行版をそちらへ合わせます。  
+admonition は、配色だけでなく形状とアイコンも Material を正とし、静的発行をそちらへ合わせます。  
 配色の原則 (pandoc が正) の例外です。  
 枠付きの表現の方が読みやすいという判断によるもので、`styles/html/html-style.css` と `bin/pandoc-filters/admonition.lua` を変更しました。
 
@@ -569,7 +576,7 @@ pandoc 側の変更点は次のとおりです。
 - 見出しの要素を `<p><span class="admonition-title">` から `<p class="admonition-title">` へ変更します。Pandoc の `Para` は属性を持てないため、`RawBlock` で組み立てます。
 
 アイコンの SVG は両側で同一です。  
-note / tip / warning / danger は Material の `--md-admonition-icon--*`、Material に無い important / deprecated は `assets/docsfw-preview.css` の定義を、`styles/html/html-style.css` へ複写しています。  
+note / tip / warning / danger は Material の `--md-admonition-icon--*`、Material に無い important / deprecated は `assets/docsfw-livedocs.css` の定義を、`styles/html/html-style.css` へ複写しています。  
 別々のパイプラインのため共有はできません。両ファイルに相互参照のコメントを置いています。
 
 docx は対象外です。見出しは絵文字付きのままで、`admonition.lua` の docx 分岐は変更していません。
@@ -577,7 +584,7 @@ docx は対象外です。見出しは絵文字付きのままで、`admonition.
 #### 寸法を px で固定する理由
 
 Material の admonition は `rem` と `em` で寸法を持ちます。  
-`html { font-size: 125% }` (1rem = 20px) が基準ですが、`@media (min-width: 100em)` で 137.5% へ上がるため、1600px 以上の画面ではプレビューだけが約 10% 大きくなります。
+`html { font-size: 125% }` (1rem = 20px) が基準ですが、`@media (min-width: 100em)` で 137.5% へ上がるため、1600px 以上の画面では動的発行だけが約 10% 大きくなります。
 
 そこで、1rem = 20px として px へ換算した固定値を両側へ置きます。  
 `assets/docsfw-pandoc-style.css` が見出しの書式で採っている方針と同じです。
@@ -599,7 +606,7 @@ Material の admonition は `rem` と `em` で寸法を持ちます。
 発行対象の Markdown に生の `<details>` は無く、`pymdownx.details` も有効にしていないため、admonition と同じ寸法へ寄せる必要がありません。
 
 admonition 内の段落の余白は `8px` です。  
-プレビュー側は `assets/docsfw-pandoc-style.css` の `.md-typeset p { margin: 0.5em 0 }` がすでに `8px` を与えているため、pandoc 側の `.admonition p` をそこへ合わせます。  
+動的発行側は `assets/docsfw-pandoc-style.css` の `.md-typeset p { margin: 0.5em 0 }` がすでに `8px` を与えているため、pandoc 側の `.admonition p` をそこへ合わせます。  
 pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px }` のままで、admonition の内部だけ `8px` になります。
 
 なお `.admonition-title` も `p` 要素です。  
@@ -612,10 +619,10 @@ pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px 
 
 #### そろえる前の状態
 
-`make preview` の Material は、`.md-sidebar__scrollwrap`、`.md-typeset pre > code`、`.md-search__scrollwrap`、`.md-tooltip2__inner` の 4 か所だけを細く塗ります。  
+`make servedocs` の Material は、`.md-sidebar__scrollwrap`、`.md-typeset pre > code`、`.md-search__scrollwrap`、`.md-tooltip2__inner` の 4 か所だけを細く塗ります。  
 ページ本体はブラウザーの既定のままです。
 
-`make docs` の pandoc 発行版は、`styles/html/` には指定がありませんが、CDN から読む Bootstrap テンプレート `template.css` がセレクターなしの全称指定を持っています。
+静的発行は、`styles/html/` には指定がありませんが、CDN から読む Bootstrap テンプレート `template.css` がセレクターなしの全称指定を持っています。
 
 ```css
 ::-webkit-scrollbar       { width: 12px; height: 12px; }
@@ -626,7 +633,7 @@ pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px 
 これがページ本体を含むすべてのスクロール領域へ効きます。  
 同じページを 1400x900 で描画して画素を計測すると、次の差がありました。
 
-| | make docs | make preview |
+| | make docs | make servedocs |
 |---|---|---|
 | thumb の幅 | 12px | 6px |
 | thumb の色 | `#727272` | `#ADADAD` |
@@ -659,7 +666,7 @@ Material が個別に持つ `::-webkit-scrollbar` は全称指定より詳細度
 #### ホバー時の着色
 
 Material は、スクロール バーにホバーしたとき thumb をアクセント色で着色します。  
-pandoc 発行版にホバーの指定はないため、着色をやめて通常時と同じ色に固定します。
+静的発行にホバーの指定はないため、着色をやめて通常時と同じ色に固定します。
 
 Material は標準の `scrollbar-color` と `::-webkit-scrollbar-thumb` の 2 通りで指定しています。  
 `::-webkit-scrollbar-thumb:hover` だけを上書きしても着色は消えないため、両方を上書きします。
@@ -671,12 +678,12 @@ Material 側の指定は `@media (min-width: 60em)` の中にもありますが�
 
 ここは Material も pandoc も正とせず、[見出し書式](heading-style.md) を正本とし、両側をそこへ合わせます。  
 書式の一覧と、大きさや太さを含む全体の規則は正本を参照してください。  
-この節では、`make preview` 側で必要になる調整だけを述べます。
+この節では、`make servedocs` 側で必要になる調整だけを述べます。
 
 濃さは 2 段です。  
 本文の `#212121` がいちばん濃く、見出しは `#757575` で本文より淡くなります。
 
-| 対象 | preview の指定 | 白地での値 |
+| 対象 | 動的発行の指定 | 白地での値 |
 |---|---|---|
 | 見出し (Markdown の H1 - H6) | `--md-default-fg-color--light` | `#757575` |
 | 本文 | Material 既定の `--md-typeset-color` | `#212121` |
@@ -699,7 +706,7 @@ Material の既定のうち、次の 3 つは打ち消す必要があります�
 
 ホバー時は下線ありに統一します。
 
-pandoc 発行版は、本文リンクが Bootstrap の `a:hover`、ナビゲーション ツリーが `docsfw-ui.css` の `#docsfw-tree a:hover` で、いずれも下線を引きます。  
+静的発行は、本文リンクが Bootstrap の `a:hover`、ナビゲーション ツリーが `docsfw-ui.css` の `#docsfw-tree a:hover` で、いずれも下線を引きます。  
 Material は色を変えるだけで下線を引かないため、`.md-typeset a` と `.md-nav__link` のホバーとフォーカスに `text-decoration: underline` を足します。
 
 見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。
@@ -709,7 +716,7 @@ Material は色を変えるだけで下線を引かないため、`.md-typeset a
 `make docs` の TOC は、`styles/html/html-template.html` が `<div class="well toc">` として出力します。  
 `well` は Bootstrap `template.css` (CDN) のクラスで、塗りつぶし `#F5F5F5`、枠 `#E3E3E3`、角丸 4px、内側の影を持つカード風の装飾です。
 
-`make preview` の Material は、デスクトップ幅では `.md-sidebar { padding: 1.2rem 0 }` だけを持ち、背景も枠も影もありません。  
+`make servedocs` の Material は、デスクトップ幅では `.md-sidebar { padding: 1.2rem 0 }` だけを持ち、背景も枠も影もありません。  
 そこで `#TOC > .well` でカードの装飾を打ち消し、素の一覧の見た目にそろえます。
 
 `padding` は Bootstrap の 19px のまま残します。  
@@ -722,7 +729,7 @@ TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separa
 
 ### ナビゲーションの幅と切り替え
 
-Pandoc HTML と mkdocs プレビューは、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
+Pandoc HTML と mkdocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
 全体幅は 1370px です。
 
 1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
@@ -730,44 +737,46 @@ Pandoc HTML と mkdocs プレビューは、1400px 以上で左 240px、本文�
 
 ### 一致させない項目
 
-- `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、プレビューに対応物がありません。
+- `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、動的発行に対応物がありません。
 
 ## make からの起動
 
-ワークスペースのルート `makefile` に次のターゲットを追加します。  
-既存の `docs` ターゲットは変更しません。
+ワークスペースのルート `makefile` に次のターゲットを置きます。  
+静的発行の `docs` ターゲットは変更しません。
 
 | ターゲット | 内容 |
 |---|---|
-| `preview` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`PREVIEW_VARIANT` で言語と details を選ぶ (既定 `ja-details`) |
-| `preview-build` | ステージング後に `mkdocs build` を実行する。`PREVIEW_STRICT=1` のときは `--strict` を付ける。バリアントは `preview` と同じ |
-| `preview-stop` | このワークスペースのプレビュー venv で動いている `mkdocs serve` を停止する |
-| `cleanpreview` | serve を停止してから `pages/preview/` を削除する |
+| `servedocs` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`LIVEDOCS_VARIANT` で言語と details を選ぶ (既定 `ja-details`) |
+| `livedocs` | ステージング後に `mkdocs build` を実行する。`LIVEDOCS_STRICT=1` のときは `--strict` を付ける。バリアントは `servedocs` と同じ |
+| `livedocs-stage` | ステージングとアセット配置だけを実行する。`servedocs` と `livedocs` の前提 |
+| `livedocs-venv` | `livedocs/.venv` を作成し `requirements.txt` の依存を導入する。未作成のときだけ動く |
+| `stopdocs` | このワークスペースの動的発行の venv で動いている `mkdocs serve` を停止する |
+| `cleanlivedocs` | serve を停止してから `pages/livedocs/` を削除する |
 
-ルートの `make clean` は `cleandocs` を呼び、`cleandocs` と `cleanpreview` は削除の前に `preview-stop` を実行します。  
-`mkdocs serve` は `pages/preview` を監視し続けるため、Windows では削除対象が busy になり `rm -rf` が失敗します。  
-`preview-stop` はこのワークスペースのプレビュー venv をコマンド ラインに含み、かつ引数がちょうど `serve` であるプロセスとその子孫だけを止めます。  
+ルートの `make clean` は `cleandocs` を呼び、`cleandocs` と `cleanlivedocs` は削除の前に `stopdocs` を実行します。  
+`mkdocs serve` は `pages/livedocs` を監視し続けるため、Windows では削除対象が busy になり `rm -rf` が失敗します。  
+`stopdocs` はこのワークスペースの動的発行の venv をコマンド ラインに含み、かつ引数がちょうど `serve` であるプロセスとその子孫だけを止めます。  
 ポート番号や作業ディレクトリだけでは判定しません。  
-Linux では TERM のあと残っていれば KILL します。プロセス グループ全体へは送りません。`make preview` は端末とグループを共有するためです。  
+Linux では TERM のあと残っていれば KILL します。プロセス グループ全体へは送りません。`make servedocs` は端末とグループを共有するためです。  
 Windows では SIGTERM がネイティブの python や watchdog に届かず、親だけが先に死ぬとハンドルが残ります。  
 そのため `/proc/<pid>/winpid` 経由で `taskkill /T /F` し、ツリーごと終了します。  
 停止直後でもハンドルが残ることがあるため、削除は短い間隔で最大 5 回やり直します。  
-対象プロセスが無い、または停止しきれない場合も `preview-stop` 自体は失敗しません。削除できなければ `clean` が失敗します。
+対象プロセスが無い、または停止しきれない場合も `stopdocs` 自体は失敗しません。削除できなければ `clean` が失敗します。
 
-`make preview` はステージングの前に同じ停止処理を `--require-stopped` 付きで実行します。  
+`make servedocs` はステージングの前に同じ停止処理を `--require-stopped` 付きで実行します。  
 先に動いていたこのワークスペースの `mkdocs serve` が消えるまで待ち、消えてからステージングします。  
-バリアントが違うと `pages/preview/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、旧バリアントと新バリアントが混ざります。  
-止めきれなければステージングへ進まず失敗します。`preview-stop` と `cleanpreview` は、停止しきれなくても失敗しません。  
+バリアントが違うと `pages/livedocs/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、旧バリアントと新バリアントが混ざります。  
+止めきれなければステージングへ進まず失敗します。`stopdocs` と `cleanlivedocs` は、停止しきれなくても失敗しません。  
 停止とステージングはレシピ内で順に実行し、`make -j` でも同時に走らないようにします。  
-先に起動した側の `make preview` は、`mkdocs serve` が止まった時点で終了します。
+先に起動した側の `make servedocs` は、`mkdocs serve` が止まった時点で終了します。
 
-Python の依存は `framework/docsfw/mkdocs/.venv` に閉じ込め、`requirements.txt` で固定します。
+Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`requirements.txt` で固定します。
 
 ### バリアントの指定
 
 `make docs` と同じ 4 値を、起動時に 1 つだけ選びます。同時に 4 系統は出しません。
 
-| `PREVIEW_VARIANT` | 言語 | 詳細ブロック | `make docs` の出力に相当 |
+| `LIVEDOCS_VARIANT` | 言語 | 詳細ブロック | `make docs` の出力に相当 |
 |---|---|---|---|
 | `ja` | ja | 除く | `pages/ja/html/` |
 | `ja-details` (既定) | ja | 残す | `pages/ja-details/html/` |
@@ -775,18 +784,18 @@ Python の依存は `framework/docsfw/mkdocs/.venv` に閉じ込め、`requireme
 | `en-details` | en | 残す | `pages/en-details/html/` |
 
 ```bash
-make preview
-make preview PREVIEW_VARIANT=en
-make preview-build PREVIEW_VARIANT=ja
+make servedocs
+make servedocs LIVEDOCS_VARIANT=en
+make livedocs LIVEDOCS_VARIANT=ja
 ```
 
-選んだ値はステージングと `mkdocs.yml` の `extra.preview_variant` に書き、serve 中の自動ステージングも同じフィルターを使います。  
-切り替えるときは `make preview` を再起動します。後から起動した `make preview` が、先に動いていた serve を止めて置き換わります。  
+選んだ値はステージングと `mkdocs.yml` の `extra.livedocs_variant` に書き、serve 中の自動ステージングも同じフィルターを使います。  
+切り替えるときは `make servedocs` を再起動します。後から起動した `make servedocs` が、先に動いていた serve を止めて置き換わります。  
 ページ内の概要 / 詳細切替リンクは出しません。
 
-## 対応しない機能
+## 静的発行だけが持つ機能
 
-次の機能が必要な場合は `make docs` で docsfw を使用します。
+次の機能は動的発行では扱いません。必要な場合は `make docs` を使用します。
 
 - Word (docx) 出力と、docx 専用フィルター、rsvg-convert、共有ブラウザー
 - 4 バリアントの同時出力と、ページ内の概要 / 詳細切替リンク
@@ -864,7 +873,7 @@ Salt を含むページを確認する場合は `make docs` を使用してく�
 ### skinparam の挿入位置
 
 `skinparam backgroundColor transparent` とスタイル設定は、`@start<種別>` の行の直後へ挿入します。  
-この規則は docsfw の `bin/pandoc-filters/plantuml.lua` と、プレビューの `assets/docsfw-plantuml.js` で共通です。
+この規則は静的発行の `bin/pandoc-filters/plantuml.lua` と、動的発行の `assets/docsfw-plantuml.js` で共通です。
 
 もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の  
 4 種類だけから探していました。  
@@ -917,10 +926,10 @@ docsfw 側にも同じ対策を入れました。
 ### ビルドの健全性
 
 ```bash
-make preview-build
+make livedocs
 ```
 
-`PREVIEW_STRICT=1` を付けると `mkdocs build --strict` になります。
+`LIVEDOCS_STRICT=1` を付けると `mkdocs build --strict` になります。
 
 791 ファイルのステージングは約 1.4 秒、`mkdocs build` は約 53 秒、合計で約 55 秒です。  
 docsfw の `make docs` は 4 バリアントの HTML と docx を生成するため、これより桁違いに長くかかります。
@@ -929,20 +938,20 @@ docsfw の `make docs` は 4 バリアントの HTML と docx を生成するた
 
 Doxygen HTML への本文リンクは `/doxygen/` へ書き換えるため、MkDocs の文書リンク検査では扱いません。  
 その他の相対リンクは、ステージング後の論理ツリーに存在する対象だけを有効なリンクとして残します。  
-正式発行とプレビューに共通する判定規則は、[リンク解決の規則](link-resolution.md) に定めます。
+静的発行と動的発行に共通する判定規則は、[リンク解決の規則](link-resolution.md) に定めます。
 
 `README.md` と `SKILL.md` は、同じディレクトリの優先順位に従って `index.md` へ読み替えた後の論理パスへ書き換えます。  
-論理ツリー外の README、AGENTS、ソース コード、ヘッダー、ディレクトリ、未生成ファイルへの参照は、プレビューへ対象ファイルを追加せず、表示文字列と元のパスを残した非リンクの参照へ変換します。
+論理ツリー外の README、AGENTS、ソース コード、ヘッダー、ディレクトリ、未生成ファイルへの参照は、動的発行へ対象ファイルを追加せず、表示文字列と元のパスを残した非リンクの参照へ変換します。
 
-この変換により、プレビューは公開対象外のファイルを誤って公開せず、元の参照情報も保持します。  
+この変換により、動的発行は公開対象外のファイルを誤って公開せず、元の参照情報も保持します。  
 リンク切れの確認は次の strict ビルドで行えます。
 
 ```bash
-make preview-build PREVIEW_STRICT=1
+make livedocs LIVEDOCS_STRICT=1
 ```
 
 存在しない相対リンクを別のファイルへ推測して書き換えることはありません。  
-リンク先が論理ツリーに存在しない場合は、原文側の参照先を修正するか、対象ファイルを正式な発行対象へ追加してください。
+リンク先が論理ツリーに存在しない場合は、原文側の参照先を修正するか、対象ファイルを発行対象へ追加してください。
 
 見出しの id は `pymdownx.slugs.slugify` で GitHub と同じ規則にそろえています。  
 Python-Markdown の既定では非 ASCII が落ちるため、この設定がないと日本語見出しへのリンクが約 35 件切れます。
@@ -950,7 +959,7 @@ Python-Markdown の既定では非 ASCII が落ちるため、この設定がな
 ### 表示の確認
 
 ```bash
-make preview
+make servedocs
 ```
 
 次のページを確認します。
@@ -965,7 +974,7 @@ make preview
 | Doxybook2 ページ | `app/example/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
 | Doxygen HTML | `/doxygen/example_public/index.html` | `make doxy` 済みなら無変換で表示されること |
 | 依存関係レポート | `/doxygen/example_internal/dependency/index.html` | Cytoscape の HTML と付随アセットが読み込まれること |
-| 依存関係レポートの Page リンク | `/doxygen/example_internal/dependency/index.html` | 起動中の preview にあるファイル ページと関数アンカーを開くこと |
+| 依存関係レポートの Page リンク | `/doxygen/example_internal/dependency/index.html` | 配信中のファイル ページと関数アンカーを開くこと |
 | Doxygen 単一ページ リンク | `doxygen-page-url` を持つ Doxybook2 ページ | 見出し横のアイコンが `/doxygen/...` を `target="doxygen-page"` で開くこと |
 | GitHub アラート | 各 app の `coding-guideline.md` | 6 種の表示。特に `DEPRECATED` |
 | 数式 | `app/example/docs/build-design.md` | MathJax の描画 |
@@ -974,11 +983,11 @@ make preview
 
 ### クロスプラットフォーム
 
-Windows の Git Bash と Python でも `make preview-build` が通ることを確認します。  
+Windows の Git Bash と Python でも `make livedocs` が通ることを確認します。  
 ステージングは Python で実装するため、シェル スクリプトへの依存を持ちません。  
 シンボリック リンクは Windows で不安定なため使用せず、実ファイルのコピーで構成します。  
-`pages/doxygen/` もコピーせず、`make preview` の WSGI が直接読みます。Windows でもジャンクションは使いません。  
-`make preview-build` の `site/` には Doxygen ツリーを入れないため、Doxygen HTML の閲覧確認は `make preview` で行います。
+`pages/doxygen/` もコピーせず、`make servedocs` の WSGI が直接読みます。Windows でもジャンクションは使いません。  
+`make livedocs` の `site/` には Doxygen ツリーを入れないため、Doxygen HTML の閲覧確認は `make servedocs` で行います。
 
 ### docsfw への非干渉
 
@@ -1003,7 +1012,7 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 - `pymdownx.superfences` の `custom_fences` が出す要素は、Material の Mermaid 連携と競合します。クラス名を `docsfw-mermaid` に変えて回避しました。
 - GitHub アラート記法には `markdown-callouts` の `callouts` ではなく `github-callouts` が必要です。`callouts` は `NOTE:` 形式だけを扱います。
 - `attr_list` はブロック要素の属性を、段落の直後の属性だけの行から読み取ります。段落の末尾に続けて書いても効きません。
-- `nl2br` を有効にすると、キャプション段落の末尾に `<br>` が付きます。`assets/docsfw-preview.css` で非表示にしています。
+- `nl2br` を有効にすると、キャプション段落の末尾に `<br>` が付きます。`assets/docsfw-livedocs.css` で非表示にしています。
 - 見出しの id は `pymdownx.slugs.slugify` で GitHub と同じ規則にする必要があります。
 - `.venv` は docsfw の `.gitignore` に追加しました。
 - `skinparam` の挿入位置の不備は docsfw 側にも存在したため、`plantuml.lua` にも同じ対策を入れました。

@@ -18,7 +18,7 @@ Pandoc を中心に、Markdown から HTML や docx を生成するための発�
 - `bin/pandoc-filters/` - Lua、Python、Shell のフィルター群
 - `bin/prepare_puppeteer_env.sh`、`bin/chrome-wrapper.sh`、`bin/mmdc-wrapper.sh` - ブラウザー依存処理の補助
 - `styles/` - HTML、docx、Widdershins 向けのスタイルやテンプレート
-- `mkdocs/` - mkdocs 簡易プレビュー基盤 (執筆中の確認用。docx は非対応)
+- `livedocs/` - mkdocs による動的発行基盤 (docx は非対応)
 - `lib/` - draw.io などの補助資材
 - [docs/README.md](docs/README.md) - 実装メモと運用ドキュメントの入口
 
@@ -32,9 +32,12 @@ bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
 グローバルにあればそれを使い、欠けていればオンデマンドで導入します。  
 詳細は [Node コンポーネント](docs/node-components.md) を参照してください。
 
-mkdocs 簡易プレビューは、ワークスペース ルートで `make preview` を実行します。  
-設計は [mkdocs 簡易プレビュー基盤](docs/mkdocs-preview-design.md)、利用手順は [mkdocs/README.md](mkdocs/README.md) を参照してください。  
-docsfw の発行処理を変更した場合は、プレビュー側のステージングにも同じ規則が必要か確認してください。
+このフレームワークは 2 本の発行系を持ちます。  
+`bin/pub_markdown_core.sh` による静的発行と、`livedocs/` の mkdocs による動的発行です。
+
+動的発行は、ワークスペース ルートで `make servedocs` (ローカル配信) または `make livedocs` (サイト生成) を実行します。  
+設計は [動的発行基盤](docs/livedocs-design.md)、利用手順は [livedocs/README.md](livedocs/README.md) を参照してください。  
+静的発行の処理を変更した場合は、動的発行側のステージングにも同じ規則が必要か確認してください。
 
 ## Windows でのコマンド実行
 

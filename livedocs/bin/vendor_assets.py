@@ -5,9 +5,9 @@
 
 - ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
 - ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
-- ``mkdocs/assets/`` 配下の自前スクリプトとスタイル
+- ``livedocs/assets/`` 配下の自前スクリプトとスタイル
 - Doxygen 単一ページ リンク用の SVG と theme 上書き
-- ``mkdocs/mkdocs.yml.in`` から生成した ``pages/preview/mkdocs.yml``
+- ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
 
 いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
 必須コンポーネントが無ければオンデマンドで導入します。
@@ -26,9 +26,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_preview_docs import (  # noqa: E402
-    DEFAULT_PREVIEW_VARIANT,
-    parse_preview_variant,
+from stage_livedocs import (  # noqa: E402
+    DEFAULT_LIVEDOCS_VARIANT,
+    parse_livedocs_variant,
     write_if_changed,
 )
 
@@ -49,7 +49,7 @@ OWN_ASSETS = (
     "docsfw-mermaid.js",
     "docsfw-mathjax.js",
     "docsfw-responsive-nav.js",
-    "docsfw-preview.css",
+    "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
     "docsfw-doxygen-link.css",
 )
@@ -135,10 +135,10 @@ def vendor_doxygen_icon(assets_dir):
     return 1 if copy_if_changed(DOXYGEN_ICON_SRC, dst) else 0
 
 
-def vendor_theme(preview_dir):
-    """Material の custom_dir 上書きを ``pages/preview/theme/`` へコピーする。"""
+def vendor_theme(livedocs_dir):
+    """Material の custom_dir 上書きを ``pages/livedocs/theme/`` へコピーする。"""
     src_dir = os.path.join(MKDOCS_DIR, "theme")
-    dst_dir = os.path.join(preview_dir, "theme")
+    dst_dir = os.path.join(livedocs_dir, "theme")
     if not os.path.isdir(src_dir):
         return 0
     copied = 0
@@ -163,9 +163,9 @@ def has_nav_files(docs_dir):
     return False
 
 
-def generate_mkdocs_yml(preview_dir, nav_generated, variant=DEFAULT_PREVIEW_VARIANT):
-    """``mkdocs.yml.in`` から ``pages/preview/mkdocs.yml`` を生成する。"""
-    lang, _details, variant_name = parse_preview_variant(variant)
+def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VARIANT):
+    """``mkdocs.yml.in`` から ``pages/livedocs/mkdocs.yml`` を生成する。"""
+    lang, _details, variant_name = parse_livedocs_variant(variant)
     template_path = os.path.join(MKDOCS_DIR, "mkdocs.yml.in")
     with open(template_path, "r", encoding="utf-8") as handle:
         template = handle.read()
@@ -185,42 +185,42 @@ def generate_mkdocs_yml(preview_dir, nav_generated, variant=DEFAULT_PREVIEW_VARI
             lines.append(line)
 
     text = "\n".join(lines)
-    text = text.replace("@PREVIEW_VARIANT@", variant_name)
-    text = text.replace("@PREVIEW_THEME_LANGUAGE@", lang)
-    return write_if_changed(os.path.join(preview_dir, "mkdocs.yml"), text)
+    text = text.replace("@LIVEDOCS_VARIANT@", variant_name)
+    text = text.replace("@LIVEDOCS_THEME_LANGUAGE@", lang)
+    return write_if_changed(os.path.join(livedocs_dir, "mkdocs.yml"), text)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="mkdocs プレビューのアセットと設定を配置する")
     parser.add_argument("--workspaceFolder", dest="workspace", required=True)
-    parser.add_argument("--previewDir", dest="preview_dir", default=None,
-                        help="既定は <workspaceFolder>/pages/preview")
+    parser.add_argument("--livedocsDir", dest="livedocs_dir", default=None,
+                        help="既定は <workspaceFolder>/pages/livedocs")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
         "--variant",
-        default=DEFAULT_PREVIEW_VARIANT,
+        default=DEFAULT_LIVEDOCS_VARIANT,
         help="ja / ja-details / en / en-details (default: ja-details)",
     )
     args = parser.parse_args(argv)
 
     workspace = os.path.abspath(args.workspace)
-    preview_dir = os.path.abspath(args.preview_dir or os.path.join(workspace, "pages", "preview"))
-    assets_dir = os.path.join(preview_dir, "src", "assets")
+    livedocs_dir = os.path.abspath(args.livedocs_dir or os.path.join(workspace, "pages", "livedocs"))
+    assets_dir = os.path.join(livedocs_dir, "src", "assets")
 
     try:
-        _lang, _details, variant = parse_preview_variant(args.variant)
+        _lang, _details, variant = parse_livedocs_variant(args.variant)
         resolved = resolve_node_components()
         copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""))
         copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
         copied += vendor_doxygen_icon(assets_dir)
-        copied += vendor_theme(preview_dir)
+        copied += vendor_theme(livedocs_dir)
     except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)
         return 1
 
-    nav_generated = has_nav_files(os.path.join(preview_dir, "src"))
-    changed = generate_mkdocs_yml(preview_dir, nav_generated, variant=variant)
+    nav_generated = has_nav_files(os.path.join(livedocs_dir, "src"))
+    changed = generate_mkdocs_yml(livedocs_dir, nav_generated, variant=variant)
 
     if not args.quiet:
         print("vendored: {} assets, mkdocs.yml {}".format(copied, "updated" if changed else "unchanged"))

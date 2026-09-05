@@ -18,8 +18,8 @@ docsfw の ``bin/pub_markdown_core.sh`` が発行時に行う入力側の処理�
 
 使用方法:
 
-    python3 stage_preview_docs.py --workspaceFolder=/path/to/workspace
-    python3 stage_preview_docs.py --workspaceFolder=/path/to/workspace --variant en
+    python3 stage_livedocs.py --workspaceFolder=/path/to/workspace
+    python3 stage_livedocs.py --workspaceFolder=/path/to/workspace --variant en
 """
 
 import argparse
@@ -39,8 +39,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-DEFAULT_PREVIEW_VARIANT = "ja-details"
-PREVIEW_VARIANTS = ("ja", "ja-details", "en", "en-details")
+DEFAULT_LIVEDOCS_VARIANT = "ja-details"
+LIVEDOCS_VARIANTS = ("ja", "ja-details", "en", "en-details")
 
 MARKDOWN_EXTENSIONS = (".md", ".markdown")
 ASSET_EXTENSIONS = (
@@ -56,7 +56,7 @@ VENDORED_FILES = (
     "assets/docsfw-mermaid.js",
     "assets/docsfw-mathjax.js",
     "assets/docsfw-responsive-nav.js",
-    "assets/docsfw-preview.css",
+    "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-doxygen-link.css",
     "assets/docsfw-doxygen-icon.svg",
@@ -85,17 +85,17 @@ _DOXYGEN_REL_RE = re.compile(r"(?:\.\./)+doxygen/")
 DOCUMENT_LINK_EXTENSIONS = (".md", ".markdown", ".rmd", ".tmd", ".rst")
 
 
-def parse_preview_variant(variant):
+def parse_livedocs_variant(variant):
     """バリアント名を ``(lang, details, variant)`` へ分解する。
 
     ``ja`` / ``en`` は詳細ブロックを除き、``*-details`` は残します。
     ``make docs`` の出力ディレクトリ名と同じ 4 値だけを受け付けます。
     """
-    name = (variant or DEFAULT_PREVIEW_VARIANT).strip()
-    if name not in PREVIEW_VARIANTS:
+    name = (variant or DEFAULT_LIVEDOCS_VARIANT).strip()
+    if name not in LIVEDOCS_VARIANTS:
         raise ValueError(
-            "unknown preview variant: {} (expected {})".format(
-                name, ", ".join(PREVIEW_VARIANTS)
+            "unknown livedocs variant: {} (expected {})".format(
+                name, ", ".join(LIVEDOCS_VARIANTS)
             )
         )
     if name.endswith("-details"):
@@ -436,7 +436,7 @@ def rewrite_links(text, document, mapper, real_to_staged):
     return _apply_outside_fences(text, lambda line: _LINK_RE.sub(replace, line))
 
 
-def rewrite_doxygen_preview_links(text):
+def rewrite_doxygen_livedocs_links(text):
     """docsfw 発行レイアウト向けの Doxygen 相対リンクを ``/doxygen/`` へ写す。
 
     ``../../../doxygen/cplat_public/index.html`` や生 HTML の
@@ -811,7 +811,7 @@ class StageIndex:
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
-                      variant=DEFAULT_PREVIEW_VARIANT):
+                      variant=DEFAULT_LIVEDOCS_VARIANT):
     """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。"""
     config = parse_config(config_path)
     md_root_name = config.get("mdRoot") or "docs"
@@ -877,7 +877,7 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
 def _render_document(document, container):
     """1 ドキュメント分の変換パイプラインを実行し、書き出す内容を返す。"""
     body = rewrite_links(document.body, document, container.mapper, container.real_to_staged)
-    body = rewrite_doxygen_preview_links(body)
+    body = rewrite_doxygen_livedocs_links(body)
     body = expand_toc_commands(body, container.index, document.staged_rel)
     body = strip_collapsible_list_fences(body)
     body = convert_deprecated_alerts(body)
@@ -1017,7 +1017,7 @@ def stage_index(container, out_dir, quiet=False):
 
 
 def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
-          variant=DEFAULT_PREVIEW_VARIANT):
+          variant=DEFAULT_LIVEDOCS_VARIANT):
     """収集から書き出しまでを実行する (フル ステージング)。
 
     :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
@@ -1033,24 +1033,24 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="mkdocs プレビュー用に Markdown をステージングする")
     parser.add_argument("--workspaceFolder", dest="workspace", required=True)
     parser.add_argument("--out", dest="out", default=None,
-                        help="ステージング先。既定は <workspaceFolder>/pages/preview/src")
+                        help="ステージング先。既定は <workspaceFolder>/pages/livedocs/src")
     parser.add_argument("--configFile", dest="config", default=None,
                         help="既定は <workspaceFolder>/.vscode/pub_markdown.config.yaml")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
         "--variant",
-        default=DEFAULT_PREVIEW_VARIANT,
+        default=DEFAULT_LIVEDOCS_VARIANT,
         help="ja / ja-details / en / en-details (default: ja-details)",
     )
     args = parser.parse_args(argv)
 
     workspace = os.path.abspath(args.workspace)
     config_path = args.config or os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
-    out_dir = args.out or os.path.join(workspace, "pages", "preview", "src")
+    out_dir = args.out or os.path.join(workspace, "pages", "livedocs", "src")
     os.makedirs(out_dir, exist_ok=True)
 
     try:
-        lang, details, variant = parse_preview_variant(args.variant)
+        lang, details, variant = parse_livedocs_variant(args.variant)
         stage(
             workspace,
             os.path.abspath(out_dir),

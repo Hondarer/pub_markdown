@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mkdocs プレビューのステージング処理に関する単体テスト。"""
+"""mkdocs による動的発行のステージング処理に関する単体テスト。"""
 
 import os
 import sys
@@ -9,7 +9,7 @@ import unittest
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
-from stage_preview_docs import (  # noqa: E402
+from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
     build_front_matter,

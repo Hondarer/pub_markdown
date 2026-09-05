@@ -9,34 +9,34 @@ import unittest
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
-from preview_doxygen_hook import (  # noqa: E402
-    dependency_page_template_to_preview,
-    doxygen_page_url_to_preview,
+from livedocs_doxygen_hook import (  # noqa: E402
+    dependency_page_template_to_livedocs,
+    doxygen_page_url_to_livedocs,
     find_doxygen_root,
     guess_doxygen_content_type,
     is_doxygen_link_enabled,
     is_dependency_data_js_url,
     is_doxygen_url_path,
     resolve_doxygen_file,
-    rewrite_dependency_data_for_preview,
+    rewrite_dependency_data_for_livedocs,
     serve_doxygen,
     url_path_to_rel_parts,
 )
-from stage_preview_docs import rewrite_doxygen_preview_links  # noqa: E402
+from stage_livedocs import rewrite_doxygen_livedocs_links  # noqa: E402
 
 
-class RewriteDoxygenPreviewLinksTest(unittest.TestCase):
+class RewriteDoxygenLivedocsLinksTest(unittest.TestCase):
     def test_markdown_relative_link(self):
         text = "[cplat](../../../doxygen/cplat_public/index.html)"
         self.assertEqual(
-            rewrite_doxygen_preview_links(text),
+            rewrite_doxygen_livedocs_links(text),
             "[cplat](/doxygen/cplat_public/index.html)",
         )
 
     def test_html_href_and_anchor(self):
         text = '<a href="../../../../doxygen/porter_internal/dependency/index.html#top">'
         self.assertEqual(
-            rewrite_doxygen_preview_links(text),
+            rewrite_doxygen_livedocs_links(text),
             '<a href="/doxygen/porter_internal/dependency/index.html#top">',
         )
 
@@ -49,44 +49,44 @@ class RewriteDoxygenPreviewLinksTest(unittest.TestCase):
                 "[usage](../../../framework/doxyfw/docs/makefile-usage.md)",
             ]
         )
-        self.assertEqual(rewrite_doxygen_preview_links(text), text)
+        self.assertEqual(rewrite_doxygen_livedocs_links(text), text)
 
 
 class DoxygenPageUrlTest(unittest.TestCase):
     def test_workspace_relative(self):
         self.assertEqual(
-            doxygen_page_url_to_preview("pages/doxygen/calc_public/calc_8h.html"),
+            doxygen_page_url_to_livedocs("pages/doxygen/calc_public/calc_8h.html"),
             "/doxygen/calc_public/calc_8h.html",
         )
 
-    def test_already_preview_url(self):
+    def test_already_livedocs_url(self):
         self.assertEqual(
-            doxygen_page_url_to_preview("/doxygen/calc_public/calc_8h.html"),
+            doxygen_page_url_to_livedocs("/doxygen/calc_public/calc_8h.html"),
             "/doxygen/calc_public/calc_8h.html",
         )
 
     def test_rejects_unrelated(self):
-        self.assertIsNone(doxygen_page_url_to_preview("docs/README.md"))
-        self.assertIsNone(doxygen_page_url_to_preview(""))
-        self.assertIsNone(doxygen_page_url_to_preview(None))
+        self.assertIsNone(doxygen_page_url_to_livedocs("docs/README.md"))
+        self.assertIsNone(doxygen_page_url_to_livedocs(""))
+        self.assertIsNone(doxygen_page_url_to_livedocs(None))
 
     def test_windows_separators(self):
         self.assertEqual(
-            doxygen_page_url_to_preview("pages\\doxygen\\calc_public\\calc_8h.html"),
+            doxygen_page_url_to_livedocs("pages\\doxygen\\calc_public\\calc_8h.html"),
             "/doxygen/calc_public/calc_8h.html",
         )
 
 
-class DependencyPagePreviewUrlTest(unittest.TestCase):
+class DependencyPageLivedocsUrlTest(unittest.TestCase):
     def test_converts_published_template(self):
         self.assertEqual(
-            dependency_page_template_to_preview(
+            dependency_page_template_to_livedocs(
                 "../../../{variant}/html/c-platform/doxybook2_internal"
             ),
             "/c-platform/doxybook2_internal",
         )
         self.assertEqual(
-            dependency_page_template_to_preview(
+            dependency_page_template_to_livedocs(
                 "../../../{variant}/html/日本語/app docs/"
             ),
             "/日本語/app docs",
@@ -100,15 +100,15 @@ class DependencyPagePreviewUrlTest(unittest.TestCase):
             "../../../{variant}/html/calc//doxybook2",
             "../../../{variant}/html/calc/doxybook2?x=1",
         ):
-            self.assertIsNone(dependency_page_template_to_preview(value))
+            self.assertIsNone(dependency_page_template_to_livedocs(value))
 
     def test_rewrites_dependency_data_js(self):
         source = (
             'window.DoxyfwDependencyData = {"pageUrlTemplate": '
             '"../../../{variant}/html/calc/doxybook2", "functions": []};\n'
         ).encode("utf-8")
-        rewritten = rewrite_dependency_data_for_preview(source).decode("utf-8")
-        self.assertIn('"previewPageUrlTemplate": "/calc/doxybook2"', rewritten)
+        rewritten = rewrite_dependency_data_for_livedocs(source).decode("utf-8")
+        self.assertIn('"livedocsPageUrlTemplate": "/calc/doxybook2"', rewritten)
         self.assertIn('"pageUrlTemplate": "../../../{variant}/html/calc/doxybook2"', rewritten)
 
     def test_keeps_malformed_and_unrecognized_data(self):
@@ -119,7 +119,7 @@ class DependencyPagePreviewUrlTest(unittest.TestCase):
             b"\xff",
         )
         for source in samples:
-            self.assertEqual(rewrite_dependency_data_for_preview(source), source)
+            self.assertEqual(rewrite_dependency_data_for_livedocs(source), source)
 
     def test_identifies_dependency_data_url_only(self):
         self.assertTrue(
@@ -266,7 +266,7 @@ class ServeDoxygenTest(unittest.TestCase):
             self.assertEqual(captured["status"], "200 OK")
             self.assertEqual(captured["headers"]["Content-Type"], "application/javascript")
             self.assertEqual(int(captured["headers"]["Content-Length"]), len(body))
-            self.assertIn(b'"previewPageUrlTemplate": "/calc/doxybook2_internal"', body)
+            self.assertIn(b'"livedocsPageUrlTemplate": "/calc/doxybook2_internal"', body)
 
     def test_redirects_directory_and_root(self):
         with tempfile.TemporaryDirectory() as tmp:

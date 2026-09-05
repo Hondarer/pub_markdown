@@ -7,7 +7,7 @@ mkdocs 1.6.1 の LiveReloadServer は、再生成中の通常 HTTP 要求を待�
 その版を削除しない。
 
 ``/livereload/`` と ``/doxygen/`` は先に登録された WSGI アプリへ委譲する。
-設計は docs/mkdocs-preview-design.md を参照。
+設計は docs/livedocs-design.md を参照。
 """
 
 import logging
@@ -18,7 +18,7 @@ import threading
 
 from mkdocs.livereload import LiveReloadServer
 
-log = logging.getLogger("mkdocs.preview_versioned")
+log = logging.getLogger("mkdocs.livedocs_versioned")
 
 
 class _Version:
@@ -103,7 +103,7 @@ class _VersionStore:
             except FileNotFoundError:
                 pass
             except OSError as error:
-                log.warning("使用済みプレビュー版を削除できませんでした: %s: %s", path, error)
+                log.warning("使用済みの版を削除できませんでした: %s: %s", path, error)
 
 
 class _SnapshotServer:
@@ -198,7 +198,7 @@ def _make_versioned_app(server, store, delegated_app):
 
 def _make_versioned_builder(server, store, config, builder):
     def versioned_builder():
-        candidate = tempfile.mkdtemp(prefix="mkdocs_preview_")
+        candidate = tempfile.mkdtemp(prefix="mkdocs_livedocs_")
         original_site_dir = config.site_dir
         try:
             config.site_dir = candidate

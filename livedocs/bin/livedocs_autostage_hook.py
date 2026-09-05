@@ -8,12 +8,12 @@ import threading
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_preview_docs import (  # noqa: E402
-    DEFAULT_PREVIEW_VARIANT,
+from stage_livedocs import (  # noqa: E402
+    DEFAULT_LIVEDOCS_VARIANT,
     build_stage_index,
     parse_config,
     parse_merge_subfolder_docs,
-    parse_preview_variant,
+    parse_livedocs_variant,
     stage_index,
     stage_single,
 )
@@ -22,7 +22,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-log = logging.getLogger("mkdocs.preview_autostage")
+log = logging.getLogger("mkdocs.livedocs_autostage")
 
 _DEBOUNCE_SECONDS = 0.4
 _INDEX_RESTAGE_DELAY_SECONDS = 120.0
@@ -31,8 +31,8 @@ _MARKDOWN_EXTENSIONS = (".md", ".markdown")
 
 def _workspace_and_config(config):
     """``mkdocs.yml`` の位置からワークスペース ルートを逆算する。"""
-    preview_dir = os.path.dirname(os.path.abspath(config["config_file_path"]))
-    workspace = os.path.dirname(os.path.dirname(preview_dir))
+    livedocs_dir = os.path.dirname(os.path.abspath(config["config_file_path"]))
+    workspace = os.path.dirname(os.path.dirname(livedocs_dir))
     config_path = os.path.join(workspace, ".vscode", "pub_markdown.config.yaml")
     return workspace, config_path
 
@@ -47,11 +47,11 @@ def _source_roots(workspace, config_path):
     return [root for root in roots if os.path.isdir(root)]
 
 
-def _preview_lang_details(config):
+def _livedocs_lang_details(config):
     """生成済み設定から言語、details、バリアント名を取得する。"""
     extra = config.get("extra") or {}
-    variant = extra.get("preview_variant") or DEFAULT_PREVIEW_VARIANT
-    lang, details, name = parse_preview_variant(variant)
+    variant = extra.get("livedocs_variant") or DEFAULT_LIVEDOCS_VARIANT
+    lang, details, name = parse_livedocs_variant(variant)
     return lang, details, name
 
 
@@ -403,13 +403,13 @@ def on_serve(server, config, builder=None, **kwargs):
 
     workspace, config_path = _workspace_and_config(config)
     out_dir = config["docs_dir"]
-    lang, details, variant = _preview_lang_details(config)
+    lang, details, variant = _livedocs_lang_details(config)
 
     stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant)
     stager.set_rebuild_request(lambda: _request_server_rebuild(server))
     handler = _make_handler(stager)
 
-    # preview_versioned_hook が先に設定した builder を包む。この関数から
+    # livedocs_versioned_hook が先に設定した builder を包む。この関数から
     # 戻った時点は、候補サイトの生成だけでなく完成版の公開も完了している。
     if server.builder is not None:
         server.builder = stager.wrap_builder(server.builder)

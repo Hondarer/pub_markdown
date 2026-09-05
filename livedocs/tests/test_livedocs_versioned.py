@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""再生成中も完成済みのプレビュー版を配信する hook のテスト。"""
+"""再生成中も完成済みの版を配信する hook のテスト。"""
 
 import os
 import sys
@@ -12,7 +12,7 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from mkdocs.livereload import LiveReloadServer  # noqa: E402
-from preview_versioned_hook import (  # noqa: E402
+from livedocs_versioned_hook import (  # noqa: E402
     _VersionStore,
     _make_versioned_app,
     _make_versioned_builder,
@@ -43,7 +43,7 @@ def _request(app, path):
     return captured, body
 
 
-class PreviewVersionedHookTest(unittest.TestCase):
+class LivedocsVersionedHookTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
         self.initial = os.path.join(self._tmp.name, "initial")

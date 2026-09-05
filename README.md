@@ -1,6 +1,7 @@
 # pub_markdown
 
-Pandoc を使用して、Markdown から HTML と docx を生成します。
+Markdown からドキュメントを発行するフレームワークです。  
+Pandoc による静的発行と、mkdocs による動的発行の 2 本の発行系を持ちます。
 
 ## 作業時の入口
 
@@ -18,6 +19,7 @@ Pandoc を使用して、Markdown から HTML と docx を生成します。
 - [PlantUML](https://marketplace.visualstudio.com/items?itemName=jebbs.plantuml)
 - [pandoc](https://github.com/jgm/pandoc)
 - node.js
+- Python 3.9 以降 (動的発行に使用します)
 
 ### オプション
 
@@ -36,7 +38,19 @@ Pandoc を使用して、Markdown から HTML と docx を生成します。
 - node.exe へ PATH を設定してください。Linux では nodejs モジュール パッケージに含まれます。
 - Node.js モジュールは発行時に解決します。グローバルにあればそれを使い、無ければオンデマンドで導入します。詳細は [Node.js モジュールの設定](bin/how_to_setup_node_modules.md) と [Node コンポーネント](docs/node-components.md) を参照してください。
 
-### Markdown の発行方法
+### 静的発行と動的発行
+
+| | 静的発行 | 動的発行 |
+|---|---|---|
+| 実装 | `bin/pub_markdown_core.sh` (Pandoc) | `livedocs/` (mkdocs) |
+| 成果物 | HTML + docx | HTML |
+| 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
+| バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 1 つを選んで出力 |
+| 図 | ビルド時に画像化 | ブラウザー上でレンダリング |
+
+動的発行の利用手順は [livedocs/README.md](livedocs/README.md)、設計は [動的発行基盤](docs/livedocs-design.md) を参照してください。
+
+### 静的発行の実行方法
 
 - Visual Studio Code でタスク `exec pandoc` (Ctrl + Shift + B) を実行してください。
 - 現在開いている Markdown だけを発行する場合は、タスク `exec pandoc (current file)` を実行してください。

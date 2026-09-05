@@ -11,14 +11,14 @@ docsfw が実行時に使う npm パッケージと、その解決手順を示�
 | パッケージ | 役割 | 検出 |
 |---|---|---|
 | `@mermaid-js/mermaid-cli` | Mermaid を SVG へ変換する `mmdc` | 実行ファイル |
-| `mermaid` | HTML と mkdocs プレビューへ同梱する `mermaid.min.js` | `@mermaid-js/mermaid-cli` の推移依存。直下または mermaid-cli 配下 |
+| `mermaid` | HTML と動的発行へ同梱する `mermaid.min.js` | `@mermaid-js/mermaid-cli` の推移依存。直下または mermaid-cli 配下 |
 | `widdershins` | OpenAPI を Markdown へ変換する CLI | 実行ファイル |
 | `puppeteer` | 共有ブラウザー、`rsvg-convert.js`、`mmdc-reuse.js` | `require('puppeteer')` |
 | `puppeteer-core` | `puppeteer` が利用する中核 | モジュール |
 | `minimist` | 自前 Node スクリプトの引数解析 | モジュール |
 | `sharp` | SVG スクリーンショットの再エンコード | モジュール |
 | `minisearch` | HTML 検索インデックスと UMD バンドル | モジュールと `dist/umd` のファイル |
-| `@plantuml/core` | mkdocs プレビューのブラウザー上 PlantUML | モジュール |
+| `@plantuml/core` | 動的発行のブラウザー上 PlantUML | モジュール |
 
 `mermaid` は `package.json` の直接依存ではありません。  
 `@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使います。

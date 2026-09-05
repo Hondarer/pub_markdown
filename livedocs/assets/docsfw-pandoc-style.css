@@ -1,4 +1,4 @@
-/* mkdocs 簡易プレビュー基盤の追加スタイル。
+/* mkdocs による動的発行の追加スタイル。
    pandoc 発行版 (framework/docsfw/styles/html/html-style.css) に見た目を
    近づけるための、本文タイポグラフィと配色の上書き。
    ライト/ダーク切替、ナビゲーション、検索といった Material の機能そのものは
@@ -294,7 +294,7 @@ body {
 
 /* admonition の寸法は、Material の rem 指定を 1rem = 20px として px へ換算した
    固定値にする。Material は @media (min-width: 100em) で root を 137.5% へ
-   上げるため、rem のままでは 1600px 以上の画面でプレビューだけが約 10% 大きく
+   上げるため、rem のままでは 1600px 以上の画面で動的発行だけが約 10% 大きく
    なり、pandoc 発行版 (styles/html/html-style.css) と一致しない。
    同じ値を両側へ置く。 */
 
@@ -654,7 +654,7 @@ body {
 
 /* github-callouts は CAUTION を danger クラスへ写すため、caution ではなく
    danger を対象にする。Material に無い important と deprecated の定義は
-   docsfw-preview.css にあり、色だけをここで供給する。 */
+   docsfw-livedocs.css にあり、色だけをここで供給する。 */
 
 .md-typeset .admonition.note,
 .md-typeset details.note {

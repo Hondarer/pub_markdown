@@ -1,23 +1,23 @@
 #!/bin/bash
 # このワークスペースの mkdocs serve を停止する。
-# ルート makefile の preview / preview-stop / cleandocs / cleanpreview から呼ぶ。
-# make preview は起動前に --require-stopped 付きでこれを呼び、
+# ルート makefile の servedocs / stopdocs / cleandocs / cleanlivedocs から呼ぶ。
+# make servedocs は起動前に --require-stopped 付きでこれを呼び、
 # 先に動いていた serve が消えてからステージングする。
-# preview-stop / clean は停止しきれなくても失敗しない。
+# stopdocs / clean は停止しきれなくても失敗しない。
 #
-# 対象は、プレビュー venv のパスをコマンドラインに含み、かつ引数が
+# 対象は、動的発行の venv のパスをコマンドラインに含み、かつ引数が
 # ちょうど serve であるプロセスとその子孫に限る。
 # ポート番号や作業ディレクトリだけでは判定しない。
 #
 # Windows では SIGTERM がネイティブ子プロセスに届かず、親だけが先に死ぬと
-# pages/preview のハンドルが残る。taskkill /T /F でツリーごと終了する。
+# pages/livedocs のハンドルが残る。taskkill /T /F でツリーごと終了する。
 # see: https://cygwin.com/cygwin-ug-net/proc.html
 # see: https://learn.microsoft.com/windows-server/administration/windows-commands/taskkill
 
 set -u
 
 usage() {
-    echo "Usage: $0 --venv <preview-venv-dir> [--require-stopped]" >&2
+    echo "Usage: $0 --venv <livedocs-venv-dir> [--require-stopped]" >&2
     exit 2
 }
 
@@ -106,7 +106,7 @@ ppid_of() {
 
 # /proc/<pid>/cmdline の NUL 区切り引数を見て、venv パスと serve サブコマンドを確認する。
 # スクリプト名に serve が含まれていても、引数そのものが serve でなければ一致しない。
-is_preview_serve() {
+is_livedocs_serve() {
     local pid="$1"
     local arg
     local has_venv=0
@@ -142,14 +142,14 @@ list_serve_pids() {
         [ -d "$dir" ] || continue
         pid=${dir#/proc/}
         [ "$pid" = "$$" ] && continue
-        if is_preview_serve "$pid"; then
+        if is_livedocs_serve "$pid"; then
             printf '%s\n' "$pid"
         fi
     done
 }
 
 # 指定 PID の子孫を PPid で辿る。プロセス グループ全体へは送らない。
-# make preview は端末とグループを共有するため。
+# make servedocs は端末とグループを共有するため。
 list_descendants() {
     local root="$1"
     local dir pid ppid
@@ -241,7 +241,7 @@ fi
 
 tree_pids=()
 for pid in "${serve_pids[@]}"; do
-    printf 'INFO: Stopping preview mkdocs serve (pid %s)\n' "$pid"
+    printf 'INFO: Stopping livedocs mkdocs serve (pid %s)\n' "$pid"
     while IFS= read -r child; do
         [ -n "$child" ] || continue
         tree_pids+=("$child")
@@ -268,7 +268,7 @@ fi
 if ! wait_until_gone "${tree_pids[@]}"; then
     for pid in "${tree_pids[@]}"; do
         if pid_alive "$pid"; then
-            printf 'WARNING: preview mkdocs serve が残っています (pid %s)\n' "$pid" >&2
+            printf 'WARNING: livedocs mkdocs serve が残っています (pid %s)\n' "$pid" >&2
         fi
     done
 fi
@@ -280,10 +280,10 @@ sleep 0.5
 mapfile -t leftover_pids < <(list_serve_pids | unique_pids)
 if [ "${#leftover_pids[@]}" -gt 0 ]; then
     for pid in "${leftover_pids[@]}"; do
-        printf 'WARNING: preview mkdocs serve が残っています (pid %s)\n' "$pid" >&2
+        printf 'WARNING: livedocs mkdocs serve が残っています (pid %s)\n' "$pid" >&2
     done
     if [ "$require_stopped" -eq 1 ]; then
-        printf 'ERROR: 既存の mkdocs serve を止めきれなかったため、プレビューを起動しません\n' >&2
+        printf 'ERROR: 既存の mkdocs serve を止めきれなかったため、動的発行の配信を起動しません\n' >&2
         exit 1
     fi
 fi

@@ -1,14 +1,14 @@
 # 見出し書式
 
-この文書は、`make docs` (pandoc 発行版) と `make preview` (mkdocs プレビュー) が共通で使用する見出しと本文の文字書式を定めます。  
+この文書は、静的発行 (`make docs`) と動的発行 (`make livedocs` / `make servedocs`) が共通で使用する見出しと本文の文字書式を定めます。  
 2 つの出力は変換経路もテーマも異なりますが、同じ Markdown を読んだときの見え方は一致させます。
 
 ## 適用範囲
 
 対象は HTML 出力の 2 系統です。
 
-- pandoc 発行版 (`bin/pub_markdown_core.sh` が生成する HTML)
-- mkdocs プレビュー (`make preview` が生成する HTML)
+- 静的発行 (`bin/pub_markdown_core.sh` が生成する HTML)
+- 動的発行 (mkdocs が生成する HTML)
 
 docx 出力は対象外です。  
 Word の段落スタイルは `styles/docx/docx-template.dotx` が持ち、印刷媒体の慣習に従うため、この文書の規則を適用しません。
@@ -53,7 +53,7 @@ H1 から H4 が 19px、H5 と H6 が 17px です。
 2 つの出力では、Markdown の見出しレベルと HTML のタグ名の対応が異なります。  
 書式を HTML のタグ名で定めると、この差によって Markdown 上の見え方がずれます。
 
-### pandoc 発行版
+### 静的発行
 
 pandoc は `--shift-heading-level-by=-1` を使用します。  
 Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H1>$title$</H1>` へ移り、残りの見出しは 1 段浅い HTML タグになります。
@@ -70,7 +70,7 @@ Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H
 ページ見出しと Markdown の H2 は、どちらも `h1` として出力されます。  
 両者は書式が同じであるため、`h1` に対する 1 つの指定で足ります。
 
-### mkdocs プレビュー
+### 動的発行
 
 mkdocs は H1 をページ見出しとして本文に残すため、Markdown の H1 から H6 が HTML の `h1` から `h6` にそのまま対応します。  
 段のずれはありません。
@@ -82,8 +82,8 @@ mkdocs は H1 をページ見出しとして本文に残すため、Markdown の
 
 | 出力 | ファイル |
 |---|---|
-| pandoc 発行版 | `styles/html/html-style.css` |
-| mkdocs プレビュー | `mkdocs/assets/docsfw-pandoc-style.css` |
+| 静的発行 | `styles/html/html-style.css` |
+| 動的発行 | `livedocs/assets/docsfw-pandoc-style.css` |
 
 pandoc 側は、本文色を `body` に指定し、見出しは HTML タグを 1 段浅く読み替えて指定します。  
 `line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。
@@ -107,7 +107,7 @@ mkdocs 側では、次の Material 既定を打ち消す必要があります。
 採番の実装は 2 つの出力で異なりますが、表示される番号は一致します。
 
 - pandoc は `-N` (`--number-sections`) が `<span class="header-section-number">` を実体として出力します。
-- mkdocs は `mkdocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` で表示します。
+- mkdocs は `livedocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` で表示します。
 
 いずれも Markdown の H2 から採番し、H1 は対象外です。  
 番号は見出しの `color` を継承するため、色を変更しても追随します。
@@ -116,4 +116,4 @@ mkdocs 側では、次の Material 既定を打ち消す必要があります。
 
 - 見出し内のリンクの色。pandoc は Bootstrap の `h1 a { color: #333 }`、mkdocs は `.md-typeset a` の `#4183C4` です。
 - 見出しのアンカー。pandoc は `a.anchor`、mkdocs は Material の `.headerlink` で、構造が異なります。
-- ダーク モードの実際の色。pandoc 発行版はライト固定です。mkdocs は Material の変数を通して切り替わります。
+- ダーク モードの実際の色。静的発行はライト固定です。mkdocs は Material の変数を通して切り替わります。

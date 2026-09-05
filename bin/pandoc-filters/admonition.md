@@ -54,7 +54,7 @@ BlockQuote
 Pandoc の `Para` は属性を持てないため、見出しの段落は `RawBlock` で組み立てています。
 
 クラス名とマークアップは mkdocs-material にそろえています。  
-`make preview` が使う `github-callouts` は `CAUTION` を `danger` クラスへ写すため、`CAUTION` のクラス名だけタイプ名と異なります。
+動的発行が使う `github-callouts` は `CAUTION` を `danger` クラスへ写すため、`CAUTION` のクラス名だけタイプ名と異なります。
 
 CSS は `styles/html/html-style.css` に定義します。  
 形状も mkdocs-material に合わせ、全周の枠、角丸、見出し帯、SVG アイコンで表現します。  
@@ -71,7 +71,7 @@ CSS は `styles/html/html-style.css` に定義します。
 | DEPRECATED | `deprecated` | Deprecated | #6a737d (灰) | #f0f1f2 |
 
 見出し帯の色は `color-mix()` で基準色から導き、表の値は非対応環境向けのフォールバックです。  
-寸法と、mkdocs プレビューとの一致のさせ方は [mkdocs 簡易プレビュー基盤](../../docs/mkdocs-preview-design.md) の「admonition の実装」を参照してください。
+寸法と、動的発行との一致のさせ方は [動的発行基盤](../../docs/livedocs-design.md) の「admonition の実装」を参照してください。
 
 HTML と docx で見出しの文字列は異なります。  
 HTML は絵文字なし、docx は絵文字付きです。

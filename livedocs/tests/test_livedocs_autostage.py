@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""mkdocs プレビューの自動再同期に関する単体テスト。"""
+"""mkdocs による動的発行の自動再同期に関する単体テスト。"""
 
 import os
 import sys
@@ -10,7 +10,7 @@ from unittest import mock
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
-import preview_autostage_hook as autostage  # noqa: E402
+import livedocs_autostage_hook as autostage  # noqa: E402
 
 
 class FakeTimer:
