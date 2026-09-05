@@ -380,7 +380,7 @@ blockquote, table, pre {
 
 hr {
   border: 0 none;
-  background-color: #cccccc;
+  background-color: rgba(0, 0, 0, 0.32);
   height: 1px;
   padding: 0; }
 
@@ -460,19 +460,19 @@ table {
   margin: 12px auto;
   }
   table tr {
-    border-top: 1px solid #cccccc;
+    border-top: 1px solid rgba(0, 0, 0, 0.32);
     background-color: white;
     margin: 0;
     padding: 0; }
     table tr th {
       font-weight: normal;
-      border: 1px solid #cccccc;
+      border: 1px solid rgba(0, 0, 0, 0.32);
       background-color: #eaeaea;
       text-align: left;
       margin: 0;
       padding: 8px; }
     table tr td {
-      border: 1px solid #cccccc;
+      border: 1px solid rgba(0, 0, 0, 0.32);
       text-align: left;
       margin: 0;
       padding: 8px; }
@@ -583,12 +583,14 @@ pre code {
   border: none;
   background: transparent; }
 
-/* コード ブロックと figure の枠は rgba(0, 0, 0, 0.32) でそろえる。
+/* 本文中の枠と罫線は rgba(0, 0, 0, 0.32) でそろえる。対象はコード ブロック、
+   figure、表の罫線、水平線、SVG ダウンロード ボタン。
+   ヘッダー下の 2px の区切り (header > hr) は動的発行に対応する部品が無いため
+   対象外とし、#cccccc のままにする。
    これは動的発行 (mkdocs Material) の --md-default-fg-color--lighter を
    白地で解決した色で、../../livedocs/assets/docsfw-livedocs.css と
-   ../../livedocs/assets/docsfw-pandoc-style.css がコード ブロックと図の枠に
-   使う値と同じ。両発行系で枠の濃さを一致させる。
-   表の罫線は #cccccc のままとし、この変更の対象に含めない。 */
+   ../../livedocs/assets/docsfw-pandoc-style.css が同じ用途に使う値と同じ。
+   両発行系で線の濃さを一致させる。 */
 .highlight pre {
   background-color: #f8f8f8;
   border: 1px solid rgba(0, 0, 0, 0.32);
@@ -967,7 +969,7 @@ mark {
   opacity: 0;
   transition: opacity 0.15s;
   background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.32);
   border-radius: 3px;
   padding: 3px;
   line-height: 0; }
