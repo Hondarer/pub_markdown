@@ -25,6 +25,16 @@ local function split_suffix(target)
   return path or target, suffix or ""
 end
 
+-- pandoc の markdown リーダーは、リンク先に含まれる空白などを
+-- パース時に自動的にパーセントエンコードする (例: " " -> "%20")。
+-- ファイルシステム上のパス解決にはデコードした文字列が必要となる。
+-- see: https://github.com/jgm/pandoc/blob/main/src/Text/Pandoc/Shared.hs (escapeURI)
+local function url_decode(path)
+  return (path:gsub("%%(%x%x)", function(hex)
+    return string.char(tonumber(hex, 16))
+  end))
+end
+
 local function normalize_path(path)
   local is_absolute = path:sub(1, 1) == "/"
   local parts = {}
@@ -180,6 +190,9 @@ local function rewrite_document_path(target)
     return target, false
   end
 
+  -- ファイルシステム上の実パスは無エンコードのため、照合前にデコードする。
+  local decoded_path = url_decode(path)
+
   local source_file = os.getenv("SOURCE_FILE")
   if source_file == nil or source_file == "" then
     return target, false
@@ -190,9 +203,9 @@ local function rewrite_document_path(target)
     return target, false
   end
 
-  local real_target = resolve_document_file(normalize_path(dirname(source_file) .. "/" .. path))
+  local real_target = resolve_document_file(normalize_path(dirname(source_file) .. "/" .. decoded_path))
   if real_target == nil then
-    local virtual_target = normalize_path(dirname(source_virtual) .. "/" .. path)
+    local virtual_target = normalize_path(dirname(source_virtual) .. "/" .. decoded_path)
     real_target = resolve_document_file(virtual_to_real_path(virtual_target))
     if real_target == nil then
       return target, false
