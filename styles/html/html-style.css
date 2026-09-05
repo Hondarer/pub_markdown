@@ -2,6 +2,7 @@ body {
   font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif';
   font-size: 16px;
   line-height: 1.5;
+  color: #212121;
   padding: 10px 30px 0;
   background-color: white;
   overflow-x: hidden; }
@@ -175,9 +176,6 @@ a.anchor {
   left: 0;
   bottom: 0; }
 
-.title {
-  font-size: 24px;
-}
 .author {
   text-align: right;
 }
@@ -192,11 +190,11 @@ h1, h2, h3, h4, h5, h6 {
   cursor: text;
   position: relative; }
 
-h1 {
+h1, h2 {
   font-weight: bold;
 }
 
-h2, h3, h4, h5, h6 {
+h3, h4, h5, h6 {
   font-weight: normal;
 }
 
@@ -221,45 +219,25 @@ h5 tt, h5 code {
 h6 tt, h6 code {
   font-size: inherit; }
 
-/* 見出しの色は mkdocs プレビュー (Material) に合わせる。
-   Material は Markdown の H1 (ページ見出し) と H5 / H6 を
-   --md-default-fg-color--light (rgba(0,0,0,.54) = 白地で #757575)、
-   その間の見出しを --md-default-fg-color (rgba(0,0,0,.87) = 白地で #212121)
-   にする。
+/* 見出しの書式は ../../docs/heading-style.md を正本とする。
+   本文を #212121、見出しを #757575 とし、見出しは本文より淡くする。
+   階層は太さで表し、Markdown の H1 - H3 を bold、H4 - H6 を normal にする。
    pandoc は --shift-heading-level-by=-1 で Markdown の H1 をページ見出し
-   (テンプレートの <H1>) へ移すため、HTML の h1 - h3 が Markdown の H2 - H4、
-   h4 以降が Markdown の H5 以降に対応する。 */
-h1 {
+   (テンプレートの <H1>) へ移すため、HTML の h1 - h5 が Markdown の H2 - H6 に
+   対応する。ページ見出しも .span9 / .span12 直下の h1 として出るため、
+   h1 は Markdown の H1 と H2 の両方を受け持つ。
+   line-height は CDN の Bootstrap template.css と同じ値だが、外部 CSS への
+   暗黙の依存を残さないため明示する。 */
+h1, h2, h3, h4, h5, h6 {
+  color: #757575; }
+
+h1, h2, h3 {
   font-size: 19px;
-  color: #212121; }
+  line-height: 40px; }
 
-h2 {
-  font-size: 19px;
-  color: #212121; }
-
-h3 {
-  font-size: 19px;
-  color: #212121; }
-
-h4 {
+h4, h5, h6 {
   font-size: 17px;
-  color: #757575; }
-
-h5 {
-  font-size: 17px;
-  color: #757575; }
-
-h6 {
-  font-size: 17px;
-  color: #757575; }
-
-/* ページ見出し (Markdown の H1)。
-   html-template.html は .span9 / .span12 の直下に <H1> を置き、
-   html-simple-template.html は #title-block-header に h1.title を置く。 */
-.span9 > h1,
-.span12 > h1,
-h1.title {
-  color: #757575; }
+  line-height: 20px; }
 
 /* TOC は Bootstrap の .well (塗りつぶし #F5F5F5、枠 #E3E3E3、角丸、内側の影)
    でカード風になる。mkdocs プレビュー (Material) のサイドバーは

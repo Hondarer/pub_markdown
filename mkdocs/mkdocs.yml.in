@@ -25,6 +25,10 @@ theme:
   name: material
   custom_dir: theme
   language: @PREVIEW_THEME_LANGUAGE@
+  # 本文と等幅のフォントは assets/docsfw-pandoc-style.css が
+  # --md-text-font-family と --md-code-font-family で与えるため、
+  # Material 既定の Google Fonts (Roboto / Roboto Mono) は取得しない。
+  font: false
   features:
     - navigation.indexes
     - navigation.top

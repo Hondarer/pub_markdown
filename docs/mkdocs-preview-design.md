@@ -394,6 +394,7 @@ docsfw が同梱方式であることと、描画結果を docsfw の HTML 出�
 theme:
   name: material
   language: ja
+  font: false
   features:
     - navigation.indexes
     - navigation.sections
@@ -420,6 +421,10 @@ plugins:
   - search: { lang: en, separator: "... CJK 文字境界を追加 (後述) ..." }
 ```
 
+`theme.font` は `false` にします。  
+本文と等幅のフォントは `extra_css` 側で与えるため、Material 既定の Google Fonts (Roboto / Roboto Mono) は不要です。  
+詳細は「フォント」を参照してください。
+
 `mkdocs.yml` には `nav:` を記述しません。  
 ステージング時にルートの `.nav.yml` へ `use_index_title: true` を設定し、各フォルダーの `index.md` にある `title` を展開可能なフォルダーの表示名に使用します。  
 README または SKILL を `index.md` へ正規化するときに `title` がなければ、選択中の言語と details を反映した最初の H1 を `title` として補います。  
@@ -439,13 +444,32 @@ docsfw は正式な発行の正本であり、プレビューは執筆中の確�
 配色もこのファイルに集約します。
 
 例外が 3 つあります。  
-見出しの色と TOC の枠や塗りつぶしは Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+見出しと本文の文字色は、どちらか一方を正とせず [見出し書式](heading-style.md) を正本とし、両側をそこへ合わせます。  
+TOC の枠や塗りつぶしは Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
 スクロール バーは、どちらか一方を正とせず両側を同じ仕様へ寄せます。  
-詳細は「見出しの色」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
+詳細は「見出しと本文の文字色」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
 
 `mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
 Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
 `extra_css` は Material の `palette.css` より後に読まれるため、属性セレクター 1 個どうしでも後勝ちで上書きできます。
+
+### フォント
+
+本文と等幅のフォントは pandoc 発行版を正とします。  
+本文は `styles/html/html-style.css` の `body`、等幅は同じく `code, tt` の指定に合わせます。
+
+指定は `assets/docsfw-pandoc-style.css` の `body` で、Material の CSS 変数 `--md-text-font-family` と `--md-code-font-family` を上書きして行います。  
+Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, input` へ `font-family: var(--md-text-font-family)` を、`code, kbd, pre` へ `font-family: var(--md-code-font-family)` を当てます。  
+既定値は `base.html` がインラインの `<style>` で `--md-text-font` と `--md-code-font` へ与え、あわせて Google Fonts を読み込みます。
+
+個別のセレクターではなく変数を上書きするのは、ヘッダー、ナビゲーション、検索 UI、「最上部にスクロール」(`.md-top`)、フッター、ツールヒントまでを 1 か所で決められるためです。  
+`.md-typeset` だけを上書きすると、本文以外は `body` から継承する Material 既定のフォントのまま残ります。
+
+`extra_css` は Material の `main.css` より後に読まれるため、同じ `body` セレクター (詳細度 (0,0,1)) でも後勝ちで上書きできます。  
+`.md-tooltip` と `--md-mermaid-font-family` は Material 側が `var(--md-text-font-family)` を明示して参照し、`button` は Material のリセットが `font-family: inherit` を持つため、いずれもこの上書きに追従します。
+
+自前の font stack を与えるため、`mkdocs.yml.in` の `theme` では `font: false` を指定し、Google Fonts の取得を止めます。  
+`--md-text-font` と `--md-code-font` が未定義になりますが、上書き後の `--md-text-font-family` と `--md-code-font-family` はこれらを参照しないため、表示は変わりません。
 
 ### 色の対応
 
@@ -466,6 +490,11 @@ Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存�
 | コード背景 | `#F8F8F8` | `html-style.css` の `code, tt` | 同左 | Material 既定 |
 | コード文字 | `black` | 同上 | 同左 | Material 既定 |
 | `==mark==` | `#FFFF00` | `html-style.css` の `mark` | 同左 | Material 既定 |
+| 本文 | `#212121` | [見出し書式](heading-style.md) | 同左 | Material 既定 |
+| 見出し | `#757575` | 同上 | 同左 | `--md-default-fg-color--light` |
+
+本文と見出しの 2 行だけは pandoc を正とせず、[見出し書式](heading-style.md) を正本とします。  
+表には、その正本が定めるライトでの値を載せています。
 
 pandoc 発行版はライト固定のため、`slate` に対応する正はありません。  
 そこで、色相を保ったまま明度を上げた値を使います。  
@@ -553,32 +582,33 @@ Material は標準の `scrollbar-color` と `::-webkit-scrollbar-thumb` の 2 �
 上書きは Material と同じセレクターで行い、詳細度をそろえます。  
 Material 側の指定は `@media (min-width: 60em)` の中にもありますが、メディア クエリは詳細度を変えないため、後から読まれる `extra_css` が勝ちます。
 
-### 見出しの色
+### 見出しと本文の文字色
 
-ここだけは Material を正とし、pandoc 側を合わせます。  
-Material の見出しは灰色系で、pandoc の黒より本文との差が穏やかなためです。
+ここは Material も pandoc も正とせず、[見出し書式](heading-style.md) を正本とし、両側をそこへ合わせます。  
+書式の一覧と、大きさや太さを含む全体の規則は正本を参照してください。  
+この節では、`make preview` 側で必要になる調整だけを述べます。
 
-Material は次の 2 色を使います。
+濃さは 2 段です。  
+本文の `#212121` がいちばん濃く、見出しは `#757575` で本文より淡くなります。
 
-| 対象 | Material の変数 | 白地での値 |
+| 対象 | preview の指定 | 白地での値 |
 |---|---|---|
-| Markdown の H1 (ページ見出し)、H5、H6 | `--md-default-fg-color--light` | `#757575` |
-| Markdown の H2 - H4 | `--md-default-fg-color` | `#212121` |
+| 見出し (Markdown の H1 - H6) | `--md-default-fg-color--light` | `#757575` |
+| 本文 | Material 既定の `--md-typeset-color` | `#212121` |
 
-pandoc は `--shift-heading-level-by=-1` により Markdown の H1 をページ見出しへ移します。  
-そのため HTML の見出しレベルが 1 つずれ、対応は次のようになります。
+本文の色は Material の既定がすでに仕様どおりであるため、`assets/docsfw-pandoc-style.css` では指定しません。  
+pandoc 側は `body` に `color` の指定がなく Bootstrap の `#333333` が効いていたため、`styles/html/html-style.css` の `body` へ `#212121` を追加しました。
 
-| Markdown | pandoc の HTML | 色 |
-|---|---|---|
-| H1 | `html-template.html` の `<H1>`、`html-simple-template.html` の `h1.title` | `#757575` |
-| H2 - H4 | `h1` - `h3` | `#212121` |
-| H5、H6 | `h4`、`h5` | `#757575` |
+見出しの色は直値で書かず `var(--md-default-fg-color--light)` を使用します。  
+ダーク (`slate`) でも「見出しは本文より淡い」という関係が保たれるためです。
 
-ページ見出しは `.span9 > h1`、`.span12 > h1`、`h1.title` で指定します。  
-本文の見出しより詳細度が高いため、要素セレクターの指定を後から打ち消せます。
+Material の既定のうち、次の 3 つは打ち消す必要があります。
 
-本文の文字色はそろえません。  
-pandoc は Bootstrap の `#333333`、Material は `#212121` ですが、見出しほどの差ではありません。
+- 全レベルの `letter-spacing: -.01em`
+- `h5` の `text-transform: uppercase`
+- `em` 基準の `margin` と、`h2` 直後の `h3` だけ上余白を `.8em` にする `.md-typeset h2 + h3`
+
+`.md-typeset h2 + h3` は詳細度が (0,1,2) であり、レベルごとの指定 (0,1,1) より高いため、同じセレクターで上書きします。
 
 ### リンクのホバー
 
@@ -892,6 +922,10 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 - `mkdocs-awesome-nav` の `use_index_title` により、README から生成した索引ページのタイトルをフォルダー表示名に使用できます。
 - `github-callouts` は `CAUTION` を `danger` クラスへ写します。`IMPORTANT` は同名のまま出力されますが、Material に `important` は存在しないため、既定の admonition として描画されます。
 - `extra_css` は Material の `palette.css` より後に読まれます。属性セレクター 1 個どうしでも後勝ちになるため、パレットの CSS 変数はここで上書きできます。
+- Material の本文以外のフォントは、`main.css` が `body` で定義する `--md-text-font-family` で決まります。`.md-typeset` だけを上書きすると、ヘッダー、左右 TOC、「最上部にスクロール」などが Material 既定のフォントのまま残ります。
+- Material は `.md-typeset h5` を `text-transform: uppercase` にします。英字を含む H5 だけ表示が変わるため、`text-transform: none` で打ち消しています。
+- Material の `.md-typeset h2 + h3` は詳細度が (0,1,2) で、レベルごとの指定 (0,1,1) より高くなります。上余白を `.8em` に縮める指定が残るため、同じセレクターで上書きしています。
+- 見出しの書式を HTML のタグ名でそろえると、pandoc の `--shift-heading-level-by=-1` による 1 段のずれで Markdown 上の見え方が食い違います。[見出し書式](heading-style.md) は Markdown のレベルを基準に定めています。
 
 ### 未着手の課題
 

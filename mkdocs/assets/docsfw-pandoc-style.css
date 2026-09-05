@@ -8,8 +8,20 @@
 /* フォント                                                                  */
 /* ------------------------------------------------------------------------ */
 
+/* Material は本文以外 (ヘッダー、ナビゲーション、検索、「最上部にスクロール」
+   など) のフォントを、main.css が body で定義する --md-text-font-family で
+   決める。.md-typeset だけを上書きすると本文しか追従しないため、変数そのものを
+   pandoc 発行版の font stack へ置き換える。
+   宣言は Material と同じ body セレクターで行う。extra_css は main.css より
+   後に読まれるため、同じ詳細度 (0,0,1) でも後勝ちする。
+   本文は ../../styles/html/html-style.css の body、等幅は同じく code, tt に
+   合わせる。 */
+body {
+  --md-text-font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --md-code-font-family: Consolas, Menlo, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', monospace;
+}
+
 .md-typeset {
-  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
   font-size: 16px;
   line-height: 1.5;
 }
@@ -18,39 +30,55 @@
 /* 見出し                                                                    */
 /* ------------------------------------------------------------------------ */
 
+/* 見出しの書式は ../../docs/heading-style.md を正本とする。
+   mkdocs は Markdown の H1 - H6 が HTML の h1 - h6 にそのまま対応するため、
+   pandoc 側のような 1 段のずれはない。
+   Material の既定と異なる点は次のとおり。
+   - letter-spacing: Material は全レベルに -.01em を入れるため normal へ戻す。
+   - text-transform: Material は h5 を uppercase にするため none へ戻す。
+   - margin: Material は em 基準のため、pandoc と同じ固定値へ置き換える。 */
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 {
+  margin: 20px 0 10px;
+  color: var(--md-default-fg-color--light);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4 {
+  font-size: 19px;
+  line-height: 40px;
+}
+
+.md-typeset h5,
+.md-typeset h6 {
+  font-size: 17px;
+  line-height: 20px;
+}
+
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3 {
-  margin: 1.25em 0 0.625em;
-  font-size: 19px;
-  line-height: 40px;
+  font-weight: 700;
 }
 
 .md-typeset h4,
 .md-typeset h5,
 .md-typeset h6 {
-  margin: 1.25em 0 0.625em;
-  font-size: 17px;
-  line-height: 20px;
-}
-
-.md-typeset h1 {
-  font-weight: 700;
-}
-
-.md-typeset h2,
-.md-typeset h3 {
   font-weight: 400;
 }
 
-.md-typeset h4,
-.md-typeset h5 {
-  font-weight: 400;
-}
-
-.md-typeset h6 {
-  font-weight: 400;
-  color: var(--md-default-fg-color--light);
+/* Material は h2 の直後の h3 だけ上余白を .8em (15.2px) に縮める。
+   詳細度 (0,1,2) が上の指定 (0,1,1) より高いため、同じセレクターで打ち消す。 */
+.md-typeset h2 + h3 {
+  margin-top: 20px;
 }
 
 /* 見出しの自動採番。
@@ -264,7 +292,6 @@
 .md-nav--primary .md-nav__title,
 .md-nav--secondary .md-nav__link,
 .md-nav--secondary .md-nav__title {
-  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
   font-size: 14px;
   line-height: 21px;
 }
