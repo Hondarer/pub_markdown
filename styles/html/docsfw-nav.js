@@ -213,7 +213,10 @@
       }
     }
 
-    function activate(link) {
+    /* Mark every heading up to and including the current one as passed, so the
+       TOC dims what the reader already scrolled through. Same semantics as
+       mkdocs Material's md-nav__link--passed; see docs/livedocs-design.md. */
+    function activate(link, index) {
       if (activeLink === link) { return; }
       for (var i = 0; i < links.length; i++) {
         links[i].classList.toggle('docsfw-toc-active', links[i] === link);
@@ -223,21 +226,24 @@
           links[i].removeAttribute('aria-current');
         }
       }
+      for (var j = 0; j < entries.length; j++) {
+        entries[j].link.classList.toggle('docsfw-toc-passed', j <= index);
+      }
       activeLink = link;
       revealInSidebar(link);
     }
 
     function update() {
       scheduled = false;
-      var selected = entries[0];
+      var selectedIndex = 0;
       for (var i = 0; i < entries.length; i++) {
         if (entries[i].heading.getBoundingClientRect().top <= 32) {
-          selected = entries[i];
+          selectedIndex = i;
         } else {
           break;
         }
       }
-      activate(selected.link);
+      activate(entries[selectedIndex].link, selectedIndex);
     }
 
     function scheduleUpdate() {

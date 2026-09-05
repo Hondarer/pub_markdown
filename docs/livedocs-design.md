@@ -451,12 +451,13 @@ README または SKILL を `index.md` へ正規化するときに `title` がな
 `assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を 静的発行へ寄せるためのファイルです。  
 配色もこのファイルに集約します。
 
-例外が 4 つあります。  
+例外が 5 つあります。  
 見出しと本文の文字色は、どちらか一方を正とせず [見出し書式](heading-style.md) を正本とし、両側をそこへ合わせます。  
 TOC の枠や塗りつぶしは Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+ページ内目次と左ナビゲーションの状態表現 (通常、通過済み、アクティブ) も Material を正とし、pandoc の `styles/html/docsfw-ui.css` を合わせます。  
 admonition の形状とアイコンも Material を正とし、pandoc 側を合わせます。  
 スクロール バーは、どちらか一方を正とせず両側を同じ仕様へ寄せます。  
-詳細は「見出しと本文の文字色」「admonition の実装」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
+詳細は「見出しと本文の文字色」「admonition の実装」「スクロール バー」「TOC の枠と塗りつぶし」「ページ内目次の状態表現」を参照してください。
 
 `mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
 Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
@@ -488,6 +489,8 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 | 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
 | 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
 | ナビ ホバーと現在ページ | `#1A5FAA` | `styles/html/docsfw-ui.css` | `#1A5FAA` | `#9CC7EA` |
+| ページ内目次 通常 | `#212121` | Material `--md-typeset-color` (Material が正) | 同左 | Material 既定 |
+| ページ内目次 通過済み | `#757575` | Material `--md-default-fg-color--light` (Material が正) | 同左 | Material 既定 |
 | accent 背景に載る文字 | 対応なし | Material `--md-accent-bg-color` | `#FFFFFF` (Material 既定) | `#1F2129` |
 | ヘッダー背景 | `#F7F7F7` | `styles/html/html-style.css` の `.navbar-inner` | `#F7F7F7` | `#1F2129` |
 | ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
@@ -711,6 +714,15 @@ Material は色を変えるだけで下線を引かないため、`.md-typeset a
 
 見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。
 
+ナビゲーションの色と下線は、Material と同じ形のセレクターで指定します。  
+`.md-nav__link:hover` の詳細度 (0,2,0) では、Material が左ナビの現在ページへ当てる `.md-nav--primary .md-nav__item--active > .md-nav__link:hover` (0,4,0) に負け、ナビの色 `#1A5FAA` ではなく本文リンクのホバー色 `#005580` が出るためです。  
+アクティブ側も同じ理由で、`.md-nav__link--active` (0,1,0) は Material の `.md-nav__item .md-nav__link--active` (0,2,0) に負けます。  
+`extra_css` は `main.css` より後に読まれるため、詳細度を同じまで上げれば後勝ちします。
+
+色の変わり方は静的発行を正とし、瞬時に切り替えます。  
+Material は `.md-nav__link` に `transition: color 125ms` を持ちますが、静的発行に対応する指定がないため `transition: none` で打ち消します。  
+`.md-nav` の `transition: max-height` は狭い画面のドロワー開閉に必要なので、対象にしません。
+
 ### TOC の枠と塗りつぶし
 
 `make docs` の TOC は、`styles/html/html-template.html` が `<div class="well toc">` として出力します。  
@@ -726,6 +738,55 @@ Material は色を変えるだけで下線を引かないため、`.md-typeset a
 1400px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
 
 TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) は、狭い画面で文書ツリーとページ内目次を区切るために使用します。
+
+### ページ内目次の状態表現
+
+読んでいる位置を示す表現は Material を正とし、pandoc の `styles/html/docsfw-ui.css` を合わせます。  
+状態は次の 4 つです。
+
+| 状態 | 白地 (`default`) | ダーク (`slate`) | 由来 |
+|---|---|---|---|
+| 通常 (未通過) | `#212121` | Material 既定 | Material の `--md-typeset-color` |
+| 通過済み | `#757575` | Material 既定 | Material の `--md-default-fg-color--light` |
+| アクティブ | `#1A5FAA` | `#9CC7EA` | 「色の対応」の「ナビ ホバーと現在ページ」 |
+| ホバーとフォーカス | `#1A5FAA` | `#9CC7EA` | 同上。下線を引く |
+
+強調に太字は使いません。  
+太字は文字幅が変わるため、幅 210px の目次ではスクロール追従のたびに省略記号 (`text-overflow: ellipsis`) の出方が変わり、行の見え方が動きます。  
+色だけで示せば、追従しても幅は変わりません。
+
+同じ理由で、静的発行の左ナビゲーション ツリーからも現在ページの太字を外します。  
+現在ページは色と左のアクセント バーで示します。  
+アクセント バーの `#4A90D9` は「一致させない項目」のとおり、動的発行に対応物がありません。
+
+「通過済み」は、現在の見出しより上にある見出しすべてに付きます。  
+現在の見出しにも付きますが、アクティブの色が後勝ちします。  
+Material は `md-nav__link--passed` を、静的発行の `styles/html/docsfw-nav.js` は `docsfw-toc-passed` を付与します。
+
+指定の順序は「通常」「通過済み」「アクティブ」「ホバー」です。  
+`docsfw-ui.css` の 4 つの規則は詳細度が等しいため、後に置いたものが勝ちます。  
+Material もホバーの詳細度 (0,3,0) がアクティブ (0,2,0) より高く、ホバーが最優先である点は同じです。
+
+項目の間隔も Material に合わせ、リンク 1 件ごとに上へ `8.75px` を取ります。  
+Material の `.md-nav__link` が持つ `margin-top: .625em` を、両側でそろえている 14px を基準に換算した値です。  
+先頭のリンクでも打ち消しません。Material も同じで、余白は外側の `.well` の `padding` に吸収され、目次の開始位置は変わりません。
+
+節番号はリンクの文字色に従わせます。  
+静的発行は `docsfw-nav.js` の `normalizeTocLinks()` が目次リンクを 1 つのテキスト ノードへ平坦化するため、`span.toc-section-number` は実行時に存在せず、番号はリンクの色になります。  
+動的発行は Material の `::before` にカウンターで番号を出すので、`--md-default-fg-color--light` による独自の色付けをやめて同じ扱いにします。  
+これにより、通過済みとアクティブでも番号と本文が同じ色で動きます。
+
+静的発行の目次には Bootstrap の `template.css` (CDN) が `.toc ul > li > a` (0,2,3) で `padding: 3px 15px` を当て、`.toc ul > li > a:hover` で `text-decoration: none` と `background-color: #eeeeee` を当てます。  
+どちらも `docsfw-ui.css` の指定より詳細度が高いため、行間もホバーの下線も効かず、ホバーで灰色の帯が出ていました。  
+また 1400px 未満では目次が文書ツリーの中へ移るため、`#docsfw-tree a` (1,0,1) が状態の色に勝ちます。
+
+そこで `docsfw-ui.css` の目次の状態指定は、クラスではなく `#docsfw-page-toc` を起点にします。  
+`#docsfw-page-toc a` は両方より詳細度が高いか同等で、同等の `#docsfw-tree a` に対してはファイル内で後に置いて勝たせます。  
+Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a` と `#docsfw-page-toc ul > li > a:hover` で打ち消します。
+
+ページ先頭で、どのリンクをアクティブにするかは一致させません。  
+静的発行は常に先頭の見出しをアクティブにし、Material は最初の見出しを通過するまでどれもアクティブにしません。  
+目次として現在位置が常に 1 つ示される方が分かりやすいため、静的発行の挙動を残します。
 
 ### ナビゲーションの幅と切り替え
 
@@ -821,7 +882,7 @@ mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使�
 2 文字程度の語やカタカナ語は引けますが、`同期プリミティブ` のような複合語は引けません。  
 また `同期` が `同梱` にも一致するなど、分かち書きの精度は docsfw の 2-gram より劣ります。
 
-mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、mkdocs-material では直せない」と upstream に帰責しています
+mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、mkdocs-material では直せない」と upstream に帰責しています  
 ([squidfunk/mkdocs-material Discussion #3916](https://github.com/squidfunk/mkdocs-material/discussions/3916))。  
 検索クエリのトークン化処理を差し替える機能も、2026 年 8 月時点で未実装です  
 ([squidfunk/mkdocs-material Issue #4980](https://github.com/squidfunk/mkdocs-material/issues/4980))。
@@ -830,7 +891,7 @@ mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr
 
 `mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) をやめ、`separator` の正規表現に「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加している。
 
-lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。
+lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。  
 これにより `同期プリミティブ` のような複合語も検索でヒットするようになる。
 
 再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の  

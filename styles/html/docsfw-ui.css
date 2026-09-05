@@ -127,11 +127,11 @@
   text-decoration: underline;
 }
 
-/* Highlight current page link */
+/* Highlight current page link. No bold: the left accent bar already marks the
+   node, and Material marks its current page with color alone. */
 #docsfw-tree a.docsfw-current,
 .docsfw-home-link a.docsfw-current {
   color: #1a5faa;
-  font-weight: bold;
   pointer-events: none;
 }
 
@@ -261,35 +261,57 @@ div#docsfw-current-node {
   padding-left: 10px;
 }
 
-.docsfw-page-toc a {
-  color: #555;
+/* State colors follow mkdocs Material; see docs/livedocs-design.md.
+   margin-top matches Material's .md-nav__link margin-top: .625em at 14px.
+
+   These rules are keyed on #docsfw-page-toc rather than the class, because
+   two other rule sets outrank the class form:
+     - #docsfw-tree a (1,0,1) styles the drawer tree below 1400px, and the page
+       TOC is moved inside that tree, so a class selector loses there;
+     - Bootstrap's template.css (CDN) has .toc ul > li > a (0,2,3), which sets
+       padding 3px 15px and, on hover, text-decoration: none with a #eeeeee
+       background.
+   The id form outranks both, and where specificity only ties (#docsfw-tree a)
+   these rules come later in the file and win. */
+#docsfw-page-toc a {
+  color: #212121;
   text-decoration: none;
   display: block;
   font-size: 14px;
   line-height: 1.5;
-  padding: 1px 0;
+  margin-top: 8.75px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.docsfw-page-toc a:hover {
+#docsfw-page-toc ul > li > a {
+  padding: 0;
+}
+
+/* Headings already scrolled through, including the current one. */
+#docsfw-page-toc a.docsfw-toc-passed {
+  color: #757575;
+}
+
+/* Placed after the passed rule so the active color wins at equal specificity. */
+#docsfw-page-toc a.docsfw-toc-active,
+#docsfw-page-toc a[aria-current="location"] {
+  color: #1a5faa;
+}
+
+/* Last of the color rules, so hover wins over the passed and active colors. */
+#docsfw-page-toc a:hover,
+#docsfw-page-toc ul > li > a:hover,
+#docsfw-page-toc ul > li > a:focus {
   color: #1a5faa;
   text-decoration: underline;
+  background-color: transparent;
 }
 
-.docsfw-page-toc a.docsfw-toc-active,
-.docsfw-page-toc a[aria-current="location"] {
-  color: #1a5faa;
-  font-weight: bold;
-}
-
-/* Section numbers: muted */
-.docsfw-page-toc .toc-section-number {
-  color: #aaa;
-  font-size: 0.9em;
-  margin-right: 2px;
-}
+/* No rule for .toc-section-number: normalizeTocLinks() in docsfw-nav.js
+   flattens each link to a single text node, so the section number is part of
+   the link text and takes the link's own color. */
 
 /* --- Hamburger button (mobile only) ----------------------------------- */
 

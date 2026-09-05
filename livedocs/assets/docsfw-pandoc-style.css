@@ -132,7 +132,6 @@ body {
 
 .md-nav--secondary .md-nav__item > .md-nav__link .md-ellipsis::before {
   content: counters(docsfw-toc-num, ".") " ";
-  color: var(--md-default-fg-color--light);
 }
 
 /* ------------------------------------------------------------------------ */
@@ -514,15 +513,37 @@ body {
 /* ------------------------------------------------------------------------ */
 
 /* Material は本文リンクと同じ --md-accent-fg-color を使うが、pandoc 発行版は
-   本文リンクのホバー (#005580) とナビの色 (#1A5FAA) を分けている。 */
-.md-nav__link:hover,
-.md-nav__link:focus {
+   本文リンクのホバー (#005580) とナビの色 (#1A5FAA) を分けている。
+
+   セレクターは Material 側と同じ形にそろえる。単独の .md-nav__link--active
+   (0,1,0) では Material の .md-nav__item .md-nav__link--active (0,2,0) と
+   .md-nav--primary .md-nav__item--active > .md-nav__link (0,3,0) に負け、
+   目次のアクティブと左ナビの現在ページが本文リンク色 (#4183C4) になる。
+   ホバーも同様で、.md-nav__link:hover (0,2,0) では左ナビの現在ページに効く
+   .md-nav--primary .md-nav__item--active > .md-nav__link:hover (0,4,0) に
+   負けて #005580 が出る。extra_css は main.css より後に読まれるため、
+   同じ詳細度まで上げれば後勝ちする。 */
+.md-nav__item .md-nav__link--active,
+.md-nav__item .md-nav__link--active code,
+.md-nav--primary .md-nav__item--active > .md-nav__link {
   color: var(--docsfw-nav-accent);
 }
 
-.md-nav__link--active,
-.md-nav__item .md-nav__link--active code {
+.md-nav__link[for]:hover,
+.md-nav__link[for]:focus,
+.md-nav__link[href]:hover,
+.md-nav__link[href]:focus,
+.md-nav--primary .md-nav__item--active > .md-nav__link:hover,
+.md-nav--primary .md-nav__item--active > .md-nav__link:focus {
   color: var(--docsfw-nav-accent);
+}
+
+/* pandoc 発行版のナビゲーションと目次は色が瞬時に切り替わる。Material の
+   transition: color 125ms によるフェードを止めて、同じ切り替わり方にする。
+   .md-nav の transition: max-height は狭い画面のドロワー開閉に必要なので
+   対象にしない。 */
+.md-nav__link {
+  transition: none;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -544,8 +565,12 @@ body {
   text-decoration: none;
 }
 
-.md-nav__link:hover,
-.md-nav__link:focus {
+.md-nav__link[for]:hover,
+.md-nav__link[for]:focus,
+.md-nav__link[href]:hover,
+.md-nav__link[href]:focus,
+.md-nav--primary .md-nav__item--active > .md-nav__link:hover,
+.md-nav--primary .md-nav__item--active > .md-nav__link:focus {
   text-decoration: underline;
 }
 
