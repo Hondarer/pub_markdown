@@ -393,8 +393,7 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 
 Table: セル内での改行を含む表
 
-以下の形式 (Markdown pipe tables) も Pandoc ではサポートされます。  
-ただし、[Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、編集時の使い勝手を判断して使用してください。  
+以下の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、mkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
 [Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
 
 +------------------+-------------+
