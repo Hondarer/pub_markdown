@@ -1,6 +1,6 @@
-# 動的発行 (mkdocs)
+# 動的発行 (MkDocs)
 
-docsfw の発行対象を mkdocs で発行する、2 本目の発行系です。  
+docsfw の発行対象を MkDocs で発行する、2 本目の発行系です。  
 静的発行 (`make docs`) と並ぶ位置付けで、HTML をローカル配信または一括生成します。  
 PlantUML と Mermaid はブラウザー上でレンダリングするため、ビルド時に図を生成しません。
 
@@ -90,7 +90,7 @@ make stopdocs
 | `bin/livedocs_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
 | `bin/livedocs_versioned_hook.py` | 再生成中の完成済み版の配信と版切り替え |
 | `bin/stop_livedocs_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
-| `mkdocs.yml.in` | mkdocs 設定のテンプレート |
+| `mkdocs.yml.in` | MkDocs 設定のテンプレート |
 | `theme/partials/header.html` | Material のヘッダーの上書き |
 | `theme/partials/docsfw-header-links.html` | Doxygen と Git の単一ページ リンクのボタン |
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
@@ -129,7 +129,7 @@ make stopdocs
 元の Markdown ディレクトリを監視し、変更されたファイルだけを軽量に  
 再ステージングします (ワークスペース全体の再走査は行いません)。  
 ステージング結果は `mkdocs serve` が監視しているステージング先  
-(`pages/livedocs/src/`) に書き込まれるため、続けて mkdocs 標準の仕組みが  
+(`pages/livedocs/src/`) に書き込まれるため、続けて MkDocs 標準の仕組みが  
 ビルドとブラウザーの自動リロードを行います。
 
 再生成中の通常の HTTP 要求には、直前に完成した版を返します。  

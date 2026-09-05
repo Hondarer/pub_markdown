@@ -8,7 +8,7 @@
 対象は HTML 出力の 2 系統です。
 
 - 静的発行 (`bin/pub_markdown_core.sh` が生成する HTML)
-- 動的発行 (mkdocs が生成する HTML)
+- 動的発行 (MkDocs が生成する HTML)
 
 docx 出力は対象外です。  
 Word の段落スタイルは `styles/docx/docx-template.dotx` が持ち、印刷媒体の慣習に従うため、この文書の規則を適用しません。
@@ -72,7 +72,7 @@ Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H
 
 ### 動的発行
 
-mkdocs は H1 をページ見出しとして本文に残すため、Markdown の H1 から H6 が HTML の `h1` から `h6` にそのまま対応します。  
+MkDocs は H1 をページ見出しとして本文に残すため、Markdown の H1 から H6 が HTML の `h1` から `h6` にそのまま対応します。  
 段のずれはありません。
 
 ## 実装
@@ -88,11 +88,11 @@ mkdocs は H1 をページ見出しとして本文に残すため、Markdown の
 pandoc 側は、本文色を `body` に指定し、見出しは HTML タグを 1 段浅く読み替えて指定します。  
 `line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。
 
-mkdocs 側は、見出しの色を直値で書かず `var(--md-default-fg-color--light)` を使用します。  
+MkDocs 側は、見出しの色を直値で書かず `var(--md-default-fg-color--light)` を使用します。  
 ライトでは `#757575` に解決され、ダーク (`slate`) では Material の対応色へ自動で切り替わります。  
 本文の色は Material の既定 (`--md-typeset-color`) がすでに `#212121` に解決されるため指定しません。
 
-mkdocs 側では、次の Material 既定を打ち消す必要があります。
+MkDocs 側では、次の Material 既定を打ち消す必要があります。
 
 - 全レベルの `letter-spacing: -.01em`
 - `h5` の `text-transform: uppercase`
@@ -107,7 +107,7 @@ mkdocs 側では、次の Material 既定を打ち消す必要があります。
 採番の実装は 2 つの出力で異なりますが、表示される番号は一致します。
 
 - pandoc は `-N` (`--number-sections`) が `<span class="header-section-number">` を実体として出力します。
-- mkdocs は `livedocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` で表示します。
+- MkDocs は `livedocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` で表示します。
 
 いずれも Markdown の H2 から採番し、H1 は対象外です。  
 番号は見出しの `color` を継承するため、色を変更しても追随します。
@@ -115,7 +115,7 @@ mkdocs 側では、次の Material 既定を打ち消す必要があります。
 ## 見出しのアンカー
 
 どちらの出力も、見出しの末尾に `¶` のパーマリンクを表示します。  
-mkdocs は Material の `toc.permalink` が `<a class="headerlink">` を生成し、pandoc は `styles/html/docsfw-nav.js` が同じ構造を実行時に付与します。
+MkDocs は Material の `toc.permalink` が `<a class="headerlink">` を生成し、pandoc は `styles/html/docsfw-nav.js` が同じ構造を実行時に付与します。
 
 | 項目 | 仕様 |
 |---|---|
@@ -137,5 +137,5 @@ GitHub 由来の `a.anchor` は `styles/html/html-style.css` に定義が残っ�
 
 ## 一致させない項目
 
-- 見出し内のリンクの色。pandoc は Bootstrap の `h1 a { color: #333 }`、mkdocs は `.md-typeset a` の `#4183C4` です。
-- ダーク モードの実際の色。静的発行はライト固定です。mkdocs は Material の変数を通して切り替わります。
+- 見出し内のリンクの色。pandoc は Bootstrap の `h1 a { color: #333 }`、MkDocs は `.md-typeset a` の `#4183C4` です。
+- ダーク モードの実際の色。静的発行はライト固定です。MkDocs は Material の変数を通して切り替わります。

@@ -123,7 +123,7 @@ framework/docsfw/
 
 ### 共通レイアウト
 
-Pandoc HTML と mkdocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
+Pandoc HTML と MkDocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
 全体幅は 1370px です。
 
 1400px 未満では本文を最大 870px で中央配置し、文書ツリーとページ内目次を幅 `min(80vw, 320px)` の左ドロワーへ統合します。
@@ -207,7 +207,7 @@ Pandoc HTML と mkdocs は、1400px 以上で左 240px、本文約 870px、右 2
 | `docsfw-toc-passed` | 現在の見出しと、それより上にある見出しのリンク | `#757575` に淡色化 |
 
 `docsfw-toc-passed` は、読み進めた範囲を示すための表現です。  
-mkdocs Material の `md-nav__link--passed` と同じ意味論で、現在の見出しにも付きますが、アクティブの色が後勝ちします。  
+MkDocs Material の `md-nav__link--passed` と同じ意味論で、現在の見出しにも付きますが、アクティブの色が後勝ちします。  
 配色と太字を使わない理由は [動的発行基盤の「ページ内目次の状態表現」](livedocs-design.md) を参照してください。
 
 1400px 未満では、`docsfw-nav.js` が目次要素を左ドロワーの現在ページ配下へ移します。  
@@ -219,7 +219,7 @@ mkdocs Material の `md-nav__link--passed` と同じ意味論で、現在の見�
 ### 見出しのパーマリンク
 
 `docsfw-nav.js` は `<main id="docsfw-content">` 内の `id` を持つ見出しへ、`<a class="headerlink" href="#<id>" title="Permanent link">¶</a>` を追加します。  
-mkdocs Material の `toc.permalink` が生成するアンカーに合わせるためです。
+MkDocs Material の `toc.permalink` が生成するアンカーに合わせるためです。
 
 生成物の HTML には含めず実行時に付与します。  
 `docsfw-nav.js` は外部アセットなので、`.md` を再変換しなくても反映されます。  

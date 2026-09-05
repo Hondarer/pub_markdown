@@ -1,7 +1,7 @@
 # pub_markdown
 
 Markdown からドキュメントを発行するフレームワークです。  
-Pandoc による静的発行と、mkdocs による動的発行の 2 本の発行系を持ちます。
+Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行系を持ちます。
 
 ## 作業時の入口
 
@@ -42,7 +42,7 @@ Pandoc による静的発行と、mkdocs による動的発行の 2 本の発行
 
 | | 静的発行 | 動的発行 |
 |---|---|---|
-| 実装 | `bin/pub_markdown_core.sh` (Pandoc) | `livedocs/` (mkdocs) |
+| 実装 | `bin/pub_markdown_core.sh` (Pandoc) | `livedocs/` (MkDocs) |
 | 成果物 | HTML + docx | HTML |
 | 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
 | バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 1 つを選んで出力 |

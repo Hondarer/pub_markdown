@@ -126,7 +126,7 @@ doxyfw 側の埋め込みは `templates/inject-source-origin.py` が担当し、
 
 ## 動的発行での対応
 
-mkdocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ blob URL を同じ位置へ出します。  
+MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ blob URL を同じ位置へ出します。  
 実装は `livedocs/bin/git_link.py` で、本書が定める URL 形式、provider の判定、`git-origin` の差し替えは共通です。
 
 静的発行との違いを次に示します。
