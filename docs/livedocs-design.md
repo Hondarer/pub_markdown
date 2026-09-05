@@ -1,9 +1,9 @@
-# 動的発行基盤 (mkdocs)
+# 動的発行基盤 (MkDocs)
 
 ## 概要
 
 docsfw は 2 本の発行系を持ちます。  
-`bin/pub_markdown_core.sh` による静的発行と、mkdocs による動的発行です。  
+`bin/pub_markdown_core.sh` による静的発行と、MkDocs による動的発行です。  
 この文書は動的発行の設計を定めます。
 
 静的発行は、図をビルド時に画像化した self-contained な HTML と docx を、4 バリアント同時に出力します。  
@@ -74,7 +74,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
 | 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
-| 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | mkdocs は H1 をページ見出しとして扱う |
+| 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う |
 
 ### 図の生成
 
@@ -100,7 +100,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 25 | GitHub アラート 6 種 | 616 | 維持 | `markdown-callouts`。`DEPRECATED` はステージングで変換 |
 | 26 | `+hard_line_breaks` | 371 ファイル | 維持 | `markdown.extensions.nl2br` |
 | 27 | 表 | 789 | 維持 | `tables` 拡張 |
-| 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換 |
+| 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換。Pandoc がもう 1 つ受け付ける行頭のコロンだけの形式 (`: キャプション`) は対象外とし、`docs/sample/README.md` で非推奨と明記する |
 | 29 | `CodeBlock:` キャプション | 68 | 簡略 | PlantUML / Mermaid フェンスの直後にある場合は、フェンスとともに `md_in_html` の `figure` へ包む。それ以外は `.docsfw-caption` の段落にする |
 | 30 | pandoc-crossref の採番と相互参照 | ラベル 22 / 参照 7 | 対象外 | ラベルは id として残す |
 | 31 | 数式 | 51 | 維持 | `pymdownx.arithmatex` と MathJax |
@@ -115,7 +115,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 
 | # | ファンクション ポイント | 出現数 | 対応 | 備考 |
 |---|---|---|---|---|
-| 37 | `.md` から `.html` への書き換え | 963 | 維持 | mkdocs が標準で解決 |
+| 37 | `.md` から `.html` への書き換え | 963 | 維持 | MkDocs が標準で解決 |
 | 38 | 実パスと仮想パスの相互変換 | 114 | 維持 | ステージングで書き換える |
 | 39 | `README.md` / `SKILL.md` のリンク正規化 | - | 維持 | ステージングで書き換える |
 | 40 | Git 単一ページ リンク | フロント マター 392 | 維持 | ステージングで blob URL を解決し、ヘッダーへ出す |
@@ -134,7 +134,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
-| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は mkdocs 側に対応する拡張が無いため、`stage_livedocs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
+| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は MkDocs 側に対応する拡張が無いため、`stage_livedocs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 簡略 | Material の `content.code.copy` |
 | 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
@@ -207,16 +207,16 @@ pages/livedocs/
 ### 背景
 
 `mkdocs serve` は既定で `docs_dir` (`pages/livedocs/src/`) だけを監視する。  
-執筆者が実際に編集するのは元の Markdown (`app/*/docs` 等) であり、そのままではステージング (`stage_livedocs.py`) を手動で再実行しない限り画面へ反映されない。配信を前提とする発行系である以上、元の Markdown を保存するだけで反映される方が自然なため、`bin/livedocs_autostage_hook.py` を mkdocs の `hooks:` として追加した。
+執筆者が実際に編集するのは元の Markdown (`app/*/docs` 等) であり、そのままではステージング (`stage_livedocs.py`) を手動で再実行しない限り画面へ反映されない。配信を前提とする発行系である以上、元の Markdown を保存するだけで反映される方が自然なため、`bin/livedocs_autostage_hook.py` を MkDocs の `hooks:` として追加した。
 
-### mkdocs 側の制約
+### MkDocs 側の制約
 
-mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる  
+MkDocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる  
 (`framework/docsfw/mkdocs/.venv/Lib/site-packages/mkdocs/livereload/__init__.py:139-161`)。
 
-このため `livedocs_autostage_hook.py` は、mkdocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は mkdocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
+このため `livedocs_autostage_hook.py` は、MkDocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は MkDocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
 
-以前は `mkdocs.yml` の `watch:` に元の Markdown ディレクトリを列挙し、mkdocs 本体の監視に変更検知だけを任せていた (`vendor_assets.py` の `build_watch_list` が生成)。しかし `docs_dir` はステージング先 (`src/`) のままのため、この `watch:` は「元ファイルの変更を検知してビルドをやり直す」だけで、ビルドに使う内容自体は古いステージング済みコピーのままだった。実質的に反映には寄与しない仕組みだったため、`livedocs_autostage_hook.py` の導入とあわせて `watch:` および `build_watch_list` は削除した。
+以前は `mkdocs.yml` の `watch:` に元の Markdown ディレクトリを列挙し、MkDocs 本体の監視に変更検知だけを任せていた (`vendor_assets.py` の `build_watch_list` が生成)。しかし `docs_dir` はステージング先 (`src/`) のままのため、この `watch:` は「元ファイルの変更を検知してビルドをやり直す」だけで、ビルドに使う内容自体は古いステージング済みコピーのままだった。実質的に反映には寄与しない仕組みだったため、`livedocs_autostage_hook.py` の導入とあわせて `watch:` および `build_watch_list` は削除した。
 
 ### ファイル単位の軽量な再ステージングと索引の遅延同期
 
@@ -238,9 +238,9 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 
 索引再同期でステージング先が変化した場合は、その出力世代を含むサイトが完成版として公開されるまで再同期を完了扱いにしません。  
 `livedocs_autostage_hook.py` は `livedocs_versioned_hook.py` が設定したサイト生成関数を包むため、候補サイトの生成だけでなく完成版の公開後に完了を記録します。  
-公開前に呼ばれる mkdocs の `on_post_build` は完了判定に使用しません。
+公開前に呼ばれる MkDocs の `on_post_build` は完了判定に使用しません。
 
-サイト再生成中にステージング先が変化した場合、mkdocs 1.6.1 の `LiveReloadServer` は `_want_rebuild` を保持し、現在の生成後にもう一度生成します。  
+サイト再生成中にステージング先が変化した場合、MkDocs 1.6.1 の `LiveReloadServer` は `_want_rebuild` を保持し、現在の生成後にもう一度生成します。  
 自動再同期も、生成開始時より新しい出力世代を現在の完成版へ取り込まれたとはみなしません。  
 最新の出力世代を含む完成版が公開された後、未処理の変更世代があれば、その時点から次の 120 秒を待ちます。  
 したがって、サイト再生成時間は次の待機時間に含まれません。
@@ -262,9 +262,9 @@ mkdocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更された
 
 ## 再生成中の配信
 
-### mkdocs 側の待機動作
+### MkDocs 側の待機動作
 
-mkdocs 1.6.1 の `LiveReloadServer` は、ファイル変更を検知すると再生成の開始時刻を記録し、再生成が完了するまで通常の HTTP 要求を待機させます。  
+MkDocs 1.6.1 の `LiveReloadServer` は、ファイル変更を検知すると再生成の開始時刻を記録し、再生成が完了するまで通常の HTTP 要求を待機させます。  
 同じ出力ディレクトリを消去して再生成する途中の内容を配信しないための動作ですが、再生成に時間がかかると、表示済みページから別ページへの移動や CSS などの取得も完了待ちになります。
 
 `bin/livedocs_versioned_hook.py` は、初回生成で完成した出力を公開版として保持します。  
@@ -273,14 +273,14 @@ mkdocs 1.6.1 の `LiveReloadServer` は、ファイル変更を検知すると�
 
 ### HTTP 要求と版の寿命
 
-通常の HTTP 要求は、要求開始時の公開版を参照し、mkdocs の再生成完了を待ちません。  
-HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使用するため、次版の公開後に mkdocs 標準の通知でブラウザーを再読み込みします。
+通常の HTTP 要求は、要求開始時の公開版を参照し、MkDocs の再生成完了を待ちません。  
+HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使用するため、次版の公開後に MkDocs 標準の通知でブラウザーを再読み込みします。
 
 公開版の切り替え時に旧版からファイルを送信中の場合は、その応答が閉じるまで旧版のディレクトリを残します。  
 応答が完了して参照数がゼロになった版だけを削除するため、Windows でも使用中のファイルを削除しません。  
-初回生成物の一時ディレクトリは mkdocs 自身が所有するためフックから削除せず、フックが生成した一時ディレクトリだけを終了時に回収します。
+初回生成物の一時ディレクトリは MkDocs 自身が所有するためフックから削除せず、フックが生成した一時ディレクトリだけを終了時に回収します。
 
-`/livereload/` は mkdocs 標準の長時間ポーリングへ委譲します。  
+`/livereload/` は MkDocs 標準の長時間ポーリングへ委譲します。  
 `/doxygen/` は `livedocs_doxygen_hook.py` の静的配信へ委譲するため、版管理の対象に含めません。
 
 ## Doxygen HTML の静的サーブ
@@ -294,7 +294,7 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 
 ### コピーしない理由
 
-`docs_dir` へコピーすると、mkdocs が毎回 1.8 万ファイルを走査し、Material テーマで包んでしまいます。  
+`docs_dir` へコピーすると、MkDocs が毎回 1.8 万ファイルを走査し、Material テーマで包んでしまいます。  
 シンボリック リンクとジャンクションは、動的発行が Windows で使わないと決めている手段です。  
 `pages/livedocs/site/doxygen/` へネストするとパスが伸び、Windows の MAX_PATH に当たりやすくなります。
 
@@ -325,7 +325,7 @@ JSON が不正な場合や発行用テンプレートを認識できない場合
 ### 本文リンクの書き換え
 
 README や依存関係レポートのリンクは、docsfw の発行レイアウト (`pages/ja/html/<alias>/...`) を前提に `../../../doxygen/` と書かれています。  
-mkdocs は `use_directory_urls: true` で、かつ `ja/html/` 相当の階層が無いため、この相対パスは段数が合いません。
+MkDocs は `use_directory_urls: true` で、かつ `ja/html/` 相当の階層が無いため、この相対パスは段数が合いません。
 
 `stage_livedocs.py` はフェンス外の `(?:\.\./)+doxygen/` を `/doxygen/` へ置き換えます。  
 Markdown リンクと生 HTML の `href` の両方が対象です。  
@@ -536,7 +536,7 @@ Material にも Mermaid 連携がありますが、こちらは unpkg から `me
 docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、  
 クラス名を `docsfw-mermaid` として Material 側の処理と競合しないようにしています。
 
-## mkdocs の設定
+## MkDocs の設定
 
 `mkdocs.yml.in` の主要部分を次に示します。
 
@@ -577,7 +577,7 @@ docsfw はサブモジュールとして任意のワークスペースから使�
 静的発行はサイト名の概念を持たず、タイトルをページ単位で扱うため、この設定は動的発行だけが読みます。
 
 同じ理由で、`hooks:` のパスもテンプレートに固定値を持ちません。  
-mkdocs は `hooks:` を `mkdocs.yml` の位置を基準に解決するため、`vendor_assets.py` が docsfw の実際の配置と生成先から相対パスを求めて展開します。  
+MkDocs は `hooks:` を `mkdocs.yml` の位置を基準に解決するため、`vendor_assets.py` が docsfw の実際の配置と生成先から相対パスを求めて展開します。  
 docsfw をワークスペース内の既定位置以外へ置いた場合や、生成先を `--livedocsDir` で変えた場合も、生成後のパスは実ファイルを指します。
 
 `theme.font` は `false` にします。  
@@ -942,7 +942,7 @@ Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a
 
 ### ナビゲーションの幅と切り替え
 
-Pandoc HTML と mkdocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
+Pandoc HTML と MkDocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
 全体幅は 1370px です。
 
 1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
@@ -1209,7 +1209,7 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 | 0 | 設計ドキュメントの作成 | 完了 |
 | 1 | ステージング基盤 | 完了 |
 | 2 | `\toc` の展開 | 完了 |
-| 3 | mkdocs 設定とテーマ資産 | 完了 |
+| 3 | MkDocs 設定とテーマ資産 | 完了 |
 | 4 | PlantUML のクライアント レンダラー | 完了 |
 | 5 | make 統合と文書化 | 完了 |
 | 6 | Doxygen HTML の静的サーブと単一ページ リンク | 完了 |

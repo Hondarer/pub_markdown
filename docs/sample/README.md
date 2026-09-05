@@ -364,7 +364,7 @@ Debug.WriteLine("日本");
 
 [列幅の指定方法](https://github.com/jgm/pandoc/issues/2486) により、ページ幅に収まらなかった場合の列幅を指定できます。
 
-表に続いて、`Table:` または `:` を記載して表のキャプションを指定します。  
+表に続いて `Table:` を記載して表のキャプションを指定します。  
 キャプションの末尾に `{#tbl:xxx}` を記載すると、pandoc-crossref による採番と相互参照の対象になります。
 
 |No.|内容     |
@@ -383,6 +383,9 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 
 : 表のキャプション (`: 表のキャプション`)
 
+上記の行頭のコロンだけの形式 (`: キャプション`) については、Pandoc では表のキャプションとしてサポートされますが、MkDocs による動的発行では解釈されず、コロンを含む段落としてそのまま表示されるため、非推奨です。  
+表のキャプションには `Table:` を使用してください。
+
 セル内に改行を挿入する場合は、`<br />` を使用します。
 
 |No.|ヘッダー 1 行目<br />ヘッダー 2 行目|
@@ -393,7 +396,7 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 
 Table: セル内での改行を含む表
 
-以下の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、mkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
+以下の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、MkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
 [Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
 
 +------------------+-------------+
