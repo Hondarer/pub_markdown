@@ -56,6 +56,7 @@ OWN_ASSETS = (
     "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
     "docsfw-header-links.css",
+    "docsfw-header-meta.css",
 )
 
 # ヘッダーの単一ページ リンクで使うアイコン。静的発行と同じく、provider 設定を

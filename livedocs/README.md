@@ -85,7 +85,8 @@ make stopdocs
 | `bin/stage_livedocs.py` | 収集、前処理、リンク書き換え、書き出し |
 | `bin/lang_details_filter.py` | `bin/replace-tag.sh` の Python 移植 |
 | `bin/expand_toc.py` | `\toc` の索引展開 |
-| `bin/git_link.py` | Git 単一ページ リンク (blob URL) の解決 |
+| `bin/git_link.py` | Git 由来のページ情報 (blob URL、発行者、発行日時) の解決 |
+| `bin/publish_info.py` | 発行者と発行日時の文字列への整形 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
 | `bin/livedocs_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
 | `bin/livedocs_versioned_hook.py` | 再生成中の完成済み版の配信と版切り替え |
@@ -93,6 +94,7 @@ make stopdocs
 | `mkdocs.yml.in` | MkDocs 設定のテンプレート |
 | `theme/partials/header.html` | Material のヘッダーの上書き |
 | `theme/partials/docsfw-header-links.html` | Doxygen と Git の単一ページ リンクのボタン |
+| `theme/partials/docsfw-header-meta.html` | ヘッダーの発行者と発行日時 |
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
 | `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
@@ -100,6 +102,7 @@ make stopdocs
 | `assets/docsfw-svg-download.js` | 本文中の SVG のダウンロード ボタン |
 | `assets/docsfw-livedocs.css` | 追加スタイル |
 | `assets/docsfw-header-links.css` | ヘッダー内アイコンのスタイル |
+| `assets/docsfw-header-meta.css` | ヘッダーの発行者と発行日時のスタイル |
 | `requirements.txt` | Python 依存 |
 
 生成物は `pages/livedocs/` に出力します。
@@ -177,6 +180,6 @@ python3 framework/docsfw/livedocs/bin/vendor_assets.py --workspaceFolder="$PWD" 
 ## 静的発行だけが持つ機能
 
 Word (docx) 出力、4 バリアントの同時出力、pandoc-crossref の採番、  
-Git 単一ページ リンク、`file://` での動作は動的発行では扱いません。  
+概要版と詳細版の切替リンク、`file://` での動作は動的発行では扱いません。  
 これらが必要な場合は `make docs` を使用してください。  
 詳細は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。

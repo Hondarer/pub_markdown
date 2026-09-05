@@ -1,11 +1,17 @@
 {#-
-  mkdocs-material 9.7.7 の partials/header.html を上書きし、配色トグルと検索
-  ボックスの間へ Doxygen 単一ページ リンクと Git 単一ページ リンク
-  (ソースを開く) を足す。並びは静的発行 (styles/html/html-template.html) の
-  ナビバーと同じく Doxygen、Git の順とする。
+  mkdocs-material 9.7.7 の partials/header.html を上書きし、docsfw の追加要素を
+  2 か所へ入れる。
 
-  上流の md-header__source ブロックを取り除き、単一ページ リンクの include を
-  加える以外は上流のままとする。
+  - 配色トグルの前: 発行者と発行日時 (partials/docsfw-header-meta.html)
+  - 配色トグルと検索ボックスの間: Doxygen 単一ページ リンクと Git 単一ページ
+    リンク (partials/docsfw-header-links.html)
+
+  この並びで、静的発行 (styles/html/html-template.html) のナビバーと同じ
+  「タイトル … 発行者、発行日時、Doxygen、Git」の順になる。配色トグルと検索は
+  静的発行に対応する要素を持たないため、両者の間に入る。
+
+  上流の md-header__source ブロックを取り除き、上記 2 つの include を加える
+  以外は上流のままとする。
   mkdocs-material を更新した場合は、上流の partials/header.html との差分を
   取り直すこと。tests/test_livedocs_header.py が上流の内容変化を検出する。
 -#}
@@ -42,6 +48,9 @@
         </div>
       </div>
     </div>
+    {#- docsfw: ここから発行者と発行日時 -#}
+    {% include "partials/docsfw-header-meta.html" %}
+    {#- docsfw: ここまで -#}
     {% if config.theme.palette %}
       {% if not config.theme.palette is mapping %}
         {% include "partials/palette.html" %}

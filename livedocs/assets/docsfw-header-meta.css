@@ -1,0 +1,35 @@
+/* ヘッダーの発行者と発行日時のスタイル。
+   静的発行のナビバー右側にある .navbar-text に相当する。
+   配置と非表示の境は docs/livedocs-design.md の「発行者と発行日時」を参照。 */
+
+.docsfw-header-meta {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Material は html を 125% (20px) にするため .7rem が 14px になり、
+   静的発行の .doc-title, .doc-info, .navbar-text { font-size: 14px } と一致する。
+   色は本文より一段淡い副次情報として --md-primary-bg-color--light を使う。
+   この変数は docsfw-pandoc-style.css が default と slate の双方で定義している。 */
+.docsfw-header-meta > span {
+  color: var(--md-primary-bg-color--light);
+  font-size: .7rem;
+  line-height: normal;
+}
+
+/* 発行者と発行日時の間隔は、ヘッダー ボタン同士の 8px にそろえる
+   (.md-header__button の margin .2rem が両側に付いた値と同じ)。 */
+.docsfw-header-meta > span + span {
+  margin-left: 8px;
+}
+
+/* 発行日時は「曜日, 日 月 年 時刻 時差 短縮 SHA」と長いため、アイコンの 767px
+   より早く消す。76.25em は Material がヘッダーをドロワーへ切り替える境で、
+   これ未満ではページ タイトルの表示幅を優先する。 */
+@media screen and (max-width: 76.1875em) {
+  .docsfw-header-meta {
+    display: none;
+  }
+}

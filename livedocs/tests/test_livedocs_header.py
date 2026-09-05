@@ -24,6 +24,7 @@ UPSTREAM_HEADER_SHA256 = "8cf3fb15bcf969ff596649616fd99366b3c31c08d57a86d05308ef
 
 OVERRIDE_HEADER = os.path.join(MKDOCS_DIR, "theme", "partials", "header.html")
 LINKS_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-links.html")
+META_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-meta.html")
 
 
 def _find_upstream_header():
@@ -65,12 +66,32 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertNotIn('class="md-header__source"', text)
         self.assertNotIn('{% include "partials/source.html" %}', text)
         self.assertIn('{% include "partials/docsfw-header-links.html" %}', text)
+        self.assertIn('{% include "partials/docsfw-header-meta.html" %}', text)
         # 上流の構造は保つ。
         for marker in ('{% include "partials/logo.html" %}',
                        '{% include "partials/search.html" %}',
                        '{% include "partials/palette.html" %}',
                        'data-md-component="header"'):
             self.assertIn(marker, text)
+
+    def test_meta_partial_is_placed_before_the_palette_toggle(self):
+        """発行者と発行日時を、静的発行と同じくアイコン群より前に出していること。"""
+        with open(OVERRIDE_HEADER, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        meta = text.index('{% include "partials/docsfw-header-meta.html" %}')
+        palette = text.index('{% include "partials/palette.html" %}')
+        links = text.index('{% include "partials/docsfw-header-links.html" %}')
+        search = text.index('{% include "partials/search.html" %}')
+        self.assertLess(meta, palette)
+        self.assertLess(palette, links)
+        self.assertLess(links, search)
+
+    def test_meta_partial_reads_the_front_matter(self):
+        with open(META_PARTIAL, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn('page.meta["author"]', text)
+        self.assertIn('page.meta["date"]', text)
+        self.assertIn("docsfw-header-meta", text)
 
     def test_links_partial_uses_both_single_page_links(self):
         with open(LINKS_PARTIAL, "r", encoding="utf-8") as handle:

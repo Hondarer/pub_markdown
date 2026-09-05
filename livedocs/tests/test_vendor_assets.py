@@ -155,7 +155,8 @@ class VendorThemeTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as root:
             livedocs_dir = os.path.join(root, "pages", "livedocs")
             vendor_theme(livedocs_dir)
-            for name in ("header.html", "docsfw-header-links.html"):
+            for name in ("header.html", "docsfw-header-links.html",
+                         "docsfw-header-meta.html"):
                 self.assertTrue(
                     os.path.isfile(os.path.join(livedocs_dir, "theme", "partials", name)),
                     name,
@@ -173,6 +174,18 @@ class VendorThemeTest(unittest.TestCase):
             vendor_theme(livedocs_dir)
             self.assertFalse(os.path.exists(stale))
             self.assertTrue(os.path.isfile(os.path.join(partials, "header.html")))
+
+    def test_header_meta_css_is_copied_registered_and_preserved(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets = os.path.join(root, "assets")
+            vendor_own_assets(assets)
+            generate_mkdocs_yml(root, False)
+            with open(os.path.join(root, "mkdocs.yml"), encoding="utf-8") as handle:
+                config = handle.read()
+            name = "docsfw-header-meta.css"
+            self.assertTrue(os.path.isfile(os.path.join(assets, name)))
+            self.assertIn("assets/" + name, config)
+            self.assertIn("assets/" + name, VENDORED_FILES)
 
     def test_collapsible_assets_are_copied_registered_and_preserved(self):
         with tempfile.TemporaryDirectory() as root:

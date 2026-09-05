@@ -1,0 +1,22 @@
+{#-
+  ヘッダー右側の発行者と発行日時。
+  値は bin/stage_livedocs.py が staged md のフロント マターへ書いた
+  author / date を page.meta から読む。静的発行のナビバー
+  (styles/html/html-template.html の $author$ と $date$) と同じ文字列とする。
+
+  発行日時は「RFC2822 日時 + 短縮 SHA」の 1 文字列で、未コミット差分があると
+  SHA の末尾に + が付く。日時とハッシュは静的発行でも分かれていないため、
+  ここでも分割しない。
+-#}
+{% set publish_author = page.meta["author"] if page and page.meta else none %}
+{% set publish_date = page.meta["date"] if page and page.meta else none %}
+{% if publish_author or publish_date %}
+  <div class="docsfw-header-meta">
+    {% if publish_author %}
+      <span class="docsfw-header-meta__author">{{ publish_author }}</span>
+    {% endif %}
+    {% if publish_date %}
+      <span class="docsfw-header-meta__date">{{ publish_date }}</span>
+    {% endif %}
+  </div>
+{% endif %}

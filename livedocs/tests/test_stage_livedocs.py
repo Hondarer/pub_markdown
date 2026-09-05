@@ -12,16 +12,21 @@ from unittest.mock import patch
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
+from git_link import PublishFacts  # noqa: E402
+
 from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
     build_front_matter,
     convert_captions,
     convert_implicit_figures,
-    create_git_link_resolver,
+    create_git_resolver,
     generate_nav_files,
+    is_auto_set_author_enabled,
+    is_auto_set_date_enabled,
     is_git_link_enabled,
     resolve_document_git_link,
+    resolve_document_publish_info,
     rewrite_links,
     stage_index,
     stage_single,
@@ -56,6 +61,33 @@ class BuildFrontMatterTest(unittest.TestCase):
         self.assertEqual(build_front_matter(document, "ja", True), "")
 
     def test_non_index_does_not_add_heading_as_title(self):
+        document = self._document(staged_rel="guide/usage.md")
+        self.assertEqual(build_front_matter(document, "ja", True), "")
+
+    def test_publish_info_is_added(self):
+        document = self._document(staged_rel="guide/usage.md")
+        document.publish_author = "first, second et al."
+        document.publish_date = "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\nauthor: "first, second et al."\n'
+            'date: "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"\n---',
+        )
+
+    def test_publish_info_does_not_overwrite_the_source_front_matter(self):
+        # set-meta.lua が文書側のメタデータを上書きしないことにそろえる。
+        document = self._document(staged_rel="guide/usage.md")
+        document.front_matter = '---\nauthor: "明示著者"\n---'
+        document.fields = {"author": "明示著者"}
+        document.publish_author = "first"
+        document.publish_date = "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\nauthor: "明示著者"\n'
+            'date: "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"\n---',
+        )
+
+    def test_empty_publish_info_adds_nothing(self):
         document = self._document(staged_rel="guide/usage.md")
         self.assertEqual(build_front_matter(document, "ja", True), "")
 
@@ -127,6 +159,19 @@ class GitLinkResolutionTest(unittest.TestCase):
             self.targets.append(path)
             return "https://example.test/blob/abc/x", "git"
 
+    class _FakePublishResolver:
+        """``resolve_publish_facts`` の呼び出し先を記録するだけの差し替え。"""
+
+        def __init__(self):
+            self.targets = []
+
+        def resolve_publish_facts(self, path):
+            self.targets.append(path)
+            return PublishFacts(
+                tracked=True, dirty=False, authors=["first"],
+                committer_date="Sat, 06 Sep 2026 12:34:56 +0900", short_sha="5927f1d",
+            )
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.workspace = self.tmp.name
@@ -139,10 +184,33 @@ class GitLinkResolutionTest(unittest.TestCase):
         self.assertTrue(is_git_link_enabled({"gitLinkEnable": "true"}))
         self.assertFalse(is_git_link_enabled({"gitLinkEnable": "false"}))
 
-    def test_disabled_config_creates_no_resolver(self):
+    def test_auto_set_flags_default_to_true(self):
+        self.assertTrue(is_auto_set_author_enabled({}))
+        self.assertFalse(is_auto_set_author_enabled({"autoSetAuthor": "false"}))
+        self.assertTrue(is_auto_set_date_enabled({}))
+        self.assertFalse(is_auto_set_date_enabled({"autoSetDate": "false"}))
+
+    def test_resolver_is_created_while_any_feature_needs_git(self):
         config_path = os.path.join(self.workspace, "pub_markdown.config.yaml")
-        self.assertIsNone(create_git_link_resolver({"gitLinkEnable": "false"}, config_path))
-        self.assertIsNotNone(create_git_link_resolver({}, config_path))
+        self.assertIsNotNone(create_git_resolver({}, config_path))
+        # 単一ページ リンクだけを止めても、発行者と発行日時のために resolver は要る。
+        self.assertIsNotNone(
+            create_git_resolver({"gitLinkEnable": "false"}, config_path)
+        )
+        self.assertIsNone(create_git_resolver({
+            "gitLinkEnable": "false",
+            "autoSetAuthor": "false",
+            "autoSetDate": "false",
+        }, config_path))
+
+    def test_disabled_git_link_clears_git_fields(self):
+        document = Document(os.path.join(self.workspace, "a.md"), "a.md")
+        document.git_url = "https://example.test/stale"
+        resolve_document_git_link(
+            document, self.workspace, self._FakeResolver(), enabled=False
+        )
+        self.assertEqual(document.git_url, "")
+        self.assertEqual(document.git_provider, "")
 
     def test_disabled_resolver_clears_git_fields(self):
         document = Document(os.path.join(self.workspace, "a.md"), "a.md")
@@ -170,6 +238,40 @@ class GitLinkResolutionTest(unittest.TestCase):
         resolver = self._FakeResolver()
         resolve_document_git_link(document, self.workspace, resolver)
         self.assertEqual(resolver.targets, [document.real_path])
+
+    def test_publish_info_ignores_git_origin(self):
+        # 静的発行は get_file_author.sh / get_file_date.sh へ発行対象の md を
+        # そのまま渡すため、git-origin による差し替えは行わない。
+        origin = os.path.join(self.workspace, "prod", "include", "calc.h")
+        os.makedirs(os.path.dirname(origin))
+        with open(origin, "w", encoding="utf-8") as handle:
+            handle.write("/* calc */\n")
+
+        document = Document(os.path.join(self.workspace, "docs", "Files", "calc.h.md"),
+                            "calc/Files/calc.h.md")
+        document.fields = {"git-origin": "prod/include/calc.h"}
+        resolver = self._FakePublishResolver()
+        resolve_document_publish_info(document, resolver)
+        self.assertEqual(resolver.targets, [document.real_path])
+
+    def test_publish_info_is_cleared_without_resolver(self):
+        document = Document(os.path.join(self.workspace, "a.md"), "a.md")
+        document.publish_author = "stale"
+        document.publish_date = "stale"
+        resolve_document_publish_info(document, None)
+        self.assertEqual(document.publish_author, "")
+        self.assertEqual(document.publish_date, "")
+
+    def test_disabled_flags_clear_each_side(self):
+        document = Document(os.path.join(self.workspace, "a.md"), "a.md")
+        resolver = self._FakePublishResolver()
+        resolve_document_publish_info(document, resolver, auto_author=False)
+        self.assertEqual(document.publish_author, "")
+        self.assertTrue(document.publish_date)
+
+        resolve_document_publish_info(document, resolver, auto_date=False)
+        self.assertTrue(document.publish_author)
+        self.assertEqual(document.publish_date, "")
 
 
 class GenerateNavFilesTest(unittest.TestCase):
@@ -222,6 +324,7 @@ class GenerateNavFilesTest(unittest.TestCase):
             container = SimpleNamespace(
                 by_real_path={os.path.normcase(os.path.abspath(source)).replace("\\", "/"): document},
                 lang="ja", details=True, workspace=tmp, git_resolver=None,
+                git_link_enabled=True, auto_set_author=True, auto_set_date=True,
                 main_mdroot=tmp, subfolders=[],
             )
             generate_nav_files(output, tmp, [], ["cmd"])

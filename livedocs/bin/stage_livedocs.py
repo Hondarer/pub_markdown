@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from expand_toc import DocIndex, expand_toc_commands, collapsible_open_tag, parse_toc_params  # noqa: E402
 from git_link import GitLinkResolver, parse_host_provider_map  # noqa: E402
+from publish_info import build_publish_info  # noqa: E402
 from lang_details_filter import filter_lang_details  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -64,6 +65,7 @@ VENDORED_FILES = (
     "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-header-links.css",
+    "assets/docsfw-header-meta.css",
     "assets/docsfw-doxygen-icon.svg",
     "assets/docsfw-git-icon.svg",
     "assets/docsfw-github-icon.svg",
@@ -191,21 +193,43 @@ def parse_merge_subfolder_docs(spec, workspace):
     return entries
 
 
-def is_git_link_enabled(config):
-    """``gitLinkEnable`` を判定する。未指定は有効 (docsfw と同じ)。"""
-    value = (config or {}).get("gitLinkEnable", "")
+def is_flag_enabled(config, key):
+    """真偽値の設定を判定する。未指定は有効 (docsfw と同じ)。"""
+    value = (config or {}).get(key, "")
     if value == "":
         return True
     return value.strip().lower() == "true"
 
 
-def create_git_link_resolver(config, config_path):
-    """``gitLinkEnable`` が有効なら ``GitLinkResolver`` を作る。無効なら ``None``。
+def is_git_link_enabled(config):
+    """``gitLinkEnable`` を判定する。未指定は有効 (docsfw と同じ)。"""
+    return is_flag_enabled(config, "gitLinkEnable")
+
+
+def is_auto_set_author_enabled(config):
+    """``autoSetAuthor`` を判定する。未指定は有効 (docsfw と同じ)。"""
+    return is_flag_enabled(config, "autoSetAuthor")
+
+
+def is_auto_set_date_enabled(config):
+    """``autoSetDate`` を判定する。未指定は有効 (docsfw と同じ)。"""
+    return is_flag_enabled(config, "autoSetDate")
+
+
+def create_git_resolver(config, config_path):
+    """git 由来の情報が 1 つでも要るなら ``GitLinkResolver`` を作る。不要なら ``None``。
+
+    単一ページ リンク、発行者、発行日時は同じリポジトリ走査を共有します。
+    このため ``gitLinkEnable`` が無効でも、``autoSetAuthor`` か ``autoSetDate`` が
+    有効であれば resolver を作ります。blob URL を出すかどうかは
+    ``is_git_link_enabled()`` で別に判定します。
 
     自己ホスト用の ``gitLinkHostProvider`` は、``pub_markdown.config.yaml`` と
     同じ ``.vscode/`` にある ``git_link.yaml`` から読みます。
     """
-    if not is_git_link_enabled(config):
+    if not (is_git_link_enabled(config)
+            or is_auto_set_author_enabled(config)
+            or is_auto_set_date_enabled(config)):
         return None
     git_link_config = parse_config(
         os.path.join(os.path.dirname(config_path), "git_link.yaml")
@@ -213,7 +237,7 @@ def create_git_link_resolver(config, config_path):
     return GitLinkResolver(parse_host_provider_map(git_link_config.get("gitLinkHostProvider")))
 
 
-def resolve_document_git_link(document, workspace, resolver):
+def resolve_document_git_link(document, workspace, resolver, enabled=True):
     """``document`` の Git 単一ページ リンクを解決し、結果を保持させる。
 
     doxyfw 生成 md はフロント マターに ``git-origin`` (元ソースのワークスペース
@@ -222,7 +246,7 @@ def resolve_document_git_link(document, workspace, resolver):
     """
     document.git_url = ""
     document.git_provider = ""
-    if resolver is None:
+    if resolver is None or not enabled:
         return
 
     target = document.real_path
@@ -236,6 +260,26 @@ def resolve_document_git_link(document, workspace, resolver):
     if url:
         document.git_url = url
         document.git_provider = provider
+
+
+def resolve_document_publish_info(document, resolver, auto_author=True, auto_date=True):
+    """``document`` の発行者と発行日時を解決し、結果を保持させる。
+
+    解決対象は ``document.real_path`` 自身です。Git 単一ページ リンクのような
+    ``git-origin`` への差し替えは行いません。静的発行も
+    ``get_file_author.sh`` / ``get_file_date.sh`` へ発行対象の md をそのまま渡すため、
+    doxyfw の生成 md では ``date`` がファイルの更新時刻へ、``author`` が空になります。
+    その挙動もそろえます。
+    """
+    document.publish_author = ""
+    document.publish_date = ""
+    if resolver is None or not (auto_author or auto_date):
+        return
+
+    facts = resolver.resolve_publish_facts(document.real_path)
+    document.publish_author, document.publish_date = build_publish_info(
+        document.real_path, facts, auto_author, auto_date
+    )
 
 
 # ----------------------------------------------------------------------------
@@ -391,6 +435,8 @@ class Document:
         self.title = ""
         self.git_url = ""
         self.git_provider = ""
+        self.publish_author = ""
+        self.publish_date = ""
 
 
 def collect_sources(workspace, main_mdroot, subfolders):
@@ -847,6 +893,10 @@ def build_front_matter(document, lang, details):
 
     ``git-url`` と ``git-provider`` は、テーマの ``partials/header.html`` が
     ``page.meta`` から読んで「ソースを開く」リンクにします。
+
+    ``author`` と ``date`` は同じくヘッダーの発行者と発行日時になります。
+    静的発行の ``set-meta.lua`` が文書側のメタデータを上書きしないことにそろえ、
+    ソースのフロント マターに同じキーがある場合は補いません。
     """
     added = []
 
@@ -859,6 +909,11 @@ def build_front_matter(document, lang, details):
     if document.git_url:
         added.append(_front_matter_line("git-url", document.git_url))
         added.append(_front_matter_line("git-provider", document.git_provider))
+
+    if document.publish_author and not document.fields.get("author"):
+        added.append(_front_matter_line("author", document.publish_author))
+    if document.publish_date and not document.fields.get("date"):
+        added.append(_front_matter_line("date", document.publish_date))
 
     if not added:
         return document.front_matter
@@ -1013,12 +1068,15 @@ class StageIndex:
     1 ファイルだけの再ステージング (``stage_single``) に使い回す。
 
     ``git_resolver`` もリポジトリ単位の情報をキャッシュしているため、同じ寿命で
-    使い回す。``gitLinkEnable`` が無効な場合は ``None``。
+    使い回す。単一ページ リンク、発行者、発行日時のいずれも無効な場合は ``None``。
+    どの情報を出すかは ``git_link_enabled``/``auto_set_author``/``auto_set_date`` が
+    個別に決める。
     """
 
     def __init__(self, workspace, config_path, main_mdroot, subfolders,
                  mapper, kept, assets, index, real_to_staged, by_real_path,
-                 lang, details, variant, git_resolver=None):
+                 lang, details, variant, git_resolver=None,
+                 git_link_enabled=True, auto_set_author=True, auto_set_date=True):
         self.workspace = workspace
         self.config_path = config_path
         self.main_mdroot = main_mdroot
@@ -1033,6 +1091,9 @@ class StageIndex:
         self.details = details
         self.variant = variant
         self.git_resolver = git_resolver
+        self.git_link_enabled = git_link_enabled
+        self.auto_set_author = auto_set_author
+        self.auto_set_date = auto_set_date
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
@@ -1043,7 +1104,10 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
     main_mdroot = os.path.normpath(os.path.join(workspace, md_root_name))
     subfolders = parse_merge_subfolder_docs(config.get("mergeSubfolderDocs"), workspace)
     mapper = PathMapper(main_mdroot, subfolders)
-    git_resolver = create_git_link_resolver(config, config_path)
+    git_resolver = create_git_resolver(config, config_path)
+    git_link_enabled = is_git_link_enabled(config)
+    auto_set_author = is_auto_set_author_enabled(config)
+    auto_set_date = is_auto_set_date_enabled(config)
 
     documents, assets = collect_sources(workspace, main_mdroot, subfolders)
 
@@ -1068,7 +1132,10 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
             or first_heading(document.body)
             or posixpath.splitext(document.source_name)[0]
         )
-        resolve_document_git_link(document, workspace, git_resolver)
+        resolve_document_git_link(document, workspace, git_resolver, git_link_enabled)
+        resolve_document_publish_info(
+            document, git_resolver, auto_set_author, auto_set_date
+        )
         kept.append(document)
 
     resolve_staged_names(kept)
@@ -1099,6 +1166,9 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
         details=details,
         variant=variant,
         git_resolver=git_resolver,
+        git_link_enabled=git_link_enabled,
+        auto_set_author=auto_set_author,
+        auto_set_date=auto_set_date,
     )
 
 
@@ -1207,7 +1277,13 @@ def stage_single(container, out_dir, real_path):
         or first_heading(document.body)
         or posixpath.splitext(document.source_name)[0]
     )
-    resolve_document_git_link(document, container.workspace, container.git_resolver)
+    resolve_document_git_link(
+        document, container.workspace, container.git_resolver, container.git_link_enabled
+    )
+    resolve_document_publish_info(
+        document, container.git_resolver,
+        container.auto_set_author, container.auto_set_date,
+    )
 
     content = _render_document(document, container)
     updated = write_if_changed(os.path.join(out_dir, document.staged_rel), content)

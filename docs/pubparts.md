@@ -134,7 +134,7 @@ docs/
 
 - ナビゲーション ツリーと TOC の見出し (`short-title` 系) は別経路 (`extract_short_title`) で読み込むため、`defaults:` の対象外です。
 - `category` などの値を出力に表示するには、HTML / docx テンプレート側で対応するメタデータ (`$category$` など) を参照している必要があります。本機能は値を pandoc に渡すところまでを担います。
-- `author` / `date` を `defaults:` で与えると pandoc のメタデータに載るため、`autoSetAuthor` / `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。
+- `author` / `date` を `defaults:` で与えると pandoc のメタデータに載るため、`autoSetAuthor` / `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
 ## 実装上の注意
 
