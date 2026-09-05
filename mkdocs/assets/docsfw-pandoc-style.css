@@ -555,9 +555,11 @@ body {
    ::-webkit-scrollbar をセレクターなしの全称指定で持ち、ページ本体を含む
    すべてのスクロール領域を 12px 幅、トラック rgba(0,0,0,.1)、
    thumb rgba(0,0,0,.5) で塗る。
-   そこで、こちらも全称指定でページ本体まで含め、幅 6px、トラック透明、
+   そこで、こちらも全称指定でページ本体まで含め、幅 6px、
+   トラックは --md-default-fg-color--lightest、
    thumb は --md-default-fg-color--lighter にそろえる。
-   ダーク (slate) ではこの変数が明るい灰色へ切り替わるため、追加の指定は
+   トラックは thumb より薄い前景色で、スクロール可能領域の存在だけを示す。
+   ダーク (slate) ではこれらの変数が明るい灰色へ切り替わるため、追加の指定は
    要らない。
 
    Material の .md-tabs__list と .md-typeset .tabbed-labels は
@@ -570,7 +572,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--md-default-fg-color--lightest);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -613,14 +615,14 @@ body {
 @supports not selector(::-webkit-scrollbar) {
   html {
     scrollbar-width: thin;
-    scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+    scrollbar-color: var(--md-default-fg-color--lighter) var(--md-default-fg-color--lightest);
   }
 
   .md-typeset pre > code:hover,
   .md-search__scrollwrap:hover,
   .md-sidebar__scrollwrap:focus-within,
   .md-sidebar__scrollwrap:hover {
-    scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+    scrollbar-color: var(--md-default-fg-color--lighter) var(--md-default-fg-color--lightest);
   }
 }
 

@@ -634,7 +634,8 @@ pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px 
 
 #### そろえた後の仕様
 
-幅 6px、角丸のない四角い thumb、トラックは透明、thumb の色は `--md-default-fg-color--lighter` (白地で `#ADADAD`) にそろえます。  
+幅 6px、角丸のない四角い thumb、トラックは `--md-default-fg-color--lightest` (白地で約 `#EDEDED`)、thumb の色は `--md-default-fg-color--lighter` (白地で `#ADADAD`) にそろえます。  
+トラックは thumb より薄い前景色で、スクロール可能領域の存在だけを示します。  
 ページ本体のスクロール バーも対象に含めます。
 
 コード ブロックの上では thumb が `#A8A8A8` と計測されますが、これは同じ色の指定がコード ブロックの背景 `#F8F8F8` の上に載るためで、指定は同一です。
