@@ -116,6 +116,7 @@ extra_javascript:
   - assets/docsfw-mermaid.js
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
+  - assets/docsfw-svg-download.js
   # MathJax は docsfw の pandoc --mathjax と同じく CDN から読み込む。
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 

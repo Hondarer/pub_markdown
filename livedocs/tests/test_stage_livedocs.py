@@ -13,6 +13,8 @@ from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
     build_front_matter,
+    convert_captions,
+    convert_implicit_figures,
     generate_nav_files,
     rewrite_links,
 )
@@ -147,6 +149,144 @@ class RewriteLinksTest(unittest.TestCase):
             rewrite_links(document.body, document, mapper, {}),
             document.body,
         )
+
+
+class ConvertCaptionsTest(unittest.TestCase):
+    def test_wraps_diagram_fence_and_caption_into_figure(self):
+        source = (
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            "CodeBlock: Mermaid のキャプション\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            '<figure class="docsfw-figure" markdown="1">\n'
+            "\n"
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            '<figcaption class="docsfw-caption" markdown="span">'
+            "Mermaid のキャプション</figcaption>\n"
+            "\n"
+            "</figure>\n",
+        )
+
+    def test_moves_label_to_figure_id(self):
+        source = (
+            "```plantuml\n"
+            "@startuml\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "CodeBlock: ラベル付き {#fig:sample}\n"
+        )
+        result = convert_captions(source)
+        self.assertIn('<figure class="docsfw-figure" id="fig:sample" markdown="1">', result)
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">ラベル付き</figcaption>',
+            result,
+        )
+
+    def test_keeps_multiline_caption_in_figcaption(self):
+        source = (
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            "CodeBlock: 1 行目\n"
+            "2 行目\n"
+        )
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">1 行目\n'
+            "2 行目</figcaption>",
+            convert_captions(source),
+        )
+
+    def test_keeps_paragraph_caption_for_source_code_and_table(self):
+        source = (
+            "```c\n"
+            "int main(void);\n"
+            "```\n"
+            "\n"
+            "CodeBlock: ソースのキャプション\n"
+            "\n"
+            "Table: 表のキャプション\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "```c\n"
+            "int main(void);\n"
+            "```\n"
+            "\n"
+            "ソースのキャプション\n"
+            "{: .docsfw-caption }\n"
+            "\n"
+            "表のキャプション\n"
+            "{: .docsfw-caption }\n",
+        )
+
+    def test_keeps_diagram_without_caption(self):
+        source = (
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            "つぎの段落。\n"
+        )
+        self.assertEqual(convert_captions(source), source)
+
+    def test_ignores_caption_separated_from_diagram_by_text(self):
+        source = (
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            "あいだの段落。\n"
+            "\n"
+            "CodeBlock: キャプション\n"
+        )
+        result = convert_captions(source)
+        self.assertNotIn("<figure", result)
+        self.assertIn("{: .docsfw-caption }", result)
+
+
+class ConvertImplicitFiguresTest(unittest.TestCase):
+    def test_converts_lone_image_paragraph(self):
+        self.assertEqual(
+            convert_implicit_figures("![draw.io のテスト](images/x.drawio.svg)\n"),
+            '<figure class="docsfw-figure" markdown="1">\n'
+            "\n"
+            "![draw.io のテスト](images/x.drawio.svg)\n"
+            "\n"
+            '<figcaption class="docsfw-caption" markdown="span">'
+            "draw.io のテスト</figcaption>\n"
+            "\n"
+            "</figure>\n",
+        )
+
+    def test_moves_label_to_figure_and_keeps_other_attributes(self):
+        result = convert_implicit_figures("![幅つき](images/y.svg){#fig:a width=50%}\n")
+        self.assertIn('<figure class="docsfw-figure" id="fig:a" markdown="1">', result)
+        self.assertIn("![幅つき](images/y.svg){width=50%}", result)
+
+    def test_keeps_image_without_alternative_text(self):
+        source = "![](images/x.svg)\n"
+        self.assertEqual(convert_implicit_figures(source), source)
+
+    def test_keeps_image_followed_by_text(self):
+        source = "![図](images/x.svg)\nつづきの本文。\n"
+        self.assertEqual(convert_implicit_figures(source), source)
+
+    def test_keeps_image_inside_fence(self):
+        source = (
+            "```md\n"
+            "![コード例](images/x.svg)\n"
+            "```\n"
+        )
+        self.assertEqual(convert_implicit_figures(source), source)
 
 
 if __name__ == "__main__":

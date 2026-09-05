@@ -83,7 +83,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 14 | PlantUML の SVG 化 | `bin/pandoc-filters/plantuml.lua:503-560`, `:731-758` | 簡略 | `@plantuml/core` によるブラウザー描画 |
 | 15 | PlantUML の LibDeflate エンコード | `plantuml.lua:157-211` | 対象外 | サーバーを使わない |
 | 16 | `skinparam backgroundColor transparent` の注入 | `plantuml.lua:663-668` | 維持 | クライアント側 JavaScript で実施 |
-| 17 | `caption` 行と `@startuml <名前>` からのキャプション抽出 | `plantuml.lua:579-644` | 維持 | 同じ優先順を実装 |
+| 17 | `caption` 行と `@startuml <名前>` からのキャプション抽出 | `plantuml.lua:579-644` | 維持 | 同じ優先順を実装。`CodeBlock:` 行がある場合はそちらを優先する点も同じ |
 | 18 | SVG の処理命令移動とフォント パッチ | `plantuml.lua:358-400`, `:464-500` | 対象外 | docx 向けの対策 |
 | 19 | SVG から PNG への変換 | `plantuml.lua:781-802`、`bin/rsvg-convert.js` | 対象外 | docx 専用 |
 | 20 | Mermaid のブラウザー描画 | `bin/pandoc-filters/mermaid.lua:150-166` | 維持 | 同じ方式。ローカルの `mermaid.min.js` を使用 |
@@ -91,6 +91,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 22 | 共有ブラウザー インスタンス | `bin/browser-server.js` ほか | 対象外 | ビルド時にブラウザーを使わない |
 | 23 | draw.io SVG の `foreignObject` 除去 | `bin/strip-foreignobject.py` | 対象外 | ブラウザーは `foreignObject` を解釈できる |
 | 24 | 画像リソースの事前コピー | `:2473-2492` | 維持 | ステージングで画像も配置 |
+| 58 | SVG のダウンロード ボタン | `styles/html/html-template.html:975-1052` | 維持 | `assets/docsfw-svg-download.js`。画像として参照する SVG に加え、インライン描画した図も直列化して保存する |
 
 ### Markdown 記法の変換
 
@@ -100,7 +101,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 26 | `+hard_line_breaks` | 371 ファイル | 維持 | `markdown.extensions.nl2br` |
 | 27 | 表 | 789 | 維持 | `tables` 拡張 |
 | 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換 |
-| 29 | `CodeBlock:` キャプション | 68 | 簡略 | フェンス属性または図キャプションへ畳み込む |
+| 29 | `CodeBlock:` キャプション | 68 | 簡略 | PlantUML / Mermaid フェンスの直後にある場合は、フェンスとともに `md_in_html` の `figure` へ包む。それ以外は `.docsfw-caption` の段落にする |
 | 30 | pandoc-crossref の採番と相互参照 | ラベル 22 / 参照 7 | 対象外 | ラベルは id として残す |
 | 31 | 数式 | 51 | 維持 | `pymdownx.arithmatex` と MathJax |
 | 32 | 脚注 | 29 | 維持 | `footnotes` 拡張 |
@@ -108,6 +109,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 34 | `==mark==` | 少数 | 維持 | `pymdownx.mark` |
 | 35 | `\newpage` / `\pagebreak` | 4 | 対象外 | ステージングで削除 |
 | 36 | docx 専用フィルター 8 本 | - | 対象外 | |
+| 57 | `implicit_figures` | 画像 12 | 維持 | 画像 1 個だけの段落を、ステージングで `md_in_html` の `figure` へ変換する |
 
 ### リンク解決
 
@@ -168,6 +170,7 @@ framework/docsfw/
 |   |   +-- docsfw-mermaid.js        # Mermaid 初期化
 |   |   +-- docsfw-mathjax.js        # MathJax の設定
 |   |   +-- docsfw-responsive-nav.js # 共通レイアウトと単一ドロワーの制御
+|   |   +-- docsfw-svg-download.js   # SVG のダウンロード ボタン
 |   |   +-- docsfw-livedocs.css       # 追加スタイル
 |   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
 |   +-- tests/
@@ -372,7 +375,8 @@ API は `renderToString(lines, onSuccess, onError)` です。
 `assets/docsfw-plantuml.js` は次を行います。
 
 - `pymdownx.superfences` の `custom_fences` が出力した要素から PlantUML ソースを取得します。
-- `caption` 行、または `@startuml <名前>` からキャプションを取り、`figcaption` として出力します。優先順は `plantuml.lua:579-644` と同じです。
+- `caption` 行、または `@startuml <名前>` からキャプションを取り、`figcaption` として出力します。優先順は `plantuml.lua:579-644` と同じです。  
+  キャプションがある場合はブロックを `figure` で包みます。`CodeBlock:` 行によってステージングがすでに `figure` を作っている場合は、そちらの `figcaption` を優先します。
 - `skinparam backgroundColor transparent` を注入します。処理は `plantuml.lua:663-668` と同じです。
 - `IntersectionObserver` で、ビューポートに入った図だけをレンダリングします。
 - Material のカラー スキームを参照し、ダーク モードの指定を切り替えます。  
@@ -382,6 +386,40 @@ API は `renderToString(lines, onSuccess, onError)` です。
 
 遅延描画は必須です。  
 `app/example/docs/sequence.md` のような 1 ページに多数の PlantUML を含む文書や、Doxybook2 のページは各ページにインクルード グラフと呼び出しグラフを持つためです。
+
+## 図の枠とキャプション
+
+静的発行は、キャプションを持つ図を `figure` で包み、枠と中央寄せを与えます (`styles/html/html-style.css` の `figure`)。  
+キャプションを持たない図は `figure` になりません。動的発行もこの条件をそろえます。
+
+`figure` は 2 つの経路で組み立てます。
+
+| 経路 | 実装 | 対象 |
+|---|---|---|
+| ステージング | `bin/stage_livedocs.py` の `convert_captions` | PlantUML / Mermaid フェンスの直後にある `CodeBlock:` キャプション |
+| ステージング | 同 `convert_implicit_figures` | 画像 1 個だけの段落 (Pandoc の `implicit_figures` 相当) |
+| ブラウザー | `assets/docsfw-plantuml.js` の `addCaption` | PlantUML ソース内の `caption` 行 |
+
+ステージングは `md_in_html` を使い、`figure` の内側を Markdown のまま残します。  
+生の `<img>` を出力すると、`use_directory_urls: true` の下で `index.md` 以外のページから画像の相対パスを解決できなくなるためです。  
+`figcaption` は `markdown="span"` とします。`markdown="1"` は内側に `<p>` を作り、`figure` 側を `markdown="span"` にすると `nl2br` が余分な `<br>` を作ります。
+
+枠と余白は `assets/docsfw-livedocs.css` の `.docsfw-figure` が与えます。  
+キャプションの色は静的発行の `figcaption` と同じく本文色 (`--md-typeset-color`) です。  
+枠線は `--md-default-fg-color--lightest` で、静的発行側もこの色を白地で解決した `rgba(0, 0, 0, 0.07)` へそろえています。
+
+## SVG のダウンロード
+
+本文中の SVG へ、ホバー時だけ右上にダウンロード ボタンを重ねます。  
+静的発行の `styles/html/html-template.html` にある同名の処理を `assets/docsfw-svg-download.js` へ移植したものです。
+
+静的発行は PlantUML も draw.io も `<img src="*.svg">` のため画像だけを対象にします。  
+動的発行は PlantUML と Mermaid をブラウザー上でインライン描画するため、対応する SVG ファイルが存在しません。  
+このため描画済みの `<svg>` を `XMLSerializer` で直列化し、`Blob` として保存します。  
+描画は非同期のため、`MutationObserver` で `<svg>` の挿入を検知してボタンを付けます。描画側のスクリプトへ呼び出しを埋め込まないため、読み込み順に依存しません。
+
+インライン描画した図のファイル名は、`figcaption` があればそのテキスト、無ければ `<ページ スラグ>-<plantuml|mermaid><連番>.svg` とします。  
+静的発行のファイル名 (`puml_<sha1>.svg`) はキャッシュ キーであり、利用者にとって意味を持たないため踏襲しません。
 
 ## Mermaid
 

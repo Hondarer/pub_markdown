@@ -125,6 +125,40 @@
   text-align: center;
 }
 
+/* キャプションを持つ図の枠。pandoc 発行版の
+   ../../styles/html/html-style.css の figure と同じ寸法にする。
+   pandoc 発行版と同じく、キャプションを持たない図には付けない。
+
+   pandoc 発行版は display: flex で中央寄せするが、動的発行の図は
+   overflow-x: auto を持つ div のため、flex アイテムにすると内容幅まで縮んで
+   横スクロールが効かなくなる。block のまま text-align で中央へ寄せる。 */
+.md-typeset .docsfw-figure {
+  display: block;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 3px;
+  padding: 8px;
+  margin: 15px 0;
+  text-align: center;
+  /* Material の .md-typeset figure は width: fit-content で内容幅まで縮める。
+     pandoc 発行版の figure はブロック要素として本文幅いっぱいに広がるため、
+     width を戻す。 */
+  width: auto;
+  max-width: 100%;
+}
+
+/* figure の内余白が図の上下余白と二重にならないようにする。
+   画像は md_in_html により <p> で包まれるため、段落側も対象にする。 */
+.md-typeset .docsfw-figure > p,
+.md-typeset .docsfw-figure > .docsfw-plantuml,
+.md-typeset .docsfw-figure > .docsfw-mermaid {
+  margin: 0;
+}
+
+.md-typeset .docsfw-figure img {
+  max-width: 100%;
+  height: auto;
+}
+
 .md-typeset .docsfw-plantuml svg,
 .md-typeset .docsfw-mermaid svg {
   max-width: 100%;
@@ -161,20 +195,25 @@
 /* ------------------------------------------------------------------------ */
 
 /* docsfw の Table: / CodeBlock: キャプションに相当する段落。 */
+/* 色と余白は pandoc 発行版の figcaption に合わせる。pandoc 発行版は
+   figcaption に色を指定せず body (#212121) を継承するため、見出し用の
+   --md-default-fg-color--light ではなく本文色を使う。 */
 .md-typeset .docsfw-caption {
-  margin-top: 0.4em;
-  color: var(--md-default-fg-color--light);
+  margin: 8px 0 0;
+  color: var(--md-typeset-color);
   font-size: 16px;
   line-height: 1.1;
   text-align: center;
+  /* Material の .md-typeset figcaption は italic で、幅を 24rem に絞る。
+     pandoc 発行版の figcaption はどちらも持たないため、既定へ戻す。 */
+  font-style: normal;
+  max-width: none;
 }
 
-.md-typeset figcaption.docsfw-caption {
-  margin-top: 0.4em;
-}
-
-/* nl2br が段落末尾に付ける <br> は、キャプションでは余白になるので消す。 */
-.md-typeset .docsfw-caption > br:last-child {
+/* nl2br が段落末尾に付ける <br> は、キャプションでは余白になるので消す。
+   figcaption は対象にしない。複数行キャプションの改行が最後の要素の子になり、
+   pandoc 発行版では残る改行まで消えてしまう。 */
+.md-typeset p.docsfw-caption > br:last-child {
   display: none;
 }
 
@@ -242,4 +281,66 @@
 .md-typeset ul li > br + span,
 .md-typeset ul li {
   line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------------ */
+/* SVG ダウンロード                                                          */
+/* ------------------------------------------------------------------------ */
+
+/* 本文中の SVG に、ホバー時だけ右上へ「SVG をダウンロード」を重ねる。
+   ボタンの組み立ては assets/docsfw-svg-download.js が行う。
+   pandoc 発行版の ../../styles/html/html-style.css および
+   ../../styles/html/html-template.html と同じ見た目と規則にそろえる。
+
+   アイコンの基準要素 (.docsfw-svg-dl-host) は figure があれば figure、
+   なければ図または画像を包む span (.docsfw-svg-dl-wrap)。 */
+.md-typeset .docsfw-svg-dl-host {
+  position: relative;
+}
+
+.md-typeset .docsfw-svg-dl-wrap {
+  display: inline-block;
+  max-width: 100%;
+}
+
+/* キャプションを持たない図には figure が無いため、包む要素を別に作る。
+   図はブロック要素なので span ではなく div とし、ボタンが図の右端へ来るよう
+   内容幅に縮める。上下の余白は包まれた図から引き継ぐ。 */
+.md-typeset .docsfw-svg-dl-block {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1em auto;
+}
+
+.md-typeset .docsfw-svg-dl-block > .docsfw-plantuml,
+.md-typeset .docsfw-svg-dl-block > .docsfw-mermaid {
+  margin: 0;
+}
+
+/* ボタンは本文の枠ではなく操作部品のため、枠線は図の枠 (--lightest) ではなく
+   視認できる --lighter を使う。 */
+.md-typeset .docsfw-svg-dl {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 3px;
+  padding: 3px;
+  line-height: 0;
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .docsfw-svg-dl-host:hover .docsfw-svg-dl,
+.md-typeset .docsfw-svg-dl:focus {
+  opacity: 1;
+}
+
+.md-typeset .docsfw-svg-dl svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }

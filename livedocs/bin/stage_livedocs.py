@@ -56,6 +56,7 @@ VENDORED_FILES = (
     "assets/docsfw-mermaid.js",
     "assets/docsfw-mathjax.js",
     "assets/docsfw-responsive-nav.js",
+    "assets/docsfw-svg-download.js",
     "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-doxygen-link.css",
@@ -76,6 +77,15 @@ _H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 _PAGEBREAK_RE = re.compile(r"^[ \t]*\\(?:newpage|pagebreak)[ \t]*$")
 _LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)\)")
 _CAPTION_RE = re.compile(r"^(Table|CodeBlock):[ \t]*(.*)$")
+# figure で包む対象のフェンス。字下げされたフェンス (リスト内など) は
+# md_in_html が生の HTML として扱えないため、行頭のものだけを対象にする。
+_DIAGRAM_FENCE_RE = re.compile(r"^(?:```+|~~~+)[ \t]*(plantuml|mermaid)\b")
+# 段落が画像 1 個だけで構成される行。Pandoc の implicit_figures と同じ条件。
+_IMAGE_ONLY_RE = re.compile(
+    r"^!\[((?:[^\[\]]|\[[^\]]*\])*)\]"
+    r"\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)\)"
+    r"[ \t]*(\{[^}]*\})?[ \t]*$"
+)
 _ATTR_TAIL_RE = re.compile(r"\s*\{#([A-Za-z0-9_:.-]+)\}\s*$")
 _DEPRECATED_RE = re.compile(r"^([ \t]*)>[ \t]*\[!DEPRECATED\][ \t]*$")
 _COLLAPSIBLE_OPEN_RE = re.compile(r"^:{3,}[ \t]*\{\.collapsible-list(?:[ \t][^}]*)?\}[ \t]*$")
@@ -480,14 +490,150 @@ def _apply_outside_fences(text, transform):
     return "\n".join(out)
 
 
-def convert_captions(text):
-    """``Table:`` / ``CodeBlock:`` キャプションを attr_list 付きの段落へ変換する。
+def _split_caption_label(paragraph):
+    """キャプション段落から ``{#fig:xxx}`` ラベルを取り出す。
 
-    docsfw は Pandoc のキャプション記法として扱いますが、mkdocs では
-    ``.docsfw-caption`` クラスを付けた段落として表現します。
+    :return: ``(ラベル, ラベルを取り除いた段落)``。ラベルが無ければ ``("", 段落)``。
+    """
+    label_match = _ATTR_TAIL_RE.search(paragraph[-1])
+    if not label_match:
+        return "", paragraph
+    trimmed = list(paragraph)
+    trimmed[-1] = trimmed[-1][: label_match.start()].rstrip()
+    return label_match.group(1), trimmed
+
+
+def _figure_open_tag(label):
+    """``docsfw-figure`` の開始タグを組み立てる。"""
+    if label:
+        return '<figure class="docsfw-figure" id="{}" markdown="1">'.format(label)
+    return '<figure class="docsfw-figure" markdown="1">'
+
+
+def _figcaption_lines(paragraph):
+    """キャプション段落を ``figcaption`` の行へ変換する。
+
+    ``markdown="span"`` は内側へ ``<p>`` を作らないため、pandoc 発行版の
+    ``figcaption`` と同じ構造になります。複数行のキャプションは ``nl2br`` に
+    より ``<br>`` になり、これも pandoc 発行版と一致します。
+    """
+    lines = list(paragraph)
+    lines[0] = '<figcaption class="docsfw-caption" markdown="span">' + lines[0]
+    lines[-1] = lines[-1] + "</figcaption>"
+    return lines
+
+
+def convert_captions(text):
+    """``Table:`` / ``CodeBlock:`` キャプションを mkdocs 向けの記法へ変換する。
+
+    docsfw は Pandoc のキャプション記法として扱いますが、mkdocs では次の 2 通り
+    で表現します。
+
+    - PlantUML / Mermaid フェンスの直後に置かれた ``CodeBlock:`` は、フェンスと
+      ともに ``md_in_html`` の ``figure`` へ包みます。pandoc 発行版が図に
+      ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - それ以外は ``.docsfw-caption`` クラスを付けた段落として表現します。
+
     ``{#fig:xxx}`` などのラベルは id として残します。
 
     attr_list はブロック要素の属性を、段落の直後の属性だけの行から読み取ります。
+    """
+    lines = text.split("\n")
+    out = []
+    fence = None
+    index = 0
+    # 直前に閉じた図フェンスの ``(out 上の開始位置, 終了位置, 言語)``。
+    diagram_block = None
+    fence_start = None
+    fence_lang = None
+
+    while index < len(lines):
+        line = lines[index]
+        fence_match = _FENCE_RE.match(line)
+        if fence_match:
+            marker = fence_match.group(1)[0]
+            if fence is None:
+                fence = marker
+                diagram_match = _DIAGRAM_FENCE_RE.match(line)
+                fence_start = len(out) if diagram_match else None
+                fence_lang = diagram_match.group(1) if diagram_match else None
+                diagram_block = None
+            elif fence == marker:
+                fence = None
+                if fence_start is not None:
+                    diagram_block = (fence_start, len(out) + 1, fence_lang)
+            out.append(line)
+            index += 1
+            continue
+
+        if fence is not None:
+            out.append(line)
+            index += 1
+            continue
+
+        caption_match = _CAPTION_RE.match(line)
+        at_paragraph_start = not out or not out[-1].strip()
+        if caption_match and at_paragraph_start:
+            paragraph = [caption_match.group(2).strip()]
+            index += 1
+            while index < len(lines) and lines[index].strip() and not _FENCE_RE.match(lines[index]):
+                paragraph.append(lines[index])
+                index += 1
+
+            label, paragraph = _split_caption_label(paragraph)
+
+            if caption_match.group(1) == "CodeBlock" and _is_after_diagram(out, diagram_block):
+                block_start, block_end, _lang = diagram_block
+                figure = [_figure_open_tag(label), ""]
+                figure.extend(out[block_start:block_end])
+                figure.append("")
+                figure.extend(_figcaption_lines(paragraph))
+                figure.extend(["", "</figure>"])
+                # md_in_html は生の HTML ブロックの前後に空行を必要とする。
+                if block_start > 0 and out[block_start - 1].strip():
+                    figure.insert(0, "")
+                out[block_start:] = figure
+                if index < len(lines) and lines[index].strip():
+                    out.append("")
+                diagram_block = None
+                continue
+
+            attrs = [".docsfw-caption"]
+            if label:
+                attrs.insert(0, "#" + label)
+            # attr_list はブロック要素に対して、属性だけの行を要求する。
+            paragraph.append("{{: {} }}".format(" ".join(attrs)))
+            out.extend(paragraph)
+            diagram_block = None
+            continue
+
+        if line.strip():
+            diagram_block = None
+        out.append(line)
+        index += 1
+
+    return "\n".join(out)
+
+
+def _is_after_diagram(out, diagram_block):
+    """キャプションの直前が図フェンスだけであるかを判定する。"""
+    if diagram_block is None:
+        return False
+    _start, end, _lang = diagram_block
+    tail = out[end:]
+    return bool(tail) and not any(entry.strip() for entry in tail)
+
+
+def convert_implicit_figures(text):
+    """画像 1 個だけの段落を ``figure`` へ変換する。
+
+    Pandoc の ``implicit_figures`` に相当します。Python-Markdown には同等の
+    機能が無いため、``md_in_html`` の ``figure`` としてステージング時に組み
+    立てます。代替テキストが空の画像は、pandoc 発行版と同じく変換しません。
+
+    画像を Markdown 記法のまま ``figure`` の内側へ置くのは、mkdocs の相対パス
+    解決を効かせるためです。生の ``<img>`` を出力すると、``use_directory_urls``
+    により ``index.md`` 以外のページで画像のパスが解決できなくなります。
     """
     lines = text.split("\n")
     out = []
@@ -512,30 +658,41 @@ def convert_captions(text):
             index += 1
             continue
 
-        caption_match = _CAPTION_RE.match(line)
+        image_match = _IMAGE_ONLY_RE.match(line)
         at_paragraph_start = not out or not out[-1].strip()
-        if caption_match and at_paragraph_start:
-            paragraph = [caption_match.group(2).strip()]
+        at_paragraph_end = index + 1 >= len(lines) or not lines[index + 1].strip()
+        alt = image_match.group(1).strip() if image_match else ""
+        if image_match and alt and at_paragraph_start and at_paragraph_end:
+            label, attrs = _split_image_attrs(image_match.group(3))
+            image = "![{}]({}){}".format(image_match.group(1), image_match.group(2), attrs)
+            out.append(_figure_open_tag(label))
+            out.append("")
+            out.append(image)
+            out.append("")
+            out.extend(_figcaption_lines([alt]))
+            out.append("")
+            out.append("</figure>")
             index += 1
-            while index < len(lines) and lines[index].strip() and not _FENCE_RE.match(lines[index]):
-                paragraph.append(lines[index])
-                index += 1
-
-            attrs = [".docsfw-caption"]
-            last = paragraph[-1]
-            label_match = _ATTR_TAIL_RE.search(last)
-            if label_match:
-                attrs.insert(0, "#" + label_match.group(1))
-                paragraph[-1] = last[: label_match.start()].rstrip()
-            # attr_list はブロック要素に対して、属性だけの行を要求する。
-            paragraph.append("{{: {} }}".format(" ".join(attrs)))
-            out.extend(paragraph)
             continue
 
         out.append(line)
         index += 1
 
     return "\n".join(out)
+
+
+def _split_image_attrs(attrs):
+    """画像の属性から ``{#fig:xxx}`` ラベルを取り出す。
+
+    :return: ``(ラベル, 画像へ残す属性文字列)``。
+    """
+    if not attrs:
+        return "", ""
+    tokens = attrs[1:-1].split()
+    labels = [token[1:] for token in tokens if token.startswith("#")]
+    rest = [token for token in tokens if not token.startswith("#")]
+    label = labels[0] if labels else ""
+    return label, ("{" + " ".join(rest) + "}") if rest else ""
 
 
 def convert_deprecated_alerts(text):
@@ -882,6 +1039,7 @@ def _render_document(document, container):
     body = strip_collapsible_list_fences(body)
     body = convert_deprecated_alerts(body)
     body = convert_captions(body)
+    body = convert_implicit_figures(body)
     body = remove_page_breaks(body)
 
     front_matter = build_front_matter(document, container.lang, container.details)

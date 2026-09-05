@@ -583,9 +583,14 @@ pre code {
   border: none;
   background: transparent; }
 
+/* コード ブロックと figure の枠は rgba(0, 0, 0, 0.07) でそろえる。
+   これは動的発行 (mkdocs Material) の --md-default-fg-color--lightest を
+   白地で解決した色で、../../livedocs/assets/docsfw-livedocs.css が
+   コード ブロックと図の枠に使う値と同じ。両発行系で枠の濃さを一致させる。
+   表の罫線は情報の区切りとして濃さが要るため、#cccccc のままにする。 */
 .highlight pre {
   background-color: #f8f8f8;
-  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.07);
   font-size: 13px;
   line-height: 19px;
   overflow: auto;
@@ -593,7 +598,7 @@ pre code {
   border-radius: 3px; }
 
 pre {
-  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.07);
   font-size: 16px;
   line-height: 19px;
   overflow: auto;
@@ -626,7 +631,7 @@ pre.mermaid svg {
    そのため border と padding を div.sourceCode (スクロールコンテナ) に
    移動し、横スクロール時に枠が動かないようにする。 */
 div.sourceCode {
-  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.07);
   border-radius: 3px;
   padding: 6px 0 6px 10px; }
 
@@ -636,7 +641,7 @@ div.sourceCode > pre {
   min-width: max-content; }
 
 figure {
-  border: 1px solid #cccccc;
+  border: 1px solid rgba(0, 0, 0, 0.07);
   border-radius: 3px;
   padding: 8px;
   margin-top: 15px;

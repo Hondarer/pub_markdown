@@ -50,6 +50,7 @@ OWN_ASSETS = (
     "docsfw-mermaid.js",
     "docsfw-mathjax.js",
     "docsfw-responsive-nav.js",
+    "docsfw-svg-download.js",
     "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
     "docsfw-doxygen-link.css",

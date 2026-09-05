@@ -107,6 +107,34 @@ function runQueue() {
 }
 
 /**
+ * 描画済みのブロックへキャプションを付け、pandoc 発行版と同じ figure を作る。
+ *
+ * pandoc 発行版はキャプションを持つ図だけを ``<figure>`` にするため、
+ * キャプションが無いブロックは包まない。
+ * ``CodeBlock:`` 行で既に figure へ包まれている場合は、その figcaption を
+ * 優先する。``CodeBlock:`` 行が ``caption`` 行より優先される規則は
+ * bin/pandoc-filters/codeblock-caption.lua と同じ。
+ *
+ * @param {HTMLElement} block 描画済みの div 要素。
+ * @param {string} caption ソースから取り出したキャプション。
+ */
+function addCaption(block, caption) {
+  if (!caption || block.closest("figure")) {
+    return;
+  }
+
+  const figure = document.createElement("figure");
+  figure.className = "docsfw-figure";
+  block.parentNode.insertBefore(figure, block);
+  figure.appendChild(block);
+
+  const element = document.createElement("figcaption");
+  element.className = "docsfw-caption";
+  element.textContent = caption;
+  figure.appendChild(element);
+}
+
+/**
  * 1 個のブロックを描画する。
  *
  * @param {HTMLElement} block 対象の div 要素。
@@ -134,12 +162,7 @@ function renderBlock(block) {
         block.textContent = html;
       } else {
         block.innerHTML = html;
-        if (prepared.caption) {
-          const caption = document.createElement("figcaption");
-          caption.className = "docsfw-caption";
-          caption.textContent = prepared.caption;
-          block.appendChild(caption);
-        }
+        addCaption(block, prepared.caption);
       }
       done();
     };
