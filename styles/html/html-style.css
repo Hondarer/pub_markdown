@@ -779,3 +779,33 @@ mark {
   width: 16px;
   height: 16px;
   display: block; }
+
+/* スクロール バー。
+   Bootstrap の template.css (CDN) は 12px 幅、トラック rgba(0,0,0,.1)、
+   thumb rgba(0,0,0,.5) を、セレクターなしの全称指定ですべてのスクロール
+   領域へ適用する。ページ本体のスクロール バーも対象になる。
+   mkdocs プレビュー (Material) と見た目をそろえるため、ここで上書きする。
+   rgba(0,0,0,.32) は Material の --md-default-fg-color--lighter を白地で
+   解決した色と同じ。
+
+   scrollbar-width を Chrome へ渡すと ::-webkit-scrollbar 系ではなく標準側の
+   描画に切り替わり、thumb が角丸になって幅も変わる。四角い thumb を保つため
+   Chrome には webkit の擬似要素だけを使う。
+   Firefox は擬似要素に対応しないため、@supports で分岐して標準プロパティを
+   与える。 */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px; }
+
+::-webkit-scrollbar-track {
+  background: transparent; }
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.32); }
+
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.32) transparent; }
+}

@@ -438,9 +438,10 @@ docsfw は正式な発行の正本であり、プレビューは執筆中の確�
 `assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を pandoc 発行版へ寄せるためのファイルです。  
 配色もこのファイルに集約します。
 
-例外は見出しの色です。  
-こちらは Material の色を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
-詳細は「見出しの色」を参照してください。
+例外が 2 つあります。  
+見出しの色は Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+スクロール バーは、どちらか一方を正とせず両側を同じ仕様へ寄せます。  
+詳細は「見出しの色」と「スクロール バー」を参照してください。
 
 `mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
 Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
@@ -494,13 +495,59 @@ Material の既定は indigo の単色バーであり、本文リンクを `#418
 
 ### スクロール バー
 
+スクロール バーは、どちらか一方を正とするのではなく、両側を同じ仕様へ寄せます。
+
+#### そろえる前の状態
+
+`make preview` の Material は、`.md-sidebar__scrollwrap`、`.md-typeset pre > code`、`.md-search__scrollwrap`、`.md-tooltip2__inner` の 4 か所だけを細く塗ります。  
+ページ本体はブラウザーの既定のままです。
+
+`make docs` の pandoc 発行版は、`styles/html/` には指定がありませんが、CDN から読む Bootstrap テンプレート `template.css` がセレクターなしの全称指定を持っています。
+
+```css
+::-webkit-scrollbar       { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.5); }
+```
+
+これがページ本体を含むすべてのスクロール領域へ効きます。  
+同じページを 1400x900 で描画して画素を計測すると、次の差がありました。
+
+| | make docs | make preview |
+|---|---|---|
+| thumb の幅 | 12px | 6px |
+| thumb の色 | `#727272` | `#ADADAD` |
+| トラック | `#E5E5E5` (可視) | 透明 |
+| ページ本体 | 12px / `#E5E5E5` / `#727272` | 15px / `#FCFCFC` / `#8B8B8B` (ブラウザー既定) |
+
+#### そろえた後の仕様
+
+幅 6px、角丸のない四角い thumb、トラックは透明、thumb の色は `--md-default-fg-color--lighter` (白地で `#ADADAD`) にそろえます。  
+ページ本体のスクロール バーも対象に含めます。
+
+コード ブロックの上では thumb が `#A8A8A8` と計測されますが、これは同じ色の指定がコード ブロックの背景 `#F8F8F8` の上に載るためで、指定は同一です。
+
+#### 実装で守る 2 つの制約
+
+計測で分かった Chrome の挙動が、実装方法を縛ります。
+
+1. `scrollbar-width: auto` と `scrollbar-color: auto` では、Bootstrap の `::-webkit-scrollbar` を打ち消せません。`auto` は「指定なし」を意味し、擬似要素側の描画に戻るだけです。そのため「両方ともブラウザー既定へ戻す」案は成立せず、明示指定でそろえます。
+2. `scrollbar-width: thin` を指定すると、Chrome は `::-webkit-scrollbar` 系ではなく標準側の描画へ切り替わり、thumb が角丸になって幅も変わります。四角い thumb を保つため、Chrome へは `scrollbar-width` を渡しません。
+
+この結果、実装は次の切り分けになります。
+
+- Chrome と Edge は `::-webkit-scrollbar` 系の擬似要素だけで指定します。Material が 4 か所へ入れている `scrollbar-width` と `scrollbar-color` は、`@supports selector(::-webkit-scrollbar)` の中で `auto` へ戻します。ホバー時の指定も同時に戻さないと、ホバーした瞬間だけ角丸へ変わります。
+- Firefox は擬似要素に対応しないため、`@supports not selector(::-webkit-scrollbar)` の中で標準プロパティを与えます。`scrollbar-color` と `scrollbar-width` は継承するので、`html` への指定がすべてのスクロール領域へ届きます。
+
+Material が個別に持つ `::-webkit-scrollbar` は全称指定より詳細度が高いため、同じセレクターでサイズをそろえます。  
+`.md-tabs__list` と `.md-typeset .tabbed-labels` は `::-webkit-scrollbar { display: none }` を持ち、全称指定より詳細度が高いので非表示のまま保たれます。
+
+#### ホバー時の着色
+
 Material は、スクロール バーにホバーしたとき thumb をアクセント色で着色します。  
-対象は本文のコード ブロック、検索結果、左サイドバー、ツールヒントの 4 か所です。  
-pandoc 発行版はスクロール バーに手を入れず、ブラウザーの既定のままです。  
-そこでホバー時の着色をやめ、通常時と同じ `--md-default-fg-color--lighter` に固定します。
+pandoc 発行版にホバーの指定はないため、着色をやめて通常時と同じ色に固定します。
 
 Material は標準の `scrollbar-color` と `::-webkit-scrollbar-thumb` の 2 通りで指定しています。  
-Chrome と Edge は `scrollbar-color` に対応しており、そちらが `::-webkit-scrollbar` 系の擬似要素より優先されます。  
 `::-webkit-scrollbar-thumb:hover` だけを上書きしても着色は消えないため、両方を上書きします。
 
 上書きは Material と同じセレクターで行い、詳細度をそろえます。  
@@ -744,7 +791,8 @@ docsfw の `make docs` は 4 バリアントの HTML と docx を生成するた
 #### リンク検証
 
 Doxygen HTML への本文リンクは `/doxygen/` へ書き換えるため、MkDocs の文書リンク検査では扱いません。  
-その他の相対リンクは、ステージング後の論理ツリーに存在する対象だけを有効なリンクとして残します。
+その他の相対リンクは、ステージング後の論理ツリーに存在する対象だけを有効なリンクとして残します。  
+正式発行とプレビューに共通する判定規則は、[リンク解決の規則](link-resolution.md) に定めます。
 
 `README.md` と `SKILL.md` は、同じディレクトリの優先順位に従って `index.md` へ読み替えた後の論理パスへ書き換えます。  
 論理ツリー外の README、AGENTS、ソース コード、ヘッダー、ディレクトリ、未生成ファイルへの参照は、プレビューへ対象ファイルを追加せず、表示文字列と元のパスを残した非リンクの参照へ変換します。

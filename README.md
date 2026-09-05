@@ -42,6 +42,10 @@ Pandoc を使用して、Markdown から HTML と docx を生成します。
 - 現在開いている Markdown だけを発行する場合は、タスク `exec pandoc (current file)` を実行してください。
 - YAML front matter に `pub_markdown.skip: true` を定義した Markdown は、HTML、docx、目次の生成対象から除外されます。
 
+相対リンクは、`mdRoot` と `mergeSubfolderDocs` から構成される論理ツリーを基準に解決します。  
+論理ツリー外の相対リンクは、対象ファイルを発行物へ追加せず、表示文字列と元のリンク先を残した非リンクの参照へ変換します。  
+詳細は [リンク解決の規則](docs/link-resolution.md) を参照してください。
+
 ### 進捗ログ
 
 長時間処理の位置を確認したい場合は、`PUB_MARKDOWN_PROGRESS_LOG=1` を付けて実行します。  

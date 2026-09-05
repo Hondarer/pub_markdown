@@ -125,7 +125,9 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 |---|---|---|
 | `.agents/skills/README.md` | `../../app/example/docs/skill-sync.md` | `../example/skill-sync.md` |
 
-外部 URL、アンカーのみのリンク、公開対象外ファイルへのリンクは読み替えません。
+外部 URL とアンカーのみのリンクは、この処理による読み替え対象外です。  
+公開対象外ファイルへの相対リンクは、対象ファイルを追加せず、表示文字列と元のリンク先を残した非リンクの参照へ変換します。  
+共通するリンク解決の規則は [リンク解決の規則](link-resolution.md) を参照してください。
 
 ## 制約事項
 

@@ -424,30 +424,87 @@
 /* スクロールバー                                                            */
 /* ------------------------------------------------------------------------ */
 
-/* Material はスクロールバーにホバーしたとき、thumb を --md-accent-fg-color で
-   着色する。pandoc 発行版はスクロールバーに一切手を入れず、ブラウザーの既定
-   のままなので、ホバーでの着色をやめて通常時と同じ色に固定する。
+/* Material がスクロールバーを塗るのは .md-sidebar__scrollwrap、
+   .md-typeset pre > code、.md-search__scrollwrap、.md-tooltip2__inner の
+   4 か所だけで、ページ本体はブラウザーの既定のままになる。
+   一方、pandoc 発行版は Bootstrap の template.css (CDN) が
+   ::-webkit-scrollbar をセレクターなしの全称指定で持ち、ページ本体を含む
+   すべてのスクロール領域を 12px 幅、トラック rgba(0,0,0,.1)、
+   thumb rgba(0,0,0,.5) で塗る。
+   そこで、こちらも全称指定でページ本体まで含め、幅 6px、トラック透明、
+   thumb は --md-default-fg-color--lighter にそろえる。
+   ダーク (slate) ではこの変数が明るい灰色へ切り替わるため、追加の指定は
+   要らない。
 
-   Material は標準の scrollbar-color と ::-webkit-scrollbar-thumb の 2 通りで
-   指定している。Chrome と Edge は scrollbar-color に対応しており、そちらが
-   ::-webkit-scrollbar 系の擬似要素より優先されるため、両方を上書きしないと
-   ホバー時の着色が残る。
+   Material の .md-tabs__list と .md-typeset .tabbed-labels は
+   ::-webkit-scrollbar { display: none } を持ち、全称指定より詳細度が高い
+   ため、非表示のまま保たれる。 */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--md-default-fg-color--lighter);
+}
+
+/* Material が個別に持つ ::-webkit-scrollbar は上の全称指定より詳細度が高い。
+   同じセレクターでサイズをそろえる。 */
+.md-typeset pre > code::-webkit-scrollbar,
+.md-search__scrollwrap::-webkit-scrollbar,
+.md-sidebar__scrollwrap::-webkit-scrollbar,
+.md-tooltip2__inner::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+/* Chrome と Edge では標準の scrollbar-width / scrollbar-color が
+   ::-webkit-scrollbar 系より優先され、thumb が角丸の描画に切り替わる。
+   Material が上記 4 か所へ入れている指定を auto (指定なし) へ戻し、
+   webkit 側の四角い描画に寄せる。ホバー時の指定も同時に戻さないと、
+   ホバーした瞬間だけ角丸へ変わる。 */
+@supports selector(::-webkit-scrollbar) {
+  .md-typeset pre > code,
+  .md-typeset pre > code:hover,
+  .md-search__scrollwrap,
+  .md-search__scrollwrap:hover,
+  .md-sidebar__scrollwrap,
+  .md-sidebar__scrollwrap:focus-within,
+  .md-sidebar__scrollwrap:hover,
+  .md-tooltip2__inner {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+}
+
+/* Firefox は webkit の擬似要素に対応しないため、標準プロパティでそろえる。
+   scrollbar-color と scrollbar-width は継承するので、html への指定が
+   すべてのスクロール領域へ届く。
+   ホバーでアクセント色にする Material の指定は、ここで打ち消す。 */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+  }
+
+  .md-typeset pre > code:hover,
+  .md-search__scrollwrap:hover,
+  .md-sidebar__scrollwrap:focus-within,
+  .md-sidebar__scrollwrap:hover {
+    scrollbar-color: var(--md-default-fg-color--lighter) transparent;
+  }
+}
+
+/* ホバーしたときに thumb をアクセント色にする Material の指定を打ち消し、
+   通常時と同じ色に固定する。
    セレクターは Material と同じものを使い、詳細度をそろえる。
    Material 側の指定は @media (min-width: 60em) の中にもあるが、メディア
    クエリは詳細度を変えないので、後から読まれるこちらが勝つ。 */
-
-.md-typeset pre > code:hover {
-  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
-}
-
-.md-search__scrollwrap:hover {
-  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
-}
-
-.md-sidebar__scrollwrap:focus-within,
-.md-sidebar__scrollwrap:hover {
-  scrollbar-color: var(--md-default-fg-color--lighter) transparent;
-}
 
 .md-typeset pre > code::-webkit-scrollbar-thumb:hover,
 .md-search__scrollwrap::-webkit-scrollbar-thumb:hover,
