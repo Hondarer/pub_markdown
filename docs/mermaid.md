@@ -106,6 +106,18 @@ os.execute(string.format("cd %s && \"%s\" -i %s -o %s -b transparent | grep -v -
 - 背景を透明に設定 (`-b transparent`)
 - 不要な出力メッセージをフィルタリング
 
+### 並列発行時の資産共有
+
+`pub_markdown_core.sh` は Markdown ファイル単位で発行処理を並列実行します。
+
+Mermaid の `.mmd`、`.svg`、`.png` は Mermaid 本文の SHA-1 と出力ディレクトリから決まる資産を共有します。
+
+同じ出力ディレクトリへ Mermaid 資産を生成する DOCX 対象の Markdown は、スケジューラーが同時に実行しません。
+
+異なる出力ディレクトリの Markdown は、従来どおり並列実行します。
+
+HTML だけを生成する場合は Mermaid をブラウザー側で描画するため、この待機処理の対象になりません。
+
 ## SVG 補正 (パッチ) 処理の詳細
 
 ### 問題の背景

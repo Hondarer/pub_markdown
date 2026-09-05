@@ -804,6 +804,7 @@ declare -a _file_pids=()
 declare -a _file_names=()
 declare -a _file_status_files=()
 declare -a _file_slot_released=()
+declare -a _file_mermaid_keys=()
 declare -a _file_heartbeat_sigs=()
 declare -a _file_last_progress=()
 declare -a _file_timeout_reported=()
@@ -851,6 +852,51 @@ wait_for_parallel_slot() {
         (( _running_count < MAX_PARALLEL )) && break
         sleep 1
     done
+}
+
+# 同じ出力ディレクトリを使用する Mermaid 文書が実行中かを確認する。
+# Mermaid の一時ファイルと画像ファイルは内容ハッシュだけで名前を決めるため、
+# 同じディレクトリの別 Markdown を同時に変換するとファイルを共有してしまう。
+mermaid_job_key_is_active() {
+    local key="$1"
+    local _i
+
+    [[ -n "$key" ]] || return 1
+    for _i in "${!_file_pids[@]}"; do
+        if [[ "${_file_slot_released[$_i]:-false}" != "true" &&
+              "${_file_mermaid_keys[$_i]:-}" == "$key" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# 待機中のファイルから、現在起動可能なファイルの添字を選択する。
+# Mermaid の競合キーが使用中の場合は、そのファイルを飛ばして別のキーを選ぶ。
+select_next_pending_file() {
+    local _i _key
+
+    _selected_pending_index=-1
+    _selected_mermaid_key=""
+    for _i in "${!_pending_files[@]}"; do
+        _key="${_pending_mermaid_keys[$_i]:-}"
+
+        # OpenAPI などの同期処理は、既存の挙動どおり Markdown ジョブ数に
+        # 関係なく処理する。
+        if [[ "${_pending_files[$_i]}" != *.md ]]; then
+            _selected_pending_index=$_i
+            _selected_mermaid_key="$_key"
+            return 0
+        fi
+
+        if (( _running_count < MAX_PARALLEL )) &&
+           ! mermaid_job_key_is_active "$_key"; then
+            _selected_pending_index=$_i
+            _selected_mermaid_key="$_key"
+            return 0
+        fi
+    done
+    return 1
 }
 #-------------------------------------------------------------------
 
@@ -1382,6 +1428,34 @@ real_to_virtual_path() {
 
     # メイン mdRoot のファイル (変換不要)
     echo "$real_path"
+}
+
+# Mermaid の生成資産を共有する Markdown の競合キーを出力する。
+# HTML だけを生成する場合は Mermaid コードをブラウザー側で処理するため、
+# DOCX 出力が有効な場合だけキーを割り当てる。
+mermaid_job_key_for_file() {
+    local file="$1"
+    local virtual_file
+    local publish_dir
+
+    [[ "$docxOutput" == "true" ]] || return 0
+    [[ "$file" == *.md ]] || return 0
+    grep -Eiq '(^```[[:space:]]*\{?\.?mermaid\b|^```[[:space:]]*mermaid\b)' "$file" || return 0
+
+    if [[ -n "$mergeSubfolderDocs" ]]; then
+        virtual_file=$(real_to_virtual_path "$file")
+    else
+        virtual_file="$file"
+    fi
+
+    publish_dir=$(dirname "${virtual_file}")
+    if [[ "$publish_dir" != "${workspaceFolder}/${mdRoot}" ]]; then
+        publish_dir="html/${publish_dir#${workspaceFolder}/${mdRoot}/}"
+    else
+        publish_dir="html"
+    fi
+
+    printf '%s/%s/%s\n' "$workspaceFolder" "$pubRoot" "$publish_dir"
 }
 
 # 仮想パスを実パスに変換する関数
@@ -1932,8 +2006,28 @@ done
 
 # ファイル レベルの並列処理用追跡配列
 _pm_job_index=0
+_pending_files=("${files[@]}")
+_pending_mermaid_keys=()
+for _pending_file in "${_pending_files[@]}"; do
+    _pending_mermaid_keys+=("$(mermaid_job_key_for_file "$_pending_file")")
+done
 
-for file in "${files[@]}"; do
+while ((${#_pending_files[@]} > 0)); do
+    # 同じ Mermaid 競合キーのジョブを待機させる間も、別キーのジョブを
+    # 起動できるように、待機配列から起動可能なファイルを選択する。
+    if ! select_next_pending_file; then
+        monitor_file_jobs_once
+        sleep 1
+        continue
+    fi
+
+    file="${_pending_files[$_selected_pending_index]}"
+    _current_mermaid_key="$_selected_mermaid_key"
+    unset "_pending_files[$_selected_pending_index]"
+    unset "_pending_mermaid_keys[$_selected_pending_index]"
+    _pending_files=("${_pending_files[@]}")
+    _pending_mermaid_keys=("${_pending_mermaid_keys[@]}")
+
     # 追加ドキュメント サブフォルダー使用時は仮想パスに変換して出力パスを計算
     if [[ -n "$mergeSubfolderDocs" ]]; then
         virtual_file=$(real_to_virtual_path "$file")
@@ -2719,6 +2813,7 @@ for file in "${files[@]}"; do
         _file_names+=("$file")
         _file_status_files+=("$_pm_statusfile")
         _file_slot_released+=(false)
+        _file_mermaid_keys+=("$_current_mermaid_key")
         _file_heartbeat_sigs+=("")
         _file_last_progress+=("$SECONDS")
         _file_timeout_reported+=(false)
