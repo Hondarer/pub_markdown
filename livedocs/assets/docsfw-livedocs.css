@@ -5,6 +5,10 @@
 /* Pandoc HTML と共通のナビゲーション配置                            */
 /* ------------------------------------------------------------------------ */
 
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  scrollbar-gutter: stable;
+}
+
 @media screen and (min-width: 1400px) {
   .md-grid {
     max-width: 1370px;

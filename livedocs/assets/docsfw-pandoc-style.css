@@ -540,10 +540,21 @@ body {
 
 /* pandoc 発行版のナビゲーションと目次は色が瞬時に切り替わる。Material の
    transition: color 125ms によるフェードを止めて、同じ切り替わり方にする。
-   .md-nav の transition: max-height は狭い画面のドロワー開閉に必要なので
-   対象にしない。 */
+   左ナビの階層とアイコンも、開閉状態を即座に切り替える。 */
 .md-nav__link {
   transition: none;
+}
+
+.md-nav--primary .md-nav,
+.md-nav--primary .md-nav__toggle ~ .md-nav,
+.md-nav--primary .md-nav__icon,
+.md-nav--primary .md-nav__icon::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+.md-nav--primary .md-nav__icon:hover {
+  background-color: transparent;
 }
 
 /* ------------------------------------------------------------------------ */

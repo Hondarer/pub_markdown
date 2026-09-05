@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """mkdocs による動的発行のステージング処理に関する単体テスト。"""
 
+import json
 import os
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
@@ -20,6 +23,8 @@ from stage_livedocs import (  # noqa: E402
     is_git_link_enabled,
     resolve_document_git_link,
     rewrite_links,
+    stage_index,
+    stage_single,
 )
 
 
@@ -176,8 +181,56 @@ class GenerateNavFilesTest(unittest.TestCase):
 
             generated = generate_nav_files(output, source, [], ["guide"])
 
-            self.assertEqual(generated, 1)
+            self.assertEqual(generated, 2)
             with open(os.path.join(output, ".nav.yml"), encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), "use_index_title: true\n")
+
+    def test_directory_names_preserved_and_index_title_restored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "source")
+            output = os.path.join(tmp, "output")
+            os.makedirs(source)
+            names = ["cmd", "include", "libsrc", "MixedCase", "my-dir", "my_dir", 'a"b']
+            generate_nav_files(output, source, [], names)
+            for name in names:
+                with open(os.path.join(output, name, ".nav.yml"), encoding="utf-8") as handle:
+                    self.assertEqual(json.loads(handle.read().split(": ", 1)[1]), name)
+            with open(os.path.join(output, "cmd", "index.md"), "w", encoding="utf-8") as handle:
+                handle.write('---\ntitle: "Commands"\n---\n')
+            generate_nav_files(output, source, [], names)
+            with open(os.path.join(output, "cmd", ".nav.yml"), encoding="utf-8") as handle:
+                self.assertEqual(handle.read(), "use_index_title: true\n")
+            self.assertEqual(generate_nav_files(output, source, [], names), 0)
+
+    def test_intermediate_directory_configs_survive_cleanup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            container = SimpleNamespace(main_mdroot=tmp, subfolders=[], kept=[], assets=[])
+            with patch("stage_livedocs.write_documents", return_value=(0, {"src/cmd/tool/page.md"})):
+                stage_index(container, tmp, quiet=True)
+            for name in ("src", "src/cmd", "src/cmd/tool"):
+                with open(os.path.join(tmp, name, ".nav.yml"), encoding="utf-8") as handle:
+                    self.assertEqual(json.loads(handle.read().split(": ", 1)[1]), name.split("/")[-1])
+
+    def test_single_index_update_refreshes_directory_title(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = os.path.join(tmp, "source.md")
+            output = os.path.join(tmp, "output")
+            with open(source, "w", encoding="utf-8") as handle:
+                handle.write("# Commands\n")
+            document = Document(source, "cmd/index.md")
+            document.staged_rel = "cmd/index.md"
+            container = SimpleNamespace(
+                by_real_path={os.path.normcase(os.path.abspath(source)).replace("\\", "/"): document},
+                lang="ja", details=True, workspace=tmp, git_resolver=None,
+                main_mdroot=tmp, subfolders=[],
+            )
+            generate_nav_files(output, tmp, [], ["cmd"])
+            with patch("stage_livedocs.resolve_document_git_link"), patch(
+                "stage_livedocs._render_document", return_value='---\ntitle: "Commands"\n---\n'
+            ):
+                result = stage_single(container, output, source)
+            self.assertTrue(result.updated)
+            with open(os.path.join(output, "cmd", ".nav.yml"), encoding="utf-8") as handle:
                 self.assertEqual(handle.read(), "use_index_title: true\n")
 
     def test_root_combines_index_titles_with_publocal_order(self):

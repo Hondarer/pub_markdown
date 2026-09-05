@@ -96,29 +96,52 @@
 
 /* --- Navigation tree -------------------------------------------------- */
 
+#docsfw-primary-sidebar {
+  scrollbar-gutter: stable;
+}
+
+#docsfw-tree,
+#docsfw-home-container,
+#docsfw-page-toc {
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+}
+
+#docsfw-primary-sidebar > .well {
+  margin-right: 0;
+  padding: 24px 22px 24px 12px;
+}
+
 #docsfw-tree {
-  margin: 6px 0 2px;
+  margin: 0;
   font-size: 14px;
-  line-height: 1.55;
-  border-top: 1px solid #ddd;
-  padding: 6px 4px 0 8px;
-  overflow-wrap: break-word;
-  word-break: break-all;
+  line-height: 1.5;
+  border-top: none;
+  padding: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 /* Home link at top of tree */
 .docsfw-home-link {
-  margin-bottom: 4px;
-  padding-left: 10px;
+  margin-bottom: 0;
+  padding-left: 0;
   margin-left: 0;
 }
 
 #docsfw-tree a,
 .docsfw-home-link a {
-  color: #444;
+  color: #212121;
   text-decoration: none;
   display: block;
-  padding: 1px 0;
+  padding: 0;
+  margin-top: 8.75px;
+  font-size: 14px;
+  line-height: 21px;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 #docsfw-tree a:hover,
@@ -127,59 +150,10 @@
   text-decoration: underline;
 }
 
-/* Highlight current page link. No bold: the left accent bar already marks the
-   node, and Material marks its current page with color alone. */
+/* Material marks the current page with color alone. */
 #docsfw-tree a.docsfw-current,
 .docsfw-home-link a.docsfw-current {
   color: #1a5faa;
-  pointer-events: none;
-}
-
-/* Current page node: subtle left accent.
-   For directory nodes (<details>), the page TOC is inserted as a direct child
-   of <details> (before the child-pages <div>), so it shares the same margin
-   calculation as <summary>. Child page links that follow are not accented. */
-details#docsfw-current-node > summary,
-details#docsfw-current-node > .docsfw-page-toc,
-div#docsfw-current-node {
-  padding-left: 4px;
-  margin-left: -4px;
-}
-
-/* Directory node: full-height border on summary and page-toc.
-   Use a -2px offset so active root directories align with inactive root items,
-   and widen only the TOC inner gap to match the leaf page spacing. */
-details#docsfw-current-node > summary,
-details#docsfw-current-node > .docsfw-page-toc {
-  margin-left: -2px;
-  border-left: 2px solid #4a90d9;
-}
-
-details#docsfw-current-node > .docsfw-page-toc {
-  padding-left: 8px;
-}
-
-/* Inactive leaf nodes reserve the same text offset as the active leaf accent. */
-#docsfw-tree > div:not(#docsfw-current-node),
-#docsfw-tree details > div > div:not(#docsfw-current-node) {
-  padding-left: 17px;
-}
-
-/* Leaf node: inset bar via background-image (avoids overflow clipping issues).
-   padding-left overrides the shared 4px to widen the gap between bar and text,
-   matching the visual spacing of directory nodes (which have arrow + gap). */
-div#docsfw-current-node {
-  padding-left: 19px;
-  margin-left: -2px;
-  background-image: linear-gradient(#4a90d9, #4a90d9);
-  background-repeat: no-repeat;
-  background-position: left 3px;
-  background-size: 2px calc(100% - 6px);
-}
-
-.docsfw-home-link#docsfw-current-node {
-  margin-left: 0;
-  background-position: 6px 3px;
 }
 
 /* Directory nodes */
@@ -191,10 +165,11 @@ div#docsfw-current-node {
 #docsfw-tree details > summary {
   cursor: pointer;
   list-style: none;
-  padding: 1px 0;
+  padding: 0;
+  margin-top: 8.75px;
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: flex-start;
+  gap: 8px;
 }
 
 /* Remove default triangle marker */
@@ -202,32 +177,46 @@ div#docsfw-current-node {
 #docsfw-tree details > summary::marker             { display: none; }
 
 /* Custom arrow */
-#docsfw-tree details > summary::before {
-  content: '▶';
-  font-size: 10px;
-  color: #999;
+#docsfw-tree details > summary::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6z'/%3E%3C/svg%3E") center / contain no-repeat;
   flex-shrink: 0;
   display: inline-block;
-  transition: transform 0.12s;
+  transition: none;
   margin-top: 1px;
-  margin-left: 3px;
+  margin-left: auto;
 }
 
-#docsfw-tree details[open] > summary::before {
+#docsfw-tree details[open] > summary::after {
   transform: rotate(90deg);
 }
 
-#docsfw-tree details > summary a {
-  display: inline;
+#docsfw-tree details > summary a,
+#docsfw-tree details > summary > span {
+  flex: 1;
+  margin-top: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   min-width: 0;
+}
+
+#docsfw-tree details > summary:hover {
+  color: #1a5faa;
+}
+
+#docsfw-tree details:has(.docsfw-current) > summary,
+#docsfw-tree details:has(.docsfw-current) > summary > a {
+  color: #1a5faa;
 }
 
 /* Indentation for child items */
 #docsfw-tree details > div {
-  padding-left: 11px;
+  padding-left: 12px;
 }
 
 /* --- Separator before page-local TOC ---------------------------------- */
@@ -282,7 +271,9 @@ div#docsfw-current-node {
   margin-top: 8.75px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 #docsfw-page-toc ul > li > a {

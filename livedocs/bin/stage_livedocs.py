@@ -24,6 +24,7 @@ docsfw の ``bin/pub_markdown_core.sh`` が発行時に行う入力側の処理�
 
 import argparse
 from dataclasses import dataclass
+import json
 import os
 import posixpath
 import re
@@ -947,6 +948,7 @@ def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
     """``publocal.yaml`` の ``order:`` を mkdocs-awesome-nav の ``.nav.yml`` へ変換する。
 
     ルートには索引ページのタイトルをフォルダー表示名として使う設定を常に生成します。
+    索引タイトルがないディレクトリでは、元の名前を表示名に指定します。
     ``publocal.yaml`` に ``order:`` があるディレクトリでは、並び順も生成します。
 
     :return: 生成した ``.nav.yml`` の数。
@@ -958,12 +960,19 @@ def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
         real_dir = mapper.virtual_to_real(staged_dir)
         publocal = os.path.join(real_dir, "publocal.yaml")
         order = parse_publocal_order(publocal) if os.path.isfile(publocal) else []
-        if staged_dir and not order:
-            continue
-
         lines = []
         if not staged_dir:
             lines.append("use_index_title: true")
+        else:
+            index_path = os.path.join(out_dir, staged_dir, "index.md")
+            index_title = None
+            if os.path.isfile(index_path):
+                front_matter, _ = split_front_matter(read_text(index_path))
+                index_title = parse_front_matter_fields(front_matter).get("title")
+            if not index_title:
+                lines.append("title: " + json.dumps(posixpath.basename(staged_dir), ensure_ascii=False))
+            else:
+                lines.append("use_index_title: true")
         if order:
             lines.append("nav:")
             for name in order:
@@ -1216,6 +1225,12 @@ def stage_single(container, out_dir, real_path):
 
     content = _render_document(document, container)
     updated = write_if_changed(os.path.join(out_dir, document.staged_rel), content)
+    if posixpath.basename(document.staged_rel) == "index.md":
+        nav_updated = generate_nav_files(
+            out_dir, container.main_mdroot, container.subfolders,
+            [posixpath.dirname(document.staged_rel)],
+        )
+        updated = updated or nav_updated > 0
     return StageSingleResult(found=True, updated=updated)
 
 
@@ -1230,7 +1245,13 @@ def stage_index(container, out_dir, quiet=False):
     """
     updated, keep_relative = write_documents(container, out_dir)
 
-    staged_dirs = sorted({posixpath.dirname(rel) for rel in keep_relative} | {""})
+    staged_dirs = {""}
+    for rel in keep_relative:
+        directory = posixpath.dirname(rel)
+        while directory:
+            staged_dirs.add(directory)
+            directory = posixpath.dirname(directory)
+    staged_dirs = sorted(staged_dirs)
     nav_count = generate_nav_files(out_dir, container.main_mdroot, container.subfolders, staged_dirs)
     for staged_dir in staged_dirs:
         candidate = posixpath.join(staged_dir, ".nav.yml") if staged_dir else ".nav.yml"
