@@ -456,6 +456,7 @@ table {
   font-size: 15px;
   border-collapse: collapse;
   min-width: auto;
+  max-width: 100%;
   margin: 12px auto;
   }
   table tr {
@@ -482,6 +483,20 @@ table {
       margin-top: 0; }
     table tr th :last-child, table tr td :last-child {
       margin-bottom: 0; }
+
+/* 表のセル内に限り、インライン コードの折り返しを許可する。
+   本文カラムは 1400px 以上で 870px 固定のため、code, tt の
+   white-space: nowrap のままでは長い識別子が列幅を超え、
+   右のページ内目次へはみ出す。
+   white-space: pre-wrap は pandoc 既定の code { white-space: pre } と
+   同じくセル内の空白を保ったまま折り返しを許す。
+   overflow-wrap: anywhere は空白やカンマがあればそこで折り返し、
+   1 語で列幅に収まらないときだけ語中で折り返す。
+   本文中のインライン コードは nowrap のまま維持する。 */
+table tr th code, table tr td code,
+table tr th tt, table tr td tt {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere; }
 
 img {
   max-width: 100%; }
