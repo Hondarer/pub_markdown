@@ -807,8 +807,7 @@ make livedocs LIVEDOCS_VARIANT=ja
 
 全文検索について補足します。  
 docsfw は重なり 2-gram のトークナイザーを自前で実装し、日本語の検索精度を確保しています。  
-mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使用しますが、TinySegmenter には  
-複合語の分割漏れという upstream の既知バグがあり、日本語の長い複合語を取りこぼします。
+mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使用しますが、TinySegmenter には複合語の分割漏れという upstream の既知バグがあり、日本語の長い複合語を取りこぼします。
 
 実測した挙動 (`lang: ja` 使用時) を次に示します。
 
@@ -822,19 +821,16 @@ mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使�
 2 文字程度の語やカタカナ語は引けますが、`同期プリミティブ` のような複合語は引けません。  
 また `同期` が `同梱` にも一致するなど、分かち書きの精度は docsfw の 2-gram より劣ります。
 
-mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、  
-mkdocs-material では直せない」と upstream に帰責しています  
+mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、mkdocs-material では直せない」と upstream に帰責しています
 ([squidfunk/mkdocs-material Discussion #3916](https://github.com/squidfunk/mkdocs-material/discussions/3916))。  
 検索クエリのトークン化処理を差し替える機能も、2026 年 8 月時点で未実装です  
 ([squidfunk/mkdocs-material Issue #4980](https://github.com/squidfunk/mkdocs-material/issues/4980))。
 
 #### 緩和策 (実装済み)
 
-`mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) をやめ、`separator` の正規表現に  
-「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加している。
+`mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) をやめ、`separator` の正規表現に「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加している。
 
-lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter の  
-ような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。  
+lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。
 これにより `同期プリミティブ` のような複合語も検索でヒットするようになる。
 
 再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の  

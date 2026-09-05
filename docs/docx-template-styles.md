@@ -24,12 +24,10 @@ Pandoc が自動生成するため、ここでは docsfw 固有のカスタム �
 
 ## コード スタイルの注意点
 
-Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に  
-同じ文字スタイル `VerbatimChar` を割り当てます。  
+Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。
 そのため `VerbatimChar` に背景色を付けると、インライン コードだけでなくコード ブロックにも背景が乗ります。
 
-この問題に対処するため、docsfw は Lua フィルター `bin/pandoc-filters/inline-code-style.lua` で  
-docx 出力時のみインライン コードを `InlineCode` スタイルへ振り替えます。
+この問題に対処するため、docsfw は Lua フィルター `bin/pandoc-filters/inline-code-style.lua` で docx 出力時のみインライン コードを `InlineCode` スタイルへ振り替えます。
 
 ```
 インラインコード `x`  ->  rStyle = InlineCode  (背景色あり)
@@ -37,13 +35,11 @@ docx 出力時のみインライン コードを `InlineCode` スタイルへ振
 ハイライトありブロック ->  rStyle = KeywordTok 等 (背景色なし)
 ```
 
-HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` の `code, tt` セレクターが  
-インライン コードの背景色を担当します。
+HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` の `code, tt` セレクターがインライン コードの背景色を担当します。
 
 ## admonition スタイルの定義詳細
 
-`admonition.lua` は GitHub-style alert 構文 (`> [!NOTE]` 等) を検出し、docx では  
-`custom-style` 属性付き Div に変換します。各タイプと対応スタイルの関係は以下のとおりです。
+`admonition.lua` は GitHub-style alert 構文 (`> [!NOTE]` 等) を検出し、docx では `custom-style` 属性付き Div に変換します。各タイプと対応スタイルの関係は以下のとおりです。
 
 | タイプ | custom-style 値 | styleId | 基底スタイル | 左罫線色 | 背景色 |
 |---|---|---|---|---|---|

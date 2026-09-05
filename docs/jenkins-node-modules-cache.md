@@ -6,11 +6,8 @@
 グローバルに必須パッケージが揃っていれば `npm ci` は走りません。  
 コンテナー CI でグローバルが無い場合は、ローカル `node_modules` をキャッシュすると再導入を避けられます。
 
-さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で  
-**Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。  
-コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも  
-毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると  
-postinstall も走らないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
+さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。
+コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると postinstall も走らないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
 
 GitHub Actions では `actions/cache` が利用できるが、Jenkins には同等の標準機能がありません。  
 ここでは **固定エージェントおよびコンテナー エージェント** を対象に、  
