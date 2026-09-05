@@ -481,7 +481,7 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 | 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
 | ナビ ホバーと現在ページ | `#1A5FAA` | `styles/html/docsfw-ui.css` | `#1A5FAA` | `#9CC7EA` |
 | accent 背景に載る文字 | 対応なし | Material `--md-accent-bg-color` | `#FFFFFF` (Material 既定) | `#1F2129` |
-| ヘッダー背景 | `#FFFFFF`〜`#F2F2F2` | Bootstrap `.navbar-inner` | `#F7F7F7` | `#1F2129` |
+| ヘッダー背景 | `#F7F7F7` | `styles/html/html-style.css` の `.navbar-inner` | `#F7F7F7` | `#1F2129` |
 | ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
 | ヘッダー文字 | 濃色 | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
 | フッター背景 | - | ヘッダーからの流用 | `#F7F7F7` | `#1F2129` |
@@ -507,11 +507,19 @@ pandoc 発行版はライト固定のため、`slate` に対応する正はあ�
 admonition の 6 色は、pandoc が採用している GitHub のライト色に対応する GitHub のダーク色をそのまま当てます。  
 コード背景と `==mark==` は暗背景で成立しないため、`slate` では Material の既定に任せます。
 
-### ヘッダーとフッターを淡色にする理由
+### ヘッダーとフッターを淡色のフラットにする理由
 
-pandoc 発行版のヘッダーは Bootstrap の `.navbar-inner` で、白から `#F2F2F2` への淡いグラデーションに濃い文字です。  
+pandoc 発行版のヘッダーは Bootstrap の `.navbar-inner` です。  
+Bootstrap の既定は、白から `#F2F2F2` への淡いグラデーション、四辺の枠、角丸、外側の影を持つカード風の帯でした。  
+`styles/html/html-style.css` でこれらを外し、単色 `#F7F7F7` の帯に下端 1px の境界線 (`#D4D4D4`) だけを残すフラットな表現へ変更しています。  
+`text-shadow: 0 1px 0 #FFFFFF` も、グラデーションの上で文字を浮かせるための指定であり、フラットな帯では不要なため外します。
+
 Material の既定は indigo の単色バーであり、本文リンクを `#4183C4` に合わせると、ヘッダーの indigo だけが別系統の青として残ります。  
-`--md-primary-fg-color` 系を上書きして淡色に寄せ、`.md-header` へ下端の境界線を足します。
+`--md-primary-fg-color` 系を上書きして同じ淡色に寄せ、`.md-header` へ下端の境界線を足します。
+
+Material はスクロール時に JavaScript で `.md-header--shadow` を付け、ヘッダーの下へ影を落とします。  
+pandoc 発行版と表現をそろえるため、`.md-header--shadow` の `box-shadow` を `none` で打ち消します。  
+`transition` は残すため、ヘッダーの表示と非表示の動きは変わりません。
 
 淡色ヘッダーでは、Material が濃色ヘッダーを前提に指定している検索フォームの背景 (`#00000042`) では入力文字が読めません。  
 `default` のときだけ薄いティントへ変更します。

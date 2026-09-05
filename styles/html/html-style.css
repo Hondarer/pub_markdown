@@ -54,17 +54,36 @@ body > *:last-child {
 .navbar-static-top {
   margin-bottom: 4px; }
 
+/* Bootstrap の .navbar-inner は #FFFFFF から #F2F2F2 へのグラデーション、
+   四辺の枠、角丸、外側の影でカード風の帯になる。
+   mkdocs プレビュー (Material) の .md-header は単色の帯に下端 1px の境界線
+   だけを持つため、装飾を外して見た目をそろえる。
+   背景はグラデーションの中間色 #F7F7F7 とし、mkdocs 側の
+   docsfw-pandoc-style.css が --md-primary-fg-color に置く値と一致させる。
+   filter: progid: の IE 用グラデーションは、現行のブラウザーでは無効な値
+   として捨てられるため打ち消さない。 */
 .navbar-inner {
-  min-height: auto; }
+  min-height: auto;
+  background-color: #f7f7f7;
+  background-image: none;
+  border: none;
+  border-bottom: 1px solid #d4d4d4;
+  border-radius: 0;
+  box-shadow: none; }
 
 /* navbar-static-top は fixed-top と同様に左右 padding を 0 にする。
    Bootstrap 既定の navbar-inner 左右 20px と .nav.pull-right の負マージン
    (-35px) が重なると、M (980) / L (1200) / LL (1400) のコンテンツ幅切替直後に
    右端アイコン (Word 等) が body の overflow-x: hidden で欠ける。
-   container 右端 = アイコン右端に揃え、切替直後から全アイコンを可視にする。 */
+   container 右端 = アイコン右端に揃え、切替直後から全アイコンを可視にする。
+
+   box-shadow は .navbar-inner の指定と同じ意図で外す。Bootstrap は
+   .navbar-static-top .navbar-inner にも別の影 (0 1px 10px rgba(0,0,0,.1)) を
+   当てており、詳細度がこちらのほうが高いため、この規則でも打ち消す。 */
 .navbar-static-top .navbar-inner {
   padding-left: 0;
   padding-right: 0;
+  box-shadow: none;
 }
 
 .doc-title, .doc-info, .navbar-text {
@@ -83,6 +102,13 @@ body > *:last-child {
 .navbar .nav.pull-right {
   margin-right: 0;
 }
+
+/* Bootstrap は .doc-title と .navbar .nav > li > a へ text-shadow: 0 1px 0 #FFFFFF
+   を当て、淡いグラデーションの上で文字を浮かせる。フラットな帯では不要。 */
+.doc-title,
+.navbar-text,
+.navbar .nav > li > a {
+  text-shadow: none; }
 
 /* DOCX ダウンロードリンク (navbar 右側) */
 #docsfw-docx-li[hidden] {

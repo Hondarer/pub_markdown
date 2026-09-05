@@ -382,9 +382,10 @@ body {
      本文リンクのホバーとは別の色なので、専用の変数に分ける。 */
   --docsfw-nav-accent: #1a5faa;
 
-  /* ヘッダーは Bootstrap の .navbar-inner
-     (#FFFFFF〜#F2F2F2 のグラデーション、下端 #D4D4D4、濃い文字)。
-     Material のヘッダーは単色のため、グラデーションの中間色を使う。 */
+  /* ヘッダーは html-style.css の .navbar-inner (単色 #F7F7F7、下端 #D4D4D4、
+     濃い文字)。Bootstrap 既定のグラデーションと影は同ファイルで外している。
+     --light と --dark は Material のパレット規約で必要な派生値であり、
+     --dark は .md-header と .md-footer の境界線にも使う。 */
   --md-primary-fg-color: #f7f7f7;
   --md-primary-fg-color--light: #ffffff;
   --md-primary-fg-color--dark: #d4d4d4;
@@ -463,9 +464,17 @@ body {
 /* ヘッダー                                                                  */
 /* ------------------------------------------------------------------------ */
 
-/* Bootstrap の .navbar-inner が持つ下端の境界線に相当する。 */
+/* html-style.css の .navbar-inner が持つ下端の境界線に相当する。 */
 .md-header {
   border-bottom: 1px solid var(--md-primary-fg-color--dark);
+}
+
+/* Material はスクロール時に JavaScript で .md-header--shadow を付け、
+   ヘッダーの下へ影を落とす。pandoc 発行版のヘッダーはフラットな帯で、
+   下端の境界線だけで本文と区切るため、影を外す。
+   transition は残すので、ヘッダーの表示・非表示の動きは変わらない。 */
+.md-header--shadow {
+  box-shadow: none;
 }
 
 /* Material の検索フォームは、色の濃いヘッダーを前提に背景を #00000042 と
