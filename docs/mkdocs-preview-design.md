@@ -462,11 +462,12 @@ Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存�
 Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, input` へ `font-family: var(--md-text-font-family)` を、`code, kbd, pre` へ `font-family: var(--md-code-font-family)` を当てます。  
 既定値は `base.html` がインラインの `<style>` で `--md-text-font` と `--md-code-font` へ与え、あわせて Google Fonts を読み込みます。
 
-個別のセレクターではなく変数を上書きするのは、ヘッダー、ナビゲーション、検索 UI、「最上部にスクロール」(`.md-top`)、フッター、ツールヒントまでを 1 か所で決められるためです。  
+個別のセレクターではなく変数を上書きするのは、ヘッダー、ナビゲーション、検索 UI、ページ先頭へ戻るボタン (`.md-top`)、フッター、ツールヒントまでを 1 か所で決められるためです。  
 `.md-typeset` だけを上書きすると、本文以外は `body` から継承する Material 既定のフォントのまま残ります。
 
 `extra_css` は Material の `main.css` より後に読まれるため、同じ `body` セレクター (詳細度 (0,0,1)) でも後勝ちで上書きできます。  
-`.md-tooltip` と `--md-mermaid-font-family` は Material 側が `var(--md-text-font-family)` を明示して参照し、`button` は Material のリセットが `font-family: inherit` を持つため、いずれもこの上書きに追従します。
+`.md-tooltip` と `--md-mermaid-font-family` は Material 側が `var(--md-text-font-family)` を明示して参照します。  
+`.md-top` は `<button>` で、既定では `font-family` を継承しませんが、Material のリセットが `button` へ `font-family: inherit` を当てているため、こちらも追従します。
 
 自前の font stack を与えるため、`mkdocs.yml.in` の `theme` では `font: false` を指定し、Google Fonts の取得を止めます。  
 `--md-text-font` と `--md-code-font` が未定義になりますが、上書き後の `--md-text-font-family` と `--md-code-font-family` はこれらを参照しないため、表示は変わりません。
@@ -478,6 +479,7 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 | 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
 | 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
 | ナビ ホバーと現在ページ | `#1A5FAA` | `styles/html/docsfw-ui.css` | `#1A5FAA` | `#9CC7EA` |
+| accent 背景に載る文字 | 対応なし | Material `--md-accent-bg-color` | `#FFFFFF` (Material 既定) | `#1F2129` |
 | ヘッダー背景 | `#FFFFFF`〜`#F2F2F2` | Bootstrap `.navbar-inner` | `#F7F7F7` | `#1F2129` |
 | ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
 | ヘッダー文字 | 濃色 | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
@@ -922,7 +924,8 @@ Windows の Git Bash と Python でも `make preview-build` が通ることを�
 - `mkdocs-awesome-nav` の `use_index_title` により、README から生成した索引ページのタイトルをフォルダー表示名に使用できます。
 - `github-callouts` は `CAUTION` を `danger` クラスへ写します。`IMPORTANT` は同名のまま出力されますが、Material に `important` は存在しないため、既定の admonition として描画されます。
 - `extra_css` は Material の `palette.css` より後に読まれます。属性セレクター 1 個どうしでも後勝ちになるため、パレットの CSS 変数はここで上書きできます。
-- Material の本文以外のフォントは、`main.css` が `body` で定義する `--md-text-font-family` で決まります。`.md-typeset` だけを上書きすると、ヘッダー、左右 TOC、「最上部にスクロール」などが Material 既定のフォントのまま残ります。
+- Material の `--md-accent-bg-color` は accent パレット由来で `#FFFFFF` 固定であり、配色方式では変わりません。`--md-accent-fg-color` をダークで明色にすると、それを背景に敷く部品 (`.md-top` と `.md-button` のホバー、`.md-tag` のホバー) の文字色が白のまま残ります。`slate` 側で対にして上書きする必要があります。
+- Material の本文以外のフォントは、`main.css` が `body` で定義する `--md-text-font-family` で決まります。`.md-typeset` だけを上書きすると、ヘッダー、左右 TOC、ページ先頭へ戻るボタン (`.md-top`) などが Material 既定のフォントのまま残ります。
 - Material は `.md-typeset h5` を `text-transform: uppercase` にします。英字を含む H5 だけ表示が変わるため、`text-transform: none` で打ち消しています。
 - Material の `.md-typeset h2 + h3` は詳細度が (0,1,2) で、レベルごとの指定 (0,1,1) より高くなります。上余白を `.8em` に縮める指定が残るため、同じセレクターで上書きしています。
 - 見出しの書式を HTML のタグ名でそろえると、pandoc の `--shift-heading-level-by=-1` による 1 段のずれで Markdown 上の見え方が食い違います。[見出し書式](heading-style.md) は Markdown のレベルを基準に定めています。

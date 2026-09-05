@@ -8,10 +8,10 @@
 /* フォント                                                                  */
 /* ------------------------------------------------------------------------ */
 
-/* Material は本文以外 (ヘッダー、ナビゲーション、検索、「最上部にスクロール」
-   など) のフォントを、main.css が body で定義する --md-text-font-family で
-   決める。.md-typeset だけを上書きすると本文しか追従しないため、変数そのものを
-   pandoc 発行版の font stack へ置き換える。
+/* Material は本文以外 (ヘッダー、ナビゲーション、検索、ページ先頭へ戻る
+   ボタン .md-top など) のフォントを、main.css が body で定義する
+   --md-text-font-family で決める。.md-typeset だけを上書きすると本文しか
+   追従しないため、変数そのものを pandoc 発行版の font stack へ置き換える。
    宣言は Material と同じ body セレクターで行う。extra_css は main.css より
    後に読まれるため、同じ詳細度 (0,0,1) でも後勝ちする。
    本文は ../../styles/html/html-style.css の body、等幅は同じく code, tt に
@@ -365,6 +365,15 @@ body {
   --md-typeset-a-color: #6ea9dd;
   --md-accent-fg-color: #9cc7ea;
   --md-accent-fg-color--transparent: rgba(156, 199, 234, 0.1);
+
+  /* --md-accent-bg-color は --md-accent-fg-color を背景に敷く部品 (.md-top と
+     .md-button のホバー、.md-tag のホバー) の文字色。
+     Material では accent パレット由来で配色方式によらず #FFFFFF 固定であり、
+     ダークの --md-accent-fg-color を明色にしたことで白文字が読めなくなる
+     (#FFFFFF 対 #9CC7EA でコントラスト比 1.8:1)。
+     ヘッダー背景と同じ暗色へ差し替える (8.8:1)。 */
+  --md-accent-bg-color: #1f2129;
+  --md-accent-bg-color--light: rgba(31, 33, 41, 0.7);
 
   --docsfw-nav-accent: #9cc7ea;
 
