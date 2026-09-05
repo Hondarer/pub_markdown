@@ -438,10 +438,10 @@ docsfw は正式な発行の正本であり、プレビューは執筆中の確�
 `assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を pandoc 発行版へ寄せるためのファイルです。  
 配色もこのファイルに集約します。
 
-例外が 2 つあります。  
-見出しの色は Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+例外が 3 つあります。  
+見出しの色と TOC の枠や塗りつぶしは Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
 スクロール バーは、どちらか一方を正とせず両側を同じ仕様へ寄せます。  
-詳細は「見出しの色」と「スクロール バー」を参照してください。
+詳細は「見出しの色」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
 
 `mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
 Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
@@ -588,6 +588,24 @@ pandoc 発行版は、本文リンクが Bootstrap の `a:hover`、ナビゲー�
 Material は色を変えるだけで下線を引かないため、`.md-typeset a` と `.md-nav__link` のホバーとフォーカスに `text-decoration: underline` を足します。
 
 見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。
+
+### TOC の枠と塗りつぶし
+
+`make docs` の TOC は、`styles/html/html-template.html` が `<div class="well toc">` として出力します。  
+`well` は Bootstrap `template.css` (CDN) のクラスで、塗りつぶし `#F5F5F5`、枠 `#E3E3E3`、角丸 4px、内側の影を持つカード風の装飾です。
+
+`make preview` の Material は、デスクトップ幅では `.md-sidebar { padding: 1.2rem 0 }` だけを持ち、背景も枠も影もありません。  
+そこで `#TOC > .well` でカードの装飾を打ち消し、素の一覧の見た目にそろえます。
+
+`padding` は Bootstrap の 19px のまま残します。  
+カードが消えれば見えない余白になるだけで、TOC の字下げと横幅、本文の開始位置が変わらないためです。
+
+`.well` はテンプレート内で TOC にしか使われていないため、この指定の影響は TOC に閉じます。  
+モバイル (`max-width: 767px`) では `styles/html/docsfw-ui.css` の `#TOC.span3 .well` がすでに枠と角丸と影を外していましたが、背景色は残っていました。  
+今回の指定でモバイルの `.well` も透過になり、ドロワーの白背景がそのまま見えます。
+
+TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) はそのままにします。  
+ナビゲーション ツリーとページ内目次を 1 列に同居させる docsfw 固有の構成のためのもので、Material に対応物がないためです。
 
 ### 一致させない項目
 

@@ -261,6 +261,18 @@ h6 {
 h1.title {
   color: #757575; }
 
+/* TOC は Bootstrap の .well (塗りつぶし #F5F5F5、枠 #E3E3E3、角丸、内側の影)
+   でカード風になる。mkdocs プレビュー (Material) のサイドバーは
+   .md-sidebar { padding: 1.2rem 0 } だけで背景も枠も影も持たないため、
+   装飾を外して見た目をそろえる。
+   padding は Bootstrap の 19px のまま残す。カードが消えれば見えない余白に
+   なるだけで、TOC の字下げと横幅は変わらない。 */
+#TOC > .well {
+  background-color: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none; }
+
 .toc {
   margin-right: 8px;
   font-size: 14px; }
