@@ -655,79 +655,184 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 /* ===== GitHub-style Admonitions ===== */
 
-.admonition {
-  padding: 12px 16px;
-  margin: 15px 0;
-  border-left: 4px solid;
-  border-radius: 4px;
-  color: inherit;
+/* 形状とアイコンは mkdocs-material を正とし、こちらを寄せる。
+   寸法は Material の rem 指定を 1rem = 20px として px へ換算した固定値で、
+   同じ値を framework/docsfw/mkdocs/assets/docsfw-pandoc-style.css にも置く。
+   詳細は framework/docsfw/docs/mkdocs-preview-design.md の
+   「admonition の実装」を参照。 */
+
+:root {
+  /* 基準色。bin/pandoc-filters/admonition.lua の color と同じ GitHub の 6 色。 */
+  --docsfw-admonition-note: #1f6feb;
+  --docsfw-admonition-tip: #238636;
+  --docsfw-admonition-important: #8957e5;
+  --docsfw-admonition-warning: #9a6700;
+  --docsfw-admonition-danger: #da3633;
+  --docsfw-admonition-deprecated: #6a737d;
+
+  /* アイコン。note / tip / warning / danger は mkdocs-material の
+     --md-admonition-icon--* と同一。Material に無い important と deprecated は
+     docsfw の定義で、../../mkdocs/assets/docsfw-preview.css と同一。
+     別々のパイプラインのため共有できない。片方を変えたらもう片方も変えること。 */
+  --docsfw-admonition-icon--note: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2m3.1 5.07c.14 0 .28.05.4.16l1.27 1.27c.23.22.23.57 0 .78l-1 1-2.05-2.05 1-1c.1-.11.24-.16.38-.16m-1.97 1.74 2.06 2.06-6.06 6.06H7.07v-2.06z"/></svg>');
+  --docsfw-admonition-icon--tip: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-.95.23-1.78.75-2.49 1.32-2.59 2.08-3.61 5.75-2.39 8.9.04.1.08.2.08.33 0 .22-.15.42-.35.5-.23.1-.47.04-.66-.12a.6.6 0 0 1-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78 10 4.87 12.3 5 14.47c.06.5.12 1 .29 1.5.14.6.41 1.2.71 1.73 1.08 1.73 2.95 2.97 4.96 3.22 2.14.27 4.43-.12 6.07-1.6 1.83-1.66 2.47-4.32 1.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16 6.3c-.28.24-.74.5-1.1.6-1.12.4-2.24-.16-2.9-.82 1.19-.28 1.9-1.16 2.11-2.05.17-.8-.15-1.46-.28-2.23-.12-.74-.1-1.37.17-2.06.19.38.39.76.63 1.06.77 1 1.98 1.44 2.24 2.8.04.14.06.28.06.43.03.82-.33 1.72-.93 2.27"/></svg>');
+  --docsfw-admonition-icon--important: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
+  --docsfw-admonition-icon--warning: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 14h-2V9h2m0 9h-2v-2h2M1 21h22L12 2z"/></svg>');
+  --docsfw-admonition-icon--danger: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m11.5 20 4.86-9.73H13V4l-5 9.73h3.5zM12 2c2.75 0 5.1 1 7.05 2.95S22 9.25 22 12s-1 5.1-2.95 7.05S14.75 22 12 22s-5.1-1-7.05-2.95S2 14.75 2 12s1-5.1 2.95-7.05S9.25 2 12 2"/></svg>');
+  --docsfw-admonition-icon--deprecated: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.9 7.9 0 0 1 4 12a8 8 0 0 1 8-8zm0 16a7.9 7.9 0 0 1-4.9-1.69L18.31 7.1A7.9 7.9 0 0 1 20 12a8 8 0 0 1-8 8z"/></svg>');
 }
 
+.admonition {
+  display: flow-root;
+  margin: 25px 0;
+  padding: 0 12px;
+  border: 1.5px solid;
+  border-radius: 4px;
+  background-color: white;
+  color: inherit;
+  page-break-inside: avoid;
+}
+
+/* 段落の余白は、プレビュー側の .md-typeset p { margin: 0.5em 0 }
+   (mkdocs/assets/docsfw-pandoc-style.css) と同じ 8px にする。
+   Bootstrap template.css の p { margin: 0 0 10px } は打ち消す。 */
 .admonition p {
+  margin: 8px 0;
   font-size: 16px;
   line-height: 1.5;
 }
 
-.admonition > :first-child {
-  margin-top: 0;
+.admonition > :last-child {
+  margin-bottom: 12px;
 }
 
-.admonition > :last-child {
+/* 見出し帯。左右のパディングを打ち消してブロックの幅いっぱいに広げる。
+   見出しも p 要素のため、上の .admonition p (詳細度 0,1,1) が
+   .admonition-title (0,1,0) に勝ってしまう。子結合子で (0,2,0) にして、
+   帯の上下に余白が入らないようにする。 */
+.admonition > .admonition-title {
+  position: relative;
+  margin: 0 -12px;
+  padding: 8px 12px 8px 40px;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* アイコンは SVG をマスクにして基準色で塗る。 */
+.admonition > .admonition-title::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* 本文が無い admonition では、見出し帯の下余白を出さない。 */
+.admonition > .admonition-title:last-child {
   margin-bottom: 0;
 }
 
-.admonition-title {
-  font-weight: 600;
-  display: block;
-  margin-bottom: 4px;
+/* タイプ別。見出し帯のティントは基準色の 10%。
+   color-mix() 非対応の環境向けに、白地へ合成した実測値を先に置く。 */
+
+.admonition.note {
+  border-color: var(--docsfw-admonition-note);
 }
 
-.admonition-note {
-  border-left-color: #1f6feb;
-  background-color: #f0faff;
-}
-.admonition-note .admonition-title {
-  color: #1f6feb;
+.admonition.note > .admonition-title {
+  background-color: #e9f1fd;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-note) 10%, transparent);
 }
 
-.admonition-tip {
-  border-left-color: #238636;
-  background-color: #effdf2;
-}
-.admonition-tip .admonition-title {
-  color: #238636;
+.admonition.note > .admonition-title::before {
+  background-color: var(--docsfw-admonition-note);
+  -webkit-mask-image: var(--docsfw-admonition-icon--note);
+  mask-image: var(--docsfw-admonition-icon--note);
 }
 
-.admonition-important {
-  border-left-color: #8957e5;
-  background-color: #f8f2ff;
-}
-.admonition-important .admonition-title {
-  color: #8957e5;
+.admonition.tip {
+  border-color: var(--docsfw-admonition-tip);
 }
 
-.admonition-warning {
-  border-left-color: #9a6700;
-  background-color: #fffce5;
-}
-.admonition-warning .admonition-title {
-  color: #9a6700;
+.admonition.tip > .admonition-title {
+  background-color: #e9f3eb;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-tip) 10%, transparent);
 }
 
-.admonition-caution {
-  border-left-color: #da3633;
-  background-color: #fff6f5;
-}
-.admonition-caution .admonition-title {
-  color: #da3633;
+.admonition.tip > .admonition-title::before {
+  background-color: var(--docsfw-admonition-tip);
+  -webkit-mask-image: var(--docsfw-admonition-icon--tip);
+  mask-image: var(--docsfw-admonition-icon--tip);
 }
 
-.admonition-deprecated {
-  border-left-color: #6a737d;
-  background-color: #f6f8fa;
+.admonition.important {
+  border-color: var(--docsfw-admonition-important);
 }
-.admonition-deprecated .admonition-title {
-  color: #6a737d;
+
+.admonition.important > .admonition-title {
+  background-color: #f3eefc;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-important) 10%, transparent);
+}
+
+.admonition.important > .admonition-title::before {
+  background-color: var(--docsfw-admonition-important);
+  -webkit-mask-image: var(--docsfw-admonition-icon--important);
+  mask-image: var(--docsfw-admonition-icon--important);
+}
+
+.admonition.warning {
+  border-color: var(--docsfw-admonition-warning);
+}
+
+.admonition.warning > .admonition-title {
+  background-color: #f5f0e6;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-warning) 10%, transparent);
+}
+
+.admonition.warning > .admonition-title::before {
+  background-color: var(--docsfw-admonition-warning);
+  -webkit-mask-image: var(--docsfw-admonition-icon--warning);
+  mask-image: var(--docsfw-admonition-icon--warning);
+}
+
+.admonition.danger {
+  border-color: var(--docsfw-admonition-danger);
+}
+
+.admonition.danger > .admonition-title {
+  background-color: #fbebeb;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-danger) 10%, transparent);
+}
+
+.admonition.danger > .admonition-title::before {
+  background-color: var(--docsfw-admonition-danger);
+  -webkit-mask-image: var(--docsfw-admonition-icon--danger);
+  mask-image: var(--docsfw-admonition-icon--danger);
+}
+
+.admonition.deprecated {
+  border-color: var(--docsfw-admonition-deprecated);
+}
+
+.admonition.deprecated > .admonition-title {
+  background-color: #f0f1f2;
+  background-color: color-mix(in srgb, var(--docsfw-admonition-deprecated) 10%, transparent);
+}
+
+.admonition.deprecated > .admonition-title::before {
+  background-color: var(--docsfw-admonition-deprecated);
+  -webkit-mask-image: var(--docsfw-admonition-icon--deprecated);
+  mask-image: var(--docsfw-admonition-icon--deprecated);
 }
 
 /* ==text== ハイライト (<mark> 要素): docx の黄色蛍光ペン (#FFFF00) に合わせた純黄色 */

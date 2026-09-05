@@ -278,10 +278,60 @@ body {
 /* admonition・展開要素 (pymdownx.admonition / pymdownx.details)             */
 /* ------------------------------------------------------------------------ */
 
+/* 字送りは本文と同じにする。details と summary は Material の指定のままとする。
+   発行対象の Markdown に生の <details> は無く、pymdownx.details も有効にして
+   いないため、admonition と同じ寸法へ寄せる必要がない。 */
 .md-typeset .admonition,
 .md-typeset details {
   font-size: 16px;
   line-height: 24px;
+}
+
+/* admonition の寸法は、Material の rem 指定を 1rem = 20px として px へ換算した
+   固定値にする。Material は @media (min-width: 100em) で root を 137.5% へ
+   上げるため、rem のままでは 1600px 以上の画面でプレビューだけが約 10% 大きく
+   なり、pandoc 発行版 (styles/html/html-style.css) と一致しない。
+   同じ値を両側へ置く。 */
+
+.md-typeset .admonition {
+  margin: 25px 0;
+  padding: 0 12px;
+  border-width: 1.5px;
+  border-radius: 4px;
+}
+
+.md-typeset .admonition > :last-child {
+  margin-bottom: 12px;
+}
+
+.md-typeset .admonition-title {
+  margin: 0 -12px;
+  padding: 8px 12px 8px 40px;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+}
+
+.md-typeset .admonition-title::before {
+  top: 10px;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+}
+
+/* 本文が無い admonition では、見出し帯の下余白を出さない。
+   上の > :last-child と詳細度が同じため、後に置いて上書きする。 */
+.md-typeset .admonition-title:last-child {
+  margin-bottom: 0;
+}
+
+/* 横スクロールする表は、ブロックの左右パディングを打ち消して配置される。
+   パディングを固定したので、こちらも同じ値へそろえる。 */
+.md-typeset .admonition .md-typeset__scrollwrap {
+  margin: 16px -12px;
+}
+
+.md-typeset .admonition .md-typeset__table {
+  padding: 0 12px;
 }
 
 /* ------------------------------------------------------------------------ */

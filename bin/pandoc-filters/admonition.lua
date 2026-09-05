@@ -11,7 +11,7 @@ local TYPES = {
   TIP       = { class = "tip",       title = "Tip",        mark = "💡", color = "238636" },
   IMPORTANT = { class = "important", title = "Important",  mark = "❗", color = "8957E5" },
   WARNING   = { class = "warning",   title = "Warning",    mark = "⚠️", color = "9A6700" },
-  CAUTION    = { class = "caution",    title = "Caution",    mark = "🛑", color = "DA3633" },
+  CAUTION    = { class = "danger",     title = "Caution",    mark = "🛑", color = "DA3633" },
   DEPRECATED = { class = "deprecated", title = "Deprecated", mark = "🏚️", color = "6A737D" },
 }
 
@@ -62,22 +62,25 @@ function BlockQuote(bq)
   if not adm_type then return nil end
 
   local info = TYPES[adm_type]
-  local display_title = info.title
-  if info.mark ~= "" then
-    display_title = info.mark .. " " .. info.title
-  end
   local content = strip_marker(bq, adm_type)
 
   if FORMAT:match("html") then
-    local title_span = pandoc.Span(
-      { pandoc.Str(display_title) },
-      pandoc.Attr("", { "admonition-title" }, {})
+    -- mkdocs-material と同じ <p class="admonition-title"> を出力する。
+    -- Pandoc の Para は属性を持てないため、RawBlock で組み立てる。
+    -- 見出しに絵文字は付けない。アイコンは CSS の mask-image で描く。
+    local title_raw = string.format(
+      '<p class="admonition-title">%s</p>',
+      info.title
     )
-    local title_para = pandoc.Para({ title_span })
-    content:insert(1, title_para)
-    return pandoc.Div(content, pandoc.Attr("", { "admonition", "admonition-" .. info.class }, {}))
+    content:insert(1, pandoc.RawBlock("html", title_raw))
+    return pandoc.Div(content, pandoc.Attr("", { "admonition", info.class }, {}))
 
   elseif FORMAT:match("docx") then
+    -- docx は従来どおり絵文字付きの見出しにする。
+    local display_title = info.title
+    if info.mark ~= "" then
+      display_title = info.mark .. " " .. info.title
+    end
     local style_name = "Block Text " .. info.title
     local style_id = style_name:gsub(" ", "")
     local title_raw = string.format(

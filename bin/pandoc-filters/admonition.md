@@ -41,31 +41,45 @@ BlockQuote
 
 ## HTML 出力
 
-`<div class="admonition admonition-{type}">` に変換します。  
-タイトル行は種類ごとの記号を付けて `<span class="admonition-title">` で出力します。
+`<div class="admonition {クラス}">` に変換します。  
+見出しは `<p class="admonition-title">` で出力します。記号 (絵文字) は付けません。
 
 ```html
-<div class="admonition admonition-note">
-  <p><span class="admonition-title">ℹ️ Note</span></p>
+<div class="admonition note">
+  <p class="admonition-title">Note</p>
   <p>内容...</p>
 </div>
 ```
 
-CSS は `styles/html/html-style.css` に定義。左罫線色とタイトル色は GitHub 準拠とし、背景色は淡色化した配色:
+Pandoc の `Para` は属性を持てないため、見出しの段落は `RawBlock` で組み立てています。
 
-| タイプ | 見出し | 左罫線色 | 背景色 | タイトル色 |
+クラス名とマークアップは mkdocs-material にそろえています。  
+`make preview` が使う `github-callouts` は `CAUTION` を `danger` クラスへ写すため、`CAUTION` のクラス名だけタイプ名と異なります。
+
+CSS は `styles/html/html-style.css` に定義します。  
+形状も mkdocs-material に合わせ、全周の枠、角丸、見出し帯、SVG アイコンで表現します。  
+ブロック本体の背景はページ背景のままとし、見出し帯だけを基準色の 10% で塗ります。  
+アイコンは `mask-image` に SVG を与え、基準色で塗ります。
+
+| タイプ | クラス | 見出し | 基準色 (枠・アイコン・見出し文字) | 見出し帯 |
 |---|---|---|---|---|
-| NOTE | ℹ️ Note | #1f6feb (青) | #f0faff | #1f6feb |
-| TIP | 💡 Tip | #238636 (緑) | #effdf2 | #238636 |
-| IMPORTANT | ❗ Important | #8957e5 (紫) | #f8f2ff | #8957e5 |
-| WARNING | ⚠️ Warning | #9a6700 (黄) | #fffce5 | #9a6700 |
-| CAUTION | 🛑 Caution | #da3633 (赤) | #fff6f5 | #da3633 |
-| DEPRECATED | 🏚️ Deprecated | #6a737d (灰) | #f6f8fa | #6a737d |
+| NOTE | `note` | Note | #1f6feb (青) | #e9f1fd |
+| TIP | `tip` | Tip | #238636 (緑) | #e9f3eb |
+| IMPORTANT | `important` | Important | #8957e5 (紫) | #f3eefc |
+| WARNING | `warning` | Warning | #9a6700 (黄) | #f5f0e6 |
+| CAUTION | `danger` | Caution | #da3633 (赤) | #fbebeb |
+| DEPRECATED | `deprecated` | Deprecated | #6a737d (灰) | #f0f1f2 |
+
+見出し帯の色は `color-mix()` で基準色から導き、表の値は非対応環境向けのフォールバックです。  
+寸法と、mkdocs プレビューとの一致のさせ方は [mkdocs 簡易プレビュー基盤](../../docs/mkdocs-preview-design.md) の「admonition の実装」を参照してください。
+
+HTML と docx で見出しの文字列は異なります。  
+HTML は絵文字なし、docx は絵文字付きです。
 
 ## docx 出力
 
 `custom-style` 属性付き Div に変換します。  
-見出しには HTML と同じ記号付きタイトルを出力します。  
+見出しには記号 (絵文字) 付きのタイトルを出力します。HTML とは異なります。  
 テンプレート (`docx-template.dotx`) に対応するスタイルが定義されていれば適用される。  
 未定義の場合は Normal スタイルにフォールバックします。
 

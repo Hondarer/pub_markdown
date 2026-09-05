@@ -77,7 +77,12 @@
    受け手が無く、既定の admonition として描画されてしまう。
 
    色は docsfw-pandoc-style.css が --docsfw-admonition-* で供給する。
-   このファイル単体でも成立するよう、var() のフォールバックを置く。 */
+   このファイル単体でも成立するよう、var() のフォールバックを置く。
+
+   下のアイコンは pandoc 発行版の ../../styles/html/html-style.css にある
+   --docsfw-admonition-icon--important / --deprecated と同一。別々のパイプ
+   ラインのため共有できず、両側に同じ data URI を置いている。片方を変えたら
+   もう片方も変えること。 */
 :root {
   --md-admonition-icon--important: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>');
   --md-admonition-icon--deprecated: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 2c1.85 0 3.55.63 4.9 1.69L5.69 16.9A7.9 7.9 0 0 1 4 12a8 8 0 0 1 8-8zm0 16a7.9 7.9 0 0 1-4.9-1.69L18.31 7.1A7.9 7.9 0 0 1 20 12a8 8 0 0 1-8 8z"/></svg>');

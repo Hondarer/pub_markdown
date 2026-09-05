@@ -443,11 +443,12 @@ docsfw は正式な発行の正本であり、プレビューは執筆中の確�
 `assets/docsfw-pandoc-style.css` は、もともとタイポグラフィと表とコード枠を pandoc 発行版へ寄せるためのファイルです。  
 配色もこのファイルに集約します。
 
-例外が 3 つあります。  
+例外が 4 つあります。  
 見出しと本文の文字色は、どちらか一方を正とせず [見出し書式](heading-style.md) を正本とし、両側をそこへ合わせます。  
 TOC の枠や塗りつぶしは Material を正とし、pandoc の `styles/html/html-style.css` を合わせます。  
+admonition の形状とアイコンも Material を正とし、pandoc 側を合わせます。  
 スクロール バーは、どちらか一方を正とせず両側を同じ仕様へ寄せます。  
-詳細は「見出しと本文の文字色」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
+詳細は「見出しと本文の文字色」「admonition の実装」「スクロール バー」「TOC の枠と塗りつぶし」を参照してください。
 
 `mkdocs.yml.in` の `palette` には `primary` と `accent` を指定しません。  
 Material の名前付きパレットに pandoc のリンク色 `#4183C4` は存在せず、CSS 変数の上書きであればライト (`default`) とダーク (`slate`) の双方を 1 か所で扱えるためです。  
@@ -544,6 +545,57 @@ pandoc 発行版の HTML に `<footer>` は無く、フッターには正とす�
 
 見出し帯の淡いティントは `color-mix()` で基準色から導きます。  
 未対応の環境では宣言ごと無視され、Material の既定色に戻るだけで表示は壊れません。
+
+#### 形状とアイコンを Material に合わせる
+
+admonition は、配色だけでなく形状とアイコンも Material を正とし、pandoc 発行版をそちらへ合わせます。  
+配色の原則 (pandoc が正) の例外です。  
+枠付きの表現の方が読みやすいという判断によるもので、`styles/html/html-style.css` と `bin/pandoc-filters/admonition.lua` を変更しました。
+
+pandoc 側の変更点は次のとおりです。
+
+- ブロックは左罫線だけの表現をやめ、全周の枠、角丸、見出し帯にします。ブロック全体を塗っていた淡色の背景は廃止し、見出し帯だけを基準色の 10% で塗ります。
+- 見出しの絵文字をやめ、Material と同じ SVG を `mask-image` で描きます。
+- クラス名を Material にそろえます。`admonition admonition-note` から `admonition note` へ、`CAUTION` は `github-callouts` に合わせて `danger` へ変更します。
+- 見出しの要素を `<p><span class="admonition-title">` から `<p class="admonition-title">` へ変更します。Pandoc の `Para` は属性を持てないため、`RawBlock` で組み立てます。
+
+アイコンの SVG は両側で同一です。  
+note / tip / warning / danger は Material の `--md-admonition-icon--*`、Material に無い important / deprecated は `assets/docsfw-preview.css` の定義を、`styles/html/html-style.css` へ複写しています。  
+別々のパイプラインのため共有はできません。両ファイルに相互参照のコメントを置いています。
+
+docx は対象外です。見出しは絵文字付きのままで、`admonition.lua` の docx 分岐は変更していません。
+
+#### 寸法を px で固定する理由
+
+Material の admonition は `rem` と `em` で寸法を持ちます。  
+`html { font-size: 125% }` (1rem = 20px) が基準ですが、`@media (min-width: 100em)` で 137.5% へ上がるため、1600px 以上の画面ではプレビューだけが約 10% 大きくなります。
+
+そこで、1rem = 20px として px へ換算した固定値を両側へ置きます。  
+`assets/docsfw-pandoc-style.css` が見出しの書式で採っている方針と同じです。
+
+| 部位 | Material | 採用値 |
+|---|---|---|
+| ブロックの枠 | `.075rem solid` | `1.5px solid` |
+| ブロックの角丸 | `.2rem` | `4px` |
+| ブロックの左右パディング | `0 .6rem` | `0 12px` |
+| ブロックの上下マージン | `1.5625em` (font-size 16px) | `25px` |
+| 末尾要素の下マージン | `.6rem` | `12px` |
+| 見出し帯の左右マージン | `0 -.6rem` | `0 -12px` |
+| 見出し帯のパディング | 上下 `.4rem` / 左 `2rem` / 右 `.6rem` | `8px 12px 8px 40px` |
+| 見出し帯の上端角丸 | `.1rem` | `2px` |
+| アイコンの寸法 | `1rem` 四方 | `20px` 四方 |
+| アイコンの位置 | `left: .6rem` / `top: .625em` | `left: 12px` / `top: 10px` |
+
+`details` と `summary` は Material の指定のままとします。  
+発行対象の Markdown に生の `<details>` は無く、`pymdownx.details` も有効にしていないため、admonition と同じ寸法へ寄せる必要がありません。
+
+admonition 内の段落の余白は `8px` です。  
+プレビュー側は `assets/docsfw-pandoc-style.css` の `.md-typeset p { margin: 0.5em 0 }` がすでに `8px` を与えているため、pandoc 側の `.admonition p` をそこへ合わせます。  
+pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px }` のままで、admonition の内部だけ `8px` になります。
+
+なお `.admonition-title` も `p` 要素です。  
+`.admonition p` (詳細度 0,1,1) が `.admonition-title` (0,1,0) に勝つため、見出し帯の指定は `.admonition > .admonition-title` (0,2,0) と子結合子で書きます。  
+そうしないと見出し帯に段落の余白が入り、枠との間に隙間ができます。
 
 ### スクロール バー
 
@@ -662,8 +714,6 @@ TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separa
 
 ### 一致させない項目
 
-- admonition の形状。pandoc は左罫線のみでブロック全体を淡く着色し、Material は全周の罫線と見出し帯で表現します。
-- admonition のアイコン。pandoc は絵文字、Material は SVG のマスクです。
 - `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、プレビューに対応物がありません。
 
 ## make からの起動
