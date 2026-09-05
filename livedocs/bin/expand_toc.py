@@ -2,7 +2,7 @@
 r"""``\toc`` コマンドをディレクトリ横断の索引リストへ展開する。
 
 docsfw の ``bin/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち、
-動的発行で実際に使用されているパラメーターだけを再実装します。
+目次のパラメーターを動的発行向けに実装します。
 
 対応するパラメーターを次に示します。
 
@@ -10,7 +10,7 @@ docsfw の ``bin/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち
     exclude           除外パターン。複数指定できる。
     basedir           基準ディレクトリ。指定しない場合は自身のディレクトリ。
     exclude-basedir   基準ディレクトリ自体を索引に出さない。
-    open-level        docsfw では折り畳みの初期展開段数。本実装では無視する。
+    open-level        折りたたみの初期展開段数。省略時は全閉。
 
 出力の書式は insert-toc.sh と同じです。ネストした項目は 4 スペースで字下げします。
 
@@ -19,6 +19,7 @@ docsfw の ``bin/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち
     - 📁 フォルダー名
 """
 
+import html
 import posixpath
 import re
 
@@ -38,6 +39,7 @@ def parse_toc_params(params_str):
         "exclude": [],
         "basedir": "",
         "exclude-basedir": False,
+        "open-level": None,
     }
     if not params_str:
         return params
@@ -61,6 +63,8 @@ def parse_toc_params(params_str):
             params["basedir"] = value.strip("/")
         elif key == "exclude-basedir":
             params["exclude-basedir"] = value.lower() == "true"
+        elif key == "open-level":
+            params["open-level"] = value
 
     return params
 
@@ -130,20 +134,24 @@ class DocIndex:
     def subdirs_in(self, vdir):
         return sorted(self._dir_subdirs.get(vdir, ()), key=str.lower)
 
-    def index_entry(self, vdir):
+    def index_entry(self, vdir, patterns=()):
         """``vdir`` のディレクトリ索引となるエントリーを返す。無ければ ``None``。"""
         for entry in self._dir_entries.get(vdir, []):
-            if entry["staged_name"].lower() == "index.md":
+            path = posixpath.join(vdir, entry["source_name"])
+            if entry["staged_name"].lower() == "index.md" and not is_excluded(path, patterns):
                 return entry
         return None
 
-    def has_visible_file(self, vdir, patterns):
+    def has_visible_file(self, vdir, patterns, base_dir="", max_depth=-1):
         """``vdir`` 配下に、除外されずに残るファイルがあるかどうかを返す。"""
         stack = [vdir]
         while stack:
             current = stack.pop()
             for entry in self._dir_entries.get(current, []):
                 match_path = posixpath.join(current, entry["source_name"]) if current else entry["source_name"]
+                relative = posixpath.relpath(match_path, base_dir) if base_dir else match_path
+                if max_depth >= 0 and relative.count("/") > max_depth:
+                    continue
                 if not is_excluded(match_path, patterns):
                     return True
             for name in self._dir_subdirs.get(current, ()):
@@ -189,9 +197,9 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             continue
 
         if is_dir:
-            if not index.has_visible_file(child_path, patterns):
+            if not index.has_visible_file(child_path, patterns, base_dir, max_depth):
                 continue
-            dir_index = index.index_entry(child_path)
+            dir_index = index.index_entry(child_path, patterns)
             if dir_index is None:
                 lines.append(_entry_line(level, "📁", name, None, None))
             else:
@@ -221,11 +229,14 @@ def render_toc(index, source_staged_rel, params):
     if base_dir == ".":
         base_dir = ""
 
+    if is_excluded(base_dir, params["exclude"]) or not index.has_visible_file(base_dir, params["exclude"], base_dir, params["depth"]):
+        return ""
+
     lines = []
     if params["exclude-basedir"]:
         _render_dir(index, base_dir, base_dir, 0, params, from_dir, lines)
     else:
-        base_index = index.index_entry(base_dir)
+        base_index = index.index_entry(base_dir, params["exclude"])
         base_name = posixpath.basename(base_dir) if base_dir else "."
         if base_index is None:
             lines.append(_entry_line(0, "📁", base_name, None, None))
@@ -235,6 +246,14 @@ def render_toc(index, source_staged_rel, params):
         _render_dir(index, base_dir, base_dir, 1, params, from_dir, lines)
 
     return "\n".join(lines)
+
+
+def collapsible_open_tag(open_level=None):
+    """Markdown の解析を維持する折りたたみコンテナーを開始する。"""
+    attribute = ""
+    if open_level is not None:
+        attribute = ' data-open-level="{}"'.format(html.escape(str(open_level), quote=True))
+    return '<div class="collapsible-list" markdown="1"{}>'.format(attribute)
 
 
 def expand_toc_commands(text, index, source_staged_rel):
@@ -251,10 +270,10 @@ def expand_toc_commands(text, index, source_staged_rel):
     for line in text.split("\n"):
         fence_match = _FENCE_RE.match(line)
         if fence_match:
-            marker = fence_match.group(1)[0]
+            marker = fence_match.group(1)
             if fence is None:
                 fence = marker
-            elif fence == marker:
+            elif marker[0] == fence[0] and len(marker) >= len(fence) and not line.strip()[len(marker):].strip():
                 fence = None
             out.append(line)
             continue
@@ -268,7 +287,7 @@ def expand_toc_commands(text, index, source_staged_rel):
             params = parse_toc_params(toc_match.group(1))
             rendered = render_toc(index, source_staged_rel, params)
             if rendered:
-                out.append(rendered)
+                out.extend([collapsible_open_tag(params["open-level"]), "", rendered, "", "</div>", ""])
             continue
 
         out.append(line)

@@ -51,6 +51,8 @@ OWN_ASSETS = (
     "docsfw-mathjax.js",
     "docsfw-responsive-nav.js",
     "docsfw-svg-download.js",
+    "docsfw-collapsible-list.js",
+    "docsfw-collapsible-list.css",
     "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
     "docsfw-header-links.css",

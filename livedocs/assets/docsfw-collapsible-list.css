@@ -1,0 +1,45 @@
+/* Material の admonition 装飾から独立した本文リスト。 */
+.md-typeset .collapsible-list li:has(> details) { list-style: none; }
+.md-typeset .collapsible-list details {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: inherit;
+}
+.md-typeset .collapsible-list details > summary {
+  margin: 0 0 0 -1.3em;
+  padding: 0 0 0 1.3em;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-weight: inherit;
+  cursor: pointer;
+  list-style: none;
+}
+.md-typeset .collapsible-list details > summary::-webkit-details-marker { display: none; }
+.md-typeset .collapsible-list details > summary::after { display: none; }
+.md-typeset .collapsible-list details > summary::before {
+  content: "";
+  display: inline-block;
+  position: relative;
+  top: -1px;
+  left: auto;
+  width: 6px;
+  height: 6px;
+  margin-left: -1.25em;
+  margin-right: 0.75em;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  background: none;
+  mask: none;
+  transform: rotate(-45deg);
+}
+.md-typeset .collapsible-list details[open] > summary::before { transform: rotate(45deg); top: -3px; }
+.md-typeset .collapsible-list details > summary:hover { background: var(--md-default-fg-color--lightest); }
+.md-typeset .collapsible-list details > ul,
+.md-typeset .collapsible-list details > ol { margin-top: 3px; }

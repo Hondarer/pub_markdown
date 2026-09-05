@@ -72,7 +72,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 |---|---|---|---|---|
 | 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の言語側を使う |
 | 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
-| 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 簡略 | 実使用の 5 パラメーターのみ再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
+| 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 維持 | 目次パラメーターと `open-level` を再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う |
 
@@ -134,7 +134,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
-| 51 | 展開可能リスト | 簡略 | Material のナビ折り畳みで代替。ページ本文中の手動 fenced div (`::: {.collapsible-list open-level=N}`) は MkDocs 側に対応する拡張が無いため、`stage_livedocs.py` の `strip_collapsible_list_fences` が開始行と終了行だけを取り除き、中身は折り畳み無しの通常リストとして表示する |
+| 51 | 展開可能リスト | 維持 | `\toc` と手動 fenced div を `.collapsible-list` へ変換し、本文の開閉・初期展開・履歴復元を適用する。仕様は [展開可能リスト](collapsible-list.md) を参照 |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 簡略 | Material の `content.code.copy` |
 | 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |

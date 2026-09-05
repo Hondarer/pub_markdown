@@ -105,11 +105,13 @@ extra:
   livedocs_variant: "@LIVEDOCS_VARIANT@"
 
 extra_css:
+  - assets/docsfw-collapsible-list.css
   - assets/docsfw-livedocs.css
   - assets/docsfw-pandoc-style.css
   - assets/docsfw-header-links.css
 
 extra_javascript:
+  - assets/docsfw-collapsible-list.js
   # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。
   - assets/plantuml/viz-global.js
   - path: assets/docsfw-plantuml.js

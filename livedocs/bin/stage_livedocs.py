@@ -33,7 +33,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from expand_toc import DocIndex, expand_toc_commands  # noqa: E402
+from expand_toc import DocIndex, expand_toc_commands, collapsible_open_tag, parse_toc_params  # noqa: E402
 from git_link import GitLinkResolver, parse_host_provider_map  # noqa: E402
 from lang_details_filter import filter_lang_details  # noqa: E402
 
@@ -59,6 +59,8 @@ VENDORED_FILES = (
     "assets/docsfw-mathjax.js",
     "assets/docsfw-responsive-nav.js",
     "assets/docsfw-svg-download.js",
+    "assets/docsfw-collapsible-list.js",
+    "assets/docsfw-collapsible-list.css",
     "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-header-links.css",
@@ -788,52 +790,36 @@ def convert_deprecated_alerts(text):
     return "\n".join(out)
 
 
-def strip_collapsible_list_fences(text):
-    """``::: {.collapsible-list open-level=N}`` の Pandoc fenced div を取り除く。
-
-    doxybook2 向けテンプレート (``index.tmpl`` など) はこの記法を直接出力するが、
-    mkdocs (Python-Markdown) には対応する拡張が無く、そのまま表示されてしまう。
-    ``\\toc`` 展開 (``expand_toc.py``) が折り畳み表示を実装しないのと同じく、
-    プレビューでは開始行と対応する終了行だけを取り除き、中身のリストは
-    折り畳み無しの通常リストとして表示する。
-    """
-    if ":::" not in text:
-        return text
-
-    lines = text.split("\n")
+def convert_collapsible_list_fences(text):
+    """手動 fenced div を Markdown を解析する HTML コンテナーへ変換する。"""
     out = []
+    stack = []
     fence = None
-    index = 0
-
-    while index < len(lines):
-        line = lines[index]
-        fence_match = _FENCE_RE.match(line)
-        if fence_match:
-            marker = fence_match.group(1)[0]
+    for line in text.split("\n"):
+        match = _FENCE_RE.match(line)
+        if match:
+            run = match.group(1)
             if fence is None:
-                fence = marker
-            elif fence == marker:
+                fence = run
+            elif run[0] == fence[0] and len(run) >= len(fence) and not line.strip()[len(run):].strip():
                 fence = None
             out.append(line)
-            index += 1
             continue
-
         if fence is not None:
             out.append(line)
-            index += 1
             continue
-
         if _COLLAPSIBLE_OPEN_RE.match(line):
-            index += 1
-            while index < len(lines) and not _COLLAPSIBLE_CLOSE_RE.match(lines[index]):
-                out.append(lines[index])
-                index += 1
-            index += 1  # 終了行 (:::) を読み飛ばす
-            continue
-
-        out.append(line)
-        index += 1
-
+            params = parse_toc_params(line[line.index("{") + 1:line.rindex("}")])
+            stack.append(len(line) - len(line.lstrip(":")))
+            out.extend([collapsible_open_tag(params["open-level"]), ""])
+        elif stack and _COLLAPSIBLE_CLOSE_RE.match(line) and len(line.strip()) >= stack[-1]:
+            stack.pop()
+            out.extend(["", "</div>", ""])
+        else:
+            out.append(line)
+    # Pandoc と同じく文書末尾で閉じて、後続 HTML への漏れを防ぐ。
+    for _ in stack:
+        out.extend(["", "</div>"])
     return "\n".join(out)
 
 
@@ -1121,7 +1107,7 @@ def _render_document(document, container):
     body = rewrite_links(document.body, document, container.mapper, container.real_to_staged)
     body = rewrite_doxygen_livedocs_links(body)
     body = expand_toc_commands(body, container.index, document.staged_rel)
-    body = strip_collapsible_list_fences(body)
+    body = convert_collapsible_list_fences(body)
     body = convert_deprecated_alerts(body)
     body = convert_captions(body)
     body = convert_implicit_figures(body)

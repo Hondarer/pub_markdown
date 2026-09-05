@@ -2,7 +2,7 @@
 
 ## 概要
 
-ネストされたリストを折りたたみ/展開可能にする機能です。HTML5 の `<details>/<summary>` 要素を使用して、JavaScript により動的に変換されます。
+Pandoc HTML と MkDocs で、ネストされたリストを折りたたみ/展開可能にする機能です。HTML5 の `<details>/<summary>` 要素を使用して、JavaScript により動的に変換されます。
 
 ### 特徴
 
@@ -68,10 +68,10 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 ```markdown
 ::: {.collapsible-list}
 - 親項目1
-  - 子項目1-1
-  - 子項目1-2
+    - 子項目1-1
+    - 子項目1-2
 - 親項目2
-  - 子項目2-1
+    - 子項目2-1
 :::
 ```
 
@@ -81,6 +81,7 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 
 | 値 | 動作 |
 |---|---|
+| `open-level=0` | すべて折りたたみ |
 | `open-level=1` | 最上位項目のみ展開 (子は折りたたみ) |
 | `open-level=2` | 2 階層目まで展開 |
 | `open-level=-1` | すべて展開 |
@@ -93,8 +94,8 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 ```markdown
 ::: {.collapsible-list open-level=1}
 - 親項目1        <- 展開
-  - 子項目1-1    <- 折りたたみ
-    - 孫項目     <- 折りたたみ
+    - 子項目1-1    <- 折りたたみ
+        - 孫項目     <- 折りたたみ
 - 親項目2        <- 展開
 :::
 ```
@@ -207,3 +208,23 @@ JavaScript は以下の条件を満たす要素を変換します。
 ## 関連ドキュメント
 
 - [Pandoc 目次挿入 Lua フィルター (insert-toc.lua)](insert-toc.md)
+
+## MkDocs での実装
+
+`expand_toc.py` は目次を、`stage_livedocs.py` は手動の `.collapsible-list` fenced div を、`markdown="1"` 付きの HTML コンテナーへ変換します。
+`open-level` は `data-open-level` として保持し、リストとリンクは Python-Markdown が解析します。
+コード フェンス内の記述は変換しません。
+
+`docsfw-collapsible-list.js` は子リストを持つ項目へ開閉機能を付け、上記の初期展開と履歴復元を適用します。
+`docsfw-collapsible-list.css` は Material の装飾との競合を解消し、ライト モードとダーク モードの文字色に合わせて展開マーカーを表示します。
+保存領域が使用できない場合も、初期展開と開閉操作は利用できます。
+
+アセットと MkDocs 設定を更新した後は、`make servedocs` を再起動して反映します。
+
+局所ブラウザー テストは docsfw ルートで次のように実行します。
+
+```bash
+node livedocs/tests/test_collapsible_browser.js
+```
+
+このテストは livedocs の Python 仮想環境と既存の Puppeteer を使用し、一時ディレクトリに小規模な MkDocs サイトを生成します。

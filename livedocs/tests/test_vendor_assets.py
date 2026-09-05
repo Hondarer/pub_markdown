@@ -18,6 +18,7 @@ from vendor_assets import (  # noqa: E402
     resolve_site_name,
     vendor_header_icons,
     vendor_theme,
+    vendor_own_assets,
 )
 from stage_livedocs import VENDORED_FILES  # noqa: E402
 
@@ -172,6 +173,19 @@ class VendorThemeTest(unittest.TestCase):
             vendor_theme(livedocs_dir)
             self.assertFalse(os.path.exists(stale))
             self.assertTrue(os.path.isfile(os.path.join(partials, "header.html")))
+
+    def test_collapsible_assets_are_copied_registered_and_preserved(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets = os.path.join(root, 'assets')
+            vendor_own_assets(assets)
+            generate_mkdocs_yml(root, False)
+            with open(os.path.join(root, 'mkdocs.yml'), encoding='utf-8') as handle:
+                config = handle.read()
+            for extension in ('js', 'css'):
+                name = 'docsfw-collapsible-list.' + extension
+                self.assertTrue(os.path.isfile(os.path.join(assets, name)))
+                self.assertIn('assets/' + name, config)
+                self.assertIn('assets/' + name, VENDORED_FILES)
 
 
 if __name__ == "__main__":
