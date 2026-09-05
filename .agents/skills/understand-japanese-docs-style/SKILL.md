@@ -1,14 +1,16 @@
 ---
 name: understand-japanese-docs-style
-description: 英語の技術文書、UI、メッセージを日本語へ翻訳またはレビューするときに使用します。読者、原文の意図、です・ます調、UI ラベル、カタカナ語、長音符、英語のまま残す要素を確認します。
+description: 英語から日本語への技術文書・UI・メッセージの翻訳とレビューで、表記や用語を判断する際に使います。
 ---
 
 # 日本語翻訳と UI 表記の確認
 
-1. `framework/docsfw/docs/japanese-translation-style.md` を読んでください。
-2. 一般的な文章構成は `framework/docsfw/docs/japanese-technical-writing-guideline.md` を確認してください。
-3. 対象読者と原文の意図を確認してください。
-4. UI ラベルを角括弧で示し、Markdown リンクと誤認されない表記にしてください。
-5. 製品名、コード、変数、プレースホルダーなど、英語のまま残す要素を確認してください。
-6. 既存文書と用語、カタカナ語、長音符を統一してください。
-7. `text_style_jp.py --dry-run` と目視確認を実行してください。
+`framework/docsfw/docs/japanese-translation-style.md` の対象に該当する節を参照してください。  
+読者と原文の意図を保ち、製品名、コード、変数、プレースホルダーなど英語のまま残す要素を確認してください。
+
+文書中で UI ラベルを参照する場合は角括弧を使い、Markdown リンクと誤認されない表記にしてください。  
+実際の UI ラベル文字列へ説明用の括弧を追加しないでください。  
+一般的な段落構成を推敲する場合だけ、`framework/docsfw/docs/japanese-technical-writing-guideline.md` の該当節も参照してください。
+
+Markdown ファイルを変更した場合は、対象への `text_style_jp.py --dry-run` と目視確認後に `--in-place` を実行してください。  
+UI リソースや会話内の翻訳には Markdown 整形を適用せず、その形式のプレースホルダーと構文を確認してください。

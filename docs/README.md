@@ -6,6 +6,7 @@ Pandoc による静的発行と、mkdocs による動的発行の 2 本の発行
 ## 重要な文書
 
 - [発行処理の構成](pipeline.md)
+- [発行処理の保守と検証](maintenance-verification.md)
 - [動的発行基盤](livedocs-design.md)
 - [発行対象の指定](pubparts.md)
 - [検索とナビゲーション](search-and-nav.md)
