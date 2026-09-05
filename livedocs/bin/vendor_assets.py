@@ -6,7 +6,7 @@
 - ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
 - ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
 - ``livedocs/assets/`` 配下の自前スクリプトとスタイル
-- Doxygen 単一ページ リンク用の SVG と theme 上書き
+- Doxygen 単一ページ リンクと Git 単一ページ リンク用の SVG、および theme 上書き
 - ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
 
 いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
@@ -53,10 +53,20 @@ OWN_ASSETS = (
     "docsfw-svg-download.js",
     "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
-    "docsfw-doxygen-link.css",
+    "docsfw-header-links.css",
 )
 
-DOXYGEN_ICON_SRC = os.path.join(DOCSFW_DIR, "styles", "html", "docsfw-doxygen-icon.svg")
+# ヘッダーの単一ページ リンクで使うアイコン。静的発行と同じく、provider 設定を
+# 切り替えても参照が切れないように 4 種すべてを常時配置する。
+HEADER_ICONS = (
+    "docsfw-doxygen-icon.svg",
+    "docsfw-git-icon.svg",
+    "docsfw-github-icon.svg",
+    "docsfw-gitlab-icon.svg",
+    "docsfw-gitbucket-icon.svg",
+)
+
+STYLES_HTML_DIR = os.path.join(DOCSFW_DIR, "styles", "html")
 
 
 def copy_if_changed(src, dst):
@@ -128,33 +138,58 @@ def vendor_own_assets(assets_dir):
     return copied
 
 
-def vendor_doxygen_icon(assets_dir):
-    """docsfw の Doxygen アイコン SVG をプレビュー資産へコピーする。"""
-    if not os.path.isfile(DOXYGEN_ICON_SRC):
-        print("Warning: Doxygen アイコンが見つかりません: {}".format(DOXYGEN_ICON_SRC))
-        return 0
-    dst = os.path.join(assets_dir, "docsfw-doxygen-icon.svg")
-    return 1 if copy_if_changed(DOXYGEN_ICON_SRC, dst) else 0
+def vendor_header_icons(assets_dir):
+    """ヘッダーの単一ページ リンクで使うアイコン SVG をプレビュー資産へコピーする。"""
+    copied = 0
+    for name in HEADER_ICONS:
+        src = os.path.join(STYLES_HTML_DIR, name)
+        if not os.path.isfile(src):
+            print("Warning: アイコンが見つかりません: {}".format(src))
+            continue
+        if copy_if_changed(src, os.path.join(assets_dir, name)):
+            copied += 1
+    return copied
 
 
 def vendor_theme(livedocs_dir):
-    """Material の custom_dir 上書きを ``pages/livedocs/theme/`` へコピーする。"""
+    """Material の custom_dir 上書きを ``pages/livedocs/theme/`` へコピーする。
+
+    正本から消えた上書きは、コピー先からも取り除きます。上書きを外したときに
+    古い partial が残ると、Material 標準へ戻らないためです。
+    """
     src_dir = os.path.join(MKDOCS_DIR, "theme")
     dst_dir = os.path.join(livedocs_dir, "theme")
     if not os.path.isdir(src_dir):
         return 0
     copied = 0
+    keep = set()
     for dirpath, _dirnames, filenames in os.walk(src_dir):
         rel_dir = os.path.relpath(dirpath, src_dir)
         for filename in filenames:
             src = os.path.join(dirpath, filename)
             if rel_dir == os.curdir:
-                dst = os.path.join(dst_dir, filename)
+                relative = filename
             else:
-                dst = os.path.join(dst_dir, rel_dir, filename)
-            if copy_if_changed(src, dst):
+                relative = os.path.join(rel_dir, filename)
+            keep.add(os.path.normcase(relative))
+            if copy_if_changed(src, os.path.join(dst_dir, relative)):
                 copied += 1
+    remove_stale_theme(dst_dir, keep)
     return copied
+
+
+def remove_stale_theme(dst_dir, keep):
+    """正本に無いファイルと、空になったディレクトリをコピー先から取り除く。"""
+    if not os.path.isdir(dst_dir):
+        return
+    for dirpath, _dirnames, filenames in os.walk(dst_dir, topdown=False):
+        for filename in filenames:
+            path = os.path.join(dirpath, filename)
+            relative = os.path.relpath(path, dst_dir)
+            if os.path.normcase(relative) not in keep:
+                os.remove(path)
+        if dirpath != dst_dir and not os.listdir(dirpath):
+            os.rmdir(dirpath)
 
 
 def has_nav_files(docs_dir):
@@ -249,7 +284,7 @@ def main(argv=None):
         copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""))
         copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
-        copied += vendor_doxygen_icon(assets_dir)
+        copied += vendor_header_icons(assets_dir)
         copied += vendor_theme(livedocs_dir)
     except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)

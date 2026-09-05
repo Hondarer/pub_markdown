@@ -10,11 +10,16 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from vendor_assets import (  # noqa: E402
+    HEADER_ICONS,
     MKDOCS_DIR,
+    STYLES_HTML_DIR,
     generate_mkdocs_yml,
     resolve_hooks_dir,
     resolve_site_name,
+    vendor_header_icons,
+    vendor_theme,
 )
+from stage_livedocs import VENDORED_FILES  # noqa: E402
 
 
 class ResolveSiteNameTest(unittest.TestCase):
@@ -115,6 +120,58 @@ class HooksDirTest(unittest.TestCase):
             os.makedirs(livedocs_dir)
             for hook in self._hooks_in(livedocs_dir):
                 self.assertTrue(os.path.isfile(os.path.join(livedocs_dir, hook)), hook)
+
+
+class HeaderIconsTest(unittest.TestCase):
+    """ヘッダーの単一ページ リンクで使うアイコンの配置。"""
+
+    def test_all_icons_exist_in_docsfw_styles(self):
+        for name in HEADER_ICONS:
+            self.assertTrue(
+                os.path.isfile(os.path.join(STYLES_HTML_DIR, name)),
+                "{} が styles/html にありません".format(name),
+            )
+
+    def test_copies_every_icon(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets_dir = os.path.join(root, "assets")
+            self.assertEqual(vendor_header_icons(assets_dir), len(HEADER_ICONS))
+            for name in HEADER_ICONS:
+                self.assertTrue(os.path.isfile(os.path.join(assets_dir, name)), name)
+            # 2 回目は内容が同じため何もコピーしない。
+            self.assertEqual(vendor_header_icons(assets_dir), 0)
+
+    def test_icons_are_kept_by_the_staging_cleanup(self):
+        """``remove_stale`` が消さないように ``VENDORED_FILES`` にあること。"""
+        for name in HEADER_ICONS:
+            self.assertIn("assets/{}".format(name), VENDORED_FILES)
+
+
+class VendorThemeTest(unittest.TestCase):
+    """テーマ上書きのコピーと、正本から消えた上書きの掃除。"""
+
+    def test_copies_the_override_partials(self):
+        with tempfile.TemporaryDirectory() as root:
+            livedocs_dir = os.path.join(root, "pages", "livedocs")
+            vendor_theme(livedocs_dir)
+            for name in ("header.html", "docsfw-header-links.html"):
+                self.assertTrue(
+                    os.path.isfile(os.path.join(livedocs_dir, "theme", "partials", name)),
+                    name,
+                )
+
+    def test_removes_overrides_that_are_gone_from_the_source(self):
+        with tempfile.TemporaryDirectory() as root:
+            livedocs_dir = os.path.join(root, "pages", "livedocs")
+            partials = os.path.join(livedocs_dir, "theme", "partials")
+            os.makedirs(partials)
+            stale = os.path.join(partials, "actions.html")
+            with open(stale, "w", encoding="utf-8") as handle:
+                handle.write("{# 過去の上書き #}\n")
+
+            vendor_theme(livedocs_dir)
+            self.assertFalse(os.path.exists(stale))
+            self.assertTrue(os.path.isfile(os.path.join(partials, "header.html")))
 
 
 if __name__ == "__main__":

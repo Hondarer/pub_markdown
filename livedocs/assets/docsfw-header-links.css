@@ -1,0 +1,51 @@
+/* ヘッダーの単一ページ リンク (Doxygen / Git) のスタイル。
+   寸法と間隔は Material のヘッダー ボタン (配色トグル、検索) にそろえる。
+   静的発行の 18px ではなく Material の 1.2rem を採る理由は
+   docs/livedocs-design.md の「ヘッダーへの配置」を参照。 */
+
+.docsfw-header-links {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+}
+
+/* 静的発行と同じく、狭い画面ではアイコンを出さない。 */
+@media screen and (max-width: 767px) {
+  .docsfw-header-links {
+    display: none;
+  }
+}
+
+/* 余白は .md-header__button の margin .2rem と padding .4rem のままとする。
+   これで配色トグルや検索ボタンと同じ 40px 四方のボタンになり、間隔がそろう。 */
+.docsfw-header-links .md-header__button {
+  display: flex;
+}
+
+/* Material の .md-icon svg と同じ寸法にする。
+   Doxygen (28.66x27.2) と GitBucket (316x329) は正方形でないため、
+   contain で縦横比を保ったまま同じ枠に収める。 */
+.docsfw-header-links .md-header__button img {
+  display: block;
+  height: 1.2rem;
+  object-fit: contain;
+  width: 1.2rem;
+}
+
+/* 検索ボックス自身は左マージンを持たないため、直前のアイコンとの間隔が、
+   アイコン同士の 8px に対して 4px しかない。4px を補って間隔をそろえる。
+   Material が検索を入力欄として並べる 60em 以上でだけ効かせる。
+   これ未満では検索も 40px 四方のボタンになり、間隔は既にそろっている。 */
+@media screen and (min-width: 60em) {
+  .md-header .md-search {
+    margin-left: 4px;
+  }
+}
+
+/* ダーク モードでは、暗色 1 色のアイコンがヘッダー背景に沈む。
+   GitHub (#181717) と GitBucket (#303030) だけを反転して明色にする。
+   git (#F05032) と GitLab (#FC6D26) は橙色、Doxygen は淡い青のため対象外。 */
+[data-md-color-scheme="slate"] .docsfw-header-links img.docsfw-git-icon--github,
+[data-md-color-scheme="slate"] .docsfw-header-links img.docsfw-git-icon--gitbucket {
+  filter: invert(1);
+}

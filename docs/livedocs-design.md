@@ -118,8 +118,8 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 37 | `.md` から `.html` への書き換え | 963 | 維持 | mkdocs が標準で解決 |
 | 38 | 実パスと仮想パスの相互変換 | 114 | 維持 | ステージングで書き換える |
 | 39 | `README.md` / `SKILL.md` のリンク正規化 | - | 維持 | ステージングで書き換える |
-| 40 | Git 単一ページ リンク | フロント マター 392 | 対象外 | 将来対応の候補 |
-| 41 | Doxygen 単一ページ リンク | フロント マター 523 | 簡略 | `doxygen-page-url` を `/doxygen/` へ写し、見出し横の操作ボタンへ出す。ヘッダー右端の完全再現はしない |
+| 40 | Git 単一ページ リンク | フロント マター 392 | 維持 | ステージングで blob URL を解決し、ヘッダーへ出す |
+| 41 | Doxygen 単一ページ リンク | フロント マター 523 | 維持 | `doxygen-page-url` を `/doxygen/` へ写し、Git リンクと並べてヘッダーへ出す |
 
 ### 出力とナビゲーション
 
@@ -157,6 +157,7 @@ framework/docsfw/
 |   |   +-- stage_livedocs.py    # ステージング (収集、前処理、リンク書き換え)
 |   |   +-- lang_details_filter.py   # replace-tag.sh の Python 移植
 |   |   +-- expand_toc.py            # \toc の展開
+|   |   +-- git_link.py              # Git blob URL の解決 (get_file_git_url.sh の移植)
 |   |   +-- vendor_assets.py         # アセットの配置と mkdocs.yml の生成
 |   |   +-- livedocs_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
 |   |   +-- livedocs_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
@@ -164,7 +165,8 @@ framework/docsfw/
 |   |   +-- stop_livedocs_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- theme/
-|   |   +-- partials/actions.html    # Doxygen 単一ページ リンクのボタン
+|   |   +-- partials/header.html     # Material のヘッダー上書き
+|   |   +-- partials/docsfw-header-links.html  # Doxygen と Git の単一ページ リンク
 |   +-- assets/
 |   |   +-- docsfw-plantuml.js       # クライアント側 PlantUML レンダラー
 |   |   +-- docsfw-mermaid.js        # Mermaid 初期化
@@ -172,10 +174,12 @@ framework/docsfw/
 |   |   +-- docsfw-responsive-nav.js # 共通レイアウトと単一ドロワーの制御
 |   |   +-- docsfw-svg-download.js   # SVG のダウンロード ボタン
 |   |   +-- docsfw-livedocs.css       # 追加スタイル
-|   |   +-- docsfw-doxygen-link.css  # Doxygen アイコンのサイズ
+|   |   +-- docsfw-header-links.css  # ヘッダー内アイコンのスタイル
 |   +-- tests/
 |   |   +-- test_livedocs_doxygen.py  # リンク変換と静的サーブの純関数テスト
 |   |   +-- test_livedocs_versioned.py  # 再生成中の配信と版切り替えのテスト
+|   |   +-- test_livedocs_git_link.py  # blob URL の解決条件と URL 形式のテスト
+|   |   +-- test_livedocs_header.py   # ヘッダー上書きと上流追随のテスト
 |   +-- requirements.txt
 |   +-- README.md                    # 利用手順
 +-- docs/
@@ -332,15 +336,115 @@ Markdown リンクと生 HTML の `href` の両方が対象です。
 doxyfw は Doxybook2 の Markdown へ `doxygen-page-url: "pages/doxygen/...html"` を埋め込みます。  
 docsfw の発行ではナビバー右の Doxygen アイコンになります。
 
-動的発行では `pages/doxygen/` を `/doxygen/` へ写し、Material のページ操作ボタン (見出し横) へ出します。  
+動的発行では `pages/doxygen/` を `/doxygen/` へ写し、Git 単一ページ リンクと並べてヘッダーへ出します。  
 `target="doxygen-page"` で、単一ページと依存関係レポートが同じタブを再利用します。  
 `doxygenLinkEnable` は `.vscode/pub_markdown.config.yaml` を読み、未指定なら有効です。  
 リンク先ファイルの存在は確認しません。
 
-ヘッダー右端への配置は、Material の `header.html` を丸ごと上書きすることになり、テーマ更新で壊れやすいため採用しません。  
-Git 単一ページ リンクは対象外のままです。
+URL は `livedocs_doxygen_hook.py` の `on_page_context` が `doxygen_livedocs_url` としてテンプレートへ渡します。
 
 アイコン画像は `styles/html/docsfw-doxygen-icon.svg` を `vendor_assets.py` が実ファイルとしてコピーします。
+
+## Git 単一ページ リンク
+
+静的発行は、各ページのナビバー右端に Git ホスティングの blob URL へのアイコン リンクを出します。  
+ツールヒントは「ソースを開く」です。動的発行も同じリンクをヘッダーへ出します。  
+静的発行側の仕様は [Git 単一ページ リンク機能](git-link.md) を参照してください。
+
+### 解決のタイミング
+
+URL の解決はステージング時に行い、staged Markdown のフロント マターへ `git-url` と `git-provider` を書きます。  
+テンプレートは `page.meta` から読みます。
+
+ステージング先 (`src/<alias>/...`) は仮想パスで、リポジトリ ルートからの相対パスを保持しません。  
+このため Material の `repo_url` と `edit_uri` では正しい URL になりません。  
+一方 `stage_livedocs.py` はファイルごとにディスク上の実体パス (`Document.real_path`) を持つため、  
+静的発行と同じ「実体パスから所属リポジトリを決める」規則をそのまま適用できます。  
+サブモジュール配下のファイルは、当該サブモジュール自身のリポジトリを指します。
+
+フロント マターで運ぶことで、`mkdocs build` と `mkdocs serve` が同じ経路になり、  
+`stage_single()` による 1 ファイル単位の再ステージングにも自動で追従します。  
+専用のフックは持ちません。
+
+### ref の一括取得
+
+ref は静的発行と同じく、リンク対象ファイルの最終コミット SHA です。
+
+`get_file_git_url.sh` はファイルごとに `git log -1` を呼びますが、動的発行は発行対象すべてを 1 回のステージングで処理します。  
+766 ファイル分の子プロセス起動は、特に Windows で `make servedocs` の起動を遅くします。  
+そこで `bin/git_link.py` は、リポジトリごとに `git log --format=%x01%H --name-only` の 1 パスで、パス→最終コミット SHA の対応表を作ります。  
+`git ls-files` による追跡済みパスの集合と、remote URL からの provider 判定も、リポジトリごとに 1 回だけ実行します。
+
+`git log --name-only` はマージ コミットのファイル名を列挙しないため、`git log -1 -- <path>` と結果が食い違う可能性があります。  
+対応表に無いパスは、ファイル単位の `git log -1` へフォールバックします。
+
+### リンクを出さない条件
+
+追跡済みでないファイル、remote URL を解決できないリポジトリ、最終コミット SHA を取得できないファイルではリンクを出しません。  
+`gitLinkEnable: false` を指定した場合も出しません。
+
+`get_file_git_url.sh` は追跡確認の後に `git check-ignore` も行いますが、`git check-ignore` は既定で索引にあるパスを無視対象として報告しません。  
+このため追跡済みのパスに対しては常に「対象外」を返し、判定に寄与しません。  
+doxyfw の生成 md のような `.gitignore` 対象の除外は、それらが未追跡であることによって成立しています。  
+`git_link.py` はこの実際の挙動に合わせ、追跡済みかどうかだけを条件にします。
+
+### doxyfw 生成 md の git-origin
+
+doxyfw は `Files/` 配下の生成 md へ、元ソースのワークスペース相対パスを `git-origin` として埋め込みます。  
+ステージングはこれを読み、`<workspaceFolder>/<git-origin>` が実在すれば md 自身ではなく元ソースを解決対象にします。  
+静的発行の `resolve_git_link_target()` と同じ規則です。
+
+### Doxygen へフォールバックしない理由
+
+静的発行は、Git URL を解決できないとき `doxygen-page-url` を Git アイコンのリンク先にします。  
+動的発行はヘッダーに Doxygen ボタンを別に持つため、このフォールバックは同じリンクを 2 つ並べることになります。  
+Git URL を解決できないページでは Git ボタンを出しません。
+
+### ヘッダーへの配置
+
+Material の `partials/header.html` を `custom_dir` で上書きします。  
+上流の `md-header__source` ブロック (`repo_url` を設定したときのリポジトリ カード) を取り除き、  
+配色トグルと検索ボックスの間へ `partials/docsfw-header-links.html` の include を加えます。  
+それ以外は上流のままです。
+
+並びは Doxygen、Git の順で、静的発行のナビバーと同じです。  
+検索ボックスの右ではなく左へ置くのは、検索ボックスが画面幅に応じて伸縮し、  
+右端に置くとアイコンの位置が幅によって動くためです。
+
+上流の複製であるため、mkdocs-material を更新したときは差分の取り直しが要ります。  
+`requirements.txt` はバージョンを固定しており、`tests/test_livedocs_header.py` が上流 `header.html` の  
+内容ハッシュと `requirements.txt` の固定版を突き合わせて、更新に気付けるようにしています。
+
+ラベルは `config.theme.language` で「ソースを開く」と「View source」を出し分けます。  
+静的発行は読み込み後の JavaScript で `<html lang>` を見て差し替えますが、動的発行は `LIVEDOCS_VARIANT` で  
+言語が 1 つに固定されるため、テンプレートで決められます。
+
+アイコンは provider 別に切り替えます。`vendor_assets.py` が `styles/html/` から  
+`docsfw-{doxygen,git,github,gitlab,gitbucket}-icon.svg` の 5 種を常時コピーします。  
+`slate` では GitHub (`#181717`) と GitBucket (`#303030`) だけを反転し、ヘッダー背景に沈まないようにします。  
+狭い画面での非表示は、静的発行と同じ 767px を境にします。
+
+### アイコンの寸法と間隔
+
+寸法は静的発行の 18px ではなく、Material の `.md-icon svg` と同じ `1.2rem` (20px 基準で 24px) にします。  
+配色トグルと検索ボタンの間に並ぶため、これらと大きさが違うと 1 列の中で不ぞろいに見えるためです。  
+静的発行は Bootstrap のナビバーに並ぶので、そちらは 18px のままとします。
+
+間隔は `.md-header__button` の `margin: .2rem` と `padding: .4rem` をそのまま使います。  
+これで 4 つとも 40px 四方のボタンになり、アイコンの間隔がすべて 24px でそろいます。  
+アイコン自身には独自の余白を与えません。
+
+例外は検索ボックスとの間です。  
+検索ボックス (`.md-search`) は自身に左マージンを持たないため、直前のアイコンとの間隔が、  
+アイコン同士の 8px に対して 4px しかありません。  
+`.md-header .md-search` へ 4px の左マージンを補い、間隔をそろえます。
+
+このマージンは、Material が検索を入力欄として並べる 60em 以上でだけ効かせます。  
+これ未満では検索も 40px 四方のボタン (`label[for="__search"]`) になり、  
+`.md-header__button` の margin によって間隔がすでにそろっているためです。
+
+Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないため、`object-fit: contain` で  
+縦横比を保ったまま同じ枠に収めます。
 
 ## PlantUML のブラウザー レンダリング
 
@@ -909,7 +1013,6 @@ make livedocs LIVEDOCS_VARIANT=ja
 - Word (docx) 出力と、docx 専用フィルター、rsvg-convert、共有ブラウザー
 - 4 バリアントの同時出力と、ページ内の概要 / 詳細切替リンク
 - pandoc-crossref による図表とリストの採番、および相互参照
-- Git 単一ページ リンク
 - self-contained HTML と `file://` での動作
 - OpenAPI からの Markdown 生成
 - MiniSearch と CJK bigram による日本語全文検索
@@ -1111,6 +1214,7 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 | 5 | make 統合と文書化 | 完了 |
 | 6 | Doxygen HTML の静的サーブと単一ページ リンク | 完了 |
 | 7 | 配色の pandoc への一致 | 完了 |
+| 8 | Git 単一ページ リンクとヘッダーへの配置 | 完了 |
 
 ### 実装で判明したこと
 
@@ -1130,6 +1234,8 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 - Material は `.md-typeset h5` を `text-transform: uppercase` にします。英字を含む H5 だけ表示が変わるため、`text-transform: none` で打ち消しています。
 - Material の `.md-typeset h2 + h3` は詳細度が (0,1,2) で、レベルごとの指定 (0,1,1) より高くなります。上余白を `.8em` に縮める指定が残るため、同じセレクターで上書きしています。
 - 見出しの書式を HTML のタグ名でそろえると、pandoc の `--shift-heading-level-by=-1` による 1 段のずれで Markdown 上の見え方が食い違います。[見出し書式](heading-style.md) は Markdown のレベルを基準に定めています。
+- `git check-ignore` は既定で索引にあるパスを無視対象として報告しません。`get_file_git_url.sh` の `.gitignore` 判定は、追跡確認を先に行う構成のため実際には働いていません。生成 md の除外は未追跡であることで成立しています。
+- Material の `partials/header.html` は 69 行で、上流の構造も安定しています。`md-header__source` ブロックだけを差し替える上書きであれば、丸ごと上書きでも保守量は小さく収まります。
 
 ### 未着手の課題
 

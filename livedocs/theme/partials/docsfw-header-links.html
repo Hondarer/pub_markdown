@@ -1,0 +1,31 @@
+{#-
+  ヘッダー右端の単一ページ リンク。
+  Doxygen の URL は bin/livedocs_doxygen_hook.py が doxygen_livedocs_url として渡す。
+  Git の URL は bin/stage_livedocs.py が staged md のフロント マターへ書いた
+  git-url / git-provider を page.meta から読む。
+
+  静的発行は読み込み後の JavaScript で <html lang> を見てラベルを差し替えるが、
+  動的発行は LIVEDOCS_VARIANT で言語が 1 つに固定されるため、ここで決める。
+-#}
+{% set is_ja = config.theme.language | string | lower == "ja" %}
+{% set git_url = page.meta["git-url"] if page and page.meta else none %}
+{% if doxygen_livedocs_url or git_url %}
+  {% set doxygen_label = "Doxygen で開く" if is_ja else "Open in Doxygen" %}
+  {% set git_label = "ソースを開く" if is_ja else "View source" %}
+  <div class="docsfw-header-links">
+    {% if doxygen_livedocs_url %}
+      <a href="{{ doxygen_livedocs_url }}" class="md-header__button" target="doxygen-page"
+         title="{{ doxygen_label }}" aria-label="{{ doxygen_label }}">
+        <img src="{{ 'assets/docsfw-doxygen-icon.svg' | url }}" alt="Doxygen" class="docsfw-doxygen-icon" />
+      </a>
+    {% endif %}
+    {% if git_url %}
+      {% set provider = page.meta["git-provider"] | d("git", true) %}
+      <a href="{{ git_url }}" class="md-header__button" target="source-file"
+         title="{{ git_label }}" aria-label="{{ git_label }}">
+        <img src="{{ ('assets/docsfw-' ~ provider ~ '-icon.svg') | url }}" alt="Git"
+             class="docsfw-git-icon docsfw-git-icon--{{ provider }}" />
+      </a>
+    {% endif %}
+  </div>
+{% endif %}

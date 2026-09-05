@@ -124,6 +124,22 @@ docsfw は発行時に `$file` のフロント マターから `git-origin` を�
 doxyfw 側の埋め込みは `templates/inject-source-origin.py` が担当し、`Files/` 配下の各 md のパスから元ソースを特定します。  
 詳細は doxyfw 側のドキュメントを参照してください。
 
+## 動的発行での対応
+
+mkdocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ blob URL を同じ位置へ出します。  
+実装は `livedocs/bin/git_link.py` で、本書が定める URL 形式、provider の判定、`git-origin` の差し替えは共通です。
+
+静的発行との違いを次に示します。
+
+| | 静的発行 | 動的発行 |
+|---|---|---|
+| 解決の実装 | `bin/get_file_git_url.sh` | `livedocs/bin/git_link.py` |
+| 解決の単位 | ファイルごとに `git log -1` | リポジトリごとに 1 パスで一括取得 |
+| Doxygen HTML へのフォールバック | あり | なし (Doxygen ボタンを別に持つため) |
+| ラベルの決定 | 読み込み後の JavaScript | テンプレート (言語が 1 つに固定されるため) |
+
+詳細は [動的発行基盤](livedocs-design.md) の「Git 単一ページ リンク」を参照してください。
+
 ## 補足
 
 - リンク先 URL の到達性 (push 済みかどうか) はネットワーク確認しません。Git blob URL は最終コミット SHA を参照するため、未 push のコミットを参照している場合はリンク先が見つからないことがあります。

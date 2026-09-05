@@ -85,19 +85,21 @@ make stopdocs
 | `bin/stage_livedocs.py` | 収集、前処理、リンク書き換え、書き出し |
 | `bin/lang_details_filter.py` | `bin/replace-tag.sh` の Python 移植 |
 | `bin/expand_toc.py` | `\toc` の索引展開 |
+| `bin/git_link.py` | Git 単一ページ リンク (blob URL) の解決 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
 | `bin/livedocs_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
 | `bin/livedocs_versioned_hook.py` | 再生成中の完成済み版の配信と版切り替え |
 | `bin/stop_livedocs_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
 | `mkdocs.yml.in` | mkdocs 設定のテンプレート |
-| `theme/partials/actions.html` | Doxygen 単一ページ リンクのボタン |
+| `theme/partials/header.html` | Material のヘッダーの上書き |
+| `theme/partials/docsfw-header-links.html` | Doxygen と Git の単一ページ リンクのボタン |
 | `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
 | `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
 | `assets/docsfw-responsive-nav.js` | Pandoc HTML と共通の左右ナビゲーション配置 |
 | `assets/docsfw-svg-download.js` | 本文中の SVG のダウンロード ボタン |
 | `assets/docsfw-livedocs.css` | 追加スタイル |
-| `assets/docsfw-doxygen-link.css` | Doxygen アイコンのサイズ |
+| `assets/docsfw-header-links.css` | ヘッダー内アイコンのスタイル |
 | `requirements.txt` | Python 依存 |
 
 生成物は `pages/livedocs/` に出力します。

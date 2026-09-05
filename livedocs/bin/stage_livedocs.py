@@ -33,6 +33,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from expand_toc import DocIndex, expand_toc_commands  # noqa: E402
+from git_link import GitLinkResolver, parse_host_provider_map  # noqa: E402
 from lang_details_filter import filter_lang_details  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -59,8 +60,12 @@ VENDORED_FILES = (
     "assets/docsfw-svg-download.js",
     "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
-    "assets/docsfw-doxygen-link.css",
+    "assets/docsfw-header-links.css",
     "assets/docsfw-doxygen-icon.svg",
+    "assets/docsfw-git-icon.svg",
+    "assets/docsfw-github-icon.svg",
+    "assets/docsfw-gitlab-icon.svg",
+    "assets/docsfw-gitbucket-icon.svg",
 )
 
 # 既定の環境変数。.vscode/settings.json の定義と一致させる。
@@ -181,6 +186,53 @@ def parse_merge_subfolder_docs(spec, workspace):
         entries.append((alias, abs_path))
 
     return entries
+
+
+def is_git_link_enabled(config):
+    """``gitLinkEnable`` を判定する。未指定は有効 (docsfw と同じ)。"""
+    value = (config or {}).get("gitLinkEnable", "")
+    if value == "":
+        return True
+    return value.strip().lower() == "true"
+
+
+def create_git_link_resolver(config, config_path):
+    """``gitLinkEnable`` が有効なら ``GitLinkResolver`` を作る。無効なら ``None``。
+
+    自己ホスト用の ``gitLinkHostProvider`` は、``pub_markdown.config.yaml`` と
+    同じ ``.vscode/`` にある ``git_link.yaml`` から読みます。
+    """
+    if not is_git_link_enabled(config):
+        return None
+    git_link_config = parse_config(
+        os.path.join(os.path.dirname(config_path), "git_link.yaml")
+    )
+    return GitLinkResolver(parse_host_provider_map(git_link_config.get("gitLinkHostProvider")))
+
+
+def resolve_document_git_link(document, workspace, resolver):
+    """``document`` の Git 単一ページ リンクを解決し、結果を保持させる。
+
+    doxyfw 生成 md はフロント マターに ``git-origin`` (元ソースのワークスペース
+    相対パス) を持ちます。実体があれば md 自身ではなく元ソースを解決対象にします
+    (``pub_markdown_core.sh`` の ``resolve_git_link_target`` と同じ)。
+    """
+    document.git_url = ""
+    document.git_provider = ""
+    if resolver is None:
+        return
+
+    target = document.real_path
+    origin = document.fields.get("git-origin")
+    if origin:
+        candidate = os.path.join(workspace, origin.replace("\\", "/"))
+        if os.path.isfile(candidate):
+            target = candidate
+
+    url, provider = resolver.resolve(target)
+    if url:
+        document.git_url = url
+        document.git_provider = provider
 
 
 # ----------------------------------------------------------------------------
@@ -334,6 +386,8 @@ class Document:
         self.body = ""
         self.fields = {}
         self.title = ""
+        self.git_url = ""
+        self.git_provider = ""
 
 
 def collect_sources(workspace, main_mdroot, subfolders):
@@ -791,27 +845,42 @@ def remove_page_breaks(text):
     )
 
 
+def _front_matter_line(key, value):
+    """フロント マターの 1 行を、値を引用符で囲んで組み立てる。"""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return '{}: "{}"'.format(key, escaped)
+
+
 def build_front_matter(document, lang, details):
-    """ナビゲーション用の ``title`` を補ったフロント マターを組み立てる。
+    """ナビゲーション用の ``title`` と Git リンクを補ったフロント マターを組み立てる。
 
     mkdocs はナビゲーションとページ タイトルに ``title`` を使用します。
     docsfw の ``short-title`` は索引とナビゲーションだけに効くため、完全には一致しません。
     索引ページでは、フォルダーの表示名に使えるように最初の H1 も補完対象にします。
+
+    ``git-url`` と ``git-provider`` は、テーマの ``partials/header.html`` が
+    ``page.meta`` から読んで「ソースを開く」リンクにします。
     """
+    added = []
+
     title = resolve_short_title(document.fields, lang, details)
     if not title and posixpath.basename(document.staged_rel).lower() == "index.md":
         title = first_heading(document.body)
-    if not title or document.fields.get("title"):
+    if title and not document.fields.get("title"):
+        added.append(_front_matter_line("title", title))
+
+    if document.git_url:
+        added.append(_front_matter_line("git-url", document.git_url))
+        added.append(_front_matter_line("git-provider", document.git_provider))
+
+    if not added:
         return document.front_matter
 
-    escaped = title.replace("\\", "\\\\").replace('"', '\\"')
-    title_line = 'title: "{}"'.format(escaped)
-
     if not document.front_matter:
-        return "---\n{}\n---".format(title_line)
+        return "---\n{}\n---".format("\n".join(added))
 
     lines = document.front_matter.split("\n")
-    return "\n".join(lines[:-1] + [title_line, lines[-1]])
+    return "\n".join(lines[:-1] + added + [lines[-1]])
 
 
 # ----------------------------------------------------------------------------
@@ -947,11 +1016,14 @@ class StageIndex:
     ``mapper``/``index``/``real_to_staged`` はワークスペース全体の走査を経て
     構築されるため、``on_serve`` フック等はこれをプロセス内にキャッシュし、
     1 ファイルだけの再ステージング (``stage_single``) に使い回す。
+
+    ``git_resolver`` もリポジトリ単位の情報をキャッシュしているため、同じ寿命で
+    使い回す。``gitLinkEnable`` が無効な場合は ``None``。
     """
 
     def __init__(self, workspace, config_path, main_mdroot, subfolders,
                  mapper, kept, assets, index, real_to_staged, by_real_path,
-                 lang, details, variant):
+                 lang, details, variant, git_resolver=None):
         self.workspace = workspace
         self.config_path = config_path
         self.main_mdroot = main_mdroot
@@ -965,6 +1037,7 @@ class StageIndex:
         self.lang = lang
         self.details = details
         self.variant = variant
+        self.git_resolver = git_resolver
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
@@ -975,6 +1048,7 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
     main_mdroot = os.path.normpath(os.path.join(workspace, md_root_name))
     subfolders = parse_merge_subfolder_docs(config.get("mergeSubfolderDocs"), workspace)
     mapper = PathMapper(main_mdroot, subfolders)
+    git_resolver = create_git_link_resolver(config, config_path)
 
     documents, assets = collect_sources(workspace, main_mdroot, subfolders)
 
@@ -999,6 +1073,7 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
             or first_heading(document.body)
             or posixpath.splitext(document.source_name)[0]
         )
+        resolve_document_git_link(document, workspace, git_resolver)
         kept.append(document)
 
     resolve_staged_names(kept)
@@ -1028,6 +1103,7 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
         lang=lang,
         details=details,
         variant=variant,
+        git_resolver=git_resolver,
     )
 
 
@@ -1136,6 +1212,7 @@ def stage_single(container, out_dir, real_path):
         or first_heading(document.body)
         or posixpath.splitext(document.source_name)[0]
     )
+    resolve_document_git_link(document, container.workspace, container.git_resolver)
 
     content = _render_document(document, container)
     updated = write_if_changed(os.path.join(out_dir, document.staged_rel), content)

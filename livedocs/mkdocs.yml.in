@@ -107,7 +107,7 @@ extra:
 extra_css:
   - assets/docsfw-livedocs.css
   - assets/docsfw-pandoc-style.css
-  - assets/docsfw-doxygen-link.css
+  - assets/docsfw-header-links.css
 
 extra_javascript:
   # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。

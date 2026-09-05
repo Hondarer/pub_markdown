@@ -15,7 +15,10 @@ from stage_livedocs import (  # noqa: E402
     build_front_matter,
     convert_captions,
     convert_implicit_figures,
+    create_git_link_resolver,
     generate_nav_files,
+    is_git_link_enabled,
+    resolve_document_git_link,
     rewrite_links,
 )
 
@@ -65,6 +68,103 @@ class BuildFrontMatterTest(unittest.TestCase):
             build_front_matter(document, "en", False),
             '---\ntitle: "Short title"\n---',
         )
+
+
+class GitLinkFrontMatterTest(unittest.TestCase):
+    """``git-url`` / ``git-provider`` のフロント マター出力。"""
+
+    def _document(self, staged_rel="guide/usage.md"):
+        document = Document("/source/usage.md", "guide/usage.md")
+        document.staged_rel = staged_rel
+        document.body = "本文だけです。\n"
+        return document
+
+    def test_adds_git_url_and_provider(self):
+        document = self._document()
+        document.git_url = "https://github.com/owner/repo/blob/abc123/docs/usage.md"
+        document.git_provider = "github"
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\n'
+            'git-url: "https://github.com/owner/repo/blob/abc123/docs/usage.md"\n'
+            'git-provider: "github"\n'
+            '---',
+        )
+
+    def test_appends_to_existing_front_matter(self):
+        document = self._document()
+        document.front_matter = '---\nsummary: "説明"\n---'
+        document.fields = {"summary": "説明"}
+        document.git_url = "https://github.com/owner/repo/blob/abc123/docs/usage.md"
+        document.git_provider = "github"
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\n'
+            'summary: "説明"\n'
+            'git-url: "https://github.com/owner/repo/blob/abc123/docs/usage.md"\n'
+            'git-provider: "github"\n'
+            '---',
+        )
+
+    def test_no_git_url_keeps_front_matter_unchanged(self):
+        document = self._document()
+        self.assertEqual(build_front_matter(document, "ja", True), "")
+
+
+class GitLinkResolutionTest(unittest.TestCase):
+    """``gitLinkEnable`` の判定と ``git-origin`` による解決対象の差し替え。"""
+
+    class _FakeResolver:
+        def __init__(self):
+            self.targets = []
+
+        def resolve(self, path):
+            self.targets.append(path)
+            return "https://example.test/blob/abc/x", "git"
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.workspace = self.tmp.name
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_git_link_enabled_defaults_to_true(self):
+        self.assertTrue(is_git_link_enabled({}))
+        self.assertTrue(is_git_link_enabled({"gitLinkEnable": "true"}))
+        self.assertFalse(is_git_link_enabled({"gitLinkEnable": "false"}))
+
+    def test_disabled_config_creates_no_resolver(self):
+        config_path = os.path.join(self.workspace, "pub_markdown.config.yaml")
+        self.assertIsNone(create_git_link_resolver({"gitLinkEnable": "false"}, config_path))
+        self.assertIsNotNone(create_git_link_resolver({}, config_path))
+
+    def test_disabled_resolver_clears_git_fields(self):
+        document = Document(os.path.join(self.workspace, "a.md"), "a.md")
+        document.git_url = "https://example.test/stale"
+        resolve_document_git_link(document, self.workspace, None)
+        self.assertEqual(document.git_url, "")
+        self.assertEqual(document.git_provider, "")
+
+    def test_git_origin_replaces_the_resolution_target(self):
+        origin = os.path.join(self.workspace, "prod", "include", "calc.h")
+        os.makedirs(os.path.dirname(origin))
+        with open(origin, "w", encoding="utf-8") as handle:
+            handle.write("/* calc */\n")
+
+        document = Document(os.path.join(self.workspace, "docs", "Files", "calc.h.md"),
+                            "calc/Files/calc.h.md")
+        document.fields = {"git-origin": "prod/include/calc.h"}
+        resolver = self._FakeResolver()
+        resolve_document_git_link(document, self.workspace, resolver)
+        self.assertEqual(resolver.targets, [origin])
+
+    def test_missing_git_origin_falls_back_to_the_document_itself(self):
+        document = Document(os.path.join(self.workspace, "docs", "a.md"), "a.md")
+        document.fields = {"git-origin": "prod/include/missing.h"}
+        resolver = self._FakeResolver()
+        resolve_document_git_link(document, self.workspace, resolver)
+        self.assertEqual(resolver.targets, [document.real_path])
 
 
 class GenerateNavFilesTest(unittest.TestCase):
