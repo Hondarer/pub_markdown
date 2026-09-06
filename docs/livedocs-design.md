@@ -547,6 +547,50 @@ Material 標準の SVG とロゴ、および Doxygen・Git のアイコンも、
 発行情報はタイトル領域の横幅だけを使用し、長い文字列は `overflow: hidden` で切り詰めます。  
 横方向のアイコンや検索ボックスを圧迫しないため、画面幅による非表示は行いません。
 
+## 概要 (Abstract)
+
+静的発行は `abstract` / `abstract-title` フロント マターを Pandoc 標準のテンプレート変数として扱い、  
+`styles/html/html-template.html` でタイトル (`$title$` の H1) の直後・本文の前に概要ブロックを描画します。  
+動的発行でも同じ配置と見た目をそろえます。
+
+### ステージング時の変換が不要な理由
+
+発行者と発行日時、Git 単一ページ リンクはステージング処理 (`bin/stage_livedocs.py`) がフロント マターへ書き込み、  
+テーマ側は `page.meta` を読むだけでした。  
+概要はこの書き込みが要りません。  
+mkdocs はフロント マターを自前でパースするため、ソース側に `abstract` / `abstract-title` を書くだけで、  
+そのまま `page.meta` から取得できるためです。
+
+### 挿入方式と、テーマを上書きしない理由
+
+概要ブロックは `bin/livedocs_abstract_hook.py` の `on_page_content` (Markdown を HTML 化した直後・  
+テンプレート適用前に HTML 文字列を書き換えられる mkdocs 標準イベント) で挿入します。  
+本文の HTML 中の最初の `</h1>` の直後へ正規表現で差し込み、`<h1>` が無いページでは先頭へ前置します。
+
+mkdocs-material のテーマ (`partials/content.html`) が H1 を合成するのは、本文の HTML に `<h1` が無い場合だけです。  
+docsfw のドキュメントはほとんど本文側に `# 見出し` を持つため、本文の HTML にはすでに `<h1>` が含まれます。  
+テーマ側 (`partials/content.html`) を上書きしてブロックを差し込む方式では、  
+本文側の H1 より前に出てしまい、静的発行の見た目と一致しません。  
+`on_page_content` で本文の HTML そのものを書き換える方式なら、この順序を保てます。  
+また `partials/header.html` のようにテーマをフォークする必要が無いため、  
+上流差分を追い掛けるテストも増えません。
+
+### 概要本文と概要タイトルの扱い
+
+`abstract` (概要本文) は、Pandoc が Markdown として解釈する挙動に合わせ、  
+サイト本文と同じ Markdown 拡張 (`config["markdown_extensions"]` / `config["mdx_configs"]`) で HTML へ変換します。  
+`abstract-title` (見出しラベル) は Pandoc 側と同じくプレーン文字列として扱い、Markdown 変換はせず HTML エスケープだけを行います。
+
+`abstract-title` を省略した場合は、静的発行と同じく見出し行が空のまま出ます。  
+mkdocs 側で「概要」や「Abstract」を自動補完することはしません。
+
+### 見た目の一致
+
+概要タイトルの太字だけを、静的発行と動的発行の両方に同じ規則で追加します。  
+静的発行は `styles/html/html-style.css` の `.abstract-title`、  
+動的発行は `docsfw-pandoc-style.css` の `.md-typeset .abstract-title` です。  
+それ以外の装飾は無く、概要ブロックの本文は通常の段落と同じ見た目になります。
+
 ## ヘッダーの寸法とタイトルの固定表示
 
 上記の「寸法と幅不足時の表示」は文字サイズとアイコン寸法の固定でしたが、  

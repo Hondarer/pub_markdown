@@ -78,6 +78,7 @@ class HooksDirTest(unittest.TestCase):
         "livedocs_doxygen_hook.py",
         "livedocs_versioned_hook.py",
         "livedocs_autostage_hook.py",
+        "livedocs_abstract_hook.py",
     )
 
     def _hooks_in(self, livedocs_dir):

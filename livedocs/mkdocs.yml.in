@@ -134,3 +134,4 @@ hooks:
   - @LIVEDOCS_HOOKS_DIR@/livedocs_doxygen_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_versioned_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_autostage_hook.py
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_abstract_hook.py
