@@ -138,10 +138,13 @@ class CollapsibleTest(unittest.TestCase):
                 with self.subTest(options=options):
                     params = parse_toc_params(options)
                     current = root / params['basedir'] / '.toc-dummy.md' if params['basedir'] else root / 'README.md'
+                    # 出力の絵文字は UTF-8。text=True だけでは Windows の
+                    # 既定文字コード (cp932) で読み、比較前に化ける。
                     result = subprocess.run(['bash', str(script), str(params['depth']), str(current),
                                              'neutral', ','.join(params['exclude']), params['basedir'],
                                              str(params['exclude-basedir']).lower()],
-                                            capture_output=True, text=True, check=True)
+                                            capture_output=True, encoding='utf-8',
+                                            check=True)
                     expected = result.stdout.replace('README.md)', 'index.md)').replace('<br/>     ', '<br/>' + '&nbsp;' * 5)
                     self.assertEqual(render_toc(index, 'tree/index.md', params).strip(), expected.strip())
 
