@@ -221,7 +221,7 @@ def is_auto_set_date_enabled(config):
     return is_flag_enabled(config, "autoSetDate")
 
 
-def create_git_resolver(config, config_path):
+def create_git_resolver(config, config_path, on_repo_collect=None):
     """git 由来の情報が 1 つでも要るなら ``GitLinkResolver`` を作る。不要なら ``None``。
 
     単一ページ リンク、発行者、発行日時は同じリポジトリ走査を共有します。
@@ -231,6 +231,7 @@ def create_git_resolver(config, config_path):
 
     自己ホスト用の ``gitLinkHostProvider`` は、``pub_markdown.config.yaml`` と
     同じ ``.vscode/`` にある ``git_link.yaml`` から読みます。
+    ``on_repo_collect`` はリポジトリごとの ``git log`` の直前に呼びます。
     """
     if not (is_git_link_enabled(config)
             or is_auto_set_author_enabled(config)
@@ -239,7 +240,10 @@ def create_git_resolver(config, config_path):
     git_link_config = parse_config(
         os.path.join(os.path.dirname(config_path), "git_link.yaml")
     )
-    return GitLinkResolver(parse_host_provider_map(git_link_config.get("gitLinkHostProvider")))
+    return GitLinkResolver(
+        parse_host_provider_map(git_link_config.get("gitLinkHostProvider")),
+        on_repo_collect=on_repo_collect,
+    )
 
 
 def resolve_document_git_link(document, workspace, resolver, enabled=True):
@@ -1075,6 +1079,27 @@ def remove_stale(out_dir, keep_relative):
 
 
 # ----------------------------------------------------------------------------
+# 進捗
+# ----------------------------------------------------------------------------
+
+def _progress(quiet, message):
+    """フル ステージングの進行状況を即時に出す。``quiet`` なら何もしない。"""
+    if not quiet:
+        print(message, flush=True)
+
+
+def _repo_progress_label(workspace, root):
+    """Git 索引の進捗行に出すリポジトリ表示名を返す。"""
+    try:
+        relative = os.path.relpath(root, workspace)
+    except ValueError:
+        return root
+    if relative in (".", ""):
+        return "."
+    return relative.replace("\\", "/")
+
+
+# ----------------------------------------------------------------------------
 # 索引 (mkdocs serve 中の 1 ファイル単位の再ステージングでキャッシュとして使い回す)
 # ----------------------------------------------------------------------------
 
@@ -1115,19 +1140,34 @@ class StageIndex:
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
-                      variant=DEFAULT_LIVEDOCS_VARIANT):
-    """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。"""
+                      variant=DEFAULT_LIVEDOCS_VARIANT, quiet=True):
+    """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。
+
+    ``quiet`` の既定は True です。CLI のフル ステージングだけが False を渡し、
+    ``mkdocs serve`` 中の自動再ステージングは進捗行を出しません。
+    """
+    _progress(quiet, "staging: variant {}".format(variant))
     config = parse_config(config_path)
     md_root_name = config.get("mdRoot") or "docs"
     main_mdroot = os.path.normpath(os.path.join(workspace, md_root_name))
     subfolders = parse_merge_subfolder_docs(config.get("mergeSubfolderDocs"), workspace)
     mapper = PathMapper(main_mdroot, subfolders)
-    git_resolver = create_git_resolver(config, config_path)
+
+    def on_repo_collect(root):
+        _progress(quiet, "staging: git index {}".format(
+            _repo_progress_label(workspace, root)))
+
+    git_resolver = create_git_resolver(
+        config, config_path,
+        on_repo_collect=None if quiet else on_repo_collect,
+    )
     git_link_enabled = is_git_link_enabled(config)
     auto_set_author = is_auto_set_author_enabled(config)
     auto_set_date = is_auto_set_date_enabled(config)
 
     documents, assets = collect_sources(workspace, main_mdroot, subfolders)
+    _progress(quiet, "staging: collected {} documents, {} assets".format(
+        len(documents), len(assets)))
 
     kept = []
     for document in documents:
@@ -1323,6 +1363,7 @@ def stage_index(container, out_dir, quiet=False):
 
     :return: ステージング先の更新、削除、ナビゲーション生成を含む結果。
     """
+    _progress(quiet, "staging: writing")
     updated, keep_relative = write_documents(container, out_dir)
 
     staged_dirs = {""}
@@ -1341,7 +1382,7 @@ def stage_index(container, out_dir, quiet=False):
     removed = remove_stale(out_dir, keep_relative)
 
     if not quiet:
-        print("staged: variant {}, {} documents, {} assets, {} updated, {} removed, {} nav files".format(
+        _progress(False, "staged: variant {}, {} documents, {} assets, {} updated, {} removed, {} nav files".format(
             container.variant, len(container.kept), len(container.assets), updated, removed, nav_count))
 
     return StageResult(
@@ -1359,7 +1400,8 @@ def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
     :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
     """
     container = build_stage_index(
-        workspace, config_path, lang=lang, details=details, variant=variant
+        workspace, config_path, lang=lang, details=details, variant=variant,
+        quiet=quiet,
     )
     result = stage_index(container, out_dir, quiet=quiet)
     return result.document_count, result.updated, result.nav_count

@@ -22,6 +22,8 @@ make servedocs
 
 初回は `livedocs/.venv` を作成し、`requirements.txt` の依存を導入します。  
 その後、ステージングを行い `mkdocs serve` を起動します。  
+ステージング中は、完了行 `staged:` の前に進行状況を 1 行ずつ出します。  
+詳細は [動的発行基盤](../docs/livedocs-design.md) の make からの起動を参照してください。  
 ブラウザーで <http://127.0.0.1:8000/> を開いてください。
 
 `make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを開けます。  
