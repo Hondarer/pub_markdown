@@ -25,6 +25,7 @@ UPSTREAM_HEADER_SHA256 = "8cf3fb15bcf969ff596649616fd99366b3c31c08d57a86d05308ef
 OVERRIDE_HEADER = os.path.join(MKDOCS_DIR, "theme", "partials", "header.html")
 LINKS_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-links.html")
 META_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-meta.html")
+META_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-meta.css")
 
 
 def _find_upstream_header():
@@ -92,6 +93,64 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertIn('page.meta["author"]', text)
         self.assertIn('page.meta["date"]', text)
         self.assertIn("docsfw-header-meta", text)
+
+    def test_all_header_text_uses_fixed_minimum_pixel_sizes(self):
+        """Material の広い画面用 rem 拡大がヘッダーへ及ばないこと。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        for selector, size in (
+            (".docsfw-header-meta > span", "14px"),
+            (".md-header__title", "18px"),
+            (".md-header .md-search__input", "16px"),
+        ):
+            self.assertRegex(
+                text,
+                re.escape(selector) + r"\s*\{[^}]*font-size:\s*" + size,
+            )
+
+    def test_all_header_icons_use_fixed_minimum_pixel_sizes(self):
+        """Material の広い画面用 rem 拡大がヘッダーのアイコンへ及ばないこと。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            meta_css = handle.read()
+        links_css = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-links.css")
+        with open(links_css, "r", encoding="utf-8") as handle:
+            link_css = handle.read()
+        for selector in (
+            ".md-header .md-icon > svg",
+            ".md-header .md-logo > img",
+            ".md-header .md-logo > svg",
+            ".md-header .md-search__icon",
+        ):
+            self.assertRegex(
+                meta_css,
+                re.escape(selector) + r"\s*,?\s*(?:\n|.)*?height:\s*24px",
+            )
+        self.assertRegex(
+            link_css,
+            re.escape(".docsfw-header-links .md-header__button img")
+            + r"\s*\{[^}]*height:\s*24px[^}]*width:\s*24px",
+        )
+
+    def test_mode_doxygen_and_git_icon_buttons_use_four_pixel_padding(self):
+        """24px の右側アイコンだけは既定の 8px より小さい余白を使うこと。"""
+        links_css = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-links.css")
+        with open(links_css, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        padding_rule = re.search(
+            re.escape(".md-header__option .md-header__button")
+            + r"\s*,\s*"
+            + re.escape(".docsfw-header-links .md-header__button")
+            + r"\s*\{[^}]*\}",
+            text,
+        )
+        self.assertIsNotNone(padding_rule)
+        self.assertIn("padding: 4px", padding_rule.group())
+        self.assertNotIn("display:", padding_rule.group())
+        self.assertRegex(
+            text,
+            re.escape(".docsfw-header-links .md-header__button")
+            + r"\s*\{[^}]*display:\s*flex",
+        )
 
     def test_links_partial_uses_both_single_page_links(self):
         with open(LINKS_PARTIAL, "r", encoding="utf-8") as handle:

@@ -16,20 +16,25 @@
   }
 }
 
-/* 余白は .md-header__button の margin .2rem と padding .4rem のままとする。
-   これで配色トグルや検索ボタンと同じ 40px 四方のボタンになり、間隔がそろう。 */
+/* モード切替、Doxygen、Git の 24px アイコンは、既定の 8px より小さい 4px の
+   余白にする。検索、メニュー、ロゴの操作領域は変えない。 */
+.md-header__option .md-header__button,
+.docsfw-header-links .md-header__button {
+  padding: 4px;
+}
+
 .docsfw-header-links .md-header__button {
   display: flex;
 }
 
-/* Material の .md-icon svg と同じ寸法にする。
+/* Material の .md-icon svg と同じ最小寸法にする。
    Doxygen (28.66x27.2) と GitBucket (316x329) は正方形でないため、
    contain で縦横比を保ったまま同じ枠に収める。 */
 .docsfw-header-links .md-header__button img {
   display: block;
-  height: 1.2rem;
+  height: 24px;
   object-fit: contain;
-  width: 1.2rem;
+  width: 24px;
 }
 
 /* 検索ボックス自身は左マージンを持たないため、直前のアイコンとの間隔が、

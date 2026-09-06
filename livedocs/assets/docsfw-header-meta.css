@@ -9,14 +9,35 @@
   white-space: nowrap;
 }
 
-/* Material は html を 125% (20px) にするため .7rem が 14px になり、
-   静的発行の .doc-title, .doc-info, .navbar-text { font-size: 14px } と一致する。
+/* 静的発行の .doc-title, .doc-info, .navbar-text { font-size: 14px } と一致する。
+   Material は 1600px 以上で html の font-size を 137.5% へ上げるため、rem では
+   ヘッダーだけが拡大する。px で固定して最小の 14px を保つ。
    色は本文より一段淡い副次情報として --md-primary-bg-color--light を使う。
    この変数は docsfw-pandoc-style.css が default と slate の双方で定義している。 */
 .docsfw-header-meta > span {
   color: var(--md-primary-bg-color--light);
-  font-size: .7rem;
+  font-size: 14px;
   line-height: normal;
+}
+
+/* Material は広い画面で html の font-size を上げるため、rem を使う標準ヘッダー
+   も拡大する。各要素を既存の最小値で固定し、画面幅による拡大を防ぐ。 */
+.md-header__title {
+  font-size: 18px;
+}
+
+.md-header .md-search__input {
+  font-size: 16px;
+}
+
+/* Material の標準 SVG とロゴは 1.2rem のため、1600px 以上で 24px より
+   大きくなる。ヘッダーの操作領域は変えず、アイコン画像だけを固定する。 */
+.md-header .md-icon > svg,
+.md-header .md-logo > img,
+.md-header .md-logo > svg,
+.md-header .md-search__icon {
+  height: 24px;
+  width: 24px;
 }
 
 /* 発行者と発行日時の間隔は、ヘッダー ボタン同士の 8px にそろえる
