@@ -134,6 +134,42 @@ class OverrideHeaderTest(unittest.TestCase):
         )
         self.assertNotIn("max-width: 76.1875em", text)
 
+    def test_search_box_width_uses_fixed_pixel_sizes(self):
+        """100em / 125em 以上での html font-size 拡大により検索ボックスが
+        さらに広がらないこと (rem ではなく px で固定していること)。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertNotRegex(text, r"width:\s*\d+(?:\.\d+)?rem")
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*60em\)\s*\{[\s\S]*?"
+            + re.escape(".md-header .md-search__inner")
+            + r"\s*\{[^}]*width:\s*234px",
+        )
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*60em\)\s*\{[\s\S]*?"
+            + re.escape('[data-md-toggle="search"]:checked ~ .md-header .md-search__inner')
+            + r"\s*,\s*"
+            + re.escape(".md-header .md-search__scrollwrap")
+            + r"\s*\{[^}]*width:\s*468px",
+        )
+
+    def test_header_title_always_shows_the_document_title(self):
+        """本文のスクロール状況によらず、サイト名ではなく文書タイトルを表示すること。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertRegex(
+            text,
+            re.escape(".md-header__topic:first-child")
+            + r"\s*\{[^}]*display:\s*none",
+        )
+        self.assertRegex(
+            text,
+            re.escape(".md-header__topic + .md-header__topic")
+            + r"\s*\{[^}]*opacity:\s*1",
+        )
+
     def test_all_header_icons_use_fixed_minimum_pixel_sizes(self):
         """Material の広い画面用 rem 拡大がヘッダーのアイコンへ及ばないこと。"""
         with open(META_CSS, "r", encoding="utf-8") as handle:

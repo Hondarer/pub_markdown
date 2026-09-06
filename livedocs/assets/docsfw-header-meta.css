@@ -46,6 +46,39 @@
   letter-spacing: normal;
 }
 
+/* Material は検索ボックスの幅を rem で指定しており、60em 以上で常時表示の
+   入力欄 (.md-search__inner の既定値) が 11.7rem、検索を開いたときの候補パネル
+   (.md-search__inner の checked 版と .md-search__scrollwrap) が 23.4rem になる。
+   さらに 100em (1600px) 以上で html の font-size が 137.5%、125em (2000px)
+   以上で 150% へ上がるため、rem のままでは画面幅にかかわらず際限なく広がる。
+   ヘッダーの他要素と同じく、既定の等倍 (html の 125%、20px 相当) での値を px に
+   換算して固定する (11.7rem = 234px、23.4rem = 468px)。 */
+@media screen and (min-width: 60em) {
+  .md-header .md-search__inner {
+    width: 234px;
+  }
+
+  [data-md-toggle="search"]:checked ~ .md-header .md-search__inner,
+  .md-header .md-search__scrollwrap {
+    width: 468px;
+  }
+}
+
+/* ヘッダー タイトルは、本文のスクロールに応じてサイト名 (1つ目の
+   .md-header__topic) と文書タイトル (2つ目の .md-header__topic) を
+   Material の JS (.md-header__title--active の付け外し) がクロスフェード
+   させる。この切替をやめ、常に文書タイトルだけを表示する。 */
+.md-header__topic:first-child {
+  display: none;
+}
+
+.md-header__topic + .md-header__topic {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  z-index: 0;
+}
+
 /* Material の標準 SVG とロゴは 1.2rem のため、1600px 以上で 24px より
    大きくなる。ヘッダーの操作領域は変えず、アイコン画像だけを固定する。 */
 .md-header .md-icon > svg,
