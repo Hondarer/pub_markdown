@@ -1200,6 +1200,8 @@ htmlSearchUiCss="${HOME_DIR}/styles/html/docsfw-ui.css"
 htmlSearchScript="${HOME_DIR}/styles/html/docsfw-search.js"
 htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
 htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
+htmlPandocIconSvg="${HOME_DIR}/styles/html/docsfw-pandoc-icon.svg"
+htmlPandocIconLightSvg="${HOME_DIR}/styles/html/docsfw-pandoc-icon-light.svg"
 htmlDetailsIconSvg="${HOME_DIR}/styles/html/docsfw-details-icon.svg"
 htmlOverviewIconSvg="${HOME_DIR}/styles/html/docsfw-overview-icon.svg"
 htmlDoxygenIconSvg="${HOME_DIR}/styles/html/docsfw-doxygen-icon.svg"
@@ -1994,6 +1996,9 @@ for langElement in ${lang}; do
         node "${SCRIPT_DIR}/build-browser-assets.js" "${DOCSFW_PLANTUML_CORE}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html" || exit 1
         # DOCX ダウンロード リンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlWordIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-word-icon.svg"
+        # ヘッダー左上のロゴ アイコン (ライト/ダーク用の 2 種を常時配置する)
+        copy_if_different_timestamp "${htmlPandocIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-pandoc-icon.svg"
+        copy_if_different_timestamp "${htmlPandocIconLightSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-pandoc-icon-light.svg"
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDetailsIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-details-icon.svg"
         copy_if_different_timestamp "${htmlOverviewIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-overview-icon.svg"
@@ -2112,6 +2117,10 @@ while ((${#_pending_files[@]} > 0)); do
             navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
+        # ヘッダー左上のロゴ アイコン メタデータの構築 (常時渡す)
+        logo_icon_metadata_args=(--metadata "docsfw-logo-icon-base=${up_dir}")
+        self_contain_logo_icon_metadata_args=(--metadata "docsfw-logo-icon-base=../${up_dir}html/")
+
         # ヘッダー、検索、ナビゲーション メタデータの構築
         # 自己完結 HTML のサイト横断データは、兄弟の html/ から遅延ロードする。
         _search_current="${publish_file%.*}.html"
@@ -2204,7 +2213,7 @@ while ((${#_pending_files[@]} > 0)); do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${logo_icon_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/reset-table-column-width.lua" \
@@ -2238,7 +2247,7 @@ while ((${#_pending_files[@]} > 0)); do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_logo_icon_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/reset-table-column-width.lua" \
@@ -2514,6 +2523,10 @@ while ((${#_pending_files[@]} > 0)); do
             navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
+        # ヘッダー左上のロゴ アイコン メタデータの構築 (常時渡す)
+        logo_icon_metadata_args=(--metadata "docsfw-logo-icon-base=${up_dir}")
+        self_contain_logo_icon_metadata_args=(--metadata "docsfw-logo-icon-base=../${up_dir}html/")
+
         # ヘッダー、検索、ナビゲーション メタデータの構築
         # 自己完結 HTML のサイト横断データは、兄弟の html/ から遅延ロードする。
         _search_current="${publish_file%.*}.html"
@@ -2709,7 +2722,7 @@ while ((${#_pending_files[@]} > 0)); do
                 build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
                 build_git_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$up_dir"
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${logo_icon_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2747,7 +2760,7 @@ while ((${#_pending_files[@]} > 0)); do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_logo_icon_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \

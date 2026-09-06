@@ -311,16 +311,9 @@ body > *:last-child {
   #docsfw-docx-li {
     display: none !important; } }
 
-#docsfw-docx-li > a {
-  display: inline-block;
-  padding: 2px 8px;
-  line-height: normal;
-  background: none; }
-
 .docsfw-docx-icon {
   width: 18px;
-  height: 18px;
-  vertical-align: text-bottom; }
+  height: 18px; }
 
 /* 概要版/詳細版 切替リンク (navbar 右側) */
 #docsfw-details-li[hidden] {
@@ -330,48 +323,27 @@ body > *:last-child {
   #docsfw-details-li {
     display: none !important; } }
 
-#docsfw-details-li > a {
-  display: inline-block;
-  padding: 2px 8px;
-  line-height: normal;
-  background: none; }
-
 .docsfw-details-icon {
   width: 18px;
-  height: 18px;
-  vertical-align: text-bottom; }
+  height: 18px; }
 
 /* Doxygen 単一ページ リンク (navbar 右側) */
 @media (max-width: 767px) {
   #docsfw-doxygen-li {
     display: none !important; } }
 
-#docsfw-doxygen-li > a {
-  display: inline-block;
-  padding: 2px 8px;
-  line-height: normal;
-  background: none; }
-
 .docsfw-doxygen-icon {
   width: 18px;
-  height: 18px;
-  vertical-align: text-bottom; }
+  height: 18px; }
 
 /* Git 単一ページ リンク (navbar 右側) */
 @media (max-width: 767px) {
   #docsfw-git-li {
     display: none !important; } }
 
-#docsfw-git-li > a {
-  display: inline-block;
-  padding: 2px 8px;
-  line-height: normal;
-  background: none; }
-
 .docsfw-git-icon {
   width: 18px;
-  height: 18px;
-  vertical-align: text-bottom; }
+  height: 18px; }
 
 /* navbar アイコン リンク (詳細切替 / Doxygen / Git / docx):
    マウス クリック時のフォーカス枠は消し、キーボード操作時 (:focus-visible) は残す */
@@ -1346,6 +1318,24 @@ body {
 
 .docsfw-logo {
   display: none;
+}
+
+/* Pandoc html の左上アイコン。既定 (ライト) は黒地、ダークは既定色 (青) を出す。 */
+.docsfw-logo-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.docsfw-logo-icon--dark {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .docsfw-logo-icon--light {
+  display: none;
+}
+
+[data-md-color-scheme="slate"] .docsfw-logo-icon--dark {
+  display: inline-block;
 }
 
 .docsfw-menu-button {
