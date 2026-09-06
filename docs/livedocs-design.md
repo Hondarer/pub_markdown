@@ -1130,16 +1130,28 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 1625px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
 画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
-移す先は、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾に足した `li.md-nav__item.docsfw-combined-toc` です。  
-Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary` とその配下の `.md-nav` を `position: absolute` と `height: 100%` の板にし、一覧だけをスクロールさせます。  
-そのため一覧の外へ置いた要素は通常フローの先頭に来て板の背面に隠れ、外側をスクロールしたときに板の下端から目次の途中だけが現れます。  
-一覧の中へ入れることで、ファイル単位の目次に続いてページ内目次が 1 本のスクロールで並び、サブメニューのスライド動作とドロワー見出しはそのまま残ります。
+移す先は `li.md-nav__item.docsfw-combined-toc` で、幅によって入れる一覧が変わります。  
+1220px から 1624px では、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾です。  
+Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary` とその配下の `.md-nav` を `position: absolute` と `height: 100%` の入れ子の板 (スライド パネル) にし、一覧だけをスクロールさせます。  
+ドロワーを開くと、現在ページが属する板が表示されます。  
+根の一覧の末尾へ入れると、目次は表示中の板の背面に回り、見出しだけが板の行に重なって見えます。  
+そのため約 1220px 未満では、現在ページのリンク (`.md-nav__link--active`) から `closest('.md-nav__list')` でたどった一覧、すなわち表示中の板の一覧へ入れます。  
+現在ページ自身が節の索引ページ (`navigation.indexes`) のときは、開くのがその節の板になるため、節が持つ一覧 (`:scope > nav.md-nav > .md-nav__list`) を優先します。  
+これでファイル間の目次に続けてページ内目次が並び、サブメニューのスライド動作とドロワー見出しはそのまま残ります。  
+入れ先は幅で変わるため、`matchMedia('(max-width: 76.234375em)')` の変化でも配置をやり直し、器は作り直さずに移します。
 
-板向けの体裁は `assets/docsfw-livedocs.css` の `@media screen and (max-width: 76.234375em)` で目次の範囲だけ戻し、広い画面の目次と同じ見た目にそろえます。  
+約 1220px 未満の行の体裁は、この幅のものをそのまま使います。  
+Material の `.md-nav--primary .md-nav__link` の `padding: 0.6rem 0.8rem` がタップしやすい高さを、`[dir="ltr"] .md-nav--primary .md-nav--secondary .md-nav … .md-nav__link` の `padding-left` が階層のインデントを持ちます。  
+項目ごとの区切り線も残し、ファイル一覧からの続きとして並べます。  
+`assets/docsfw-livedocs.css` の `@media screen and (max-width: 76.234375em)` で戻すのは、各階層の絶対配置、見出しの戻る矢印、目次の見出しの左右余白、目次の一覧の内側の影と独立スクロール、一覧のスクロール スナップです。  
 境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく Material と同じ値を使います。  
-戻すのは、各階層の絶対配置、項目ごとの区切り線、リンクの `padding: 0.6rem 0.8rem`、見出しの戻る矢印、一覧のスクロール スナップです。  
-リンクの余白だけは `!important` を使います。Material が階層別のインデントを `[dir="ltr"] .md-nav--primary .md-nav--secondary .md-nav .md-nav .md-nav .md-nav .md-nav__link` (属性 1 個 + クラス 7 個) まで持ち、`.docsfw-combined-toc` を挟んだ指定では詳細度で勝てないためです。  
-階層のインデントは、広い画面と同じく `.md-nav--secondary .md-nav__list` の `padding-left` が入れ子で持ちます。
+スクロール スナップの打ち消しは `.md-nav--primary .md-nav__title ~ .md-nav__list` の形で書きます。  
+Material の指定がこの形 (クラス 3 個) のため、`.md-nav--primary > .md-nav__list` (クラス 2 個) では詳細度で負け、目次の見出しがスナップ点になって一覧を末尾まで送れません。
+
+Material は約 960px 未満で、現在ページの行を目次を開くラベル (`[for="__toc"]`) に置き換え、通常のリンクを隠します。  
+docsfw は目次をファイル一覧の続きとして並べるため、この内蔵の目次と二重になります。  
+`@media screen and (max-width: 59.984375em)` でラベルとその板を隠し、通常のリンクを戻します。  
+境界はここでも打ち消す相手と同じ値を使います。
 
 左ドロワーの幅は `min(80vw, 320px)` で、閉じた位置と開く量の両方が同じ値を参照します。  
 Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1625px より内側でこの指定と重なります。  

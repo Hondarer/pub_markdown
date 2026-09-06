@@ -200,20 +200,15 @@
     z-index: auto;
   }
 
-  /* ドロワーの一覧は項目ごとに区切り線を持つ。目次の中には出さない。 */
-  .md-nav--primary .docsfw-combined-toc .md-nav__item {
-    border-top: 0;
-  }
+  /* 行の体裁はこの幅のものをそのまま使う。Material の
+     .md-nav--primary .md-nav__link の padding: 0.6rem 0.8rem がタップ領域を、
+     [dir] 付きの .md-nav--primary .md-nav--secondary .md-nav … .md-nav__link の
+     padding-left が階層のインデントを持つ。区切り線 (.md-nav__item の
+     border-top) も残し、ファイル一覧からの続きとして並べる。 */
 
-  /* ドロワーのリンクは padding: 0.6rem 0.8rem を持ち、目次では行が高くなる。
-     Material は階層別のインデントを [dir="ltr"] .md-nav--primary
-     .md-nav--secondary .md-nav .md-nav .md-nav .md-nav .md-nav__link
-     (属性 1 個 + クラス 7 個) まで持つため、.docsfw-combined-toc を挟んだ
-     指定では詳細度で勝てない。ここだけ !important で戻す。
-     階層のインデントは広い画面と同じく .md-nav--secondary .md-nav__list の
-     padding-left が入れ子で持つ。 */
-  .md-nav--primary .docsfw-combined-toc .md-nav__link {
-    padding: 0 !important;
+  /* 目次の見出しも行の左端にそろえる。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav__title {
+    padding: 0.6rem 0.8rem;
   }
 
   /* Material は .md-nav--primary .md-nav__title .md-nav__icon を戻る矢印として
@@ -224,11 +219,40 @@
     display: none;
   }
 
+  /* Material の .md-nav--primary .md-nav__title ~ .md-nav__list は、板の一覧に
+     内側の影と独立したスクロールを与える。目次の一覧は見出しの後ろに続く
+     ただの一覧のため、どちらも外す。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav__list {
+    overflow: visible;
+    box-shadow: none;
+  }
+
   /* Material は一覧に scroll-snap-type: y mandatory を、目次の見出しに
      scroll-snap-align: start を当てる。目次を同じ一覧へ入れると見出しが
-     スナップ点になりスクロールが跳ねるため、scrollwrap と同じく無効にする。 */
-  .md-nav--primary > .md-nav__list {
+     スナップ点になりスクロールが跳ね、末尾まで送れない。
+     打ち消す相手は .md-nav--primary .md-nav__title ~ .md-nav__list
+     (クラス 3 個) のため、同じ形で並べないと詳細度で負ける。 */
+  .md-nav--primary .md-nav__title ~ .md-nav__list {
     scroll-snap-type: none;
+  }
+}
+
+/* Material 内蔵のページ内目次の打ち消し (既定フォントで約 960px 未満)。
+   Material はこの幅で、現在ページの行を目次を開くラベル ([for="__toc"]) に
+   置き換え、通常のリンクを隠す。docsfw は目次をファイル一覧の続きとして
+   並べるため、二重になる。ラベルとその板を隠し、通常のリンクを戻す。
+   境界は打ち消す相手と一致させるため、Material と同じ 59.984375em を使う。 */
+@media screen and (max-width: 59.984375em) {
+  .md-nav--primary .md-nav__link[for="__toc"] {
+    display: none;
+  }
+
+  .md-nav--primary .md-nav__link[for="__toc"] ~ .md-nav {
+    display: none;
+  }
+
+  .md-nav--primary .md-nav__link[for="__toc"] + .md-nav__link {
+    display: flex;
   }
 }
 
