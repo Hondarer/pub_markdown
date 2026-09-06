@@ -255,7 +255,7 @@
 
    These rules are keyed on #docsfw-page-toc rather than the class, because
    two other rule sets outrank the class form:
-     - #docsfw-tree a (1,0,1) styles the drawer tree below 1400px, and the page
+     - #docsfw-tree a (1,0,1) styles the drawer tree below 1625px, and the page
        TOC is moved inside that tree, so a class selector loses there;
      - Bootstrap's template.css (CDN) has .toc ul > li > a (0,2,3), which sets
        padding 3px 15px and, on hover, text-decoration: none with a #eeeeee
@@ -367,7 +367,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
 /* ---- Combined drawer below the three-column breakpoint ------------------ */
 
-@media (max-width: 1399px) {
+@media (max-width: 1624px) {
 
   /* Hamburger button: fixed expander, slides to drawer's right edge when open */
   #docsfw-hamburger {
@@ -448,7 +448,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 }
 
 /* Three-column layout: hide hamburger and backdrop */
-@media (min-width: 1400px) {
+@media (min-width: 1625px) {
   #docsfw-hamburger    { display: none !important; }
   #docsfw-nav-backdrop { display: none !important; }
 }

@@ -130,7 +130,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 44 | docx 出力 | 対象外 | 本基盤の要件どおり |
 | 45 | ページ内目次 | 維持 | Material の右サイドバー。`toc_depth: 3` |
 | 46 | サイト内ナビゲーション ツリー | 維持 | Material の左サイドバー。自動生成 |
-| 47 | ページ内目次のナビゲーション ツリーへのマージ | 維持 | 1400px 以上は左右分離、未満は左ドロワーへ統合 |
+| 47 | ページ内目次のナビゲーション ツリーへのマージ | 維持 | 1625px 以上は左右分離、未満は左ドロワーへ統合 |
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
@@ -1073,7 +1073,7 @@ Material は `.md-nav__link` に `transition: color 125ms` を持ちますが、
 カードが消えれば見えない余白になるだけで、TOC の字下げと横幅、本文の開始位置が変わらないためです。
 
 `.well` はテンプレート内で TOC にしか使われていないため、この指定の影響は TOC に閉じます。  
-1400px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
+1625px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
 
 TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) は、狭い画面で文書ツリーとページ内目次を区切るために使用します。
 
@@ -1090,7 +1090,7 @@ TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separa
 | ホバーとフォーカス | `#1A5FAA` | `#9CC7EA` | 同上。下線を引く |
 
 強調に太字は使いません。  
-太字は文字幅が変わるため、幅 210px の目次ではスクロール追従のたびに省略記号 (`text-overflow: ellipsis`) の出方が変わり、行の見え方が動きます。  
+太字は文字幅が変わるため、幅 315px の目次ではスクロール追従のたびに省略記号 (`text-overflow: ellipsis`) の出方が変わり、行の見え方が動きます。  
 色だけで示せば、追従しても幅は変わりません。
 
 同じ理由で、静的発行の左ナビゲーション ツリーからも現在ページの太字を外します。  
@@ -1116,7 +1116,7 @@ Material の `.md-nav__link` が持つ `margin-top: .625em` を、両側でそ�
 
 静的発行の目次には Bootstrap の `template.css` (CDN) が `.toc ul > li > a` (0,2,3) で `padding: 3px 15px` を当て、`.toc ul > li > a:hover` で `text-decoration: none` と `background-color: #eeeeee` を当てます。  
 どちらも `docsfw-ui.css` の指定より詳細度が高いため、行間もホバーの下線も効かず、ホバーで灰色の帯が出ていました。  
-また 1400px 未満では目次が文書ツリーの中へ移るため、`#docsfw-tree a` (1,0,1) が状態の色に勝ちます。
+また 1625px 未満では目次が文書ツリーの中へ移るため、`#docsfw-tree a` (1,0,1) が状態の色に勝ちます。
 
 そこで `docsfw-ui.css` の目次の状態指定は、クラスではなく `#docsfw-page-toc` を起点にします。  
 `#docsfw-page-toc a` は両方より詳細度が高いか同等で、同等の `#docsfw-tree a` に対してはファイル内で後に置いて勝たせます。  
@@ -1128,21 +1128,21 @@ Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a
 
 ### ナビゲーションの幅と切り替え
 
-Pandoc HTML と MkDocs は、1400px 以上で左 240px、本文約 870px、右 210px の三列を 25px 間隔で表示します。  
-全体幅は 1370px です。
+Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 315px の三列を 25px 間隔で表示します。  
+全体幅は 1595px です。
 
-1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
+1625px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
 画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
 左ドロワーの幅は `min(80vw, 320px)` で、閉じた位置と開く量の両方が同じ値を参照します。  
-Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1400px より内側でこの指定と重なります。  
+Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1625px より内側でこの指定と重なります。  
 Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left: -12.1rem` を、`[dir="rtl"]` に `right: -12.1rem` を当てます。  
 `width` だけが docsfw の値になると、幅と閉じた位置が食い違い、閉じたドロワーの右端が本文の左に残ります。  
 そのため `left` と `right` は `[dir]` を付けて詳細度をそろえ、後勝ちさせます。  
 開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
 
-1400px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
-1400px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
+1625px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
+1625px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
 同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。
 
 ### 一致させない項目

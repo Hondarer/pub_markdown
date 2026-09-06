@@ -2,7 +2,7 @@
  * docsfw-nav.js
  * 1. Renders the global navigation tree from window.__DOCSFW_NAV__ into #docsfw-tree.
  * 2. Places the page-local TOC on the right at wide widths and in the combined
- *    navigation drawer below 1400px.
+ *    navigation drawer below 1625px.
  * 3. Tracks the current heading in the page-local TOC.
  * 4. Appends a permalink anchor to each heading in the page body.
  * 5. Controls the off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
@@ -351,7 +351,7 @@
     var container = document.getElementById('docsfw-tree');
     var nav       = window.__DOCSFW_NAV__;
     var current   = window.__DOCSFW_CURRENT__;
-    var wideLayout = window.matchMedia('(min-width: 1400px)');
+    var wideLayout = window.matchMedia('(min-width: 1625px)');
     var onLayoutChange = function (event) { placePageToc(event.matches); };
     if (wideLayout.addEventListener) {
       wideLayout.addEventListener('change', onLayoutChange);

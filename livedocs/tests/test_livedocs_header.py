@@ -278,7 +278,7 @@ class DrawerTopSpacingTest(unittest.TestCase):
         text = self._read_css()
         self.assertRegex(
             text,
-            r"@media screen and \(min-width:\s*1400px\)\s*\{[\s\S]*?"
+            r"@media screen and \(min-width:\s*1625px\)\s*\{[\s\S]*?"
             + re.escape(".md-sidebar--primary")
             + r"\s*,\s*"
             + re.escape(".md-sidebar--secondary")
@@ -289,7 +289,7 @@ class DrawerTopSpacingTest(unittest.TestCase):
         """絶対配置の scrollwrap は親の padding を無視するため、上端へ移す。"""
         text = self._read_css()
         match = re.search(
-            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
+            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
             text,
         )
         self.assertIsNotNone(match)

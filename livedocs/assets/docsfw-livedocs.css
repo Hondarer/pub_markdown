@@ -9,9 +9,9 @@
   scrollbar-gutter: stable;
 }
 
-@media screen and (min-width: 1400px) {
+@media screen and (min-width: 1625px) {
   .md-grid {
-    max-width: 1370px;
+    max-width: 1595px;
   }
 
   .md-sidebar--primary,
@@ -20,11 +20,11 @@
   }
 
   .md-sidebar--primary {
-    width: 240px;
+    width: 360px;
   }
 
   .md-sidebar--secondary {
-    width: 210px;
+    width: 315px;
   }
 
   .md-main__inner > .md-content > .md-content__inner {
@@ -54,7 +54,7 @@
   }
 }
 
-@media screen and (max-width: 1399px) {
+@media screen and (max-width: 1624px) {
   .md-grid {
     max-width: 902px;
   }
@@ -65,7 +65,7 @@
   }
 
   /* Material 自身のドロワーは max-width: 76.2344em (既定フォントで約 1220px) で
-     効き始め、この範囲では [dir="ltr"] .md-sidebar--primary (0,2,0) が
+     効き始め、この範囲の狭い側では [dir="ltr"] .md-sidebar--primary (0,2,0) が
      left: -12.1rem を、[dir="rtl"] が right: -12.1rem を当てる。
      位置だけ Material の 12.1rem、幅だけ docsfw の値という食い違いを避けるため、
      left / right は [dir] を付けて詳細度をそろえ、後勝ちさせる。

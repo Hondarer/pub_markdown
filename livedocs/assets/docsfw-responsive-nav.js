@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var wideLayout = window.matchMedia('(min-width: 1400px)');
+  var wideLayout = window.matchMedia('(min-width: 1625px)');
   var toc = null;
   var originalParent = null;
   var originalNextSibling = null;

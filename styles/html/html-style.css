@@ -11,8 +11,8 @@ body {
   margin-bottom: 20px; }
 
 /* Pandoc HTML と mkdocs の共通レイアウト仕様。
-   1400px 以上では 240px / 870px / 210px の三列とし、列間を 25px 空ける。
-   1400px 未満では本文を最大 870px で中央配置し、ナビゲーションは
+   1625px 以上では 360px / 870px / 315px の三列とし、列間を 25px 空ける。
+   1625px 未満では本文を最大 870px で中央配置し、ナビゲーションは
    docsfw-ui.css の単一ドロワーへ移す。 */
 .docsfw-layout-container {
   width: 870px;
@@ -46,7 +46,7 @@ body {
   .navbar .nav.pull-right {
     margin-right: 0; } }
 
-@media (min-width: 1400px) {
+@media (min-width: 1625px) {
   body {
     padding-left: 15px;
     padding-right: 15px;
@@ -56,12 +56,12 @@ body {
   .navbar-static-top .container,
   .navbar-fixed-top .container,
   .navbar-fixed-bottom .container {
-    width: 1370px;
+    width: 1595px;
   }
 
   .docsfw-layout {
     display: grid;
-    grid-template-columns: 240px 870px 210px;
+    grid-template-columns: 360px 870px 315px;
     grid-template-areas: "primary content secondary";
     column-gap: 25px;
   }
@@ -131,7 +131,7 @@ body > *:last-child {
 
 /* navbar-static-top は fixed-top と同様に左右 padding を 0 にする。
    Bootstrap 既定の navbar-inner 左右 20px と .nav.pull-right の負マージン
-   (-35px) が重なると、M (980) / L (1200) / LL (1400) のコンテンツ幅切替直後に
+   (-35px) が重なると、M (980) / L (1200) / LL (1625) のコンテンツ幅切替直後に
    右端アイコン (Word 等) が body の overflow-x: hidden で欠ける。
    container 右端 = アイコン右端に揃え、切替直後から全アイコンを可視にする。
 
@@ -485,7 +485,7 @@ table {
       margin-bottom: 0; }
 
 /* 表のセル内に限り、インライン コードの折り返しを許可する。
-   本文カラムは 1400px 以上で 870px 固定のため、code, tt の
+   本文カラムは 1625px 以上で 870px 固定のため、code, tt の
    white-space: nowrap のままでは長い識別子が列幅を超え、
    右のページ内目次へはみ出す。
    white-space: pre-wrap は pandoc 既定の code { white-space: pre } と
