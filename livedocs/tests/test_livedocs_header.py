@@ -75,15 +75,18 @@ class OverrideHeaderTest(unittest.TestCase):
                        'data-md-component="header"'):
             self.assertIn(marker, text)
 
-    def test_meta_partial_is_placed_before_the_palette_toggle(self):
-        """発行者と発行日時を、静的発行と同じくアイコン群より前に出していること。"""
+    def test_meta_partial_is_placed_below_the_title(self):
+        """発行情報は、ヘッダーの高さを増やさずタイトルの 2 行目へ置くこと。"""
         with open(OVERRIDE_HEADER, "r", encoding="utf-8") as handle:
             text = handle.read()
         meta = text.index('{% include "partials/docsfw-header-meta.html" %}')
+        ellipsis_start = text.index('<div class="md-header__ellipsis">')
+        ellipsis_end = text.index("      </div>\n    </div>", ellipsis_start)
         palette = text.index('{% include "partials/palette.html" %}')
         links = text.index('{% include "partials/docsfw-header-links.html" %}')
         search = text.index('{% include "partials/search.html" %}')
-        self.assertLess(meta, palette)
+        self.assertGreater(meta, ellipsis_start)
+        self.assertLess(meta, ellipsis_end)
         self.assertLess(palette, links)
         self.assertLess(links, search)
 
@@ -114,6 +117,22 @@ class OverrideHeaderTest(unittest.TestCase):
             + r"\s*\{[^}]*font-family:\s*var\(--md-text-font-family\)"
             + r"[^}]*font-size:\s*16px[^}]*letter-spacing:\s*normal",
         )
+
+    def test_header_metadata_uses_the_second_title_row(self):
+        """タイトル領域の既存 48px を 24px ごとの 2 行で使うこと。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertRegex(
+            text,
+            re.escape(".docsfw-header-meta")
+            + r"\s*\{[^}]*margin-top:\s*2px[^}]*position:\s*absolute[^}]*top:\s*24px",
+        )
+        self.assertRegex(
+            text,
+            re.escape(".md-header__topic")
+            + r"\s*\{[^}]*height:\s*24px[^}]*line-height:\s*24px[^}]*margin-top:\s*2px",
+        )
+        self.assertNotIn("max-width: 76.1875em", text)
 
     def test_all_header_icons_use_fixed_minimum_pixel_sizes(self):
         """Material の広い画面用 rem 拡大がヘッダーのアイコンへ及ばないこと。"""

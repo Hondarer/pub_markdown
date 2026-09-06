@@ -5,7 +5,12 @@
 .docsfw-header-meta {
   align-items: center;
   display: flex;
-  flex-shrink: 0;
+  left: 0;
+  margin-top: 2px;
+  max-width: 100%;
+  overflow: hidden;
+  position: absolute;
+  top: 24px;
   white-space: nowrap;
 }
 
@@ -24,6 +29,14 @@
    も拡大する。各要素を既存の最小値で固定し、画面幅による拡大を防ぐ。 */
 .md-header__title {
   font-size: 18px;
+}
+
+/* Material の 48px のタイトル領域を、上側に 2px の余白を持つ 24px のタイトルと
+   24px 位置の発行情報で使う。既存の高さとページ題名の切替アニメーションを維持する。 */
+.md-header__topic {
+  height: 24px;
+  line-height: 24px;
+  margin-top: 2px;
 }
 
 .md-header .md-search__input,
@@ -47,13 +60,4 @@
    (.md-header__button の margin .2rem が両側に付いた値と同じ)。 */
 .docsfw-header-meta > span + span {
   margin-left: 8px;
-}
-
-/* 発行日時は「曜日, 日 月 年 時刻 時差 短縮 SHA」と長いため、アイコンの 767px
-   より早く消す。76.25em は Material がヘッダーをドロワーへ切り替える境で、
-   これ未満ではページ タイトルの表示幅を優先する。 */
-@media screen and (max-width: 76.1875em) {
-  .docsfw-header-meta {
-    display: none;
-  }
 }
