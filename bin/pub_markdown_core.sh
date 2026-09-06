@@ -721,6 +721,7 @@ resolve_git_link_target() {
     # doxyfw 生成 md は先頭フロント マターに git-origin (元ソースの workspace 相対パス) を持つ。
     # ヒントがあり実体が存在すれば、md 自身ではなく元ソースに対して Git リンクを解決する。
     git_origin_hint=$(extract_frontmatter_value "$source_file" "git-origin")
+    git_origin_hint="${git_origin_hint//\\//}"
     if [[ -n "$git_origin_hint" && -f "${workspaceFolder}/${git_origin_hint}" ]]; then
         git_link_target="${workspaceFolder}/${git_origin_hint}"
     fi

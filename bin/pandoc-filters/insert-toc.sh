@@ -80,11 +80,27 @@ parse_subfolder_entry() {
     subfolder_docs_src="${rest#*|}"
 }
 
+# Windows (MSYS/Cygwin) のパスを Unix 形式へそろえる。
+# dirname / find / 相対パス切り出しは / を区切りとして扱うため。
+# Linux では cygpath が無いので、入力をそのまま返す。
+to_unix_path() {
+    local path="$1"
+    local converted
+    if command -v cygpath >/dev/null 2>&1; then
+        converted=$(cygpath -u "$path" 2>/dev/null) && {
+            printf '%s\n' "$converted"
+            return
+        }
+    fi
+    printf '%s\n' "${path//\\//}"
+}
+
 resolve_current_context() {
     local source_dir
     local relative_to_subfolder
 
     if [[ -n "$CURRENT_FILE" && "$CURRENT_FILE" != "-" ]]; then
+        CURRENT_FILE=$(to_unix_path "$CURRENT_FILE")
         source_dir=$(dirname "$CURRENT_FILE")
         source_dir=$(readlink -f "$source_dir" 2>/dev/null || realpath "$source_dir" 2>/dev/null || echo "$source_dir")
     else

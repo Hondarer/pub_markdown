@@ -17,6 +17,7 @@ from git_link import PublishFacts  # noqa: E402
 from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
+    _norm_key,
     build_front_matter,
     convert_captions,
     convert_implicit_figures,
@@ -227,10 +228,12 @@ class GitLinkResolutionTest(unittest.TestCase):
 
         document = Document(os.path.join(self.workspace, "docs", "Files", "calc.h.md"),
                             "calc/Files/calc.h.md")
-        document.fields = {"git-origin": "prod/include/calc.h"}
-        resolver = self._FakeResolver()
-        resolve_document_git_link(document, self.workspace, resolver)
-        self.assertEqual(resolver.targets, [origin])
+        for hint in ("prod/include/calc.h", "prod\\include\\calc.h"):
+            with self.subTest(hint=hint):
+                document.fields = {"git-origin": hint}
+                resolver = self._FakeResolver()
+                resolve_document_git_link(document, self.workspace, resolver)
+                self.assertEqual(resolver.targets, [origin])
 
     def test_missing_git_origin_falls_back_to_the_document_itself(self):
         document = Document(os.path.join(self.workspace, "docs", "a.md"), "a.md")
@@ -302,7 +305,9 @@ class GenerateNavFilesTest(unittest.TestCase):
             source = os.path.join(tmp, "source")
             output = os.path.join(tmp, "output")
             os.makedirs(source)
-            names = ["cmd", "include", "libsrc", "MixedCase", "my-dir", "my_dir", 'a"b']
+            names = ["cmd", "include", "libsrc", "MixedCase", "my-dir", "my_dir", "a'b"]
+            if os.name != "nt":
+                names.append('a"b')
             generate_nav_files(output, source, [], names)
             for name in names:
                 with open(os.path.join(output, name, ".nav.yml"), encoding="utf-8") as handle:
@@ -332,7 +337,7 @@ class GenerateNavFilesTest(unittest.TestCase):
             document = Document(source, "cmd/index.md")
             document.staged_rel = "cmd/index.md"
             container = SimpleNamespace(
-                by_real_path={os.path.normcase(os.path.abspath(source)).replace("\\", "/"): document},
+                by_real_path={_norm_key(source): document},
                 lang="ja", details=True, workspace=tmp, git_resolver=None,
                 git_link_enabled=True, auto_set_author=True, auto_set_date=True,
                 main_mdroot=tmp, subfolders=[],

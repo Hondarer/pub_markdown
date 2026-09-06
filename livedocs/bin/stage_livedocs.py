@@ -257,7 +257,7 @@ def resolve_document_git_link(document, workspace, resolver, enabled=True):
     target = document.real_path
     origin = document.fields.get("git-origin")
     if origin:
-        candidate = os.path.join(workspace, origin.replace("\\", "/"))
+        candidate = os.path.normpath(os.path.join(workspace, origin.replace("\\", "/")))
         if os.path.isfile(candidate):
             target = candidate
 
