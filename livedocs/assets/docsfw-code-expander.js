@@ -98,7 +98,39 @@
     return shell;
   }
 
-  function bindFullCopy(root, text) {
+  function relocateCopyNav(wrapper, scrollEl) {
+    var fromScroll = scrollEl.querySelectorAll(".md-code__nav");
+    var onWrapper = [];
+    var i;
+    for (i = 0; i < wrapper.children.length; i++) {
+      if (wrapper.children[i].classList.contains("md-code__nav")) {
+        onWrapper.push(wrapper.children[i]);
+      }
+    }
+    if (fromScroll.length === 0 && onWrapper.length <= 1) {
+      return;
+    }
+    var keep = fromScroll.length > 0 ? fromScroll[fromScroll.length - 1] : onWrapper[0];
+    if (!keep) {
+      return;
+    }
+    if (keep.parentElement !== wrapper) {
+      wrapper.appendChild(keep);
+    }
+    var child;
+    for (i = wrapper.children.length - 1; i >= 0; i--) {
+      child = wrapper.children[i];
+      if (child.classList.contains("md-code__nav") && child !== keep) {
+        wrapper.removeChild(child);
+      }
+    }
+    var leftover = scrollEl.querySelectorAll(".md-code__nav");
+    for (var j = 0; j < leftover.length; j++) {
+      leftover[j].parentNode.removeChild(leftover[j]);
+    }
+  }
+
+  function bindFullCopy(shell, wrapper, scrollEl, text) {
     function apply(button) {
       if (!button || button.dataset.docsfwFullCopy === "true") {
         return;
@@ -107,11 +139,20 @@
       button.removeAttribute("data-clipboard-target");
       button.dataset.docsfwFullCopy = "true";
     }
-    root.querySelectorAll('.md-code__button[data-md-type="copy"]').forEach(apply);
+    function sync() {
+      relocateCopyNav(wrapper, scrollEl);
+      shell.querySelectorAll('.md-code__button[data-md-type="copy"]').forEach(apply);
+    }
     var observer = new MutationObserver(function () {
-      root.querySelectorAll('.md-code__button[data-md-type="copy"]').forEach(apply);
+      observer.disconnect();
+      try {
+        sync();
+      } finally {
+        observer.observe(shell, { childList: true, subtree: true });
+      }
     });
-    observer.observe(root, { childList: true, subtree: true });
+    sync();
+    observer.observe(shell, { childList: true, subtree: true });
   }
 
   function initialize() {
@@ -212,7 +253,9 @@
       if (hintEl) {
         wrapper.appendChild(hintEl);
       }
-      bindFullCopy(shell, text);
+      // Material は .md-code__nav を pre 内へ置く。pre は内容幅になるため、
+      // 可視領域の右上へ残すよう scroll の外へ移す。
+      bindFullCopy(shell, wrapper, scrollEl, text);
     });
 
     function saveExpanderState() {

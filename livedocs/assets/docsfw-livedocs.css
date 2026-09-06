@@ -389,7 +389,9 @@
 /* Material の content.code.copy は .md-code__nav を pre の右上へ置く。
    既定は常時見えるゴースト アイコンなので、SVG ダウンロードと同じ
    ホバー チップ (16px、枠、不透明な背景) へそろえる。
-   寸法と余白は styles/html/html-style.css の .docsfw-code-copy と同じ。 */
+   寸法と余白は styles/html/html-style.css の .docsfw-code-copy と同じ。
+   位置の基準は docsfw-code-expander.js が移した wrapper (可視幅) で、
+   内容幅まで伸びた pre ではない。 */
 .md-typeset .highlight {
   position: relative;
 }

@@ -88,7 +88,8 @@
   background-color: var(--md-code-bg-color);
 }
 
-/* コピーはコード本文の上だけ出す。バーと「さらに N 行」では出さない。 */
+/* コピーはコード本文の上だけ出す。バーと「さらに N 行」では出さない。
+   .md-code__nav は wrapper へ移すので、ホバーは兄弟セレクタが主経路。 */
 .md-typeset .code-expander-scroll:hover .md-code__nav,
 .md-typeset .code-expander-scroll:hover ~ .md-code__nav,
 .md-typeset .md-code__nav:hover,
