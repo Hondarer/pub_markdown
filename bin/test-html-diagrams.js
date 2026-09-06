@@ -136,6 +136,20 @@ function generate() {
 @endmindmap</div>
 </body></html>
 `);
+  // 狭い画面の配色ボタン確認は、PlantUML の再描画と重ねない。
+  fs.writeFileSync(path.join(output, 'theme-mobile.html'), `<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="assets/html-style.css">
+<script src="assets/docsfw-theme.js"></script>
+</head>
+<body>
+<div class="navbar navbar-static-top"><div class="navbar-inner"><div class="container">
+<span class="doc-title">配色</span>
+<ul class="nav pull-right doc-info"></ul>
+</div></div></div>
+</body></html>
+`);
 }
 
 async function settled(page) {
@@ -196,13 +210,16 @@ async function exercise(page, url, name) {
   assert.equal(exported, displayed);
   await page.reload({ waitUntil: 'load' });
   assert.equal(await page.$eval('body', el => el.dataset.mdColorScheme), 'slate');
-  // 狭い画面でも切り替えボタンを操作できる。
+  for (const block of await page.$$('.docsfw-plantuml')) {
+    await block.scrollIntoView();
+    await page.waitForFunction(el => el.dataset.docsfwState === 'done', { timeout: 90000 }, block);
+  }
+  await settled(page);
+  // 狭い画面の見た目だけ撮る。390px で PlantUML を再描画すると TeaVM が戻らず、
+  // 続く setViewport が CDP 待ちで落ちるため、配色切替は mobileTheme() で見る。
   await page.setViewport({ width: 390, height: 844 });
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(output, name + '-mobile.png') });
-  await page.locator('#docsfw-theme-toggle').click();
-  await page.waitForFunction(() => document.body.dataset.mdColorScheme === 'default');
-  await page.setViewport({ width: 1440, height: 1100 });
   console.log(name + ': rendering, themes, persistence, SVG download passed');
 }
 
@@ -247,6 +264,20 @@ async function clip(page, url) {
   console.log('plantuml mindmap viewBox padding: passed');
 }
 
+async function mobileTheme(page, url) {
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  await page.setViewport({ width: 390, height: 844 });
+  await page.goto(url, { waitUntil: 'load' });
+  await page.waitForSelector('#docsfw-theme-toggle');
+  const before = await page.$eval('body', el => el.dataset.mdColorScheme);
+  await page.locator('#docsfw-theme-toggle').click();
+  await page.waitForFunction(prev => document.body.dataset.mdColorScheme !== prev, { timeout: 10000 }, before);
+  const after = await page.$eval('body', el => el.dataset.mdColorScheme);
+  assert.notEqual(after, before);
+  assert.ok(after === 'slate' || after === 'default', after);
+  console.log('narrow viewport theme toggle: passed');
+}
+
 async function main() {
   console.log('Artifacts: ' + output);
   generate();
@@ -259,6 +290,7 @@ async function main() {
     clipPage.on('pageerror', error => console.error('Browser:', error.message.slice(0,500)));
     await clipPage.setViewport({ width: 800, height: 600 });
     await clip(clipPage, pathToFileURL(path.join(output, 'clip.html')).href);
+    await mobileTheme(clipPage, pathToFileURL(path.join(output, 'theme-mobile.html')).href);
   } finally { await clipBrowser.close(); }
   const browser = await launch();
   const server = http.createServer((req, res) => {
