@@ -952,6 +952,15 @@ Material の既定のうち、次の 3 つは打ち消す必要があります�
 
 `.md-typeset h2 + h3` は詳細度が (0,1,2) であり、レベルごとの指定 (0,1,1) より高いため、同じセレクターで上書きします。
 
+### 表の行ホバー
+
+静的発行の `styles/html/html-style.css` は、表の行にホバー時の背景を指定しません。  
+Material は `.md-typeset table:not([class]) tbody tr:hover` で、背景色と inset の `box-shadow` を当てて行を強調します。
+
+打ち消しは Material と同じセレクターで行い、背景を通常行と同じ `var(--md-default-bg-color)` に戻し、`box-shadow` を `none` にします。  
+`tr:hover` だけでは詳細度が (0,3,2) となり、Material の (0,3,3) に負けます。  
+`extra_css` は `main.css` より後に読まれるため、詳細度をそろえれば後勝ちします。
+
 ### リンクのホバー
 
 ホバー時は下線ありに統一します。

@@ -264,8 +264,13 @@ body {
   background-color: var(--md-default-bg-color);
 }
 
-.md-typeset table:not([class]) tr:hover {
+/* Material は `.md-typeset table:not([class]) tbody tr:hover` (0,3,3) で
+   行の背景と inset box-shadow を当てる。
+   `tr:hover` だけでは詳細度 (0,3,2) で負け、ホバー強調が残る。
+   静的発行の html-style.css は表行にホバー指定が無いため、同じ見た目へ戻す。 */
+.md-typeset table:not([class]) tbody tr:hover {
   background-color: var(--md-default-bg-color);
+  box-shadow: none;
 }
 
 /* ------------------------------------------------------------------------ */
