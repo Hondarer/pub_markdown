@@ -1182,6 +1182,29 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 
 Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`requirements.txt` で固定します。
 
+### ポートの競合
+
+`make servedocs` は `LIVEDOCS_ADDR` のポートが空いているかを起動前に確認しません。  
+起動前に確認するのは、このワークスペースの `mkdocs serve` が残っていないかだけです。
+
+同じネットワーク名前空間で別のプロセスが同じポートを待ち受けている場合は、`mkdocs serve` の bind が失敗します。  
+MkDocs はこの `OSError` を捕捉しないため、traceback を出して終了コード 1 で終わります。  
+`make servedocs` もこの終了コードで失敗します。
+
+WSL2 の既定のネットワークモード (`wslinfo --networking-mode` が `nat`) では、Windows 側のポート使用は bind の失敗になりません。  
+WSL は Windows とは別のネットワーク名前空間を持つため、Windows 側が `127.0.0.1:8000` を待ち受けていても、WSL 内の bind は成功します。  
+一方、Windows から WSL への localhost 転送は、Windows 側で同じポートが先に使われていると成立しません  
+([Accessing network applications with WSL](https://learn.microsoft.com/windows/wsl/networking))。  
+そのため Windows のブラウザーで <http://127.0.0.1:8000/> を開くと、配信中の MkDocs ではなく Windows 側のプロセスへ接続します。  
+`make servedocs` は起動したままで、この食い違いを報告しません。
+
+Windows 側の待ち受けは `netstat.exe -ano` の LISTENING 行で確認できます。  
+別のポートへ移す場合は `LIVEDOCS_ADDR` を指定します。
+
+この食い違いを検出して `make servedocs` を失敗させることは行いません。  
+判定には Windows 側の待ち受け一覧の取得と、ループバック転送を妨げる待ち受けかどうかの区別が必要で、配信の起動経路に WSL 固有の分岐が入ります。  
+食い違いが起きるのは WSL でポートが重なった場合に限られ、上記の確認と `LIVEDOCS_ADDR` で対処できるためです。
+
 ### バリアントの指定
 
 `make docs` と同じ 4 値を、起動時に 1 つだけ選びます。同時に 4 系統は出しません。

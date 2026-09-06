@@ -36,6 +36,11 @@ Doxygen HTML の閲覧は `make servedocs` が正本です。`make livedocs` の
 make servedocs LIVEDOCS_ADDR=0.0.0.0:8100
 ```
 
+WSL2 の既定のネットワークモード (`nat`) では、Windows 側が同じポートを待ち受けていても `mkdocs serve` は起動します。  
+このとき Windows から WSL への localhost 転送が成立せず、Windows のブラウザーは Windows 側のプロセスへ接続します。  
+別の内容が表示される場合は `netstat.exe -ano` の LISTENING 行を確認し、`LIVEDOCS_ADDR` で別のポートを指定してください。  
+詳細は [動的発行基盤](../docs/livedocs-design.md) のポートの競合を参照してください。
+
 言語と詳細ブロックは `LIVEDOCS_VARIANT` で選びます。既定は `ja-details` です。  
 値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。1 回の起動では 1 つだけ出します。
 
