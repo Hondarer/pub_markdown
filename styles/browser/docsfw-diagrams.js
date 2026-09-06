@@ -76,6 +76,25 @@
     svg.style.maxWidth = "100%";
   }
 
+  // @plantuml/core は図形座標から viewBox を決め、線幅を含めない。
+  // マインドマップのように左端が x=0 の図は、stroke の半分が切れる。
+  function normalizePlantuml(block) {
+    const svg = block.querySelector(":scope > svg");
+    if (!svg) { return; }
+    const box = svg.viewBox && svg.viewBox.baseVal;
+    if (!box || box.width <= 0 || box.height <= 0) { return; }
+    const pad = 2;
+    const x = box.x;
+    const y = box.y;
+    const width = box.width;
+    const height = box.height;
+    svg.setAttribute("viewBox", (x - pad) + " " + (y - pad) + " " + (width + pad * 2) + " " + (height + pad * 2));
+    const attrWidth = parseFloat(svg.getAttribute("width"));
+    const attrHeight = parseFloat(svg.getAttribute("height"));
+    if (attrWidth > 0) { svg.setAttribute("width", String(attrWidth + pad * 2)); }
+    if (attrHeight > 0) { svg.setAttribute("height", String(attrHeight + pad * 2)); }
+  }
+
   async function draw(state, selectedTheme) {
     if (state.kind === "plantuml") {
       if (/^\s*@startsalt\b/im.test(state.source)) {
@@ -120,6 +139,7 @@
             state.block.classList.remove("docsfw-diagram--error");
             if (result.bindFunctions) { result.bindFunctions(state.block); }
             if (state.kind === "mermaid") { normalizeMermaid(state.block); }
+            if (state.kind === "plantuml") { normalizePlantuml(state.block); }
           }
         } catch (error) {
           if (state.block.isConnected && selectedTheme === theme()) { showError(state, error); }

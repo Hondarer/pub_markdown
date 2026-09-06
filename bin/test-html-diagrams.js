@@ -123,6 +123,19 @@ function generate() {
     assert(html.includes('id="fig:flow"'));
   }
   assert(!fs.readdirSync(output).some(name => /^puml_|^mermaid_/.test(name)));
+  fs.writeFileSync(path.join(output, 'clip.html'), `<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<script src="assets/docsfw-plantuml-loader.js"></script>
+<script src="assets/docsfw-diagrams.js"></script>
+</head>
+<body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startmindmap
+* test
+** test2
+** test3
+@endmindmap</div>
+</body></html>
+`);
 }
 
 async function settled(page) {
@@ -212,12 +225,42 @@ async function race(page) {
   console.log('theme change during rendering: passed');
 }
 
+async function clip(page, url) {
+  await page.goto(url, { waitUntil: 'load' });
+  const block = await page.$('.docsfw-plantuml');
+  await block.scrollIntoView();
+  await page.waitForFunction(el => el.dataset.docsfwState === 'done', { timeout: 90000 }, block);
+  const mindmap = await page.evaluate(() => {
+    const svg = document.querySelector('.docsfw-plantuml > svg');
+    if (!svg) { return null; }
+    const box = svg.viewBox.baseVal;
+    const rects = [...svg.querySelectorAll('rect')];
+    const minX = Math.min(...rects.map(r => parseFloat(r.getAttribute('x'))));
+    const minY = Math.min(...rects.map(r => parseFloat(r.getAttribute('y'))));
+    const maxStroke = Math.max(...rects.map(r => parseFloat(r.getAttribute('stroke-width') || 0)));
+    return { x: box.x, y: box.y, minX, minY, maxStroke };
+  });
+  assert(mindmap, 'mindmap svg missing');
+  assert(mindmap.x <= mindmap.minX - mindmap.maxStroke / 2, JSON.stringify(mindmap));
+  assert(mindmap.y <= mindmap.minY - mindmap.maxStroke / 2, JSON.stringify(mindmap));
+  await page.screenshot({ path: path.join(output, 'clip-mindmap.png') });
+  console.log('plantuml mindmap viewBox padding: passed');
+}
+
 async function main() {
   console.log('Artifacts: ' + output);
   generate();
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'win32' ?
     ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync) : undefined);
-  const browser = await puppeteer.launch(buildBrowserLaunchOptions({ headless: true, executablePath }));
+  const launch = () => puppeteer.launch(buildBrowserLaunchOptions({ headless: true, executablePath }));
+  const clipBrowser = await launch();
+  try {
+    const clipPage = await clipBrowser.newPage();
+    clipPage.on('pageerror', error => console.error('Browser:', error.message.slice(0,500)));
+    await clipPage.setViewport({ width: 800, height: 600 });
+    await clip(clipPage, pathToFileURL(path.join(output, 'clip.html')).href);
+  } finally { await clipBrowser.close(); }
+  const browser = await launch();
   const server = http.createServer((req, res) => {
     const file = path.join(output, decodeURIComponent(req.url.split('?')[0]));
     if (!file.startsWith(output + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) { res.writeHead(404); res.end(); return; }
