@@ -91,9 +91,13 @@
     right: calc(-1 * var(--docsfw-drawer-width));
   }
 
+  /* デスクトップは .md-sidebar の padding-top: 12px で先頭余白を取る。
+     ドロワーでは scrollwrap が position: absolute と inset で親を埋めるため、
+     親の padding は効かない。同じ 12px を scrollwrap の上端へ移し、
+     余白をスクロール領域の外に残す。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     position: absolute;
-    inset: 0;
+    inset: 12px 0 0;
     margin: 0;
     overflow-y: auto;
     scroll-snap-type: none;

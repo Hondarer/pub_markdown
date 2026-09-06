@@ -26,6 +26,7 @@ OVERRIDE_HEADER = os.path.join(MKDOCS_DIR, "theme", "partials", "header.html")
 LINKS_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-links.html")
 META_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-meta.html")
 META_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-meta.css")
+LIVEDOCS_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-livedocs.css")
 
 
 def _find_upstream_header():
@@ -264,6 +265,45 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertIsNotNone(re.search(r"docsfw-' ~ provider ~ '-icon\.svg", text))
         for provider in ("git", "github", "gitlab", "gitbucket"):
             self.assertIn("docsfw-{}-icon.svg".format(provider), HEADER_ICONS)
+
+
+class DrawerTopSpacingTest(unittest.TestCase):
+    """左ナビ先頭の 12px 余白が、広い画面とドロワーで同じ値になること。"""
+
+    def _read_css(self):
+        with open(LIVEDOCS_CSS, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+    def test_wide_layout_uses_twelve_pixel_sidebar_padding(self):
+        text = self._read_css()
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*1400px\)\s*\{[\s\S]*?"
+            + re.escape(".md-sidebar--primary")
+            + r"\s*,\s*"
+            + re.escape(".md-sidebar--secondary")
+            + r"\s*\{[^}]*padding-top:\s*12px",
+        )
+
+    def test_drawer_scrollwrap_keeps_the_same_twelve_pixel_inset(self):
+        """絶対配置の scrollwrap は親の padding を無視するため、上端へ移す。"""
+        text = self._read_css()
+        match = re.search(
+            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match)
+        drawer = match.group(1)
+        self.assertRegex(
+            drawer,
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*inset:\s*12px 0 0",
+        )
+        self.assertNotRegex(
+            drawer,
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*inset:\s*0\s*;",
+        )
 
 
 if __name__ == "__main__":

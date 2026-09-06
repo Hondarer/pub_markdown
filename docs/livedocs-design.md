@@ -1141,6 +1141,10 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 そのため `left` と `right` は `[dir]` を付けて詳細度をそろえ、後勝ちさせます。  
 開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
 
+1400px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
+1400px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
+同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。
+
 ### 一致させない項目
 
 - `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、動的発行に対応物がありません。
