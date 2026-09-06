@@ -509,12 +509,19 @@ body {
 /* ------------------------------------------------------------------------ */
 
 /* html-style.css の .navbar-inner が持つ下端の境界線に相当する。
+   線は灰色のヘッダー本体 (.md-header__inner、高さ 48px) の直後で、
+   ページの左端から右端まで引きたい。
    .md-header 自身へ付けると、docsfw-header-meta.css の .md-header::after
-   (本文と同じ背景色の帯 12px) の下端まで線が下がってしまう。線は灰色の
-   ヘッダー本体 (.md-header__inner、高さ 48px) の直後に置きたいため、
-   ヘッダー自身ではなく内側の nav へ付ける。 */
-.md-header__inner {
-  border-bottom: 1px solid var(--md-primary-fg-color--dark);
+   (本文と同じ背景色の帯 12px) の下端まで線が下がってしまう。
+   内側の nav (.md-header__inner) へ付けると位置は合うが、この要素は
+   md-grid を併せ持ち、docsfw-livedocs.css の .md-grid の max-width で
+   3 ペインの幅までに制限されるため、線がページ幅に届かない。
+   帯 (.md-header::after) は .md-header 直下のブロックで幅の制限を受けず、
+   位置もヘッダー本体の直後で同じため、その上端へ線を置く。
+   Material の reset が :after を border-box にしているため、この 1px は
+   docsfw-header-meta.css が持つ帯の高さ 12px の内側に収まる。 */
+.md-header::after {
+  border-top: 1px solid var(--md-primary-fg-color--dark);
 }
 
 /* Material はスクロール時に JavaScript で .md-header--shadow を付け、

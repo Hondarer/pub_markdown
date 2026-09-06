@@ -161,7 +161,10 @@
    再び接するため、ヘッダー側で持たせる。
    .md-header 自身に padding-bottom を足すと、ヘッダーの背景色 (灰色) が
    そのまま 12px 分伸びてしまう。帯は本文側の背景色にするため、
-   疑似要素を別に重ねる。 */
+   疑似要素を別に重ねる。
+   帯の上端にはヘッダーの境界線が乗る (docsfw-pandoc-style.css の
+   .md-header::after)。この疑似要素は幅の制限を受けないため線がページ幅で
+   引け、線の 1px は border-box によりここでの 12px の内側に収まる。 */
 .md-header::after {
   content: "";
   display: block;

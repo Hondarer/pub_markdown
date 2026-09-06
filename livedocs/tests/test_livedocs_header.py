@@ -27,6 +27,7 @@ LINKS_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-lin
 META_PARTIAL = os.path.join(MKDOCS_DIR, "theme", "partials", "docsfw-header-meta.html")
 META_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-meta.css")
 LIVEDOCS_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-livedocs.css")
+PANDOC_CSS = os.path.join(MKDOCS_DIR, "assets", "docsfw-pandoc-style.css")
 
 
 def _find_upstream_header():
@@ -316,6 +317,31 @@ class DrawerTopSpacingTest(unittest.TestCase):
             drawer,
             re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
             + r"\s*\{[^}]*inset:\s*0\s*;",
+        )
+
+
+class HeaderBorderWidthTest(unittest.TestCase):
+    """ヘッダー下端の境界線が、ページ幅いっぱいの要素に付いていること。"""
+
+    def _read_pandoc_css(self):
+        with open(PANDOC_CSS, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+    def test_border_is_on_the_full_width_band(self):
+        """線は幅の制限を受けない .md-header::after の上端が持つこと。"""
+        self.assertRegex(
+            self._read_pandoc_css(),
+            re.escape(".md-header::after") + r"\s*\{[^}]*border-top:\s*1px solid",
+        )
+
+    def test_border_is_not_on_the_grid_limited_nav(self):
+        """.md-header__inner は md-grid の max-width で 3 ペイン幅に制限される。
+
+        ここへ線を付けると、ページ幅ではなく 3 ペインの幅で線が途切れる。
+        """
+        self.assertNotRegex(
+            self._read_pandoc_css(),
+            re.escape(".md-header__inner") + r"\s*\{[^}]*border-bottom",
         )
 
 
