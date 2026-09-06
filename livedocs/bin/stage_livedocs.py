@@ -62,6 +62,8 @@ VENDORED_FILES = (
     "assets/docsfw-svg-download.js",
     "assets/docsfw-collapsible-list.js",
     "assets/docsfw-collapsible-list.css",
+    "assets/docsfw-code-expander.js",
+    "assets/docsfw-code-expander.css",
     "assets/docsfw-livedocs.css",
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-header-links.css",

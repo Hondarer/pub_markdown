@@ -135,7 +135,7 @@ PlantUML はすべてビルド時に SVG 化され、docx 出力ではさらに 
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 維持 | Material 標準 |
 | 51 | 展開可能リスト | 維持 | `\toc` と手動 fenced div を `.collapsible-list` へ変換し、本文の開閉・初期展開・履歴復元を適用する。仕様は [展開可能リスト](collapsible-list.md) を参照 |
-| 52 | コード ブロック エキスパンダーとコピー ボタン | 簡略 | 開閉は対象外。コピーは Material の `content.code.copy` を使い、見た目は SVG ダウンロードと同じホバー チップへそろえる |
+| 52 | コード ブロック エキスパンダーとコピー ボタン | 維持 | 開閉は静的発行と同じ 5 行閾値。コピーは Material の `content.code.copy` を使い、見た目は SVG ダウンロードと同じホバー チップへそろえる |
 | 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
 | 55 | 並列実行と無進捗ウォッチドッグ | 対象外 | ビルドが十分に速いため不要 |
@@ -175,6 +175,8 @@ framework/docsfw/
 |   |   +-- docsfw-mathjax.js        # MathJax の設定
 |   |   +-- docsfw-responsive-nav.js # 共通レイアウトと単一ドロワーの制御
 |   |   +-- docsfw-svg-download.js   # SVG のダウンロード ボタン
+|   |   +-- docsfw-code-expander.js  # コード ブロックの開閉
+|   |   +-- docsfw-code-expander.css # コード ブロック開閉の見た目
 |   |   +-- docsfw-livedocs.css       # 追加スタイル
 |   |   +-- docsfw-header-links.css  # ヘッダー内アイコンのスタイル
 |   +-- tests/
@@ -686,12 +688,19 @@ API は `renderToString(lines, onSuccess, onError)` です。
 インライン描画した図のファイル名は、`figcaption` があればそのテキスト、無ければ `<ページ スラグ>-<plantuml|mermaid><連番>.svg` とします。  
 静的発行のファイル名 (`puml_<sha1>.svg`) はキャッシュ キーであり、利用者にとって意味を持たないため踏襲しません。
 
-## コード ブロックのコピー
+## コード ブロックのコピーと開閉
 
 静的発行のコピーは、コード本体の右上へホバー時だけ重ねる 16px のチップです。  
 見た目は SVG ダウンロードと同じ枠、背景、余白です。  
-動的発行は Material の `content.code.copy` が置く `.md-code__nav` を、同じチップへ上書きします。  
-開閉バーは静的発行だけが持ち、動的発行では提供しません。
+ホバーはコード本文 (`.code-expander-scroll`) とチップ自身に限り、「開く / たたむ」と「さらに N 行」では出しません。  
+動的発行は Material の `content.code.copy` が置く `.md-code__nav` を、同じチップとホバー範囲へ上書きします。
+
+開閉は静的発行と同じ規則です。  
+末尾の空行を除いて 6 行以上あるフェンスだけ上段にバーを置き、縮小時は先頭 5 行と「さらに N 行」を出します。  
+既定は展開で、戻る操作のときだけ sessionStorage から復元します。  
+包装は `assets/docsfw-code-expander.js` が行い、見た目は `assets/docsfw-code-expander.css` です。  
+Mermaid と PlantUML は包みません。  
+コードを 5 行で切ったあともコピーは全文になるよう、Material のボタンへ分割前の本文を渡します。
 
 ## Mermaid
 

@@ -53,6 +53,8 @@ OWN_ASSETS = (
     "docsfw-svg-download.js",
     "docsfw-collapsible-list.js",
     "docsfw-collapsible-list.css",
+    "docsfw-code-expander.js",
+    "docsfw-code-expander.css",
     "docsfw-livedocs.css",
     "docsfw-pandoc-style.css",
     "docsfw-header-links.css",

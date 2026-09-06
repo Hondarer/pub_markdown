@@ -1,0 +1,98 @@
+/* Pandoc HTML のコード ブロック開閉と同じバーとヒント。
+   包装は docsfw-code-expander.js が行う。
+   色はコード本体と同じ --md-code-bg-color を使い、slate でも追従する。 */
+
+.md-typeset .code-expander-wrapper {
+  overflow: hidden;
+  position: relative;
+  background-color: var(--md-code-bg-color);
+}
+
+.md-typeset .code-expander-toolbar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--md-code-bg-color);
+  border-bottom: 1px solid var(--md-default-fg-color--lighter);
+  padding: 4px;
+  margin: 0;
+}
+
+.md-typeset .code-expander-btn {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--md-default-fg-color);
+  line-height: 1.6;
+  text-align: left;
+  background: transparent;
+  padding: 0;
+}
+
+.md-typeset .code-expander-btn:hover {
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .code-expander-btn .code-expander-arrow {
+  display: inline-block;
+  font-size: 0.7em;
+  color: var(--md-default-fg-color--light);
+  margin-right: calc(0.3em + 2px);
+  transition: transform 0.15s;
+}
+
+.md-typeset .code-expander-btn[aria-expanded="true"] .code-expander-arrow {
+  transform: rotate(90deg);
+}
+
+.md-typeset .code-expander-scroll {
+  overflow-x: auto;
+}
+
+.md-typeset .code-expander-scroll > pre {
+  border: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  overflow-x: visible !important;
+  min-width: max-content;
+}
+
+.md-typeset .code-expander-scroll > .code-first {
+  padding-bottom: 0 !important;
+}
+
+.md-typeset .code-expander-scroll > .code-rest {
+  padding-top: 0 !important;
+}
+
+.md-typeset .code-expander-hint {
+  font-family: var(--md-code-font-family);
+  font-size: 14px;
+  color: var(--md-default-fg-color--light);
+  background: var(--md-code-bg-color);
+  border: none;
+  border-top: 1px solid var(--md-default-fg-color--lighter);
+  margin: 0;
+  padding: 1px 0.8em;
+  text-align: center;
+}
+
+.md-typeset .code-copy-shell {
+  overflow: hidden;
+  background-color: var(--md-code-bg-color);
+}
+
+/* コピーはコード本文の上だけ出す。バーと「さらに N 行」では出さない。 */
+.md-typeset .code-expander-scroll:hover .md-code__nav,
+.md-typeset .code-expander-scroll:hover ~ .md-code__nav,
+.md-typeset .md-code__nav:hover,
+.md-typeset .md-code__nav:focus-within {
+  opacity: 1;
+  background: var(--md-default-bg-color);
+}

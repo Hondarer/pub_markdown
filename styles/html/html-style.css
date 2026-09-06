@@ -574,7 +574,7 @@ code, tt {
   border-radius: 3px; }
 
 pre {
-  background: transparent; }
+  background-color: #f8f8f8; }
 
 pre code {
   margin: 0;
@@ -632,8 +632,11 @@ pre.mermaid svg {
    Pandoc CSS は div.sourceCode に overflow: auto、
    pre.sourceCode に overflow: visible を設定する。
    そのため border と padding を div.sourceCode (スクロールコンテナ) に
-   移動し、横スクロール時に枠が動かないようにする。 */
+   移動し、横スクロール時に枠が動かないようにする。
+   背景もここに置く。エキスパンダーが pre を一段深く包むと
+   .highlight pre が外れ、MkDocs のコード本体と同じ灰色が見えなくなるため。 */
 div.sourceCode {
+  background-color: #f8f8f8;
   border: 1px solid rgba(0, 0, 0, 0.32);
   border-radius: 3px;
   padding: 6px 0 6px 10px; }
@@ -986,7 +989,8 @@ mark {
 
 .docsfw-svg-dl-host:hover .docsfw-svg-dl,
 .docsfw-svg-dl:focus,
-.code-expander-wrapper:hover .docsfw-code-copy,
+.code-expander-scroll:hover ~ .docsfw-code-copy,
+.docsfw-code-copy:hover,
 .docsfw-code-copy:focus {
   opacity: 1; }
 

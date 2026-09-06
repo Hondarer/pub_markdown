@@ -200,6 +200,19 @@ class VendorThemeTest(unittest.TestCase):
                 self.assertIn('assets/' + name, config)
                 self.assertIn('assets/' + name, VENDORED_FILES)
 
+    def test_code_expander_assets_are_copied_registered_and_preserved(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets = os.path.join(root, "assets")
+            vendor_own_assets(assets)
+            generate_mkdocs_yml(root, False)
+            with open(os.path.join(root, "mkdocs.yml"), encoding="utf-8") as handle:
+                config = handle.read()
+            for extension in ("js", "css"):
+                name = "docsfw-code-expander." + extension
+                self.assertTrue(os.path.isfile(os.path.join(assets, name)))
+                self.assertIn("assets/" + name, config)
+                self.assertIn("assets/" + name, VENDORED_FILES)
+
 
 if __name__ == "__main__":
     unittest.main()

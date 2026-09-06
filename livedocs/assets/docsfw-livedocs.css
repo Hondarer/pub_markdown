@@ -404,7 +404,9 @@
 }
 
 .md-typeset pre:hover > .md-code__nav,
-.md-typeset .highlight:hover > .md-code__nav,
+.md-typeset .code-expander-scroll:hover .md-code__nav,
+.md-typeset .code-expander-scroll:hover ~ .md-code__nav,
+.md-typeset .md-code__nav:hover,
 .md-typeset .md-code__nav:focus-within {
   opacity: 1;
   background: var(--md-default-bg-color);
