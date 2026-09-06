@@ -1125,6 +1125,13 @@ Pandoc HTML と MkDocs は、1400px 以上で左 240px、本文約 870px、右 2
 1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
 画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
+左ドロワーの幅は `min(80vw, 320px)` で、閉じた位置と開く量の両方が同じ値を参照します。  
+Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1400px より内側でこの指定と重なります。  
+Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left: -12.1rem` を、`[dir="rtl"]` に `right: -12.1rem` を当てます。  
+`width` だけが docsfw の値になると、幅と閉じた位置が食い違い、閉じたドロワーの右端が本文の左に残ります。  
+そのため `left` と `right` は `[dir]` を付けて詳細度をそろえ、後勝ちさせます。  
+開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
+
 ### 一致させない項目
 
 - `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、動的発行に対応物がありません。
