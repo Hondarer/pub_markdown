@@ -26,8 +26,11 @@
   font-size: 18px;
 }
 
-.md-header .md-search__input {
+.md-header .md-search__input,
+.md-header .md-search__suggest {
+  font-family: var(--md-text-font-family);
   font-size: 16px;
+  letter-spacing: normal;
 }
 
 /* Material の標準 SVG とロゴは 1.2rem のため、1600px 以上で 24px より

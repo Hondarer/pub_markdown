@@ -101,12 +101,19 @@ class OverrideHeaderTest(unittest.TestCase):
         for selector, size in (
             (".docsfw-header-meta > span", "14px"),
             (".md-header__title", "18px"),
-            (".md-header .md-search__input", "16px"),
         ):
             self.assertRegex(
                 text,
                 re.escape(selector) + r"\s*\{[^}]*font-size:\s*" + size,
             )
+        self.assertRegex(
+            text,
+            re.escape(".md-header .md-search__input")
+            + r"\s*,\s*"
+            + re.escape(".md-header .md-search__suggest")
+            + r"\s*\{[^}]*font-family:\s*var\(--md-text-font-family\)"
+            + r"[^}]*font-size:\s*16px[^}]*letter-spacing:\s*normal",
+        )
 
     def test_all_header_icons_use_fixed_minimum_pixel_sizes(self):
         """Material の広い画面用 rem 拡大がヘッダーのアイコンへ及ばないこと。"""
