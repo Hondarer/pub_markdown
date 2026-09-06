@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """mkdocs による動的発行のステージング処理に関する単体テスト。"""
 
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -18,6 +20,7 @@ from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
     _norm_key,
+    _repo_progress_label,
     build_front_matter,
     convert_captions,
     convert_implicit_figures,
@@ -29,6 +32,7 @@ from stage_livedocs import (  # noqa: E402
     resolve_document_git_link,
     resolve_document_publish_info,
     rewrite_links,
+    stage,
     stage_index,
     stage_single,
 )
@@ -558,6 +562,64 @@ class ConvertImplicitFiguresTest(unittest.TestCase):
             "```\n"
         )
         self.assertEqual(convert_implicit_figures(source), source)
+
+
+class StageProgressTest(unittest.TestCase):
+    """フル ステージングの進捗行。``quiet`` では出さない。"""
+
+    def _workspace(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        workspace = tmp.name
+        docs = os.path.join(workspace, "docs")
+        os.makedirs(docs)
+        with open(os.path.join(docs, "page.md"), "w", encoding="utf-8") as handle:
+            handle.write("# Page\n")
+        with open(os.path.join(docs, "skip.md"), "w", encoding="utf-8") as handle:
+            handle.write("---\npub_markdown.skip: true\n---\n# Skip\n")
+        vscode = os.path.join(workspace, ".vscode")
+        os.makedirs(vscode)
+        with open(os.path.join(vscode, "pub_markdown.config.yaml"), "w", encoding="utf-8") as handle:
+            handle.write(
+                "mdRoot: docs\n"
+                "gitLinkEnable: false\n"
+                "autoSetAuthor: false\n"
+                "autoSetDate: false\n"
+            )
+        out_dir = os.path.join(workspace, "pages", "livedocs", "src")
+        os.makedirs(out_dir)
+        config_path = os.path.join(vscode, "pub_markdown.config.yaml")
+        return workspace, out_dir, config_path
+
+    def test_quiet_prints_nothing(self):
+        workspace, out_dir, config_path = self._workspace()
+        captured = io.StringIO()
+        with redirect_stdout(captured):
+            stage(workspace, out_dir, config_path, quiet=True)
+        self.assertEqual(captured.getvalue(), "")
+
+    def test_progress_lines_before_completion(self):
+        workspace, out_dir, config_path = self._workspace()
+        captured = io.StringIO()
+        with redirect_stdout(captured):
+            stage(workspace, out_dir, config_path, quiet=False)
+        lines = [line for line in captured.getvalue().splitlines()
+                 if not line.startswith("Warning:")]
+        self.assertEqual(lines[0], "staging: variant ja-details")
+        self.assertEqual(lines[1], "staging: collected 2 documents, 0 assets")
+        self.assertEqual(lines[2], "staging: writing")
+        self.assertTrue(
+            lines[3].startswith("staged: variant ja-details, 1 documents, 0 assets,")
+        )
+        self.assertEqual(len(lines), 4)
+
+    def test_repo_progress_label_uses_workspace_relative_path(self):
+        workspace = os.path.join("repo", "root")
+        self.assertEqual(_repo_progress_label(workspace, workspace), ".")
+        self.assertEqual(
+            _repo_progress_label(workspace, os.path.join(workspace, "framework", "docsfw")),
+            "framework/docsfw",
+        )
 
 
 if __name__ == "__main__":

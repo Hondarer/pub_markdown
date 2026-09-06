@@ -1238,6 +1238,12 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 停止とステージングはレシピ内で順に実行し、`make -j` でも同時に走らないようにします。  
 先に起動した側の `make servedocs` は、`mkdocs serve` が止まった時点で終了します。
 
+フル ステージング (`make livedocs-stage` と、これを呼ぶ `servedocs` / `livedocs`) は、完了行 `staged:` の前に進行状況を 1 行ずつ出します。  
+出す内容は、バリアント名、収集件数、リポジトリごとの Git 索引、書き出し開始です。  
+収集件数は `pub_markdown.skip` による除外前で、完了行の document 数は除外後です。  
+`make` 経由でも途中の行が見えるよう、各行は即時に flush します。  
+`mkdocs serve` 中の自動再ステージングはこれらの行を出しません。
+
 Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`requirements.txt` で固定します。
 
 ### ポートの競合

@@ -203,6 +203,13 @@ class ResolverTest(unittest.TestCase):
         url, _provider = self._resolve("docs/tracked.md")
         self.assertIn("/blob/{}/".format(head), url)
 
+    def test_on_repo_collect_runs_once_before_index(self):
+        seen = []
+        resolver = GitLinkResolver(on_repo_collect=seen.append)
+        resolver.resolve(os.path.join(self.repo, "docs/tracked.md"))
+        resolver.resolve(os.path.join(self.repo, "docs/generated.md"))
+        self.assertEqual([os.path.realpath(path) for path in seen], [self.repo])
+
 
 if __name__ == "__main__":
     unittest.main()

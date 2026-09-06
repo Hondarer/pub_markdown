@@ -320,8 +320,9 @@ class PublishFacts:
 class GitLinkResolver:
     """実体パスから blob URL と発行情報を解決する。リポジトリ単位で結果を再利用する。"""
 
-    def __init__(self, host_provider_map=None):
+    def __init__(self, host_provider_map=None, on_repo_collect=None):
         self._host_provider_map = host_provider_map or {}
+        self._on_repo_collect = on_repo_collect
         self._repo_by_dir = {}
         self._repo_by_root = {}
 
@@ -341,6 +342,9 @@ class GitLinkResolver:
         root_key = os.path.normcase(root)
         repo = self._repo_by_root.get(root_key)
         if repo is None:
+            # ``RepoInfo`` の ``git log --name-only`` の前に出す。長い収集の無応答を避ける。
+            if self._on_repo_collect is not None:
+                self._on_repo_collect(root)
             repo = RepoInfo(root, self._host_provider_map)
             self._repo_by_root[root_key] = repo
         self._repo_by_dir[key] = repo
