@@ -365,6 +365,14 @@ h4, h5, h6 {
 p, ul, ol, dl, li {
   margin: 8px 0; }
 
+/* 本文のリスト行送り。CDN の Bootstrap template.css が li { line-height: 20px }
+   を与えるため、body の line-height: 1.5 は li へ継承されない。
+   外部 CSS への暗黙の依存を残さないため、動的発行の
+   ../../livedocs/assets/docsfw-pandoc-style.css と同じ値を明示する。 */
+.docsfw-main-content ul li,
+.docsfw-main-content ol li {
+  line-height: 1.6; }
+
 ul.task-list {
   list-style: none;
   padding-left: 0; }

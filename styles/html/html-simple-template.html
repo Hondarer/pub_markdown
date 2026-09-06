@@ -53,6 +53,17 @@ $endif$
       margin-left: 30px;
       width: 870px;
     }
+    /* 本文のリスト行送り。値の正本は ../../docs/heading-style.md。
+       この雛形は Bootstrap の template.css を読み込まないため
+       li { line-height: 20px } の打ち消しは不要だが、本文列の見え方を
+       html-style.css および動的発行とそろえるために明示する。
+       目次列 (.span3 の .toc) は対象外。 */
+    .span9 ul li,
+    .span9 ol li,
+    .span12 ul li,
+    .span12 ol li {
+      line-height: 1.6;
+    }
   </style>
 $for(css)$
   <link rel="stylesheet" href="$css$" />

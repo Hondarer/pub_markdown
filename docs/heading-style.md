@@ -27,9 +27,14 @@ HTML のタグ名ではなく Markdown のレベルで定める点が重要で�
 | H5 | 17px | 400 | 20px | `#757575` |
 | H6 | 17px | 400 | 20px | `#757575` |
 | 本文 | 16px | 400 | 1.5 | `#212121` |
+| 本文のリスト項目 (`ul` / `ol` の `li`) | 16px | 400 | 1.6 | `#212121` |
 
 見出しの余白は全レベルで `margin: 20px 0 10px` とします。  
 `letter-spacing` は全レベルで `normal`、`text-transform` は全レベルで `none` とします。
+
+リスト項目の行送りだけを本文より広くするのは、階層リストで項目の切れ目を見分けやすくするためです。  
+リスト項目の余白は箇条書きと番号付きの双方で 8px とし、項目の間隔は行送りと余白の合計で決まります。  
+この規則の対象は本文のリストだけです。サイドバーの文書ツリーとページ内目次、ヘッダーのナビゲーションは対象に含めません。
 
 ### 濃さと太さの考え方
 
@@ -86,7 +91,12 @@ MkDocs は H1 をページ見出しとして本文に残すため、Markdown の
 | 動的発行 | `livedocs/assets/docsfw-pandoc-style.css` |
 
 pandoc 側は、本文色を `body` に指定し、見出しは HTML タグを 1 段浅く読み替えて指定します。  
-`line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。
+`line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。  
+本文のリスト項目の `line-height` は、同じ `template.css` が `li { line-height: 20px }` を与えて `body` からの継承に勝つため、これを打ち消す目的でも明示が必要です。  
+本文のリストだけを対象にするため、静的発行では本文を囲む `.docsfw-main-content` を前置し、動的発行では Material が本文へ付ける `.md-typeset` を前置します。
+
+`styles/html/html-simple-template.html` は雛形の中に配置用の CSS を持ち、Bootstrap の `template.css` も `html-style.css` も前提にしません。  
+そのため本文リストの行送りだけは、この雛形の `<style>` にも同じ 1.6 を書きます。値を変更する場合は、この雛形も合わせて更新してください。
 
 MkDocs 側は、見出しの色を直値で書かず `var(--md-default-fg-color--light)` を使用します。  
 ライトでは `#757575` に解決され、ダーク (`slate`) では Material の対応色へ自動で切り替わります。  
