@@ -41,13 +41,9 @@ MKDOCS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCSFW_DIR = os.path.dirname(MKDOCS_DIR)
 RESOLVE_SCRIPT = os.path.join(DOCSFW_DIR, "bin", "resolve-node-components.js")
 
-# @plantuml/core から取り出すファイル。
-# emoji.js と openiconic.js は plantuml.js が必要に応じて読み込むため同じ場所に置く。
-PLANTUML_FILES = ("plantuml.js", "viz-global.js", "emoji.js", "openiconic.js", "LICENSE")
-
 OWN_ASSETS = (
-    "docsfw-plantuml.js",
-    "docsfw-mermaid.js",
+    "docsfw-diagrams.js",
+    "docsfw-diagrams.css",
     "docsfw-mathjax.js",
     "docsfw-responsive-nav.js",
     "docsfw-svg-download.js",
@@ -110,16 +106,11 @@ def vendor_plantuml(assets_dir, source_dir):
             "@plantuml/core が見つかりません。framework/docsfw/bin の node コンポーネントを解決してください"
         )
 
-    target_dir = os.path.join(assets_dir, "plantuml")
-    copied = 0
-    for name in PLANTUML_FILES:
-        src = os.path.join(source_dir, name)
-        if not os.path.isfile(src):
-            print("Warning: @plantuml/core に {} がありません".format(name))
-            continue
-        if copy_if_changed(src, os.path.join(target_dir, name)):
-            copied += 1
-    return copied
+    subprocess.run(
+        ["node", os.path.join(DOCSFW_DIR, "bin", "build-browser-assets.js"), source_dir, assets_dir],
+        check=True,
+    )
+    return 1
 
 
 def vendor_mermaid(assets_dir, mermaid_js):
@@ -137,7 +128,8 @@ def vendor_own_assets(assets_dir):
     """自前のスクリプトとスタイルを配置する。"""
     copied = 0
     for name in OWN_ASSETS:
-        src = os.path.join(MKDOCS_DIR, "assets", name)
+        shared = os.path.join(DOCSFW_DIR, "styles", "browser", name)
+        src = shared if os.path.isfile(shared) else os.path.join(MKDOCS_DIR, "assets", name)
         if copy_if_changed(src, os.path.join(assets_dir, name)):
             copied += 1
     return copied

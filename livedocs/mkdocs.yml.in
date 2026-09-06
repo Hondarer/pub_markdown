@@ -105,6 +105,7 @@ extra:
   livedocs_variant: "@LIVEDOCS_VARIANT@"
 
 extra_css:
+  - assets/docsfw-diagrams.css
   - assets/docsfw-collapsible-list.css
   - assets/docsfw-code-expander.css
   - assets/docsfw-livedocs.css
@@ -115,12 +116,9 @@ extra_css:
 extra_javascript:
   - assets/docsfw-collapsible-list.js
   - assets/docsfw-code-expander.js
-  # viz-global.js は plantuml.js より先に、通常のスクリプトとして読み込む。
-  - assets/plantuml/viz-global.js
-  - path: assets/docsfw-plantuml.js
-    type: module
+  - assets/docsfw-plantuml-loader.js
   - assets/mermaid/mermaid.min.js
-  - assets/docsfw-mermaid.js
+  - assets/docsfw-diagrams.js
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
   - assets/docsfw-svg-download.js

@@ -74,8 +74,17 @@ $endfor$
 $if(math)$
   $math$
 $endif$
-$if(mermaid-js)$
+$if(docsfw-browser-base)$
+  <script src="$docsfw-browser-base$docsfw-theme.js"></script>
+  <link rel="stylesheet" href="$docsfw-browser-base$docsfw-diagrams.css" />
+  <script defer src="$docsfw-browser-base$docsfw-diagrams.js"></script>
+  <script defer src="$docsfw-browser-base$docsfw-svg-download.js"></script>
+$endif$
+$if(docsfw-has-mermaid)$
   <script src="$mermaid-js$"></script>
+$endif$
+$if(docsfw-has-plantuml)$
+  <script src="$docsfw-browser-base$docsfw-plantuml-loader.js"></script>
 $endif$
 </head>
 <body>
@@ -128,63 +137,15 @@ $table-of-contents$
 $endif$
 $endif$
 <div class="span$if(homelink)$9$else$$if(toc)$9$else$12$endif$$endif$">
+<main id="docsfw-content">
 $body$
+</main>
 </div>
 
 $for(include-after)$
 $include-after$
 $endfor$
 </div>
-$if(mermaid-js)$
-<script>
-if (window.mermaid) {
-  function normalizeMermaidSvgSize() {
-    var multiplySvg = 0.875;
-    var svgs = document.querySelectorAll('.mermaid svg');
-    svgs.forEach(function(svg) {
-      // ネストされたアイコン svg (architecture 図の group / service アイコン等) は
-      // mermaid が個別に width / height を設定済みのため補正対象から除外する
-      if (svg.parentNode && svg.parentNode.closest && svg.parentNode.closest('svg')) {
-        return;
-      }
-      var width = 0;
-      var height = 0;
-      if (svg.viewBox && svg.viewBox.baseVal &&
-          svg.viewBox.baseVal.width > 0 && svg.viewBox.baseVal.height > 0) {
-        width = svg.viewBox.baseVal.width;
-        height = svg.viewBox.baseVal.height;
-      } else {
-        var viewBox = svg.getAttribute('viewBox');
-        var parts = viewBox ? viewBox.trim().split(/\s+/) : [];
-        if (parts.length === 4) {
-          width = parseFloat(parts[2]);
-          height = parseFloat(parts[3]);
-        }
-      }
-      if (!(width > 0) || !(height > 0)) {
-        return;
-      }
-      var displayWidth = width * multiplySvg;
-      var displayHeight = height * multiplySvg;
-      svg.setAttribute('width', displayWidth + 'px');
-      svg.setAttribute('height', displayHeight + 'px');
-      svg.style.width = displayWidth + 'px';
-      svg.style.height = 'auto';
-      svg.style.maxWidth = '100%';
-    });
-  }
 
-  window.mermaid.initialize({
-    startOnLoad: false,
-    theme: 'default',
-    securityLevel: 'loose'
-  });
-  window.mermaid.run({
-    querySelector: '.mermaid',
-    postRenderCallback: normalizeMermaidSvgSize
-  }).then(normalizeMermaidSvgSize);
-}
-</script>
-$endif$
 </body>
 </html>

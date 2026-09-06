@@ -769,6 +769,7 @@ build_git_link_metadata_args() {
     git_link_metadata_args=(
         --metadata "git-url=${git_link_url}"
         --metadata "git-icon=${icon_base}docsfw-${git_link_provider}-icon.svg"
+        --metadata "git-provider=${git_link_provider}"
     )
 }
 
@@ -1982,6 +1983,7 @@ for langElement in ${lang}; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
         copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
+        node "${SCRIPT_DIR}/build-browser-assets.js" "${DOCSFW_PLANTUML_CORE}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html" || exit 1
         # DOCX ダウンロード リンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlWordIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-word-icon.svg"
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
@@ -2196,6 +2198,7 @@ while ((${#_pending_files[@]} > 0)); do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/admonition.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/link-to-html.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                             --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                             "${crossref_metadata_args[@]}" \
@@ -2233,6 +2236,7 @@ while ((${#_pending_files[@]} > 0)); do
                                 "${pandoc_crossref_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                                 "${math_jax_args[@]}" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -2694,6 +2698,7 @@ while ((${#_pending_files[@]} > 0)); do
                         "${pandoc_crossref_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                         "${math_jax_args[@]}" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --metadata "mermaid-js=${up_dir}mermaid.min.js" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
@@ -2731,6 +2736,7 @@ while ((${#_pending_files[@]} > 0)); do
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             "${math_jax_args[@]}" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \

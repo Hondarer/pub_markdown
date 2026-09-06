@@ -1,10 +1,145 @@
+/* ライトは従来の配色、ダークは MkDocs Material の slate に対応する。 */
+:root {
+  color-scheme: light;
+  --docsfw-fg: #212121;
+  --docsfw-bg: white;
+  --docsfw-muted: #757575;
+  --docsfw-secondary: #333333;
+  --docsfw-quote: #777777;
+  --docsfw-quiet: #888;
+  --docsfw-hint: #999;
+  --docsfw-expander: #444;
+  --docsfw-expander-hover: #222;
+  --docsfw-header-bg: #f7f7f7;
+  --docsfw-header-border: #d4d4d4;
+  --docsfw-link: #4183C4;
+  --docsfw-link-hover: #005580;
+  --docsfw-nav-accent: #1a5faa;
+  --docsfw-absent: #cc0000;
+  --docsfw-code-bg: #f8f8f8;
+  --docsfw-code-fg: black;
+  --docsfw-subtle-bg: #eaeaea;
+  --docsfw-hover-bg: #f5f5f5;
+  --docsfw-search-hover: #f0f5ff;
+  --docsfw-focus: #4a90d9;
+  --docsfw-border: rgba(0, 0, 0, 0.32);
+  --docsfw-soft-border: #dddddd;
+  --docsfw-divider: #e5e5e5;
+  --docsfw-control-border: #ccc;
+  --docsfw-overlay-border: #bbb;
+  --docsfw-header-rule: #cccccc;
+  --docsfw-result-divider: #f0f0f0;
+  --docsfw-indicator: #adadad;
+  --docsfw-mark: #ffff00;
+  --docsfw-chip-bg: rgba(255, 255, 255, 0.9);
+  --docsfw-scroll-track: rgba(0, 0, 0, 0.07);
+  --docsfw-syntax-al: #ff0000;
+  --docsfw-syntax-an: #60a0b0;
+  --docsfw-syntax-at: #7d9029;
+  --docsfw-syntax-bn: #40a070;
+  --docsfw-syntax-bu: #008000;
+  --docsfw-syntax-cf: #007020;
+  --docsfw-syntax-ch: #4070a0;
+  --docsfw-syntax-cn: #880000;
+  --docsfw-syntax-co: #60a0b0;
+  --docsfw-syntax-cv: #60a0b0;
+  --docsfw-syntax-do: #ba2121;
+  --docsfw-syntax-dt: #902000;
+  --docsfw-syntax-dv: #40a070;
+  --docsfw-syntax-er: #ff0000;
+  --docsfw-syntax-fl: #40a070;
+  --docsfw-syntax-fu: #06287e;
+  --docsfw-syntax-im: #008000;
+  --docsfw-syntax-in: #60a0b0;
+  --docsfw-syntax-kw: #007020;
+  --docsfw-syntax-op: #666666;
+  --docsfw-syntax-ot: #007020;
+  --docsfw-syntax-pp: #bc7a00;
+  --docsfw-syntax-sc: #4070a0;
+  --docsfw-syntax-ss: #bb6688;
+  --docsfw-syntax-st: #4070a0;
+  --docsfw-syntax-va: #19177c;
+  --docsfw-syntax-vs: #4070a0;
+  --docsfw-syntax-wa: #60a0b0;
+}
+
+html[data-md-color-scheme="slate"] {
+  color-scheme: dark;
+  --docsfw-fg: rgba(255, 255, 255, 0.87);
+  --docsfw-bg: #1e2129;
+  --docsfw-muted: rgba(255, 255, 255, 0.54);
+  --docsfw-secondary: rgba(255, 255, 255, 0.87);
+  --docsfw-quote: rgba(255, 255, 255, 0.54);
+  --docsfw-quiet: #a3a6b0;
+  --docsfw-hint: #a3a6b0;
+  --docsfw-expander: #c4c6cc;
+  --docsfw-expander-hover: #ffffff;
+  --docsfw-header-bg: #1f2129;
+  --docsfw-header-border: #14161c;
+  --docsfw-link: #6ea9dd;
+  --docsfw-link-hover: #9cc7ea;
+  --docsfw-nav-accent: #9cc7ea;
+  --docsfw-absent: #f85149;
+  --docsfw-code-bg: #272a35;
+  --docsfw-code-fg: #f0f0f0;
+  --docsfw-subtle-bg: #343743;
+  --docsfw-hover-bg: #2b2e39;
+  --docsfw-search-hover: #2b3547;
+  --docsfw-focus: #9cc7ea;
+  --docsfw-border: rgba(255, 255, 255, 0.32);
+  --docsfw-soft-border: rgba(255, 255, 255, 0.12);
+  --docsfw-divider: rgba(255, 255, 255, 0.12);
+  --docsfw-control-border: rgba(255, 255, 255, 0.32);
+  --docsfw-overlay-border: rgba(255, 255, 255, 0.32);
+  --docsfw-header-rule: rgba(255, 255, 255, 0.32);
+  --docsfw-result-divider: rgba(255, 255, 255, 0.12);
+  --docsfw-indicator: rgba(255, 255, 255, 0.32);
+  --docsfw-mark: rgba(255, 213, 0, 0.35);
+  --docsfw-chip-bg: rgba(43, 46, 57, 0.95);
+  --docsfw-scroll-track: rgba(255, 255, 255, 0.07);
+  --docsfw-syntax-al: #ff6e67;
+  --docsfw-syntax-an: #8abeb7;
+  --docsfw-syntax-at: #d7ba7d;
+  --docsfw-syntax-bn: #b5cea8;
+  --docsfw-syntax-bu: #c586c0;
+  --docsfw-syntax-cf: #c586c0;
+  --docsfw-syntax-ch: #ce9178;
+  --docsfw-syntax-cn: #9cdcfe;
+  --docsfw-syntax-co: #8abeb7;
+  --docsfw-syntax-cv: #8abeb7;
+  --docsfw-syntax-do: #ce9178;
+  --docsfw-syntax-dt: #4ec9b0;
+  --docsfw-syntax-dv: #b5cea8;
+  --docsfw-syntax-er: #ff6e67;
+  --docsfw-syntax-fl: #b5cea8;
+  --docsfw-syntax-fu: #dcdcaa;
+  --docsfw-syntax-im: #c586c0;
+  --docsfw-syntax-in: #8abeb7;
+  --docsfw-syntax-kw: #c586c0;
+  --docsfw-syntax-op: #d4d4d4;
+  --docsfw-syntax-ot: #c586c0;
+  --docsfw-syntax-pp: #d7ba7d;
+  --docsfw-syntax-sc: #ce9178;
+  --docsfw-syntax-ss: #ce9178;
+  --docsfw-syntax-st: #ce9178;
+  --docsfw-syntax-va: #9cdcfe;
+  --docsfw-syntax-vs: #ce9178;
+  --docsfw-syntax-wa: #8abeb7;
+  --docsfw-admonition-note: #58a6ff;
+  --docsfw-admonition-tip: #3fb950;
+  --docsfw-admonition-important: #a371f7;
+  --docsfw-admonition-warning: #d29922;
+  --docsfw-admonition-danger: #f85149;
+  --docsfw-admonition-deprecated: #8b949e;
+}
+
 body {
   font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif';
   font-size: 16px;
   line-height: 1.5;
-  color: #212121;
+  color: var(--docsfw-fg);
   padding: 10px 30px 0;
-  background-color: white;
+  background-color: var(--docsfw-bg);
   overflow-x: hidden; }
 
 .docsfw-main-content {
@@ -101,7 +236,7 @@ body {
 header > hr {
   border: 0 none;
   height: 2px;
-  background-color: #cccccc;
+  background-color: var(--docsfw-header-rule);
 }
 
 body > *:first-child {
@@ -122,10 +257,10 @@ body > *:last-child {
    として捨てられるため打ち消さない。 */
 .navbar-inner {
   min-height: auto;
-  background-color: #f7f7f7;
+  background-color: var(--docsfw-header-bg);
   background-image: none;
   border: none;
-  border-bottom: 1px solid #d4d4d4;
+  border-bottom: 1px solid var(--docsfw-header-border);
   border-radius: 0;
   box-shadow: none; }
 
@@ -247,9 +382,9 @@ body > *:last-child {
   outline: none; }
 
 a {
-  color: #4183C4; }
+  color: var(--docsfw-link); }
 a.absent {
-  color: #cc0000; }
+  color: var(--docsfw-absent); }
 a.anchor {
   display: block;
   padding-left: 30px;
@@ -313,7 +448,7 @@ h6 tt, h6 code {
    line-height は CDN の Bootstrap template.css と同じ値だが、外部 CSS への
    暗黙の依存を残さないため明示する。 */
 h1, h2, h3, h4, h5, h6 {
-  color: #757575; }
+  color: var(--docsfw-muted); }
 
 h1, h2, h3 {
   font-size: 19px;
@@ -346,7 +481,7 @@ h4, h5, h6 {
 }
 
 .toc-navi + ul {
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--docsfw-divider);
 }
 
 .toc ul, .toc ol, .toc dl, .toc li {
@@ -388,7 +523,7 @@ blockquote, table, pre {
 
 hr {
   border: 0 none;
-  background-color: rgba(0, 0, 0, 0.32);
+  background-color: var(--docsfw-border);
   height: 1px;
   padding: 0; }
 
@@ -441,9 +576,9 @@ dl {
       margin-bottom: 0; }
 
 blockquote {
-  border-left: 4px solid #dddddd;
+  border-left: 4px solid var(--docsfw-soft-border);
   padding: 0 15px;
-  color: #777777; }
+  color: var(--docsfw-quote); }
   blockquote > :first-child {
     margin-top: 0; }
   blockquote > :last-child {
@@ -468,19 +603,19 @@ table {
   margin: 12px auto;
   }
   table tr {
-    border-top: 1px solid rgba(0, 0, 0, 0.32);
-    background-color: white;
+    border-top: 1px solid var(--docsfw-border);
+    background-color: var(--docsfw-bg);
     margin: 0;
     padding: 0; }
     table tr th {
       font-weight: normal;
-      border: 1px solid rgba(0, 0, 0, 0.32);
-      background-color: #eaeaea;
+      border: 1px solid var(--docsfw-border);
+      background-color: var(--docsfw-subtle-bg);
       text-align: left;
       margin: 0;
       padding: 8px; }
     table tr td {
-      border: 1px solid rgba(0, 0, 0, 0.32);
+      border: 1px solid var(--docsfw-border);
       text-align: left;
       margin: 0;
       padding: 8px; }
@@ -513,7 +648,7 @@ span.frame {
   display: block;
   overflow: hidden; }
   span.frame > span {
-    border: 1px solid #dddddd;
+    border: 1px solid var(--docsfw-soft-border);
     display: block;
     float: left;
     overflow: hidden;
@@ -525,7 +660,7 @@ span.frame {
     float: left; }
   span.frame span span {
     clear: both;
-    color: #333333;
+    color: var(--docsfw-secondary);
     display: block;
     padding: 5px 0 0; }
 span.align-center {
@@ -575,9 +710,9 @@ code, tt {
   margin: 0 2px;
   padding: 0 5px;
   white-space: nowrap;
-  border: 1px solid #eaeaea;
-  background-color: #f8f8f8;
-  color: black;
+  border: 1px solid var(--docsfw-subtle-bg);
+  background-color: var(--docsfw-code-bg);
+  color: var(--docsfw-code-fg);
   font-size: 15px;
   border-radius: 3px; }
 
@@ -600,8 +735,8 @@ pre code {
    ../../livedocs/assets/docsfw-pandoc-style.css が同じ用途に使う値と同じ。
    両発行系で線の濃さを一致させる。 */
 .highlight pre {
-  background-color: #f8f8f8;
-  border: 1px solid rgba(0, 0, 0, 0.32);
+  background-color: var(--docsfw-code-bg);
+  border: 1px solid var(--docsfw-border);
   font-size: 13px;
   line-height: 19px;
   overflow: auto;
@@ -609,7 +744,7 @@ pre code {
   border-radius: 3px; }
 
 pre {
-  border: 1px solid rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--docsfw-border);
   font-size: 16px;
   line-height: 19px;
   overflow: auto;
@@ -644,8 +779,8 @@ pre.mermaid svg {
    背景もここに置く。エキスパンダーが pre を一段深く包むと
    .highlight pre が外れ、MkDocs のコード本体と同じ灰色が見えなくなるため。 */
 div.sourceCode {
-  background-color: #f8f8f8;
-  border: 1px solid rgba(0, 0, 0, 0.32);
+  background-color: var(--docsfw-code-bg);
+  border: 1px solid var(--docsfw-border);
   border-radius: 3px;
   padding: 6px 0 6px 10px; }
 
@@ -655,7 +790,7 @@ div.sourceCode > pre {
   min-width: max-content; }
 
 figure {
-  border: 1px solid rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--docsfw-border);
   border-radius: 3px;
   padding: 8px;
   margin-top: 15px;
@@ -682,35 +817,35 @@ div[data-custom-style="Source Code Caption"] {
   display: none;
 }
 
-code span.al { color: #ff0000; font-style: normal; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-style: normal; font-weight: bold; } /* Annotation */
-code span.at { color: #7d9029; font-style: normal; } /* Attribute */
-code span.bn { color: #40a070; font-style: normal; } /* BaseN */
-code span.bu { color: #008000; font-style: normal; } /* BuiltIn */
-code span.cf { color: #007020; font-style: normal; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; font-style: normal; } /* Char */
-code span.cn { color: #880000; font-style: normal; } /* Constant */
-code span.co { color: #60a0b0; font-style: normal; } /* Comment */
-code span.cv { color: #60a0b0; font-style: normal; font-weight: bold;  } /* CommentVar */
-code span.do { color: #ba2121; font-style: normal; } /* Documentation */
-code span.dt { color: #902000; font-style: normal; } /* DataType */
-code span.dv { color: #40a070; font-style: normal; } /* DecVal */
-code span.er { color: #ff0000; font-style: normal; font-weight: bold; } /* Error */
+code span.al { color: var(--docsfw-syntax-al); font-style: normal; font-weight: bold; } /* Alert */
+code span.an { color: var(--docsfw-syntax-an); font-style: normal; font-weight: bold; } /* Annotation */
+code span.at { color: var(--docsfw-syntax-at); font-style: normal; } /* Attribute */
+code span.bn { color: var(--docsfw-syntax-bn); font-style: normal; } /* BaseN */
+code span.bu { color: var(--docsfw-syntax-bu); font-style: normal; } /* BuiltIn */
+code span.cf { color: var(--docsfw-syntax-cf); font-style: normal; font-weight: bold; } /* ControlFlow */
+code span.ch { color: var(--docsfw-syntax-ch); font-style: normal; } /* Char */
+code span.cn { color: var(--docsfw-syntax-cn); font-style: normal; } /* Constant */
+code span.co { color: var(--docsfw-syntax-co); font-style: normal; } /* Comment */
+code span.cv { color: var(--docsfw-syntax-cv); font-style: normal; font-weight: bold;  } /* CommentVar */
+code span.do { color: var(--docsfw-syntax-do); font-style: normal; } /* Documentation */
+code span.dt { color: var(--docsfw-syntax-dt); font-style: normal; } /* DataType */
+code span.dv { color: var(--docsfw-syntax-dv); font-style: normal; } /* DecVal */
+code span.er { color: var(--docsfw-syntax-er); font-style: normal; font-weight: bold; } /* Error */
 code span.ex {                   font-style: normal; } /* Extension */
-code span.fl { color: #40a070; font-style: normal; } /* Float */
-code span.fu { color: #06287e; font-style: normal; } /* Function */
-code span.im { color: #008000; font-style: normal; font-weight: bold; } /* Import */
-code span.in { color: #60a0b0; font-style: normal; font-weight: bold; } /* Information */
-code span.kw { color: #007020; font-style: normal; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; font-style: normal; } /* Operator */
-code span.ot { color: #007020; font-style: normal; } /* Other */
-code span.pp { color: #bc7a00; font-style: normal; } /* Preprocessor */
-code span.sc { color: #4070a0; font-style: normal; } /* SpecialChar */
-code span.ss { color: #bb6688; font-style: normal; } /* SpecialString */
-code span.st { color: #4070a0; font-style: normal; } /* String */
-code span.va { color: #19177c; font-style: normal; } /* Variable */
-code span.vs { color: #4070a0; font-style: normal; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warning */
+code span.fl { color: var(--docsfw-syntax-fl); font-style: normal; } /* Float */
+code span.fu { color: var(--docsfw-syntax-fu); font-style: normal; } /* Function */
+code span.im { color: var(--docsfw-syntax-im); font-style: normal; font-weight: bold; } /* Import */
+code span.in { color: var(--docsfw-syntax-in); font-style: normal; font-weight: bold; } /* Information */
+code span.kw { color: var(--docsfw-syntax-kw); font-style: normal; font-weight: bold; } /* Keyword */
+code span.op { color: var(--docsfw-syntax-op); font-style: normal; } /* Operator */
+code span.ot { color: var(--docsfw-syntax-ot); font-style: normal; } /* Other */
+code span.pp { color: var(--docsfw-syntax-pp); font-style: normal; } /* Preprocessor */
+code span.sc { color: var(--docsfw-syntax-sc); font-style: normal; } /* SpecialChar */
+code span.ss { color: var(--docsfw-syntax-ss); font-style: normal; } /* SpecialString */
+code span.st { color: var(--docsfw-syntax-st); font-style: normal; } /* String */
+code span.va { color: var(--docsfw-syntax-va); font-style: normal; } /* Variable */
+code span.vs { color: var(--docsfw-syntax-vs); font-style: normal; } /* VerbatimString */
+code span.wa { color: var(--docsfw-syntax-wa); font-style: normal; font-weight: bold; } /* Warning */
 
 /* ============================================================
    展開可能リスト (collapsible-list)
@@ -764,7 +899,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 }
 
 .collapsible-list details > summary:hover {
-  background-color: #f5f5f5;
+  background-color: var(--docsfw-hover-bg);
 }
 
 .collapsible-list details > ul,
@@ -807,7 +942,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
   padding: 0 12px;
   border: 1.5px solid;
   border-radius: 4px;
-  background-color: white;
+  background-color: var(--docsfw-bg);
   color: inherit;
   page-break-inside: avoid;
 }
@@ -956,7 +1091,7 @@ code span.wa { color: #60a0b0; font-style: normal; font-weight: bold; } /* Warni
 
 /* ==text== ハイライト (<mark> 要素): docx の黄色蛍光ペン (#FFFF00) に合わせた純黄色 */
 mark {
-  background-color: #ffff00;
+  background-color: var(--docsfw-mark);
   color: inherit;
   /* 印刷時にも背景色を維持する */
   -webkit-print-color-adjust: exact;
@@ -983,12 +1118,12 @@ mark {
   z-index: 1;
   opacity: 0;
   transition: opacity 0.15s;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.32);
+  background: var(--docsfw-chip-bg);
+  border: 1px solid var(--docsfw-border);
   border-radius: 3px;
   padding: 3px;
   line-height: 0;
-  color: #4183C4;
+  color: var(--docsfw-link);
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
@@ -1028,13 +1163,39 @@ mark {
   height: 6px; }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.07); }
+  background: var(--docsfw-scroll-track); }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.32); }
+  background: var(--docsfw-border); }
 
 @supports not selector(::-webkit-scrollbar) {
   html {
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.32) rgba(0, 0, 0, 0.07); }
+    scrollbar-color: var(--docsfw-border) var(--docsfw-scroll-track); }
 }
+
+/* Bootstrap と Pandoc の組み込み色も、ページの配色にそろえる。 */
+a:hover, a:focus { color: var(--docsfw-link-hover); }
+.doc-title, .navbar-text, .navbar .nav > li > a { color: var(--docsfw-quote); }
+.navbar .nav > li > a:hover { color: var(--docsfw-link-hover); }
+pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docsfw-code-fg); }
+#docsfw-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: var(--docsfw-quote);
+  cursor: pointer;
+  vertical-align: middle;
+}
+#docsfw-theme-toggle:hover { color: var(--docsfw-link-hover); }
+#docsfw-theme-toggle:focus-visible { outline: 2px solid var(--docsfw-focus); outline-offset: 2px; }
+#docsfw-theme-toggle.docsfw-theme-floating { position: fixed; top: 8px; right: 8px; z-index: 1001; background: var(--docsfw-bg); }
+@media print { #docsfw-theme-toggle { display: none; } }
+
+/* MkDocs と同じく、暗色 1 色のヘッダー アイコンだけを反転する。 */
+[data-md-color-scheme="slate"] .docsfw-git-icon--github,
+[data-md-color-scheme="slate"] .docsfw-git-icon--gitbucket { filter: invert(1); }

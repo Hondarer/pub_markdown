@@ -158,12 +158,12 @@ end
 -- キャプションがある場合は RawBlock ではなく Figure として返す。
 -- Figure にしておくと pandoc-crossref が identifier を見て採番できる。
 local function mermaid_html_block(text, caption, identifier)
-    local pre = pandoc.RawBlock("html", '<pre class="mermaid">' .. escape_html(text) .. '</pre>')
+    local block = pandoc.RawBlock("html", '<div class="docsfw-mermaid">' .. escape_html(text) .. '</div>')
     if caption == nil then
-        return pre
+        return block
     end
     return pandoc.Figure(
-        { pre },
+        { block },
         caption_to_inlines(caption),
         pandoc.Attr(identifier or "", { "mermaid-figure" })
     )

@@ -100,11 +100,10 @@ make stopdocs
 | `theme/partials/header.html` | Material のヘッダーの上書き |
 | `theme/partials/docsfw-header-links.html` | Doxygen と Git の単一ページ リンクのボタン |
 | `theme/partials/docsfw-header-meta.html` | ヘッダーの発行者と発行日時 |
-| `assets/docsfw-plantuml.js` | ブラウザー上の PlantUML レンダラー |
-| `assets/docsfw-mermaid.js` | ブラウザー上の Mermaid の初期化 |
+| `../styles/browser/docsfw-diagrams.js` | Pandoc HTML と共通の PlantUML / Mermaid 描画 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
 | `assets/docsfw-responsive-nav.js` | Pandoc HTML と共通の左右ナビゲーション配置 |
-| `assets/docsfw-svg-download.js` | 本文中の SVG のダウンロード ボタン |
+| `../styles/browser/docsfw-svg-download.js` | 本文中の SVG のダウンロード ボタン |
 | `assets/docsfw-livedocs.css` | 追加スタイル |
 | `assets/docsfw-header-links.css` | ヘッダー内アイコンのスタイル |
 | `assets/docsfw-header-meta.css` | ヘッダーの発行者と発行日時のスタイル |

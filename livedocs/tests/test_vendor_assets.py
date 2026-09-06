@@ -213,6 +213,22 @@ class VendorThemeTest(unittest.TestCase):
                 self.assertIn("assets/" + name, config)
                 self.assertIn("assets/" + name, VENDORED_FILES)
 
+    def test_shared_diagram_assets_are_registered_and_preserved(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets = os.path.join(root, 'assets')
+            vendor_own_assets(assets)
+            generate_mkdocs_yml(root, False)
+            with open(os.path.join(root, 'mkdocs.yml'), encoding='utf-8') as handle:
+                config = handle.read()
+            for name in ('docsfw-diagrams.js', 'docsfw-diagrams.css', 'docsfw-svg-download.js'):
+                shared = os.path.join(STYLES_HTML_DIR, '..', 'browser', name)
+                with open(shared, 'rb') as source, open(os.path.join(assets, name), 'rb') as copied:
+                    self.assertEqual(source.read(), copied.read())
+                self.assertIn('assets/' + name, config)
+                self.assertIn('assets/' + name, VENDORED_FILES)
+            self.assertIn('assets/docsfw-plantuml-loader.js', config)
+            self.assertIn('assets/docsfw-plantuml-loader.js', VENDORED_FILES)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -16,18 +16,18 @@
   width: 100%;
   box-sizing: border-box;
   padding: 5px 8px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--docsfw-control-border);
   border-radius: 3px;
   font-size: 14px;
   font-family: inherit;
   line-height: 1.4;
-  background: #fff;
-  color: #333;
+  background: var(--docsfw-bg);
+  color: var(--docsfw-secondary);
   outline: none;
 }
 
 #docsfw-search-input:focus {
-  border-color: #4a90d9;
+  border-color: var(--docsfw-focus);
   box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.2);
 }
 
@@ -41,8 +41,8 @@
   right: 20px;
   max-height: 70vh;
   overflow-y: auto;
-  background: #fff;
-  border: 1px solid #bbb;
+  background: var(--docsfw-bg);
+  border: 1px solid var(--docsfw-overlay-border);
   border-radius: 4px;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
   z-index: 1000;
@@ -55,7 +55,7 @@
 
 .docsfw-result-item {
   padding: 7px 14px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--docsfw-result-divider);
   cursor: pointer;
   outline: none;
 }
@@ -66,13 +66,13 @@
 
 .docsfw-result-item:hover,
 .docsfw-result-item:focus {
-  background: #f0f5ff;
+  background: var(--docsfw-search-hover);
 }
 
 .docsfw-result-title {
   font-size: 13px;
   font-weight: bold;
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -80,7 +80,7 @@
 
 .docsfw-result-url {
   font-size: 11px;
-  color: #888;
+  color: var(--docsfw-quiet);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -90,7 +90,7 @@
 .docsfw-result-empty,
 .docsfw-result-loading {
   padding: 10px 14px;
-  color: #888;
+  color: var(--docsfw-quiet);
   font-size: 13px;
 }
 
@@ -130,7 +130,7 @@
 
 #docsfw-tree a,
 .docsfw-home-link a {
-  color: #212121;
+  color: var(--docsfw-fg);
   text-decoration: none;
   display: block;
   padding: 0;
@@ -146,14 +146,14 @@
 
 #docsfw-tree a:hover,
 .docsfw-home-link a:hover {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
   text-decoration: underline;
 }
 
 /* Material marks the current page with color alone. */
 #docsfw-tree a.docsfw-current,
 .docsfw-home-link a.docsfw-current {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
 }
 
 /* Directory nodes */
@@ -206,12 +206,12 @@
 }
 
 #docsfw-tree details > summary:hover {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
 }
 
 #docsfw-tree details:has(.docsfw-current) > summary,
 #docsfw-tree details:has(.docsfw-current) > summary > a {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
 }
 
 /* Indentation for child items */
@@ -223,7 +223,7 @@
 
 .docsfw-toc-separator {
   border: none;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid var(--docsfw-soft-border);
   margin: 8px 0 4px;
 }
 
@@ -263,7 +263,7 @@
    The id form outranks both, and where specificity only ties (#docsfw-tree a)
    these rules come later in the file and win. */
 #docsfw-page-toc a {
-  color: #212121;
+  color: var(--docsfw-fg);
   text-decoration: none;
   display: block;
   font-size: 14px;
@@ -282,20 +282,20 @@
 
 /* Headings already scrolled through, including the current one. */
 #docsfw-page-toc a.docsfw-toc-passed {
-  color: #757575;
+  color: var(--docsfw-muted);
 }
 
 /* Placed after the passed rule so the active color wins at equal specificity. */
 #docsfw-page-toc a.docsfw-toc-active,
 #docsfw-page-toc a[aria-current="location"] {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
 }
 
 /* Last of the color rules, so hover wins over the passed and active colors. */
 #docsfw-page-toc a:hover,
 #docsfw-page-toc ul > li > a:hover,
 #docsfw-page-toc ul > li > a:focus {
-  color: #1a5faa;
+  color: var(--docsfw-nav-accent);
   text-decoration: underline;
   background-color: transparent;
 }
@@ -315,7 +315,7 @@
    No transition: the color and opacity switch instantly, as elsewhere in the
    static output. */
 #docsfw-content .headerlink {
-  color: #adadad;
+  color: var(--docsfw-indicator);
   display: inline-block;
   margin-left: 11px;
   opacity: 0;
@@ -332,7 +332,7 @@
 #docsfw-content :target > .headerlink,
 #docsfw-content .headerlink:hover,
 #docsfw-content .headerlink:focus {
-  color: #005580;
+  color: var(--docsfw-link-hover);
   text-decoration: none;
 }
 
@@ -381,8 +381,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     height: 36px;
     font-size: 20px;
     font-weight: bold;
-    background: #fff;
-    border: 1px solid #ccc;
+    background: var(--docsfw-bg);
+    border: 1px solid var(--docsfw-control-border);
     border-radius: 4px;
     cursor: pointer;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
@@ -414,7 +414,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     transform: translateX(-100%);
     transition: transform 0.2s ease;
     z-index: 1045;
-    background: #fff;
+    background: var(--docsfw-bg);
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
     margin: 0 !important;
     padding-top: 8px;

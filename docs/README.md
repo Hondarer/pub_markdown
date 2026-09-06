@@ -10,6 +10,7 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 - [動的発行基盤](livedocs-design.md)
 - [発行対象の指定](pubparts.md)
 - [検索とナビゲーション](search-and-nav.md)
+- [HTML のテーマと図の描画](html-theme.md)
 - [日本語技術文書の規範](japanese-technical-writing-guideline.md)
 - [日本語翻訳の表記規則](japanese-translation-style.md)
 - [リンク解決の規則](link-resolution.md)

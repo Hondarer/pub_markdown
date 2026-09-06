@@ -666,6 +666,22 @@ return {
 
             ---------------------------------------------------------------------
 
+            if FORMAT and FORMAT:match("html") then
+                local text = resultString:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")
+                local block = pandoc.RawBlock("html", '<div class="docsfw-plantuml">' .. text .. '</div>')
+                if caption == nil then
+                    return block
+                end
+                -- ブラウザーでは図だけを置換し、採番と参照は pandoc-crossref に渡す。
+                local inlines = {}
+                for line in caption:gsub("\\n", "\n"):gmatch("[^\n]+") do
+                    table.insert(inlines, pandoc.Str(line))
+                    table.insert(inlines, pandoc.LineBreak())
+                end
+                if #inlines > 0 then table.remove(inlines) end
+                return pandoc.Figure({ block }, inlines, pandoc.Attr(identifier, { "plantuml-figure" }))
+            end
+
             local encoded_text = encode(resultString)
 
             local resource_dir = PANDOC_STATE.resource_path[1] or ""

@@ -50,8 +50,17 @@ $endfor$
 $if(math)$
   $math$
 $endif$
-$if(mermaid-js)$
+$if(docsfw-browser-base)$
+  <script src="$docsfw-browser-base$docsfw-theme.js"></script>
+  <link rel="stylesheet" href="$docsfw-browser-base$docsfw-diagrams.css" />
+  <script defer src="$docsfw-browser-base$docsfw-diagrams.js"></script>
+  <script defer src="$docsfw-browser-base$docsfw-svg-download.js"></script>
+$endif$
+$if(docsfw-has-mermaid)$
   <script src="$mermaid-js$"></script>
+$endif$
+$if(docsfw-has-plantuml)$
+  <script src="$docsfw-browser-base$docsfw-plantuml-loader.js"></script>
 $endif$
 $for(header-includes)$
   $header-includes$
@@ -85,7 +94,7 @@ $endif$
           $endif$
           $if(git-url)$
           <li id="docsfw-git-li"><a id="docsfw-git-link" href="$git-url$" target="source-file"
-            title="Git" aria-label="Git"><img class="docsfw-git-icon" src="$git-icon$" alt="Git" /></a></li>
+            title="Git" aria-label="Git"><img class="docsfw-git-icon$if(git-provider)$ docsfw-git-icon--$git-provider$$endif$" src="$git-icon$" alt="Git" /></a></li>
           $endif$
           $if(docx-url)$
           <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download$if(docx-download-name-encoded)$ data-docx-download-name-encoded="$docx-download-name-encoded$"$endif$
@@ -186,8 +195,8 @@ $body$
       align-items: center;
       width: 100%;
       box-sizing: border-box;
-      background: #f8f8f8;
-      border-bottom: 1px solid rgba(0,0,0,0.12);
+      background: var(--docsfw-code-bg);
+      border-bottom: 1px solid var(--docsfw-soft-border);
       padding: 4px;
       margin: 0;
     }
@@ -200,17 +209,17 @@ $body$
       border: none;
       cursor: pointer;
       font-size: 14px;
-      color: #444;
+      color: var(--docsfw-expander);
       line-height: 1.6;
       text-align: left;
       background: transparent;
       padding: 0;
     }
-    .code-expander-btn:hover { color: #222; }
+    .code-expander-btn:hover { color: var(--docsfw-expander-hover); }
     .code-expander-btn .code-expander-arrow {
       display: inline-block;
       font-size: 0.7em;
-      color: #999;
+      color: var(--docsfw-hint);
       margin-right: calc(0.3em + 2px);
       transition: transform 0.15s;
     }
@@ -240,10 +249,10 @@ $body$
     .code-expander-hint {
       font-family: monospace;
       font-size: 14px;
-      color: #999;
-      background: #f8f8f8;
+      color: var(--docsfw-hint);
+      background: var(--docsfw-code-bg);
       border: none;
-      border-top: 1px solid rgba(0,0,0,0.12);
+      border-top: 1px solid var(--docsfw-soft-border);
       margin: 0;
       padding: 1px 0.8em;
       text-align: center;
@@ -387,9 +396,9 @@ $body$
         var preStyle = window.getComputedStyle(pre);
         shell.style.marginTop = preStyle.marginTop;
         shell.style.marginBottom = preStyle.marginBottom;
-        shell.style.border = preStyle.border;
+        shell.style.border = '1px solid var(--docsfw-border)';
         shell.style.borderRadius = preStyle.borderRadius;
-        shell.style.backgroundColor = preStyle.backgroundColor;
+        shell.style.backgroundColor = 'var(--docsfw-code-bg)';
         shell.style.boxSizing = 'border-box';
 
         parentEl.insertBefore(shell, pre);
@@ -425,7 +434,7 @@ $body$
 
       var preBlocks = document.querySelectorAll('pre');
       preBlocks.forEach(function(pre) {
-        if (pre.classList && pre.classList.contains('mermaid')) {
+        if (pre.closest('.docsfw-mermaid, .docsfw-plantuml')) {
           return;
         }
         var codeEl = pre.querySelector('code');
@@ -727,57 +736,7 @@ $body$
     });
   })();
   </script>
-$if(mermaid-js)$
-  <script>
-  if (window.mermaid) {
-    function normalizeMermaidSvgSize() {
-      var multiplySvg = 0.875;
-      var svgs = document.querySelectorAll('.mermaid svg');
-      svgs.forEach(function(svg) {
-        // ネストされたアイコン svg (architecture 図の group / service アイコン等) は
-        // mermaid が個別に width / height を設定済みのため補正対象から除外する
-        if (svg.parentNode && svg.parentNode.closest && svg.parentNode.closest('svg')) {
-          return;
-        }
-        var width = 0;
-        var height = 0;
-        if (svg.viewBox && svg.viewBox.baseVal &&
-            svg.viewBox.baseVal.width > 0 && svg.viewBox.baseVal.height > 0) {
-          width = svg.viewBox.baseVal.width;
-          height = svg.viewBox.baseVal.height;
-        } else {
-          var viewBox = svg.getAttribute('viewBox');
-          var parts = viewBox ? viewBox.trim().split(/\s+/) : [];
-          if (parts.length === 4) {
-            width = parseFloat(parts[2]);
-            height = parseFloat(parts[3]);
-          }
-        }
-        if (!(width > 0) || !(height > 0)) {
-          return;
-        }
-        var displayWidth = width * multiplySvg;
-        var displayHeight = height * multiplySvg;
-        svg.setAttribute('width', displayWidth + 'px');
-        svg.setAttribute('height', displayHeight + 'px');
-        svg.style.width = displayWidth + 'px';
-        svg.style.height = 'auto';
-        svg.style.maxWidth = '100%';
-      });
-    }
 
-    window.mermaid.initialize({
-      startOnLoad: false,
-      theme: 'default',
-      securityLevel: 'loose'
-    });
-    window.mermaid.run({
-      querySelector: '.mermaid',
-      postRenderCallback: normalizeMermaidSvgSize
-    }).then(normalizeMermaidSvgSize);
-  }
-  </script>
-$endif$
 $if(git-url)$
   <!-- Git 単一ページ リンク: Git blob URL または Doxygen source link を表示し、言語別の title のみ設定する -->
   <script>
@@ -960,85 +919,7 @@ $if(docsfw-ui-enable)$
   <script defer src="${search-base}docsfw-search.js"></script>
   $endif$
 $endif$
-  <!-- SVG ダウンロード ボタン: 本文 (#docsfw-content) 内の相対パス参照の .svg 画像に
-       ホバー時のみ右上にダウンロードリンクを重ねる。data URI (self-contain) や外部 URL は対象外 -->
-  <script>
-  (function () {
-    document.addEventListener('DOMContentLoaded', function () {
-      var main = document.getElementById('docsfw-content');
-      if (!main) { return; }
-      var ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
-        + ' stroke="#4183C4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-        + '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>';
-      var isJa = (document.documentElement.lang || '').toLowerCase().indexOf('ja') === 0;
-      main.querySelectorAll('img').forEach(function (img) {
-        var src = img.getAttribute('src') || '';
-        // data:, http(s): などスキーム付きの src は対象外 (self-contain HTML を含む)
-        if (/^[a-z][a-z0-9+.\-]*:/i.test(src)) { return; }
-        var path = src.split('#')[0].split('?')[0];
-        if (!/\.svg$$/i.test(path)) { return; }
-        if (img.closest('.docsfw-svg-dl-host')) { return; }
-        var name;
-        try { name = decodeURIComponent(path.split('/').pop()); }
-        catch (e) { name = path.split('/').pop(); }
-        // アイコンの基準要素: figure があれば figure の右上、なければ画像を包む span の右上
-        var host = img.closest('figure');
-        if (host) {
-          host.classList.add('docsfw-svg-dl-host');
-        } else {
-          host = document.createElement('span');
-          host.className = 'docsfw-svg-dl-wrap docsfw-svg-dl-host';
-          img.parentNode.insertBefore(host, img);
-          host.appendChild(img);
-        }
-        var a = document.createElement('a');
-        a.className = 'docsfw-svg-dl';
-        a.href = src;
-        a.setAttribute('download', name);
-        var label;
-        if (isJa) {
-          label = 'SVG をダウンロード: ' + name;
-        } else {
-          label = 'Download SVG: ' + name;
-        }
-        a.title = label;
-        a.setAttribute('aria-label', label);
-        a.innerHTML = ICON;
-        host.appendChild(a);
-        // download 属性が無視されて SVG が表示される環境があるため、
-        // http(s) では Blob URL (application/octet-stream) を経由して保存を強制する
-        a.addEventListener('click', function (ev) {
-          if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') { return; }
-          ev.preventDefault();
-          // 資格情報入り URL では相対 src の fetch が TypeError になるため、資格情報を除去する
-          var fetchSrc = src;
-          try {
-            var su = new URL(src, window.location.href);
-            su.username = '';
-            su.password = '';
-            fetchSrc = su.href;
-          } catch (e) { /* 解析不可ならそのまま */ }
-          fetch(fetchSrc).then(function (res) {
-            if (!res.ok) { throw new Error('HTTP ' + res.status); }
-            return res.blob();
-          }).then(function (blob) {
-            var url = URL.createObjectURL(new Blob([blob], { type: 'application/octet-stream' }));
-            var tmp = document.createElement('a');
-            tmp.href = url;
-            tmp.setAttribute('download', name);
-            document.body.appendChild(tmp);
-            tmp.click();
-            document.body.removeChild(tmp);
-            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-          }).catch(function () {
-            // 取得に失敗した場合は従来のリンク挙動にフォールバックする
-            window.location.href = src;
-          });
-        });
-      });
-    });
-  })();
-  </script>
+
 
 </body>
 </html>

@@ -1,0 +1,26 @@
+/* 図ソースは JavaScript 無効時も読める形で残す。SVG 内の明示色は上書きしない。 */
+.docsfw-mermaid, .docsfw-plantuml {
+  white-space: pre-wrap;
+  text-align: center;
+  max-width: 100%;
+  line-height: normal;
+  overflow-x: auto;
+}
+.docsfw-mermaid > svg, .docsfw-plantuml > svg {
+  max-width: 100%;
+  height: auto;
+}
+.docsfw-diagram-measure {
+  position: absolute;
+  left: -100000px;
+  top: 0;
+}
+.docsfw-diagram--error {
+  text-align: left;
+  white-space: normal;
+  color: var(--md-default-fg-color, var(--docsfw-fg, #212121));
+}
+.docsfw-diagram--error pre {
+  white-space: pre-wrap;
+  text-align: left;
+}

@@ -1,13 +1,4 @@
-// 本文中の SVG へ「SVG をダウンロード」ボタンを重ねる。
-//
-// 静的発行 (Pandoc) の ../../styles/html/html-template.html にある同名の処理を
-// 動的発行へ移植したもの。静的発行は PlantUML も draw.io も
-// <img src="*.svg"> のため画像だけを対象にすればよいが、動的発行は
-// PlantUML と Mermaid をブラウザー上でインライン描画するため、
-// 描画済みの <svg> も直列化してダウンロード対象にする。
-//
-// ボタンの見た目は assets/docsfw-livedocs.css の .docsfw-svg-dl* が持つ。
-
+// Pandoc HTML と MkDocs の画像・描画済み SVG を保存する。
 (function () {
   "use strict";
 
@@ -24,7 +15,7 @@
 
   /** 本文のルート要素を返す。 */
   function contentRoot() {
-    return document.querySelector("article.md-content__inner") ||
+    return document.querySelector("#docsfw-content") || document.querySelector("article.md-content__inner") ||
       document.querySelector(".md-typeset");
   }
 
@@ -162,7 +153,9 @@
 
     link.addEventListener("click", function (event) {
       event.preventDefault();
-      var clone = svg.cloneNode(true);
+      var current = block.querySelector(":scope > svg");
+      if (!current) { return; }
+      var clone = current.cloneNode(true);
       if (!clone.getAttribute("xmlns")) {
         clone.setAttribute("xmlns", SVG_NAMESPACE);
       }
@@ -177,9 +170,11 @@
     root.querySelectorAll(DIAGRAM_SELECTOR).forEach(attachToDiagram);
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+  function initialize() {
     var root = contentRoot();
     if (!root) { return; }
+    if (root.dataset.docsfwSvgObserved) { return; }
+    root.dataset.docsfwSvgObserved = "true";
     scan(root);
 
     // PlantUML と Mermaid は非同期に描画されるため、<svg> の挿入を監視する。
@@ -188,5 +183,10 @@
     new MutationObserver(function () {
       root.querySelectorAll(DIAGRAM_SELECTOR).forEach(attachToDiagram);
     }).observe(root, { childList: true, subtree: true });
-  });
+  }
+  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initialize); }
+  else { initialize(); }
+  if (window.document$ && typeof window.document$.subscribe === "function") {
+    window.document$.subscribe(initialize);
+  }
 })();

@@ -464,7 +464,7 @@ body {
   --md-typeset-mark-color: #ffff00;
 }
 
-/* ダーク。pandoc 発行版に対応する出力は無いため、ライトの各色と同じ色相の
+/* ダーク。Pandoc HTML のダーク配色も同じ値を使用する。ライトの各色と同じ色相の
    まま明度を上げた値を使う。admonition の 6 色は、pandoc が採用している
    GitHub のライト色に対応する GitHub のダーク色をそのまま当てる。
    コード背景と ==mark== は、暗背景では成立しないので Material の既定に任せる。 */

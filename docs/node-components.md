@@ -18,7 +18,7 @@ docsfw が実行時に使う npm パッケージと、その解決手順を示�
 | `minimist` | 自前 Node スクリプトの引数解析 | モジュール |
 | `sharp` | SVG スクリーンショットの再エンコード | モジュール |
 | `minisearch` | HTML 検索インデックスと UMD バンドル | モジュールと `dist/umd` のファイル |
-| `@plantuml/core` | 動的発行のブラウザー上 PlantUML | モジュール |
+| `@plantuml/core` | Pandoc HTML と動的発行のブラウザー上 PlantUML | モジュール |
 
 `mermaid` は `package.json` の直接依存ではありません。  
 `@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使います。

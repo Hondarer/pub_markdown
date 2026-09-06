@@ -46,9 +46,11 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 | 成果物 | HTML + docx | HTML |
 | 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
 | バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 1 つを選んで出力 |
-| 図 | ビルド時に画像化 | ブラウザー上でレンダリング |
+| 図 | HTML はブラウザー描画、docx はビルド時に画像化 | ブラウザー上でレンダリング |
 
 動的発行の利用手順は [livedocs/README.md](livedocs/README.md)、設計は [動的発行基盤](docs/livedocs-design.md) を参照してください。
+
+テーマ切り替えと図の対応範囲は [HTML のテーマと図の描画](docs/html-theme.md) を参照してください。
 
 ### 静的発行の実行方法
 
