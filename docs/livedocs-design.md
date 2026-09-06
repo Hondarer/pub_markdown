@@ -1277,7 +1277,7 @@ make servedocs
 | Doxygen 単一ページ リンク | `doxygen-page-url` を持つ Doxybook2 ページ | 見出し横のアイコンが `/doxygen/...` を `target="doxygen-page"` で開くこと |
 | GitHub アラート | 各 app の `coding-guideline.md` | 6 種の表示。特に `DEPRECATED` |
 | 数式 | `app/example/docs/build-design.md` | MathJax の描画 |
-| 日本語パス | `framework/docsfw/docs/sample/日本語を含むサブフォルダ/` | パス解決とナビゲーション表示 |
+| 日本語パス | `framework/docsfw/docs/sample/日本語を含むサブフォルダー/` | パス解決とナビゲーション表示 |
 | 検索 | 任意 | 日本語語句での検索 |
 
 ### クロスプラットフォーム
