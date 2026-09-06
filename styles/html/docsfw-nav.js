@@ -13,6 +13,7 @@
   var currentPanelKey = 'root';
   var activePanelKey = 'root';
   var panelSequence = 0;
+  var branchSequence = 0;
   var isJa = (document.documentElement.lang || 'ja').toLowerCase().indexOf('ja') === 0;
 
   function esc(value) {
@@ -48,13 +49,40 @@
 
   function renderFlatNode(node) {
     var children = node.children || [];
-    var html = '<li class="docsfw-nav-item"><div class="docsfw-nav-row">' + rowContent(node, true) + '</div>';
+    var expanded = containsCurrent(node);
+    var ancestor = expanded && !(node.url && node.url === current);
+    var branchId = 'docsfw-branch-' + (++branchSequence);
+    var html = '<li class="docsfw-nav-item' + (ancestor ? ' docsfw-nav-ancestor' : '') +
+      '"><div class="docsfw-nav-row">' + rowContent(node, true);
     if (children.length) {
-      html += '<ul class="docsfw-nav-list">';
+      html += '<button type="button" class="docsfw-nav-toggle" aria-controls="' + branchId +
+        '" aria-expanded="' + expanded + '" aria-label="' + esc(node.title || '') +
+        '">' + chevron('forward') + '</button>';
+    }
+    html += '</div>';
+    if (children.length) {
+      html += '<ul id="' + branchId + '" class="docsfw-nav-list"' + (expanded ? '' : ' hidden') + '>';
       for (var i = 0; i < children.length; i++) { html += renderFlatNode(children[i]); }
       html += '</ul>';
     }
     return html + '</li>';
+  }
+
+  function containsCurrent(node) {
+    if (node.url && node.url === current) { return true; }
+    return (node.children || []).some(containsCurrent);
+  }
+
+  function revealCurrent() {
+    if (!wideLayout.matches) { return; }
+    var selected = document.querySelector('.docsfw-flat-nav .docsfw-current');
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    if (!selected || !sidebar) { return; }
+    var rect = selected.getBoundingClientRect();
+    var bounds = sidebar.getBoundingClientRect();
+    if (rect.top < bounds.top + 33 || rect.bottom > bounds.bottom) {
+      sidebar.scrollTop += rect.top - bounds.top - sidebar.clientHeight / 2;
+    }
   }
 
   function allocatePanel(node, parentKey) {
@@ -130,6 +158,7 @@
     }
 
     var children = nav.children || [];
+    branchSequence = 0;
     var flat = '<div class="docsfw-flat-nav"><ul class="docsfw-nav-list">';
     for (var i = 0; i < children.length; i++) { flat += renderFlatNode(children[i]); }
     flat += '</ul></div>';
@@ -169,6 +198,13 @@
 
   function wirePanelButtons(container) {
     container.addEventListener('click', function (event) {
+      var toggle = event.target.closest ? event.target.closest('.docsfw-nav-toggle') : null;
+      if (toggle) {
+        var branch = document.getElementById(toggle.getAttribute('aria-controls'));
+        branch.hidden = !branch.hidden;
+        toggle.setAttribute('aria-expanded', String(!branch.hidden));
+        return;
+      }
       var button = event.target.closest ? event.target.closest('[data-panel-target]') : null;
       if (!button) { return; }
       setActivePanel(button.getAttribute('data-panel-target'),
@@ -203,6 +239,12 @@
   function normalizeTocLinks() {
     var toc = document.getElementById('docsfw-page-toc');
     if (!toc) { return; }
+    if (!toc.querySelector('.docsfw-toc-title')) {
+      var title = document.createElement('div');
+      title.className = 'docsfw-toc-title';
+      title.textContent = isJa ? '目次' : 'Table of contents';
+      toc.insertBefore(title, toc.firstChild);
+    }
     var links = toc.querySelectorAll('a');
     for (var i = 0; i < links.length; i++) { links[i].textContent = links[i].textContent; }
   }
@@ -232,10 +274,25 @@
     }).filter(function (entry) { return !!entry.heading; });
     if (!entries.length) { return; }
     var scheduled = false;
+    var activeIndex = -1;
+    function followActiveLink(link) {
+      var secondary = document.getElementById('TOC');
+      if (!wideLayout.matches || !secondary || !secondary.contains(link)) { return; }
+      var bounds = secondary.getBoundingClientRect();
+      var title = toc.querySelector('.docsfw-toc-title');
+      var visibleTop = bounds.top + (title ? title.getBoundingClientRect().height : 0);
+      var linkBounds = link.getBoundingClientRect();
+      var targetCenter = (visibleTop + bounds.bottom) / 2;
+      var linkCenter = (linkBounds.top + linkBounds.bottom) / 2;
+      secondary.scrollTop += linkCenter - targetCenter;
+    }
     function update() {
-      scheduled = false; var selected = 0;
+      scheduled = false; var selected = -1;
       for (var i = 0; i < entries.length; i++) {
         if (entries[i].heading.getBoundingClientRect().top <= 84) { selected = i; } else { break; }
+      }
+      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1) {
+        selected = entries.length - 1;
       }
       for (var j = 0; j < entries.length; j++) {
         entries[j].link.classList.toggle('docsfw-toc-passed', j <= selected);
@@ -243,6 +300,8 @@
         if (j === selected) { entries[j].link.setAttribute('aria-current', 'location'); }
         else { entries[j].link.removeAttribute('aria-current'); }
       }
+      if (selected >= 0 && selected !== activeIndex) { followActiveLink(entries[selected].link); }
+      activeIndex = selected;
     }
     window.addEventListener('scroll', function () {
       if (!scheduled) { scheduled = true; window.requestAnimationFrame(update); }
@@ -312,11 +371,12 @@
     closeDrawer(false);
     if (panelLayout.matches) { setActivePanel(currentPanelKey); }
     placePageToc();
+    revealCurrent();
   }
 
   function init() {
     initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); placePageToc();
-    loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); });
+    loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); revealCurrent(); });
     if (wideLayout.addEventListener) {
       wideLayout.addEventListener('change', onLayoutChange); panelLayout.addEventListener('change', onLayoutChange);
     } else {

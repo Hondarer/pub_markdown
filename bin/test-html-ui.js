@@ -26,7 +26,7 @@ date: 2026-09-06
 ## 子見出し
 
 本文です。
-`;
+` + Array.from({length: 35}, (_, i) => '\n## Section ' + i + '\n\n' + '本文のスクロール確認。'.repeat(70) + '\n').join('');
 
 function prepare() {
   const resolved = JSON.parse(execFileSync(process.execPath,
@@ -43,12 +43,16 @@ function prepare() {
         { title: 'Look & Feel 同期', url: 'guide/current.html', children: [] },
         { title: '別ページ', url: 'guide/other.html', children: [] }
       ]
-    }]
+    }, {title: '閉じた分類', url: 'other/index.html', children: [
+      {title: '隠れたページ', url: 'other/page.html', children: []}
+    ]}]
   }) + ';\n');
 
   const template = fs.readFileSync(path.join(root, 'styles/html/html-template.html'), 'utf8')
     .replace(/<script\b[^>]*src=['"]https?:[^>]*>\s*<\/script>/g, '')
-    .replace(/<link\b[^>]*href=['"]https?:[^>]*>/g, '');
+    .replace(/<link\b[^>]*href=['"]https?:[^>]*>/g, '')
+    // Retain the legacy selector conflict without a network dependency.
+    .replace('<head>', '<head><style>body{margin:0}.container{margin:auto}#TOC{top:0;overflow-y:scroll}.toc{margin-top:10px}</style>');
   fs.writeFileSync(path.join(output, 'template.html'), template);
   execFileSync('pandoc', ['sample.md', '-s', '-t', 'html', '--toc', '--template', 'template.html',
     '-c', 'html-style.css', '-M', 'docsfw-browser-base=', '-M', 'docsfw-ui-enable=true',
@@ -86,6 +90,56 @@ async function main() {
     assert(['flex', 'inline-flex'].includes((await dimensions(page, '.docsfw-logo')).display));
     assert.equal((await dimensions(page, '#docsfw-hamburger')).display, 'none');
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('#TOC')));
+    assert.equal(await page.$eval('#docsfw-search-input', node => node.placeholder), '検索');
+    assert.equal((await dimensions(page, '.docsfw-search-form')).height, 36);
+    assert.equal((await dimensions(page, '.docsfw-search-form')).width, 234);
+    assert.equal((await dimensions(page, '.docsfw-search-form')).top, 6);
+    assert.equal(await page.$eval('.docsfw-logo', node => node.getBoundingClientRect().left), 60.5);
+    assert.equal(await page.$eval('.doc-title', node => node.getBoundingClientRect().left), 124.5);
+    assert.equal(await page.$eval('.doc-title', node => getComputedStyle(node).color), 'rgba(0, 0, 0, 0.87)');
+    assert.equal(await page.$eval('.docsfw-current', node => getComputedStyle(node).fontWeight), '400');
+    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > a', node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.deepEqual(await page.$eval('.docsfw-search-form', node => {
+      const style = getComputedStyle(node, '::before');
+      return {width: style.width, height: style.height, left: style.left};
+    }), {width: '24px', height: '24px', left: '10px'});
+    assert((await dimensions(page, '.docsfw-home-link a')).height > 0);
+    assert.equal(await page.$eval('.docsfw-home-link a', node => node.getAttribute('href')), 'index.html');
+    const toggles = await page.$$('.docsfw-nav-toggle');
+    assert.equal(await toggles[0].evaluate(node => node.getAttribute('aria-expanded')), 'true');
+    assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
+    await toggles[1].focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await toggles[1].evaluate(node => document.getElementById(node.getAttribute('aria-controls')).hidden), false);
+    await page.keyboard.press('Space');
+    assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
+    assert.equal((await dimensions(page, '#TOC')).top, 60);
+    assert.equal(Math.round((await dimensions(page, '#TOC')).width * 100) / 100, 306.22);
+    assert.equal(Math.round(await page.$eval('#TOC', node => node.getBoundingClientRect().right) * 100) / 100, 1643.11);
+    assert.equal(Math.round((await dimensions(page, '#docsfw-primary-sidebar')).width * 100) / 100, 351.22);
+    assert.equal(Math.round(await page.$eval('#docsfw-primary-sidebar', node => node.getBoundingClientRect().right) * 100) / 100, 408.11);
+    await page.evaluate(() => scrollTo(0, 700));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal((await dimensions(page, '#TOC')).top, 60);
+    assert.equal(await page.$eval('#TOC', node => node.scrollHeight > node.clientHeight), true);
+    await page.$eval('#TOC', node => { node.scrollTop = 200; });
+    assert.equal(await page.evaluate(() => scrollY), 700);
+    assert.equal((await dimensions(page, '.docsfw-toc-title')).top, 60);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert(await page.$eval('#TOC', node => node.scrollTop > 200));
+    assert(await page.$eval('#docsfw-page-toc .docsfw-toc-active', node => {
+      const bounds = document.querySelector('#TOC').getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      return rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+    }));
+    await page.evaluate(() => { document.documentElement.setAttribute('data-md-color-scheme', 'slate'); });
+    assert.equal(await page.$eval('.doc-title', node => getComputedStyle(node).color), 'rgba(255, 255, 255, 0.87)');
+    await page.evaluate(() => { document.documentElement.setAttribute('data-md-color-scheme', 'default'); scrollTo(0, 0); });
+    for (const width of [1624, 1625, 1700]) {
+      await page.setViewport({width, height:900});
+      await page.waitForFunction(wide => !!document.querySelector('#docsfw-page-toc').closest('#TOC') === wide, {}, width >= 1625);
+    }
     await page.screenshot({ path: path.join(output, 'wide.png'), fullPage: false });
 
     await page.setViewport({ width: 1400, height: 900 });
@@ -100,17 +154,21 @@ async function main() {
     await page.screenshot({ path: path.join(output, 'drawer.png'), fullPage: false });
     await page.click('#docsfw-nav-backdrop');
     assert.equal(await page.$eval('#docsfw-hamburger', node => node.getAttribute('aria-expanded')), 'false');
+    await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 
     await page.setViewport({ width: 1100, height: 900 });
     await page.click('#docsfw-hamburger');
     await new Promise(resolve => setTimeout(resolve, 300));
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey !== 'root'));
-    assert.equal((await dimensions(page, '.docsfw-panel-title')).display, 'flex');
+    assert.equal((await dimensions(page, '.docsfw-panel-title')).display, 'block');
+    assert.equal((await dimensions(page, '.docsfw-panel-title')).height, 112);
+    assert.equal((await dimensions(page, '.docsfw-panel-title')).top, 60);
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-nav-panel.docsfw-panel-active')));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
     await page.click('.docsfw-nav-back');
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey === 'root'));
     await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 
     await page.setViewport({ width: 900, height: 900 });
     await page.click('.docsfw-search-icon');

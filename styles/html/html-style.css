@@ -1187,7 +1187,8 @@ body {
   position: fixed;
   inset: 0 0 auto;
   height: var(--docsfw-header-body-height);
-  color: var(--docsfw-quote);
+  color: var(--docsfw-chrome-fg, rgba(0, 0, 0, 0.87));
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
   background: var(--docsfw-header-bg);
   z-index: 1070;
 }
@@ -1210,6 +1211,12 @@ body {
   height: var(--docsfw-header-body-height);
   min-width: 0;
   box-sizing: border-box;
+  padding: 0 4px;
+}
+
+.docsfw-header-inner.container {
+  width: 902px;
+  max-width: 100%;
 }
 
 .docsfw-header-button,
@@ -1226,7 +1233,7 @@ body {
   padding: 8px;
   border: 0;
   background: transparent;
-  color: var(--docsfw-quote);
+  color: inherit;
   line-height: 1;
 }
 
@@ -1259,16 +1266,18 @@ body {
   align-self: stretch;
   min-width: 0;
   overflow: hidden;
-  padding: 2px 8px;
+  margin: 0 8px 0 20px;
+  padding: 2px 0;
   box-sizing: border-box;
 }
 
 .docsfw-header .doc-title {
   display: block;
+  float: none;
   overflow: hidden;
   margin: 0;
   padding: 0;
-  color: var(--docsfw-quote);
+  color: inherit;
   font-size: 18px;
   line-height: 24px;
   text-overflow: ellipsis;
@@ -1278,11 +1287,11 @@ body {
 
 .docsfw-header-meta {
   position: absolute;
-  top: 24px;
-  left: 8px;
-  right: 8px;
+  top: 26px;
+  left: 0;
+  right: 0;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -1291,9 +1300,9 @@ body {
   overflow: hidden;
   margin: 0;
   padding: 0;
-  color: var(--docsfw-quote);
+  color: var(--docsfw-chrome-muted, rgba(0, 0, 0, 0.54));
   font-size: 14px;
-  line-height: 20px;
+  line-height: normal;
   text-overflow: ellipsis;
 }
 
@@ -1318,6 +1327,21 @@ body {
 
 .docsfw-logo {
   display: none;
+  order: -1;
+}
+
+.docsfw-logo,
+.docsfw-menu-button {
+  margin: 4px;
+}
+
+html[data-md-color-scheme="slate"] {
+  --docsfw-chrome-fg: rgba(255, 255, 255, 0.87);
+  --docsfw-chrome-muted: rgba(255, 255, 255, 0.54);
+}
+
+@media (min-width: 76.25em) {
+  .docsfw-logo { display: inline-flex; }
 }
 
 /* Pandoc html の左上アイコン。既定 (ライト) は黒地、ダークは既定色 (青) を出す。 */
@@ -1354,6 +1378,8 @@ body {
 }
 
 @media (min-width: 1625px) {
+  .docsfw-header-inner.container { width: 1595px; }
+
   .docsfw-logo {
     display: inline-flex;
   }
@@ -1362,10 +1388,11 @@ body {
     display: none;
   }
 
-  .docsfw-primary-sidebar,
-  .docsfw-secondary-sidebar {
+  #docsfw-primary-sidebar,
+  #TOC.docsfw-secondary-sidebar {
     top: var(--docsfw-header-height);
     height: calc(100vh - var(--docsfw-header-height));
+    overflow-y: auto;
   }
 }
 

@@ -18,12 +18,12 @@
   var selectedIndex = -1;
 
   var text = isJa ? {
-    open: '検索を開く', back: '検索を閉じる', label: 'ドキュメント検索', placeholder: '検索…',
+    open: '検索を開く', back: '検索を閉じる', label: 'ドキュメント検索', placeholder: '検索',
     loading: '検索インデックスを読み込んでいます…', unavailable: '検索インデックスを読み込めませんでした。',
     emptyBefore: '「', emptyAfter: '」に一致するページは見つかりませんでした。',
     moreBefore: '他 ', moreAfter: ' 件（検索語を絞ると絞り込めます）'
   } : {
-    open: 'Open search', back: 'Close search', label: 'Document search', placeholder: 'Search…',
+    open: 'Open search', back: 'Close search', label: 'Document search', placeholder: 'Search',
     loading: 'Loading the search index…', unavailable: 'The search index could not be loaded.',
     emptyBefore: 'No pages matched “', emptyAfter: '”.', moreBefore: '', moreAfter: ' more results'
   };

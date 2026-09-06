@@ -1077,9 +1077,10 @@ if [[ "$htmlTocEnable" == "" ]]; then
     htmlTocEnable="true"
 fi
 
-# 設定ファイルに htmlTocDepth が指定されなかった場合の値を 3 にする
+# --shift-heading-level-by=-1 の後の深さ 2 は、MkDocs の toc_depth: 3 と対応する。
+# 明示された htmlTocDepth は、従来どおり変換後の見出し深さとして扱う。
 if [[ "$htmlTocDepth" == "" ]]; then
-    htmlTocDepth="3"
+    htmlTocDepth="2"
 fi
 
 # toc 関連オプションの組み立て
@@ -1745,8 +1746,10 @@ set_html_lang_attributes() {
     fi
 
     tmp_file=$(mktemp)
-    if ! HTML_LANG_CODE="$lang_code" perl -0777 -pe '
+    if ! HTML_LANG_CODE="$lang_code" HTML_VARIANT="${lang_code}${details_suffix}" perl -0777 -pe '
         my $target_lang = $ENV{HTML_LANG_CODE} // "";
+        my $target_variant = $ENV{HTML_VARIANT} // "";
+        s{(<span class="docsfw-drawer-site-name">[^<]*) \([^()]*\)(</span>)}{$1 ($target_variant)$2}g;
         s{<html\b([^>]*)>}{
             my $attrs = $1;
             if ($attrs =~ /\blang\s*=\s*(["\x27]).*?\1/i) {

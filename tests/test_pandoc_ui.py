@@ -1,6 +1,8 @@
 """Pandoc HTML のヘッダーとドロワーに対するソース契約テスト。"""
 
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 
@@ -64,6 +66,35 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn('docsfw-site-name=${siteName}', self.publisher)
         self.assertIn('docsfw-variant=${langElement}${details_suffix}', self.publisher)
         self.assertIn('docsfw-asset-base=../${up_dir}html/', self.publisher)
+
+    def test_copied_variant_updates_navigation_title(self):
+        start = self.publisher.index("set_html_lang_attributes() {")
+        end = self.publisher.index("\n}", start) + 2
+        function = self.publisher[start:end]
+        with tempfile.TemporaryDirectory() as directory:
+            html = Path(directory) / "copy.html"
+            html.write_text('<html lang="ja"><span class="docsfw-drawer-site-name">'
+                            'Site (example) (ja)</span></html>', encoding="utf-8")
+            subprocess.run(["bash", "-c", function +
+                            '\ndetails_suffix=-details\nset_html_lang_attributes "$1" en',
+                            "test", str(html)], check=True)
+            result = html.read_text(encoding="utf-8")
+            self.assertIn('lang="en"', result)
+            self.assertIn('Site (example) (en-details)</span>', result)
+
+    def test_default_toc_matches_source_heading_level_three(self):
+        start = self.publisher.index('if [[ "$htmlTocDepth" == "" ]]')
+        end = self.publisher.index('\n# 設定ファイルに mathLatexEnable', start)
+        setup = self.publisher[start:end]
+        source = '# Title\n\n## Level two\n\n### Level three\n\n#### Level four\n'
+        for configured, includes_four in [("", False), ("3", True)]:
+            result = subprocess.run(
+                ["bash", "-c", 'htmlTocDepth="$1"; htmlTocEnable=true\n' + setup +
+                 '\npandoc -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -t html',
+                 "test", configured], input=source, text=True, capture_output=True, check=True)
+            self.assertIn('id="toc-level-three"', result.stdout)
+            self.assertEqual('id="toc-level-four"' in result.stdout, includes_four)
+            self.assertIn('id="level-four"', result.stdout)
 
 
 if __name__ == "__main__":
