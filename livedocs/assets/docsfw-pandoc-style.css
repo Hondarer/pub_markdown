@@ -363,6 +363,33 @@ body {
   line-height: 21px;
 }
 
+/* Material は sticky なタイトル (「c-modernization-kit」「目次」) の下端に、
+   背景色と同色で ぼかし .4rem・広がり .4rem の box-shadow を重ね、下を流れる
+   一覧をグラデーションで隠す。タイトル自身の背景は既に不透明なため、
+   ヘッダー (.md-header__inner の border-bottom) と同じくグラデーションではなく
+   不透明な塗りつぶしで区切る。
+   実際の指定は .md-nav--primary .md-nav__title / .md-nav--secondary
+   .md-nav__title (詳細度 0,2,0) にあるため、素の .md-nav__title (0,1,0) では
+   上書きできない。同じ詳細度で指定し直す。 */
+.md-nav--primary .md-nav__title,
+.md-nav--secondary .md-nav__title {
+  box-shadow: none;
+}
+
+/* タイトルと一覧の間の空白をヘッダーと同じ 12px にする。
+   一覧側の余白 (Material 既定 0.625em、docsfw の 14px 基準で 8.75px) に
+   タイトル側の padding-bottom を足すだけでは合算になるため、まず一覧側の
+   最初の項目の余白を打ち消し、タイトル側だけで 12px を持たせる。 */
+.md-nav--primary .md-nav__title ~ .md-nav__list > .md-nav__item:first-child > .md-nav__link,
+.md-nav--secondary .md-nav__title ~ .md-nav__list > .md-nav__item:first-child > .md-nav__link {
+  margin-top: 0;
+}
+
+.md-nav--primary .md-nav__title,
+.md-nav--secondary .md-nav__title {
+  padding-bottom: 12px;
+}
+
 /* 見出しにインライン装飾 (コード表記など) が含まれる場合、Material のテーマ
    partials はテキストを <span class="md-typeset"> で包む。Material 本体は
    この span に個別の font-size を当てるため、念のため合わせて上書きする。 */
