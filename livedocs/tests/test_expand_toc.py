@@ -107,6 +107,25 @@ class CollapsibleTest(unittest.TestCase):
         self.assertNotIn("api-cheatsheet.md", result)
         self.assertNotIn("functional-spec", result)
 
+    def test_merge_subfolder_root_is_visible_at_depth_zero(self):
+        # mergeSubfolderDocs のエイリアス (ここでは "c-platform") は、insert-toc.sh が
+        # エイリアス自身のルートを起点に独立した depth+1 のスキャンを行うため、直下の
+        # index.md は外側の depth=0 に関係なく常に見つかる。merge_roots に含めない限りは
+        # 直前のテストと同じく除外されたままであることも合わせて確認する。
+        index = _nested_index()
+        index.add("overview.md", "overview.md", "概要")
+        params = parse_toc_params("depth=0 exclude-basedir=true")
+
+        without_merge_roots = render_toc(index, "index.md", params)
+        self.assertNotIn("c-platform", without_merge_roots)
+
+        with_merge_roots = render_toc(index, "index.md", params, frozenset({"c-platform"}))
+        self.assertIn("- 📁 [c-platform](c-platform/index.md)", with_merge_roots)
+        # マージ ルート自身の直下は見えるが、その配下 (通常のネスト ディレクトリ) は
+        # depth=0 の制限どおり展開されない。
+        self.assertNotIn("functional-spec", with_merge_roots)
+        self.assertNotIn("api-cheatsheet.md", with_merge_roots)
+
     @unittest.skipUnless(markdown is not None, "Python-Markdown が必要です")
     def test_wrapper_preserves_markdown_links_and_nesting(self):
         result = expand_toc_commands(r'\toc depth=-1 open-level=1', _nested_index(), "c-platform/index.md")

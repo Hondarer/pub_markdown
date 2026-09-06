@@ -19,6 +19,7 @@ from git_link import PublishFacts  # noqa: E402
 from stage_livedocs import (  # noqa: E402
     Document,
     PathMapper,
+    StageIndex,
     _norm_key,
     _repo_progress_label,
     build_front_matter,
@@ -370,6 +371,48 @@ class GenerateNavFilesTest(unittest.TestCase):
                     handle.read(),
                     ROOT_NAV_YAML + "nav:\n  - index.md\n  - guide\n  - ...\n",
                 )
+
+
+class StageIndexMergeRootsTest(unittest.TestCase):
+    def test_merge_roots_matches_subfolder_aliases(self):
+        subfolders = [
+            ("general", "/workspace/app/general/docs"),
+            ("c-platform", "/workspace/app/c-platform/docs"),
+        ]
+        container = StageIndex(
+            workspace="/workspace",
+            config_path="/workspace/.vscode/pub_markdown.config.yaml",
+            main_mdroot="/workspace/docs",
+            subfolders=subfolders,
+            mapper=None,
+            kept=[],
+            assets=[],
+            index=None,
+            real_to_staged={},
+            by_real_path={},
+            lang="ja",
+            details=True,
+            variant="ja",
+        )
+        self.assertEqual(container.merge_roots, frozenset({"general", "c-platform"}))
+
+    def test_merge_roots_is_empty_without_subfolders(self):
+        container = StageIndex(
+            workspace="/workspace",
+            config_path="/workspace/.vscode/pub_markdown.config.yaml",
+            main_mdroot="/workspace/docs",
+            subfolders=[],
+            mapper=None,
+            kept=[],
+            assets=[],
+            index=None,
+            real_to_staged={},
+            by_real_path={},
+            lang="ja",
+            details=True,
+            variant="ja",
+        )
+        self.assertEqual(container.merge_roots, frozenset())
 
 
 class RewriteLinksTest(unittest.TestCase):

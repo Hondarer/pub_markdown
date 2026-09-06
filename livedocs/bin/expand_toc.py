@@ -175,8 +175,14 @@ def _entry_line(indent, icon, label, link, title):
     return line
 
 
-def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
-    """``vdir`` の直下を索引へ書き出す。``level`` はインデント段数。"""
+def _render_dir(index, vdir, base_dir, level, params, from_dir, lines, merge_roots=frozenset()):
+    """``vdir`` の直下を索引へ書き出す。``level`` はインデント段数。
+
+    :param merge_roots: ``mergeSubfolderDocs`` のエイリアス名の集合。これらのディレクトリは
+        insert-toc.sh がエイリアス自身のルートを起点に独立した ``depth+1`` の探索を行うため、
+        可視性判定でも外側の ``base_dir``/``max_depth`` をそのまま流用せず、自身を基準に
+        判定し直す。
+    """
     max_depth = params["depth"]
     patterns = params["exclude"]
 
@@ -200,7 +206,11 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             continue
 
         if is_dir:
-            if not index.has_visible_file(child_path, patterns, base_dir, max_depth):
+            if child_path in merge_roots:
+                visible = index.has_visible_file(child_path, patterns, child_path, max_depth)
+            else:
+                visible = index.has_visible_file(child_path, patterns, base_dir, max_depth)
+            if not visible:
                 continue
             dir_index = index.index_entry(child_path, patterns)
             if dir_index is None:
@@ -208,7 +218,7 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             else:
                 link = posixpath.relpath(dir_index["staged_rel"], from_dir) if from_dir else dir_index["staged_rel"]
                 lines.append(_entry_line(level, "📁", name, link, dir_index["title"]))
-            _render_dir(index, child_path, base_dir, level + 1, params, from_dir, lines)
+            _render_dir(index, child_path, base_dir, level + 1, params, from_dir, lines, merge_roots)
         else:
             entry = child[2]
             # ディレクトリ索引はフォルダー行に集約されるため、ファイルとしては出さない。
@@ -218,12 +228,13 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             lines.append(_entry_line(level, "📄", name, link, entry["title"]))
 
 
-def render_toc(index, source_staged_rel, params):
+def render_toc(index, source_staged_rel, params, merge_roots=frozenset()):
     """1 個の ``\\toc`` を Markdown の索引リストへ展開する。
 
     :param index: :class:`DocIndex`。
     :param source_staged_rel: ``\\toc`` を含むファイルのステージング後の相対パス。
     :param params: :func:`parse_toc_params` の戻り値。
+    :param merge_roots: ``mergeSubfolderDocs`` のエイリアス名の集合。:func:`_render_dir` を参照。
     :return: 索引の Markdown 文字列。対象が無い場合は空文字列。
     """
     from_dir = posixpath.dirname(source_staged_rel)
@@ -239,7 +250,7 @@ def render_toc(index, source_staged_rel, params):
 
     lines = []
     if params["exclude-basedir"]:
-        _render_dir(index, base_dir, base_dir, 0, params, from_dir, lines)
+        _render_dir(index, base_dir, base_dir, 0, params, from_dir, lines, merge_roots)
     else:
         base_index = index.index_entry(base_dir, params["exclude"])
         base_name = posixpath.basename(base_dir) if base_dir else "."
@@ -248,7 +259,7 @@ def render_toc(index, source_staged_rel, params):
         else:
             link = posixpath.relpath(base_index["staged_rel"], from_dir) if from_dir else base_index["staged_rel"]
             lines.append(_entry_line(0, "📁", base_name, link, base_index["title"]))
-        _render_dir(index, base_dir, base_dir, 1, params, from_dir, lines)
+        _render_dir(index, base_dir, base_dir, 1, params, from_dir, lines, merge_roots)
 
     return "\n".join(lines)
 
@@ -261,7 +272,7 @@ def collapsible_open_tag(open_level=None):
     return '<div class="collapsible-list" markdown="1"{}>'.format(attribute)
 
 
-def expand_toc_commands(text, index, source_staged_rel):
+def expand_toc_commands(text, index, source_staged_rel, merge_roots=frozenset()):
     r"""``text`` 中の ``\toc`` 行をすべて索引へ置き換える。
 
     コード フェンスの内側にある ``\toc`` は処理しません。
@@ -290,7 +301,7 @@ def expand_toc_commands(text, index, source_staged_rel):
         toc_match = TOC_LINE_RE.match(line)
         if toc_match:
             params = parse_toc_params(toc_match.group(1))
-            rendered = render_toc(index, source_staged_rel, params)
+            rendered = render_toc(index, source_staged_rel, params, merge_roots)
             if rendered:
                 out.extend([collapsible_open_tag(params["open-level"]), "", rendered, "", "</div>", ""])
             continue

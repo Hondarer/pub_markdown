@@ -1137,6 +1137,10 @@ class StageIndex:
         self.git_link_enabled = git_link_enabled
         self.auto_set_author = auto_set_author
         self.auto_set_date = auto_set_date
+        # mergeSubfolderDocs のエイリアス名の集合。insert-toc.sh はこれらのディレクトリを
+        # エイリアス自身のルートを起点に独立した深度予算で走査するため、expand_toc.py の
+        # 可視性判定でも同じ特別扱いが必要になる。
+        self.merge_roots = frozenset(alias for alias, _ in subfolders)
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
@@ -1234,7 +1238,7 @@ def _render_document(document, container):
     """1 ドキュメント分の変換パイプラインを実行し、書き出す内容を返す。"""
     body = rewrite_links(document.body, document, container.mapper, container.real_to_staged)
     body = rewrite_doxygen_livedocs_links(body)
-    body = expand_toc_commands(body, container.index, document.staged_rel)
+    body = expand_toc_commands(body, container.index, document.staged_rel, container.merge_roots)
     body = convert_collapsible_list_fences(body)
     body = convert_deprecated_alerts(body)
     body = convert_captions(body)
