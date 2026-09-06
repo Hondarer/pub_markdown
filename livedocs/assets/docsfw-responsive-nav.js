@@ -68,6 +68,21 @@
     }
   }
 
+  /* ドロワーの中のページ内目次は同じページのアンカーへ移動するだけで、
+     ページ遷移が起きない。Material がドロワーを閉じるのは遷移のときだけの
+     ため、押した見出しがドロワーの背後に隠れたままになる。
+     目次のリンクを押したら、覆いを押したときと同じようにドロワーを閉じる。 */
+  function closeDrawerFromToc(event) {
+    if (wideLayout.matches) { return; }
+
+    var target = event.target;
+    if (!target || !target.closest) { return; }
+    if (!target.closest('.docsfw-combined-toc a')) { return; }
+
+    var drawer = document.getElementById('__drawer');
+    if (drawer) { drawer.checked = false; }
+  }
+
   function init() {
     if (!toc || !toc.isConnected) {
       toc = null;
@@ -83,6 +98,8 @@
   } else {
     wideLayout.addListener(placeToc);
   }
+
+  document.addEventListener('click', closeDrawerFromToc);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

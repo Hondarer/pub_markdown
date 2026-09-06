@@ -45,6 +45,40 @@ class CombinedTocPlacementTest(unittest.TestCase):
         )
 
 
+class DrawerCloseTest(unittest.TestCase):
+    """ドロワーを開いた状態から、外を押しても目次を押しても閉じられること。"""
+
+    def _docsfw_drawer_block(self):
+        text = _read(LIVEDOCS_CSS)
+        match = re.search(
+            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match, "docsfw の境界の media が無い")
+        return match.group(1)
+
+    def test_overlay_covers_the_docsfw_breakpoint(self):
+        """Material の覆いは 76.2344em 未満だけのため、1624px まで広げること。
+
+        覆いが無い幅では、本文を押してもドロワーが閉じない。
+        """
+        block = self._docsfw_drawer_block()
+        self.assertRegex(
+            block,
+            re.escape('[data-md-toggle="drawer"]:checked ~ .md-overlay')
+            + r"\s*\{[^}]*width:\s*100%",
+        )
+
+    def test_toc_link_click_unchecks_the_drawer_toggle(self):
+        """ページ内目次はページ遷移が無いため、JS で閉じること。"""
+        text = _read(RESPONSIVE_NAV_JS)
+        self.assertIn(".docsfw-combined-toc a", text)
+        self.assertRegex(
+            text,
+            re.escape("getElementById('__drawer')") + r"[\s\S]{0,120}?checked = false",
+        )
+
+
 class CombinedTocStyleTest(unittest.TestCase):
     """板とスライド パネル向けの体裁を、目次の範囲だけ戻すこと。"""
 

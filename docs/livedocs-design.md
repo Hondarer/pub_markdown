@@ -1150,7 +1150,17 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 
 1625px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
 1625px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
-同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。
+同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。  
+下端にも同じ 12px を置きます。ドロワーは画面の高さいっぱい (`height: 100%`) のため、これが無いと一覧の最後の項目が画面の下端に接します。
+
+ドロワーを閉じる操作も、Material の範囲では足りません。  
+ドロワーの外を押したときに閉じる覆い (`.md-overlay`) は、Material 自身のドロワーと同じ 76.2344em 未満でしか出ません。  
+その間の幅では本文を押しても閉じないため、Material と同じ指定を docsfw の 1624px の境界へも広げます。  
+覆いは `.md-container` より前にあり、ドロワーと同じ `z-index: 5` のため、重なりの順はドロワーが上のままです。
+
+ドロワーの中のページ内目次は、同じページのアンカーへ移動するだけでページ遷移が起きません。  
+Material がドロワーを閉じるのは遷移のときだけのため、押した見出しがドロワーの背後に隠れたままになります。  
+`docsfw-responsive-nav.js` が目次のリンクの押下を受け、`#__drawer` のチェックを外して閉じます。
 
 ### 一致させない項目
 
