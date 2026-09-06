@@ -91,10 +91,10 @@ class CollapsibleTest(unittest.TestCase):
         params = parse_toc_params('basedir="functional-spec" depth=0 exclude-basedir=true')
         result = render_toc(_nested_index(), "c-platform/index.md", params)
         self.assertIn('(functional-spec/argparser.md)', result)
-        self.assertIn('(functional-spec/nested/index.md)', result)
+        self.assertNotIn('(functional-spec/nested/index.md)', result)
         self.assertNotIn('deep.md', result)
 
-    def test_depth_zero_keeps_directories_with_nested_documents(self):
+    def test_depth_zero_excludes_directories_outside_pandoc_scan(self):
         index = _nested_index()
         index.add("overview.md", "overview.md", "概要")
         result = render_toc(
@@ -102,7 +102,7 @@ class CollapsibleTest(unittest.TestCase):
             "index.md",
             parse_toc_params("depth=0 exclude-basedir=true"),
         )
-        self.assertIn("- 📁 [c-platform](c-platform/index.md)", result)
+        self.assertNotIn("c-platform", result)
         self.assertIn("- 📄 [overview.md](overview.md)", result)
         self.assertNotIn("api-cheatsheet.md", result)
         self.assertNotIn("functional-spec", result)
@@ -127,8 +127,14 @@ class CollapsibleTest(unittest.TestCase):
                 staged = 'tree/' + name.replace('README.md', 'index.md')
                 index.add(staged, file.name, name)
             script = Path(BIN_DIR).parents[1] / 'bin/pandoc-filters/insert-toc.sh'
-            for options in ('depth=-1', 'depth=-1 exclude="sub/*"',
-                            'depth=-1 basedir="sub"'):
+            combinations = (
+                'depth={} basedir="{}" exclude-basedir={} {}'.format(depth, basedir, exclude_base, exclude)
+                for depth in (-1, 0, 1, 2)
+                for basedir in ('', 'sub')
+                for exclude_base in ('false', 'true')
+                for exclude in ('', 'exclude="sub/*"', 'exclude="b.md" exclude="c.md"')
+            )
+            for options in combinations:
                 with self.subTest(options=options):
                     params = parse_toc_params(options)
                     current = root / params['basedir'] / '.toc-dummy.md' if params['basedir'] else root / 'README.md'

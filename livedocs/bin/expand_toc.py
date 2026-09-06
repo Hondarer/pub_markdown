@@ -142,11 +142,17 @@ class DocIndex:
                 return entry
         return None
 
-    def has_visible_file(self, vdir, patterns):
-        """``vdir`` 配下に、除外されずに残るファイルがあるかどうかを返す。"""
+    def has_visible_file(self, vdir, patterns, base_dir="", max_depth=-1):
+        """Pandoc の走査範囲内に、除外されずに残るファイルがあるかを返す。"""
         stack = [vdir]
         while stack:
             current = stack.pop()
+            # insert-toc.sh の find -maxdepth (depth + 1) と同じ範囲で
+            # 空ディレクトリを判定する。走査範囲外の文書では親を残さない。
+            relative_dir = posixpath.relpath(current or ".", base_dir or ".")
+            directory_depth = 0 if relative_dir == "." else relative_dir.count("/") + 1
+            if max_depth >= 0 and directory_depth > max_depth:
+                continue
             for entry in self._dir_entries.get(current, []):
                 match_path = posixpath.join(current, entry["source_name"]) if current else entry["source_name"]
                 if not is_excluded(match_path, patterns):
@@ -194,7 +200,7 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             continue
 
         if is_dir:
-            if not index.has_visible_file(child_path, patterns):
+            if not index.has_visible_file(child_path, patterns, base_dir, max_depth):
                 continue
             dir_index = index.index_entry(child_path, patterns)
             if dir_index is None:
@@ -226,7 +232,9 @@ def render_toc(index, source_staged_rel, params):
     if base_dir == ".":
         base_dir = ""
 
-    if is_excluded(base_dir, params["exclude"]) or not index.has_visible_file(base_dir, params["exclude"]):
+    if is_excluded(base_dir, params["exclude"]) or not index.has_visible_file(
+        base_dir, params["exclude"], base_dir, params["depth"]
+    ):
         return ""
 
     lines = []
