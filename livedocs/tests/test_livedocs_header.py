@@ -155,6 +155,35 @@ class OverrideHeaderTest(unittest.TestCase):
             + r"\s*\{[^}]*width:\s*468px",
         )
 
+    def test_header_height_and_spacing_use_fixed_pixel_sizes(self):
+        """幅だけでなく、ヘッダーの高さと余白も画面幅で広がらないこと。"""
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        # コメント中の rem は Material 側の元の値を示すため対象から外す。
+        declarations = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+        self.assertNotRegex(declarations, r"\d*\.?\d+rem")
+        for selector, prop, size in (
+            (".md-header__title", "height", "48px"),
+            (".md-header__inner", "padding", "0 4px"),
+            (".md-header__button", "margin", "4px"),
+            (".md-header .md-search__form", "height", "36px"),
+            (".md-sidebar", "top", "48px"),
+        ):
+            self.assertRegex(
+                declarations,
+                re.escape(selector)
+                + r"\s*\{[^}]*"
+                + re.escape(prop)
+                + r":\s*"
+                + re.escape(size)
+                + r"\s*;",
+            )
+        self.assertRegex(
+            declarations,
+            re.escape(".md-typeset :target")
+            + r"\s*\{[^}]*--md-scroll-margin:\s*72px",
+        )
+
     def test_header_title_always_shows_the_document_title(self):
         """本文のスクロール状況によらず、サイト名ではなく文書タイトルを表示すること。"""
         with open(META_CSS, "r", encoding="utf-8") as handle:

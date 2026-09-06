@@ -29,6 +29,20 @@
    も拡大する。各要素を既存の最小値で固定し、画面幅による拡大を防ぐ。 */
 .md-header__title {
   font-size: 18px;
+  height: 48px;
+  line-height: 48px;
+}
+
+/* Material の [dir] 付き指定 (margin-left 1rem、margin-right .4rem) を打ち消す。
+   詳細度が同じため、この後勝ちの上書きには同じ [dir] 付きの形が必要になる。 */
+[dir="ltr"] .md-header__title {
+  margin-left: 20px;
+  margin-right: 8px;
+}
+
+[dir="rtl"] .md-header__title {
+  margin-left: 8px;
+  margin-right: 20px;
 }
 
 /* Material の 48px のタイトル領域を、上側に 2px の余白を持つ 24px のタイトルと
@@ -46,22 +60,113 @@
   letter-spacing: normal;
 }
 
-/* Material は検索ボックスの幅を rem で指定しており、60em 以上で常時表示の
-   入力欄 (.md-search__inner の既定値) が 11.7rem、検索を開いたときの候補パネル
-   (.md-search__inner の checked 版と .md-search__scrollwrap) が 23.4rem になる。
-   さらに 100em (1600px) 以上で html の font-size が 137.5%、125em (2000px)
-   以上で 150% へ上がるため、rem のままでは画面幅にかかわらず際限なく広がる。
-   ヘッダーの他要素と同じく、既定の等倍 (html の 125%、20px 相当) での値を px に
-   換算して固定する (11.7rem = 234px、23.4rem = 468px)。 */
+/* Material はヘッダーの寸法をすべて rem で指定している。100em (1600px) 以上で
+   html の font-size が 137.5%、125em (2000px) 以上で 150% へ上がるため、rem の
+   ままでは画面幅に応じて検索ボックスの幅も、ヘッダーの高さと余白も広がり続ける。
+   文字とアイコンは上で px に固定済みのため、伸びるのは箱と余白だけになり、
+   ヘッダーだけが間延びして見える。
+   タイトル領域、ボタン、検索ボックスはいずれも等倍で 48px に収まるため、
+   等倍 (html の 125%、20px 相当) の換算値へそろえて px で固定する。 */
+.md-header__inner {
+  padding: 0 4px;
+}
+
+/* margin .2rem と padding .4rem を固定する。padding は、モード切替、Doxygen、
+   Git の 4px を docsfw-header-links.css が詳細度で勝って指定しているため、
+   ここでの 8px はメニューとロゴと検索の既定ボタンにだけ効く。 */
+.md-header__button {
+  margin: 4px;
+  padding: 8px;
+}
+
+.md-header__button.md-logo {
+  margin: 4px;
+  padding: 8px;
+}
+
+/* 60em 未満では検索も 40px 四方のボタンになり、html の font-size 拡大が始まる
+   1600px にも届かないため、入力欄として並ぶ 60em 以上だけを対象にする。 */
 @media screen and (min-width: 60em) {
+  .md-header .md-search {
+    padding: 4px 0;
+  }
+
+  /* 常時表示の入力欄の幅 11.7rem を固定する。 */
   .md-header .md-search__inner {
+    padding: 2px 0;
     width: 234px;
   }
 
+  /* 検索を開いたときの候補パネルの幅 23.4rem を固定する。
+     Material は 76.25em 以上でこれを 34.4rem へさらに広げるが、
+     画面幅で変えない方針のため、その段も 468px でそろえる。 */
   [data-md-toggle="search"]:checked ~ .md-header .md-search__inner,
   .md-header .md-search__scrollwrap {
     width: 468px;
   }
+
+  .md-header .md-search__form {
+    height: 36px;
+  }
+
+  /* 候補パネルは入力欄の下端から出る。入力欄の高さ 36px と .md-search__inner の
+     上側 2px を合わせた 38px に固定する。 */
+  .md-header .md-search__output {
+    top: 38px;
+  }
+
+  /* 60em 以上では入力欄の左右とも 2.2rem になる。文字の開始位置が広い画面で
+     右へずれないよう、両側とも 44px に固定する。 */
+  .md-header .md-search__input,
+  .md-header .md-search__suggest {
+    padding-left: 44px;
+    padding-right: 44px;
+  }
+
+  /* 24px の虫めがねと消去ボタンを 36px の入力欄の中央へ置く。 */
+  .md-header .md-search__icon[for="__search"],
+  .md-header .md-search__options {
+    top: 6px;
+  }
+
+  [dir="ltr"] .md-header .md-search__icon[for="__search"] {
+    left: 10px;
+  }
+
+  [dir="rtl"] .md-header .md-search__icon[for="__search"] {
+    right: 10px;
+  }
+
+  [dir="ltr"] .md-header .md-search__options {
+    right: 10px;
+  }
+
+  [dir="rtl"] .md-header .md-search__options {
+    left: 10px;
+  }
+
+  [dir="ltr"] .md-header .md-search__options > .md-icon {
+    margin-left: 4px;
+  }
+
+  [dir="rtl"] .md-header .md-search__options > .md-icon {
+    margin-right: 4px;
+  }
+}
+
+/* ヘッダーの高さに追従する外側の指定も、同じ 48px 基準へそろえる。
+   サイドバーの sticky 上端は Material の 2.4rem で、ヘッダーの高さと同じ値を
+   使っている。実際の表示では vendor JS が測定したヘッダーの高さを style 属性へ
+   書き込むため、この指定は JS が動かない場合の代替値として効く。 */
+.md-sidebar {
+  top: 48px;
+}
+
+/* 見出しへのアンカー移動時の上余白 3.6rem も、ヘッダー 48px と余白 24px の
+   合計として rem で書かれている。本文の文字サイズは px で固定済みのため、
+   ここだけが画面幅で伸びないよう 72px に固定する。 */
+.md-typeset :target {
+  --md-scroll-margin: 72px;
 }
 
 /* ヘッダー タイトルは、本文のスクロールに応じてサイト名 (1つ目の
