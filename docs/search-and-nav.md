@@ -196,7 +196,8 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 - 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`
 
 ブラウザー側の `docsfw-nav.js` は `__DOCSFW_NAV__` を読み込み、`<details>`/`<summary>` で折り畳みツリーを描画します。  
-現在ページは `__DOCSFW_CURRENT__` と URL 照合してハイライトし、祖先ディレクトリを自動展開します。
+現在ページは `__DOCSFW_CURRENT__` と URL 照合してハイライトし、祖先ディレクトリを自動展開します。  
+折りたたみボタン (`.docsfw-nav-toggle`) は、現在ページ・祖先・ホバー・フォーカスでタイトルと同じナビ色になります。
 
 ### ページ内目次の配置と追従
 
@@ -246,7 +247,8 @@ MkDocs Material の `toc.permalink` が生成するアンカーに合わせる�
   `body.docsfw-nav-open` クラスのトグルで制御します。ページ内目次は複製せず、同じ要素を移動します。
 
 検索は 60em 以上でヘッダー内の幅 234px の入力欄、60em 未満で検索アイコンから開くパネルとして表示します。  
-検索パネルとドロワーは同時に開きません。
+検索パネルとドロワーは同時に開きません。  
+入力欄のフォーカス枠は 1px です。
 
 ### 自己完結 HTML
 

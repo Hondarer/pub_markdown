@@ -99,16 +99,24 @@ async function main() {
     assert.equal(await page.$eval('.doc-title', node => getComputedStyle(node).color), 'rgba(0, 0, 0, 0.87)');
     assert.equal(await page.$eval('.docsfw-current', node => getComputedStyle(node).fontWeight), '400');
     assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > a', node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > .docsfw-nav-toggle', node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
     assert.deepEqual(await page.$eval('.docsfw-search-form', node => {
       const style = getComputedStyle(node, '::before');
       return {width: style.width, height: style.height, left: style.left};
     }), {width: '24px', height: '24px', left: '10px'});
+    await page.focus('#docsfw-search-input');
+    assert.equal(await page.$eval('#docsfw-search-input', node => getComputedStyle(node).boxShadow), 'rgb(74, 144, 217) 0px 0px 0px 1px');
+    await page.$eval('#docsfw-search-input', node => node.blur());
     assert((await dimensions(page, '.docsfw-home-link a')).height > 0);
     assert.equal(await page.$eval('.docsfw-home-link a', node => node.getAttribute('href')), 'index.html');
     const toggles = await page.$$('.docsfw-nav-toggle');
     assert.equal(await toggles[0].evaluate(node => node.getAttribute('aria-expanded')), 'true');
     assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
+    await toggles[1].hover();
+    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
     await toggles[1].focus();
+    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).outlineStyle), 'none');
     await page.keyboard.press('Enter');
     assert.equal(await toggles[1].evaluate(node => document.getElementById(node.getAttribute('aria-controls')).hidden), false);
     await page.keyboard.press('Space');
