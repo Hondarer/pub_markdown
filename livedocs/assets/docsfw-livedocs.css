@@ -240,12 +240,23 @@
     display: none;
   }
 
-  /* Material の .md-nav--primary .md-nav__title ~ .md-nav__list は、板の一覧に
-     内側の影と独立したスクロールを与える。目次の一覧は見出しの後ろに続く
-     ただの一覧のため、どちらも外す。 */
+  /* Material は板の一覧の内側の影で見出しとの区切り線を描く。内側の影は
+     padding box の中だけを塗るため、右のスクロール バーの列 (6px) には
+     届かない。区切り線が引かれた 1px の分だけ、スクロール バーの上端が
+     線より高く見える。同じ 1px を border-top へ移すと、線は padding box の
+     外側でスクロール バーの列も含めて引かれ、上端が線の下からになる。
+     色は Material の影と同じ rgba(0, 0, 0, 0.07) のため見た目は変わらない。 */
+  .md-nav--primary .md-nav__title ~ .md-nav__list {
+    box-shadow: none;
+    border-top: 1px solid var(--md-default-fg-color--lightest);
+  }
+
+  /* 目次の一覧は見出しの後ろに続くただの一覧のため、板向けの独立した
+     スクロールと区切り線を外す。 */
   .md-nav--primary .docsfw-combined-toc .md-nav__list {
     overflow: visible;
     box-shadow: none;
+    border-top: 0;
   }
 
   /* Material は一覧に scroll-snap-type: y mandatory を、目次の見出しに

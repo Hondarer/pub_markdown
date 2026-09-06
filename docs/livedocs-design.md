@@ -1179,6 +1179,11 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 1624px 以下では `scrollbar-gutter: auto` に戻し、`.md-sidebar__inner` の左右余白 10px も 0 にします。  
 この余白の規則は消さずに 0 を指定します。消すと Material が `@supports selector(::-webkit-scrollbar)` の中で当てる `padding-right: calc(100% - 11.5rem)` が出ます。
 
+板の見出しと一覧の区切り線は、Material では一覧の内側の影 (`box-shadow: 0 .05rem 0 … inset`) です。  
+内側の影は padding box の中だけを塗るため、右のスクロール バーの列には届かず、線の 1px 分だけスクロール バーの上端が高く見えます。  
+同じ 1px を `border-top` へ移すと、線は padding box の外側でスクロール バーの列も含めて引かれ、上端が線の下からになります。  
+色は Material の影と同じ `rgba(0, 0, 0, 0.07)` (`--md-default-fg-color--lightest`) のため、見た目は変わりません。
+
 白地を中身と一致させると、ドロワーと本文の境目が影だけになります。  
 本文に接する縁 (LTR は `border-right`、RTL は `border-left`) へ 1px の線を引きます。  
 色はヘッダーとフッターの境界線と同じ `--md-primary-fg-color--dark` です。  

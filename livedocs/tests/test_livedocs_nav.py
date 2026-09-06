@@ -148,6 +148,46 @@ class MaterialOwnTocTest(unittest.TestCase):
         )
 
 
+class PanelSeparatorTest(unittest.TestCase):
+    """板の見出しと一覧の区切り線が、スクロール バーの列まで届くこと。"""
+
+    def _block(self):
+        text = _read(LIVEDOCS_CSS)
+        match = re.search(
+            r"@media screen and \(max-width:\s*"
+            + re.escape(MATERIAL_DRAWER_BREAKPOINT)
+            + r"\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match, "Material と同じ境界の media が無い")
+        return match.group(1)
+
+    def test_separator_is_a_border_not_an_inset_shadow(self):
+        """内側の影は padding box の中だけで、スクロール バーの列に届かない。
+
+        線の分だけスクロール バーの上端が高く見えるため、border-top へ移す。
+        """
+        block = self._block()
+        self.assertRegex(
+            block,
+            re.escape(".md-nav--primary .md-nav__title ~ .md-nav__list")
+            + r"\s*\{[^}]*box-shadow:\s*none",
+        )
+        self.assertRegex(
+            block,
+            re.escape(".md-nav--primary .md-nav__title ~ .md-nav__list")
+            + r"\s*\{[^}]*border-top:\s*1px solid var\(--md-default-fg-color--lightest\)",
+        )
+
+    def test_combined_toc_list_has_no_separator(self):
+        """目次の見出しの下には線を出さない。"""
+        self.assertRegex(
+            self._block(),
+            re.escape(".md-nav--primary .docsfw-combined-toc .md-nav__list")
+            + r"\s*\{[^}]*border-top:\s*0",
+        )
+
+
 class DrawerCloseTest(unittest.TestCase):
     """ドロワーを開いた状態から、外を押しても目次を押しても閉じられること。"""
 
