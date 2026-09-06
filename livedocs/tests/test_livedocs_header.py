@@ -168,7 +168,9 @@ class OverrideHeaderTest(unittest.TestCase):
             (".md-header__inner", "padding", "0 4px"),
             (".md-header__button", "margin", "4px"),
             (".md-header .md-search__form", "height", "36px"),
-            (".md-sidebar", "top", "48px"),
+            # ヘッダーは 48px の本体と、その下に 12px の帯 (.md-header::after)
+            # を持つ。サイドバーの上端はその合計に置く。
+            (".md-sidebar", "top", "60px"),
         ):
             self.assertRegex(
                 declarations,
@@ -182,7 +184,7 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertRegex(
             declarations,
             re.escape(".md-typeset :target")
-            + r"\s*\{[^}]*--md-scroll-margin:\s*72px",
+            + r"\s*\{[^}]*--md-scroll-margin:\s*84px",
         )
 
     def test_header_title_always_shows_the_document_title(self):
@@ -274,15 +276,26 @@ class DrawerTopSpacingTest(unittest.TestCase):
         with open(LIVEDOCS_CSS, "r", encoding="utf-8") as handle:
             return handle.read()
 
-    def test_wide_layout_uses_twelve_pixel_sidebar_padding(self):
-        text = self._read_css()
+    def test_wide_layout_takes_the_twelve_pixels_from_the_header(self):
+        """3 ペインの先頭余白は、各ペインではなくヘッダーの帯が持つこと。
+
+        ペインごとに padding-top を持たせるとページ先頭でしか余白が効かず、
+        スクロール後は本文がヘッダーへ接する。sticky なヘッダー自身の下端へ
+        同じ背景色の帯を足し、ペイン側は既定の padding-top を打ち消す。
+        """
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            meta = handle.read()
         self.assertRegex(
-            text,
+            meta,
+            re.escape(".md-header::after") + r"\s*\{[^}]*height:\s*12px",
+        )
+        self.assertRegex(
+            self._read_css(),
             r"@media screen and \(min-width:\s*1625px\)\s*\{[\s\S]*?"
             + re.escape(".md-sidebar--primary")
             + r"\s*,\s*"
             + re.escape(".md-sidebar--secondary")
-            + r"\s*\{[^}]*padding-top:\s*12px",
+            + r"\s*\{[^}]*padding-top:\s*0",
         )
 
     def test_drawer_scrollwrap_keeps_the_same_twelve_pixel_inset(self):
