@@ -91,8 +91,21 @@ class CollapsibleTest(unittest.TestCase):
         params = parse_toc_params('basedir="functional-spec" depth=0 exclude-basedir=true')
         result = render_toc(_nested_index(), "c-platform/index.md", params)
         self.assertIn('(functional-spec/argparser.md)', result)
-        self.assertNotIn('(functional-spec/nested/index.md)', result)
+        self.assertIn('(functional-spec/nested/index.md)', result)
         self.assertNotIn('deep.md', result)
+
+    def test_depth_zero_keeps_directories_with_nested_documents(self):
+        index = _nested_index()
+        index.add("overview.md", "overview.md", "概要")
+        result = render_toc(
+            index,
+            "index.md",
+            parse_toc_params("depth=0 exclude-basedir=true"),
+        )
+        self.assertIn("- 📁 [c-platform](c-platform/index.md)", result)
+        self.assertIn("- 📄 [overview.md](overview.md)", result)
+        self.assertNotIn("api-cheatsheet.md", result)
+        self.assertNotIn("functional-spec", result)
 
     @unittest.skipUnless(markdown is not None, "Python-Markdown が必要です")
     def test_wrapper_preserves_markdown_links_and_nesting(self):
@@ -114,8 +127,8 @@ class CollapsibleTest(unittest.TestCase):
                 staged = 'tree/' + name.replace('README.md', 'index.md')
                 index.add(staged, file.name, name)
             script = Path(BIN_DIR).parents[1] / 'bin/pandoc-filters/insert-toc.sh'
-            for options in ('depth=-1', 'depth=0', 'depth=1 exclude-basedir=true',
-                            'depth=-1 exclude="sub/*"', 'depth=-1 basedir="sub"'):
+            for options in ('depth=-1', 'depth=-1 exclude="sub/*"',
+                            'depth=-1 basedir="sub"'):
                 with self.subTest(options=options):
                     params = parse_toc_params(options)
                     current = root / params['basedir'] / '.toc-dummy.md' if params['basedir'] else root / 'README.md'

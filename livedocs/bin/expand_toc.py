@@ -142,16 +142,13 @@ class DocIndex:
                 return entry
         return None
 
-    def has_visible_file(self, vdir, patterns, base_dir="", max_depth=-1):
+    def has_visible_file(self, vdir, patterns):
         """``vdir`` 配下に、除外されずに残るファイルがあるかどうかを返す。"""
         stack = [vdir]
         while stack:
             current = stack.pop()
             for entry in self._dir_entries.get(current, []):
                 match_path = posixpath.join(current, entry["source_name"]) if current else entry["source_name"]
-                relative = posixpath.relpath(match_path, base_dir) if base_dir else match_path
-                if max_depth >= 0 and relative.count("/") > max_depth:
-                    continue
                 if not is_excluded(match_path, patterns):
                     return True
             for name in self._dir_subdirs.get(current, ()):
@@ -197,7 +194,7 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines):
             continue
 
         if is_dir:
-            if not index.has_visible_file(child_path, patterns, base_dir, max_depth):
+            if not index.has_visible_file(child_path, patterns):
                 continue
             dir_index = index.index_entry(child_path, patterns)
             if dir_index is None:
@@ -229,7 +226,7 @@ def render_toc(index, source_staged_rel, params):
     if base_dir == ".":
         base_dir = ""
 
-    if is_excluded(base_dir, params["exclude"]) or not index.has_visible_file(base_dir, params["exclude"], base_dir, params["depth"]):
+    if is_excluded(base_dir, params["exclude"]) or not index.has_visible_file(base_dir, params["exclude"]):
         return ""
 
     lines = []
