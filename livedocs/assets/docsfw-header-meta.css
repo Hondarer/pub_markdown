@@ -176,9 +176,15 @@
    サイドバーの sticky 上端は Material の 2.4rem で、ヘッダーの高さと同じ値を
    使っている。実際の表示では vendor JS が測定したヘッダーの高さを style 属性へ
    書き込むため、この指定は JS が動かない場合の代替値として効く。
-   48px (タイトル領域) + 12px (上の空白) = 60px。 */
+   48px (タイトル領域) + 12px (上の空白) = 60px。
+   ドロワーの高さもこの値を引いて画面へ収めるため (docsfw-livedocs.css)、
+   値は変数で 1 か所に持つ。 */
+:root {
+  --docsfw-header-height: 60px;
+}
+
 .md-sidebar {
-  top: 60px;
+  top: var(--docsfw-header-height);
 }
 
 /* 見出しへのアンカー移動時の上余白 3.6rem も、ヘッダー 48px と余白 24px の

@@ -75,48 +75,63 @@
      left: -12.1rem を、[dir="rtl"] が right: -12.1rem を当てる。
      位置だけ Material の 12.1rem、幅だけ docsfw の値という食い違いを避けるため、
      left / right は [dir] を付けて詳細度をそろえ、後勝ちさせる。
-     幅は 1 か所で持ち、閉じた位置と開いた量の両方から参照する。 */
+     幅は 1 か所で持ち、閉じた位置と開いた量の両方から参照する。
+     上端は Material の JS が測ったヘッダーの高さを style 属性へ書き込むため、
+     CSS で top を指定しても効かない。高さが 100% のままだと下端がその分だけ
+     画面の外へ出て、下端の余白も画面外に落ちる。同じ値を引いて収める。 */
   .md-sidebar--primary {
     --docsfw-drawer-width: min(80vw, 320px);
     display: block;
     position: fixed;
-    top: 0;
     width: var(--docsfw-drawer-width);
-    height: 100%;
+    height: calc(100% - var(--docsfw-header-height));
     background-color: var(--md-default-bg-color);
     transform: translateX(0);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
     z-index: 5;
   }
 
+  /* 本文に接する縁だけに境界線を引く。上端はヘッダーの境界線に、左端と下端は
+     画面の縁に接するため引かない。色はヘッダーとフッターの境界線にそろえる。 */
   [dir="ltr"] .md-sidebar--primary {
     left: calc(-1 * var(--docsfw-drawer-width));
+    border-right: 1px solid var(--md-primary-fg-color--dark);
   }
 
   [dir="rtl"] .md-sidebar--primary {
     right: calc(-1 * var(--docsfw-drawer-width));
+    border-left: 1px solid var(--md-primary-fg-color--dark);
   }
 
   /* デスクトップは .md-sidebar の padding-top: 12px で先頭余白を取る。
      ドロワーでは scrollwrap が position: absolute と inset で親を埋めるため、
      親の padding は効かない。同じ 12px を scrollwrap の上端へ移し、
      余白をスクロール領域の外に残す。
-     下端にも同じ 12px を置く。ドロワーは画面の高さいっぱい (height: 100%) の
-     ため、これが無いと一覧の最後の項目が画面の下端に接する。 */
+     下端にも同じ 12px を置く。ドロワーはヘッダーの下から画面の下端までを
+     占めるため、これが無いと一覧の最後の項目が画面の下端に接する。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     position: absolute;
     inset: 12px 0;
     margin: 0;
     overflow-y: auto;
     scroll-snap-type: none;
+    /* ファイル先頭の scrollbar-gutter: stable は、3 ペインで一覧の幅が
+       スクロール バーの有無で動かないためのもの。ドロワーでは幅が狭く、
+       予約した分がそのまま右端の余白になるため打ち消す。予約幅はブラウザーの
+       スクロール バー幅で決まり、拡大率でも変わる。 */
+    scrollbar-gutter: auto;
   }
 
+  /* 3 ペインでは本文との間隔として 10px を持つが、ドロワーでは一覧の右端と
+     ドロワーの縁の間の空きになる。規則は残して 0 にする。消すと Material の
+     @supports selector(::-webkit-scrollbar) が当てる
+     padding-right: calc(100% - 11.5rem) が出る。 */
   [dir="ltr"] .md-sidebar--primary .md-sidebar__inner {
-    padding-right: 10px;
+    padding-right: 0;
   }
 
   [dir="rtl"] .md-sidebar--primary .md-sidebar__inner {
-    padding-left: 10px;
+    padding-left: 0;
   }
 
   [data-md-toggle="drawer"]:checked ~ .md-container .md-sidebar--primary {
@@ -193,6 +208,12 @@
    境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく
    Material と同じ 76.234375em を使う。 */
 @media screen and (max-width: 76.234375em) {
+  /* 板には板自身の見出し (戻る矢印とページ名の帯) があるため、上端の 12px は
+     板の上の白帯になる。上端だけ 0 にし、下端の 12px は残す。 */
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    inset: 0 0 12px;
+  }
+
   /* 目次の各階層がスライド パネル (絶対配置) になるのを止める。 */
   .md-nav--primary .docsfw-combined-toc .md-nav {
     position: static;

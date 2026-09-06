@@ -170,8 +170,10 @@ class OverrideHeaderTest(unittest.TestCase):
             (".md-header__button", "margin", "4px"),
             (".md-header .md-search__form", "height", "36px"),
             # ヘッダーは 48px の本体と、その下に 12px の帯 (.md-header::after)
-            # を持つ。サイドバーの上端はその合計に置く。
-            (".md-sidebar", "top", "60px"),
+            # を持つ。サイドバーの上端とドロワーの高さはその合計を使うため、
+            # 値は :root の変数で 1 か所に持つ。
+            (":root", "--docsfw-header-height", "60px"),
+            (".md-sidebar", "top", "var(--docsfw-header-height)"),
         ):
             self.assertRegex(
                 declarations,
@@ -321,6 +323,67 @@ class DrawerTopSpacingTest(unittest.TestCase):
             drawer,
             re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
             + r"\s*\{[^}]*inset:\s*0\s*;",
+        )
+
+
+class DrawerBoxTest(unittest.TestCase):
+    """ドロワーの白地が中身と一致すること。"""
+
+    def _read_css(self):
+        with open(LIVEDOCS_CSS, "r", encoding="utf-8") as handle:
+            return handle.read()
+
+    def _drawer_block(self):
+        match = re.search(
+            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            self._read_css(),
+        )
+        self.assertIsNotNone(match, "docsfw の境界の media が無い")
+        return match.group(1)
+
+    def test_drawer_height_fits_below_the_header(self):
+        """上端はヘッダーの高さ分下がるため、高さも同じだけ引くこと。
+
+        Material の JS が測ったヘッダーの高さを style 属性へ書き込むので、
+        高さが 100% のままだと下端がその分だけ画面の外へ出て、下端の余白も
+        画面外に落ちる。
+        """
+        self.assertRegex(
+            self._drawer_block(),
+            re.escape(".md-sidebar--primary")
+            + r"\s*\{[^}]*height:\s*calc\(100% - var\(--docsfw-header-height\)\)",
+        )
+        with open(META_CSS, "r", encoding="utf-8") as handle:
+            meta = handle.read()
+        self.assertRegex(meta, r"--docsfw-header-height:\s*60px")
+
+    def test_panel_layout_drops_the_top_band(self):
+        """板には板自身の見出しがあるため、上端の 12px は白帯になる。"""
+
+        block = re.search(
+            r"@media screen and \(max-width:\s*76\.234375em\)\s*\{([\s\S]*?)\n\}",
+            self._read_css(),
+        )
+        self.assertIsNotNone(block, "Material と同じ境界の media が無い")
+        self.assertRegex(
+            block.group(1),
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*inset:\s*0 0 12px",
+        )
+
+    def test_drawer_edge_has_a_border(self):
+        """白地と本文の境目を 1px の線で示すこと。"""
+
+        block = self._drawer_block()
+        self.assertRegex(
+            block,
+            re.escape('[dir="ltr"] .md-sidebar--primary')
+            + r"\s*\{[^}]*border-right:\s*1px solid var\(--md-primary-fg-color--dark\)",
+        )
+        self.assertRegex(
+            block,
+            re.escape('[dir="rtl"] .md-sidebar--primary')
+            + r"\s*\{[^}]*border-left:\s*1px solid var\(--md-primary-fg-color--dark\)",
         )
 
 

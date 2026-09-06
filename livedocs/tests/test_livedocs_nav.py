@@ -75,6 +75,41 @@ class CombinedTocPlacementTest(unittest.TestCase):
         )
 
 
+class DrawerWidthTest(unittest.TestCase):
+    """ドロワーでは、一覧の右にスクロール バー以外の空きを作らないこと。"""
+
+    def _docsfw_drawer_block(self):
+        text = _read(LIVEDOCS_CSS)
+        match = re.search(
+            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match, "docsfw の境界の media が無い")
+        return match.group(1)
+
+    def test_scrollbar_gutter_is_not_reserved(self):
+        """板の中では板自身の一覧がスクロールし、予約分が余白として残る。"""
+        self.assertRegex(
+            self._docsfw_drawer_block(),
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*scrollbar-gutter:\s*auto",
+        )
+
+    def test_inner_has_no_side_padding(self):
+        """3 ペイン用の 10px は、ドロワーでは一覧と縁の間の空きになる。"""
+        block = self._docsfw_drawer_block()
+        self.assertRegex(
+            block,
+            re.escape('[dir="ltr"] .md-sidebar--primary .md-sidebar__inner')
+            + r"\s*\{[^}]*padding-right:\s*0",
+        )
+        self.assertRegex(
+            block,
+            re.escape('[dir="rtl"] .md-sidebar--primary .md-sidebar__inner')
+            + r"\s*\{[^}]*padding-left:\s*0",
+        )
+
+
 class MaterialOwnTocTest(unittest.TestCase):
     """Material 内蔵のページ内目次を、約 960px 未満で打ち消すこと。"""
 

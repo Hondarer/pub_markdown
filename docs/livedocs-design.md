@@ -1163,7 +1163,26 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 1625px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
 1625px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
 同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。  
-下端にも同じ 12px を置きます。ドロワーは画面の高さいっぱい (`height: 100%`) のため、これが無いと一覧の最後の項目が画面の下端に接します。
+下端にも同じ 12px を置きます。これが無いと一覧の最後の項目が画面の下端に接します。  
+約 1220px 未満の板には板自身の見出し (戻る矢印とページ名の帯) があるため、上端の 12px は板の上の白帯になります。  
+この幅だけ `inset: 0 0 12px` にし、上端の帯を持ちません。
+
+ドロワーの高さは `calc(100% - var(--docsfw-header-height))` です。  
+上端は Material の JS が測ったヘッダーの高さを `style` 属性へ書き込むため、CSS の `top` は効きません。  
+高さが `100%` のままだと下端がその分だけ画面の外へ出て、下端の 12px の余白も画面外に落ちます。  
+ヘッダーの高さ 60px は `docsfw-header-meta.css` の `:root` に `--docsfw-header-height` として持ち、`.md-sidebar` の `top` と共有します。
+
+ドロワーでは、一覧の右にスクロール バー以外の空きを作りません。  
+`scrollbar-gutter: stable` は 3 ペインで一覧の幅がスクロール バーの有無で動かないための指定ですが、ドロワーでは幅が狭く、予約した分がそのまま右端の余白になります。  
+予約幅はブラウザーのスクロール バー幅で決まるため、拡大率によっても変わります。  
+板の中では板自身の一覧がスクロールし、ドロワー側のスクロール バーは出ないため、予約分は使われません。  
+1624px 以下では `scrollbar-gutter: auto` に戻し、`.md-sidebar__inner` の左右余白 10px も 0 にします。  
+この余白の規則は消さずに 0 を指定します。消すと Material が `@supports selector(::-webkit-scrollbar)` の中で当てる `padding-right: calc(100% - 11.5rem)` が出ます。
+
+白地を中身と一致させると、ドロワーと本文の境目が影だけになります。  
+本文に接する縁 (LTR は `border-right`、RTL は `border-left`) へ 1px の線を引きます。  
+色はヘッダーとフッターの境界線と同じ `--md-primary-fg-color--dark` です。  
+上端はヘッダーの境界線に、左端と下端は画面の縁に接するため線を引きません。
 
 ドロワーを閉じる操作も、Material の範囲では足りません。  
 ドロワーの外を押したときに閉じる覆い (`.md-overlay`) は、Material 自身のドロワーと同じ 76.2344em 未満でしか出ません。  
