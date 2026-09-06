@@ -357,3 +357,52 @@
   height: 16px;
   display: block;
 }
+
+/* ------------------------------------------------------------------------ */
+/* コード ブロックのコピー                                                    */
+/* ------------------------------------------------------------------------ */
+
+/* Material の content.code.copy は .md-code__nav を pre の右上へ置く。
+   既定は常時見えるゴースト アイコンなので、SVG ダウンロードと同じ
+   ホバー チップ (16px、枠、不透明な背景) へそろえる。
+   寸法と余白は styles/html/html-style.css の .docsfw-code-copy と同じ。 */
+.md-typeset .highlight {
+  position: relative;
+}
+
+.md-typeset .md-code__nav {
+  top: 4px;
+  right: 4px;
+  gap: 0;
+  padding: 3px;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 3px;
+  background: var(--md-default-bg-color);
+  opacity: 0;
+  transition: opacity 0.15s;
+  line-height: 0;
+}
+
+.md-typeset pre:hover > .md-code__nav,
+.md-typeset .highlight:hover > .md-code__nav,
+.md-typeset .md-code__nav:focus-within {
+  opacity: 1;
+  background: var(--md-default-bg-color);
+}
+
+.md-typeset .md-code__button[data-md-type="copy"] {
+  width: 16px;
+  height: 16px;
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .md-code__button[data-md-type="copy"]:hover,
+.md-typeset .md-code__button[data-md-type="copy"].focus-visible {
+  color: var(--md-typeset-a-color);
+}
+
+.md-typeset .md-code__button[data-md-type="copy"]:after {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}

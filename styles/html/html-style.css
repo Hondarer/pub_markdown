@@ -952,33 +952,46 @@ mark {
   print-color-adjust: exact;
 }
 
-/* 本文中 SVG 画像の「SVG をダウンロード」オーバーレイ (ホバー時のみ表示)
-   アイコンの基準要素 (.docsfw-svg-dl-host) は figure があれば figure、
-   なければ画像を包む span (.docsfw-svg-dl-wrap) */
-.docsfw-svg-dl-host {
+/* 本文中 SVG の「ダウンロード」とコード ブロックの「コピー」は同じホバー チップ。
+   アイコンの基準要素は position: relative。SVG は figure があれば figure、
+   なければ画像を包む span (.docsfw-svg-dl-wrap)。コードは
+   .code-expander-wrapper。 */
+.docsfw-svg-dl-host,
+.code-expander-wrapper {
   position: relative; }
 
 .docsfw-svg-dl-wrap {
   display: inline-block;
   max-width: 100%; }
 
-.docsfw-svg-dl {
+.docsfw-svg-dl,
+.docsfw-code-copy {
   position: absolute;
   top: 4px;
   right: 4px;
+  z-index: 1;
   opacity: 0;
   transition: opacity 0.15s;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(0, 0, 0, 0.32);
   border-radius: 3px;
   padding: 3px;
-  line-height: 0; }
+  line-height: 0;
+  color: #4183C4;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  margin: 0; }
 
 .docsfw-svg-dl-host:hover .docsfw-svg-dl,
-.docsfw-svg-dl:focus {
+.docsfw-svg-dl:focus,
+.code-expander-wrapper:hover .docsfw-code-copy,
+.docsfw-code-copy:focus {
   opacity: 1; }
 
-.docsfw-svg-dl svg {
+.docsfw-svg-dl svg,
+.docsfw-code-copy svg {
   width: 16px;
   height: 16px;
   display: block; }
