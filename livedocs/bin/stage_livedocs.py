@@ -987,10 +987,22 @@ def parse_publocal_order(path):
     return order
 
 
+# ルート .nav.yml の並び。insert-toc.sh と同じく、ファイルとフォルダーを
+# ソース名 (*.md / フォルダー名) の大小文字無視アルファベット順で混在させる。
+ROOT_NAV_SORT_YAML = """sort:
+  by: filename
+  direction: asc
+  type: alphabetical
+  ignore_case: true
+  sections: mixed"""
+
+
 def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
     """``publocal.yaml`` の ``order:`` を mkdocs-awesome-nav の ``.nav.yml`` へ変換する。
 
     ルートには索引ページのタイトルをフォルダー表示名として使う設定を常に生成します。
+    あわせて、本文 ``\\toc`` と同じ並び (ファイルとフォルダーの混在、大小文字を
+    無視したアルファベット順) を ``sort:`` として出します。子ディレクトリは継承します。
     索引タイトルがないディレクトリでは、元の名前を表示名に指定します。
     ``publocal.yaml`` に ``order:`` があるディレクトリでは、並び順も生成します。
 
@@ -1006,6 +1018,7 @@ def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
         lines = []
         if not staged_dir:
             lines.append("use_index_title: true")
+            lines.append(ROOT_NAV_SORT_YAML)
         else:
             index_path = os.path.join(out_dir, staged_dir, "index.md")
             index_title = None

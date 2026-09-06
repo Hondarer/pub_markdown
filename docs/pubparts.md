@@ -22,7 +22,7 @@ makefw 側の詳細は [makeparts.md](../../makefw/docs/makeparts.md) を参照�
 ## publocal.yaml: 並び順の指定
 
 `publocal.yaml` の `order` に、そのディレクトリ直下の子 (ファイル・サブフォルダー) を並べたい順に列挙します。  
-この指定は、ナビゲーション ツリーと TOC (目次) の両方の並び順に反映されます。
+この指定は、本文の `\toc`、Pandoc HTML の左サイドバー、MkDocs の左サイドバーの並びに反映されます。
 
 ```yaml
 order:
@@ -140,8 +140,9 @@ docs/
 
 - `publocal.yaml` は `order` を記述するディレクトリの直下に置きます。
 - 並び順はそのディレクトリ直下の子にのみ作用します。孫以降の並び順は、それぞれのディレクトリに置いた `publocal.yaml` で指定します。
-- ナビゲーション ツリー (`generate-nav-tree.py`) は出力 HTML を走査するため、ソース mdRoot と mergeSubfolderDocs のマッピングを参照して対応する `publocal.yaml` を読み込みます。
+- ナビゲーション ツリー (`generate-nav-tree.py`) は出力 HTML を走査するため、ソース mdRoot と mergeSubfolderDocs のマッピングを参照して対応する `publocal.yaml` を読み込みます。比較キーは本文の `\toc` と同じソース名 (`*.md` / フォルダー名) です。
 - TOC (`insert-toc.sh`) はソースを走査するため、各ディレクトリの `publocal.yaml` を直接読み込みます。mergeSubfolderDocs で取り込んだ仮想パスは、実ソース ディレクトリへ逆引きして `publocal.yaml` を解決します。
+- MkDocs の左サイドバーは、ルート `.nav.yml` の `sort:` と、`order:` があるディレクトリの明示 `nav:` で同じ規則を再現します。
 - mergeSubfolderDocs で取り込んだサブフォルダー内部の並び順も、マージ元の実ディレクトリに置いた `publocal.yaml` で指定できます。
 - `defaults:` は `pub_markdown_core.sh` が Markdown ごとに、ファイルの所属ディレクトリからソース ルートまで階層を遡って収集し、pandoc の `--metadata-file` 群として渡します。pandoc は後に渡したファイルを優先し、ドキュメント自身の YAML が最終的にすべてを上書きします。
 - ソース ルートの上端は、mergeSubfolderDocs のサブフォルダー配下ならそのサブフォルダーの実 mdRoot、それ以外は主 mdRoot です。走査はその範囲に収まります。

@@ -274,6 +274,16 @@ class GitLinkResolutionTest(unittest.TestCase):
         self.assertEqual(document.publish_date, "")
 
 
+ROOT_NAV_YAML = """use_index_title: true
+sort:
+  by: filename
+  direction: asc
+  type: alphabetical
+  ignore_case: true
+  sections: mixed
+"""
+
+
 class GenerateNavFilesTest(unittest.TestCase):
     def test_root_enables_index_titles_without_publocal(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -285,7 +295,7 @@ class GenerateNavFilesTest(unittest.TestCase):
 
             self.assertEqual(generated, 2)
             with open(os.path.join(output, ".nav.yml"), encoding="utf-8") as handle:
-                self.assertEqual(handle.read(), "use_index_title: true\n")
+                self.assertEqual(handle.read(), ROOT_NAV_YAML)
 
     def test_directory_names_preserved_and_index_title_restored(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -349,7 +359,7 @@ class GenerateNavFilesTest(unittest.TestCase):
             with open(os.path.join(output, ".nav.yml"), encoding="utf-8") as handle:
                 self.assertEqual(
                     handle.read(),
-                    "use_index_title: true\nnav:\n  - index.md\n  - guide\n  - ...\n",
+                    ROOT_NAV_YAML + "nav:\n  - index.md\n  - guide\n  - ...\n",
                 )
 
 

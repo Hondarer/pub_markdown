@@ -14,7 +14,8 @@ Tree node format:
     - A directory is represented by its index.html (url = "dir/index.html").
       If no index.html exists, url is null.
     - Leaf pages have no "children" key (or children=[]).
-    - Children are sorted: files and subdirs mixed alphabetically by name,
+    - Children are sorted: files and subdirs mixed alphabetically by the
+      source name used by \\toc (files as *.md, directories by folder name),
       unless the corresponding source directory provides a publocal.yaml with
       an explicit "order" list (listed entries first, the rest by name).
 
@@ -22,8 +23,8 @@ Usage: python3 generate-nav-tree.py <html-root> [<source-md-root> [alias=dir ...
 
   <source-md-root> is the Markdown source root (mdRoot). When given, each
   output directory's child order can be overridden by a publocal.yaml placed
-  in the corresponding source directory. When omitted, the legacy name order
-  is used (backward compatible).
+  in the corresponding source directory. When omitted, children follow the
+  \\toc name order (files as *.md, directories by folder name).
 
   Each trailing "alias=dir" is a mergeSubfolderDocs mapping: output paths under
   "<alias>/..." resolve to the real source directory "<dir>/..." for the
@@ -53,8 +54,8 @@ SKIP_NAMES = {
 # Source-directory ordering (publocal.yaml)
 # ---------------------------------------------------------------------------
 
-# Markdown source root passed as the optional 2nd CLI argument. None => legacy
-# name ordering (backward compatible).
+# Markdown source root passed as the optional 2nd CLI argument. None => \\toc
+# name order without publocal.yaml overrides.
 SRC_ROOT = None
 
 # mergeSubfolderDocs mapping: alias -> real source directory. Output directories
@@ -89,6 +90,17 @@ def resolve_src_dir(prefix):
         return os.path.join(real, rest.replace('/', os.sep)) if rest else real
 
     return os.path.join(SRC_ROOT, p.replace('/', os.sep))
+
+
+def toc_sort_name(name):
+    """Return the \\toc comparison name for an HTML-tree child.
+
+    Output files end with .html, while insert-toc.sh compares source names
+    ending with .md. Directories have no extension and are returned as-is.
+    """
+    if name.lower().endswith('.html'):
+        return name[:-5] + '.md'
+    return name
 
 
 def normalize_order_name(name):
@@ -257,7 +269,7 @@ def build_tree(pages, prefix=''):
             subdir = rest[:slash]
             direct_dirs[subdir] = True
 
-    # Build child nodes, mixed alphabetically by name
+    # Build child nodes, mixed alphabetically by the \\toc source name
     all_items = {}  # name -> node (for sorting)
 
     for fname, (rel_path, title) in direct_files.items():
@@ -267,9 +279,10 @@ def build_tree(pages, prefix=''):
         sub_node = build_tree(pages, prefix + subdir + '/')
         all_items[subdir] = sub_node
 
-    # Determine child order. By default it is the case-insensitive name order.
-    # When a source publocal.yaml exists for this directory, listed entries come
-    # first in that order; the rest follow by name.
+    # Determine child order. By default it is the case-insensitive \\toc name
+    # order (files as *.md). When a source publocal.yaml exists for this
+    # directory, listed entries come first in that order; the rest follow by
+    # name.
     order_map = {}
     src_dir = resolve_src_dir(prefix)
     if src_dir is not None:
@@ -277,7 +290,7 @@ def build_tree(pages, prefix=''):
 
     def child_sort_key(name):
         idx = order_map.get(normalize_order_name(name), len(order_map))
-        return (idx, name.lower())
+        return (idx, toc_sort_name(name).lower())
 
     children = [all_items[k] for k in sorted(all_items.keys(), key=child_sort_key)]
 
