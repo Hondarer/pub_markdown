@@ -140,8 +140,10 @@
     display: none;
   }
 
+  /* 目次は文書ツリーの一覧の最後の項目 (li) として入る。左右の余白は
+     一覧側の padding が持つため、区切りのための上余白と罫線だけを持たせる。 */
   .docsfw-combined-toc {
-    margin: 0.8rem 0.6rem 0;
+    margin: 0.8rem 0 0;
     padding-top: 0.6rem;
     border-top: 0.05rem solid var(--md-default-fg-color--lightest);
   }
@@ -154,6 +156,53 @@
     background: none;
     box-shadow: none;
     pointer-events: none;
+  }
+}
+
+/* Material のモバイル ドロワー (既定フォントで約 1220px 未満) の打ち消し。
+   この幅では .md-nav--primary とその配下の .md-nav が絶対配置の板になり、
+   通常フローから外れる。統合した目次は一覧 (.md-nav__list) の中の項目として
+   入れるため (assets/docsfw-responsive-nav.js)、板やスライド パネル向けの
+   体裁を目次の範囲だけ戻し、広い画面の目次と同じ見た目にそろえる。
+   境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく
+   Material と同じ 76.234375em を使う。 */
+@media screen and (max-width: 76.234375em) {
+  /* 目次の各階層がスライド パネル (絶対配置) になるのを止める。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav {
+    position: static;
+    height: auto;
+    z-index: auto;
+  }
+
+  /* ドロワーの一覧は項目ごとに区切り線を持つ。目次の中には出さない。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav__item {
+    border-top: 0;
+  }
+
+  /* ドロワーのリンクは padding: 0.6rem 0.8rem を持ち、目次では行が高くなる。
+     Material は階層別のインデントを [dir="ltr"] .md-nav--primary
+     .md-nav--secondary .md-nav .md-nav .md-nav .md-nav .md-nav__link
+     (属性 1 個 + クラス 7 個) まで持つため、.docsfw-combined-toc を挟んだ
+     指定では詳細度で勝てない。ここだけ !important で戻す。
+     階層のインデントは広い画面と同じく .md-nav--secondary .md-nav__list の
+     padding-left が入れ子で持つ。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav__link {
+    padding: 0 !important;
+  }
+
+  /* Material は .md-nav--primary .md-nav__title .md-nav__icon を戻る矢印として
+     表示する。目次の見出しに戻る操作は無いため消す。
+     .md-nav--secondary .md-nav__title .md-nav__icon の display: none と詳細度が
+     同じで競合するため、明示的に指定する。 */
+  .docsfw-combined-toc .md-nav__title .md-nav__icon {
+    display: none;
+  }
+
+  /* Material は一覧に scroll-snap-type: y mandatory を、目次の見出しに
+     scroll-snap-align: start を当てる。目次を同じ一覧へ入れると見出しが
+     スナップ点になりスクロールが跳ねるため、scrollwrap と同じく無効にする。 */
+  .md-nav--primary > .md-nav__list {
+    scroll-snap-type: none;
   }
 }
 

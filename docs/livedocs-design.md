@@ -1125,6 +1125,17 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 1625px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
 画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
+移す先は、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾に足した `li.md-nav__item.docsfw-combined-toc` です。  
+Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary` とその配下の `.md-nav` を `position: absolute` と `height: 100%` の板にし、一覧だけをスクロールさせます。  
+そのため一覧の外へ置いた要素は通常フローの先頭に来て板の背面に隠れ、外側をスクロールしたときに板の下端から目次の途中だけが現れます。  
+一覧の中へ入れることで、ファイル単位の目次に続いてページ内目次が 1 本のスクロールで並び、サブメニューのスライド動作とドロワー見出しはそのまま残ります。
+
+板向けの体裁は `assets/docsfw-livedocs.css` の `@media screen and (max-width: 76.234375em)` で目次の範囲だけ戻し、広い画面の目次と同じ見た目にそろえます。  
+境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく Material と同じ値を使います。  
+戻すのは、各階層の絶対配置、項目ごとの区切り線、リンクの `padding: 0.6rem 0.8rem`、見出しの戻る矢印、一覧のスクロール スナップです。  
+リンクの余白だけは `!important` を使います。Material が階層別のインデントを `[dir="ltr"] .md-nav--primary .md-nav--secondary .md-nav .md-nav .md-nav .md-nav .md-nav__link` (属性 1 個 + クラス 7 個) まで持ち、`.docsfw-combined-toc` を挟んだ指定では詳細度で勝てないためです。  
+階層のインデントは、広い画面と同じく `.md-nav--secondary .md-nav__list` の `padding-left` が入れ子で持ちます。
+
 左ドロワーの幅は `min(80vw, 320px)` で、閉じた位置と開く量の両方が同じ値を参照します。  
 Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1625px より内側でこの指定と重なります。  
 Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left: -12.1rem` を、`[dir="rtl"]` に `right: -12.1rem` を当てます。  
