@@ -535,7 +535,7 @@ md 自身ではなく元ソースを解決対象にします。
 ### 寸法と幅不足時の表示
 
 発行者と発行日時の文字サイズは 14px に固定します。  
-静的発行の `.doc-title, .doc-info, .navbar-text { font-size: 14px }` と一致します。  
+静的発行の `.docsfw-header-meta` と `.navbar-text` も同じ14pxです。  
 Material は 1600px 以上で `html` の文字サイズを 137.5% へ上げますが、ヘッダーはスクリーンショット相当の表示より拡大する必要がないため、サイト名とページ名は 18px、検索入力欄とサジェスチョンは 16px に固定します。  
 検索入力欄とサジェスチョンには同じフォントと通常の文字間隔を指定し、入力中の文字と候補の字送りをそろえます。  
 このため、ヘッダー内の全テキストは画面幅により拡大しません。  
@@ -811,7 +811,7 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 | ページ内目次 通常 | `#212121` | Material `--md-typeset-color` (Material が正) | 同左 | Material 既定 |
 | ページ内目次 通過済み | `#757575` | Material `--md-default-fg-color--light` (Material が正) | 同左 | Material 既定 |
 | accent 背景に載る文字 | 対応なし | Material `--md-accent-bg-color` | `#FFFFFF` (Material 既定) | `#1F2129` |
-| ヘッダー背景 | `#F7F7F7` | `styles/html/html-style.css` の `.navbar-inner` | `#F7F7F7` | `#1F2129` |
+| ヘッダー背景 | `#F7F7F7` | `styles/html/html-style.css` の `.docsfw-header` | `#F7F7F7` | `#1F2129` |
 | ヘッダー下端 | `#D4D4D4` | 同上 | `#D4D4D4` | `#14161C` |
 | ヘッダー文字 | 濃色 | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
 | フッター背景 | - | ヘッダーからの流用 | `#F7F7F7` | `#1F2129` |
@@ -832,17 +832,16 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 本文と見出しの 2 行だけは pandoc を正とせず、[見出し書式](heading-style.md) を正本とします。  
 表には、その正本が定めるライトでの値を載せています。
 
-静的発行はライト固定のため、`slate` に対応する正はありません。  
-そこで、色相を保ったまま明度を上げた値を使います。  
+静的発行も `slate` に対応し、同じ配色変数を使用します。  
+色相を保ったまま暗背景で読める明度へ上げた値を使います。  
 admonition の 6 色は、pandoc が採用している GitHub のライト色に対応する GitHub のダーク色をそのまま当てます。  
 コード背景と `==mark==` は暗背景で成立しないため、`slate` では Material の既定に任せます。
 
 ### ヘッダーとフッターを淡色のフラットにする理由
 
-静的発行のヘッダーは Bootstrap の `.navbar-inner` です。  
-Bootstrap の既定は、白から `#F2F2F2` への淡いグラデーション、四辺の枠、角丸、外側の影を持つカード風の帯でした。  
-`styles/html/html-style.css` でこれらを外し、単色 `#F7F7F7` の帯に下端 1px の境界線 (`#D4D4D4`) だけを残すフラットな表現へ変更しています。  
-`text-shadow: 0 1px 0 #FFFFFF` も、グラデーションの上で文字を浮かせるための指定であり、フラットな帯では不要なため外します。
+静的発行のヘッダーは `styles/html/html-template.html` の `.docsfw-header` です。  
+Bootstrap のナビバー構造は使用せず、Material と同じ48pxのヘッダー本体と12pxの本文背景帯で構成します。  
+ヘッダーは単色 `#F7F7F7` とし、幅の制限を受けない背景帯の上端へ1pxの境界線 (`#D4D4D4`) を引きます。
 
 Material の既定は indigo の単色バーであり、本文リンクを `#4183C4` に合わせると、ヘッダーの indigo だけが別系統の青として残ります。  
 `--md-primary-fg-color` 系を上書きして同じ淡色に寄せ、ヘッダーの下端へ境界線を足します。
@@ -1130,6 +1129,10 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 1625px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
 画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
 
+Pandoc HTML の `docsfw-nav.js` も同じ境界を使用します。  
+1220pxから1624pxでは連続一覧を表示し、約1220px未満では文書階層ごとの板と戻る操作を表示します。  
+ページ内目次は MkDocs と同様に、連続一覧または現在表示中の板の末尾へ移します。
+
 移す先は `li.md-nav__item.docsfw-combined-toc` で、幅によって入れる一覧が変わります。  
 1220px から 1624px では、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾です。  
 Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary` とその配下の `.md-nav` を `position: absolute` と `height: 100%` の入れ子の板 (スライド パネル) にし、一覧だけをスクロールさせます。  
@@ -1198,9 +1201,11 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 Material がドロワーを閉じるのは遷移のときだけのため、押した見出しがドロワーの背後に隠れたままになります。  
 `docsfw-responsive-nav.js` が目次のリンクの押下を受け、`#__drawer` のチェックを外して閉じます。
 
-### 一致させない項目
+### 静的発行側の対応
 
-- `styles/html/docsfw-ui.css` が検索 UI とナビゲーション ツリーに使う `#4A90D9`。Material の検索 UI とは構造が異なり、動的発行に対応物がありません。
+Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw-ui.css` と `docsfw-nav.js` で同じ寸法と操作を実装します。  
+検索は60em以上で幅234pxの入力欄と幅468pxの候補パネルを表示し、それ未満ではヘッダー全幅の検索パネルへ切り替えます。  
+検索とドロワーのどちらかを開くと、もう一方を閉じます。
 
 ## make からの起動
 

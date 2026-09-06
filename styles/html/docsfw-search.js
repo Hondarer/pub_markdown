@@ -1,279 +1,211 @@
 /*!
- * docsfw-search.js
- * Full-text search UI for pub_markdown HTML output.
- *
- * Lazy-loads heavy assets on first user interaction:
- *   1. minisearch.min.js   (MiniSearch UMD bundle)
- *   2. docsfw-tokenize.js  (shared CJK bigram tokenizer)
- *   3. search-index.js     (pre-built index + doc list)
- *
- * Globals consumed:
- *   window.__DOCSFW_BASE__     - relative path to html root (e.g. "../../")
- *   window.__DOCSFW_CURRENT__  - this page's path relative to html root
- *   window.__DOCSFW_INDEX__    - MiniSearch serialized index (object, from search-index.js)
- *   window.__DOCSFW_DOCS__     - [{id, url, title}, ...] (from search-index.js)
- *
- * Rendered into:
- *   #docsfw-search-container   - input box injected here
- *   #docsfw-search-results     - result overlay rendered here
+ * Pandoc HTML のヘッダー検索。MiniSearch と索引は初回操作時に読み込む。
  */
 (function () {
   'use strict';
 
-  // ---------------------------------------------------------------------------
-  // State
-  // ---------------------------------------------------------------------------
+  var base = window.__DOCSFW_BASE__ == null ? '' : String(window.__DOCSFW_BASE__);
+  var isJa = (document.documentElement.lang || 'ja').toLowerCase().indexOf('ja') === 0;
+  var mobile = window.matchMedia('(max-width: 59.984375em)');
+  var miniSearch = null;
+  var loading = false;
+  var queue = [];
+  var input;
+  var results;
+  var container;
+  var lastQuery = '';
+  var debounceTimer;
+  var selectedIndex = -1;
 
-  var _ms          = null;   // MiniSearch instance (null until loaded)
-  var _loading     = false;  // loading in progress
-  var _loadQueue   = [];     // callbacks waiting for load
-  var _input       = null;   // <input> element
-  var _results     = null;   // result overlay element
-  var _lastQuery   = '';
+  var text = isJa ? {
+    open: '検索を開く', back: '検索を閉じる', label: 'ドキュメント検索', placeholder: '検索…',
+    loading: '検索インデックスを読み込んでいます…', unavailable: '検索インデックスを読み込めませんでした。',
+    emptyBefore: '「', emptyAfter: '」に一致するページは見つかりませんでした。',
+    moreBefore: '他 ', moreAfter: ' 件（検索語を絞ると絞り込めます）'
+  } : {
+    open: 'Open search', back: 'Close search', label: 'Document search', placeholder: 'Search…',
+    loading: 'Loading the search index…', unavailable: 'The search index could not be loaded.',
+    emptyBefore: 'No pages matched “', emptyAfter: '”.', moreBefore: '', moreAfter: ' more results'
+  };
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  var base = (window.__DOCSFW_BASE__ != null) ? String(window.__DOCSFW_BASE__) : '';
-
-  function esc(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function esc(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function loadScript(url, cb) {
-    var s = document.createElement('script');
-    s.src = url;
-    s.onload = cb;
-    s.onerror = function () {
-      console.error('[docsfw-search] Failed to load: ' + url);
-      cb();
-    };
-    document.head.appendChild(s);
+  function loadScript(url, done) {
+    var script = document.createElement('script');
+    script.src = url;
+    script.onload = function () { done(null); };
+    script.onerror = function () { done(new Error('Failed to load ' + url)); };
+    document.head.appendChild(script);
   }
 
-  // ---------------------------------------------------------------------------
-  // Lazy asset loading
-  // ---------------------------------------------------------------------------
+  function loadSequence(urls, done) {
+    var index = 0;
+    function next(error) {
+      if (error || index === urls.length) { done(error || null); return; }
+      loadScript(base + urls[index++], next);
+    }
+    next(null);
+  }
 
-  /**
-   * Load MiniSearch + tokenizer + index, then call cb(err).
-   * Safe to call multiple times; queues callbacks if already loading.
-   */
-  function ensureLoaded(cb) {
-    if (_ms) { cb(null); return; }
-    _loadQueue.push(cb);
-    if (_loading) { return; }
-    _loading = true;
-
-    setStatus('loading');
-
-    loadScript(base + 'minisearch.min.js', function () {
-      loadScript(base + 'docsfw-tokenize.js', function () {
-        loadScript(base + 'search-index.js', function () {
-          var err = null;
-          try {
-            var MiniSearch = window.MiniSearch;
-            var tokenize   = window.docsfwTokenize;
-            var indexData  = window.__DOCSFW_INDEX__;
-
-            if (!MiniSearch || !tokenize || !indexData) {
-              throw new Error('Missing search assets');
-            }
-
-            // window.__DOCSFW_INDEX__ is a JSON string (set by search-index.js).
-            // MiniSearch.loadJSON() accepts a JSON string directly.
-            var indexStr = typeof indexData === 'string'
-              ? indexData
-              : JSON.stringify(indexData); // fallback for unexpected object form
-
-            _ms = MiniSearch.loadJSON(indexStr, {
-              fields:      ['title', 'headings', 'text'],
-              storeFields: ['url', 'title'],
-              tokenize:    tokenize,
-              processTerm: function (term) { return term; },
-            });
-          } catch (e) {
-            err = e;
-            console.error('[docsfw-search] Init error:', e);
+  function ensureLoaded(done) {
+    if (miniSearch) { done(null); return; }
+    queue.push(done);
+    if (loading) { return; }
+    loading = true;
+    setStatus(text.loading, 'status');
+    loadSequence(['minisearch.min.js', 'docsfw-tokenize.js', 'search-index.js'], function (error) {
+      if (!error) {
+        try {
+          if (!window.MiniSearch || !window.docsfwTokenize || !window.__DOCSFW_INDEX__) {
+            throw new Error('Missing search data');
           }
-
-          setStatus(null);
-
-          var queue = _loadQueue.slice();
-          _loadQueue = [];
-          for (var i = 0; i < queue.length; i++) {
-            queue[i](err);
-          }
-        });
-      });
+          var data = typeof window.__DOCSFW_INDEX__ === 'string' ? window.__DOCSFW_INDEX__ :
+            JSON.stringify(window.__DOCSFW_INDEX__);
+          miniSearch = window.MiniSearch.loadJSON(data, {
+            fields: ['title', 'headings', 'text'], storeFields: ['url', 'title'],
+            tokenize: window.docsfwTokenize, processTerm: function (term) { return term; }
+          });
+        } catch (caught) { error = caught; }
+      }
+      loading = false;
+      if (error) { setStatus(text.unavailable, 'alert'); }
+      var waiting = queue.slice(); queue = [];
+      for (var i = 0; i < waiting.length; i++) { waiting[i](error); }
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Result overlay
-  // ---------------------------------------------------------------------------
-
-  function showOverlay() {
-    if (_results) { _results.classList.add('visible'); }
+  function setExpanded(expanded) {
+    input.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    results.classList.toggle('visible', expanded);
   }
 
-  function hideOverlay() {
-    if (_results) { _results.classList.remove('visible'); }
+  function setStatus(message, role) {
+    results.innerHTML = '<div class="docsfw-result-empty" role="' + role + '">' + esc(message) + '</div>';
+    setExpanded(true);
   }
 
-  function setStatus(type) {
-    if (!_results) { return; }
-    if (type === 'loading') {
-      _results.innerHTML = '<div class="docsfw-result-loading">検索インデックスを読み込んでいます...</div>';
-      showOverlay();
-    } else if (type === null) {
-      hideOverlay();
-      _results.innerHTML = '';
+  function items() { return Array.prototype.slice.call(results.querySelectorAll('.docsfw-result-item')); }
+
+  function select(index, focus) {
+    var options = items();
+    if (!options.length) { selectedIndex = -1; input.removeAttribute('aria-activedescendant'); return; }
+    selectedIndex = Math.max(0, Math.min(index, options.length - 1));
+    for (var i = 0; i < options.length; i++) {
+      options[i].setAttribute('aria-selected', i === selectedIndex ? 'true' : 'false');
     }
+    input.setAttribute('aria-activedescendant', options[selectedIndex].id);
+    if (focus) { options[selectedIndex].focus(); }
   }
 
-  function renderResults(hits, query) {
-    if (!_results) { return; }
-    if (hits.length === 0) {
-      _results.innerHTML =
-        '<div class="docsfw-result-empty">「' + esc(query) + '」に一致するページは見つかりませんでした。</div>';
-    } else {
-      var html = '';
-      var limit = Math.min(hits.length, 20);
-      for (var i = 0; i < limit; i++) {
-        var h = hits[i];
-        var url  = h.url  || '';
-        var title = h.title || url;
-        var fullUrl = base + url;
-        html +=
-          '<div class="docsfw-result-item" data-href="' + esc(fullUrl) + '">' +
-            '<div class="docsfw-result-title">' + esc(title) + '</div>' +
-            '<div class="docsfw-result-url">'   + esc(url)   + '</div>' +
-          '</div>';
-      }
-      if (hits.length > 20) {
-        html +=
-          '<div class="docsfw-result-empty">他 ' + (hits.length - 20) + ' 件（検索語を絞ると絞り込めます）</div>';
-      }
-      _results.innerHTML = html;
-    }
-    showOverlay();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Search
-  // ---------------------------------------------------------------------------
-
-  var _debounceTimer = null;
-
-  function doSearch(query) {
-    if (!query || !query.trim()) {
-      hideOverlay();
-      _lastQuery = '';
+  function render(hits, query) {
+    selectedIndex = -1;
+    if (!hits.length) {
+      setStatus(text.emptyBefore + query + text.emptyAfter, 'status');
       return;
     }
-    if (query === _lastQuery) { return; }
-    _lastQuery = query;
+    var html = '';
+    var limit = Math.min(hits.length, 20);
+    for (var i = 0; i < limit; i++) {
+      var url = hits[i].url || '';
+      var title = hits[i].title || url;
+      html += '<a class="docsfw-result-item" id="docsfw-result-' + i + '" role="option" aria-selected="false" href="' +
+        esc(base + url) + '"><span class="docsfw-result-title">' + esc(title) + '</span>' +
+        '<span class="docsfw-result-url">' + esc(url) + '</span></a>';
+    }
+    if (hits.length > limit) {
+      html += '<div class="docsfw-result-empty">' + text.moreBefore + (hits.length - limit) + text.moreAfter + '</div>';
+    }
+    results.innerHTML = html;
+    setExpanded(true);
+  }
 
-    ensureLoaded(function (err) {
-      if (err || !_ms) { return; }
-      if (query !== _lastQuery) { return; } // stale
-
-      var hits = _ms.search(query, {
-        boost:       { title: 5, headings: 3 },
-        fuzzy:       0.1,
-        prefix:      true,
-      });
-      renderResults(hits, query);
+  function search(query) {
+    if (!query.trim()) { setExpanded(false); lastQuery = ''; return; }
+    if (query === lastQuery && miniSearch) { return; }
+    lastQuery = query;
+    ensureLoaded(function (error) {
+      if (error || query !== lastQuery) { return; }
+      render(miniSearch.search(query, {
+        boost: { title: 5, headings: 3 }, fuzzy: 0.1, prefix: true
+      }), query);
     });
   }
 
-  function onInput() {
-    var q = _input ? _input.value : '';
-    clearTimeout(_debounceTimer);
-    if (!q.trim()) { hideOverlay(); return; }
-    _debounceTimer = setTimeout(function () { doSearch(q); }, 200);
+  function closeSearch(restoreFocus) {
+    document.body.classList.remove('docsfw-search-open');
+    setExpanded(false);
+    if (restoreFocus && mobile.matches) {
+      var opener = container.querySelector('.docsfw-search-icon');
+      if (opener) { opener.focus(); }
+    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Build UI
-  // ---------------------------------------------------------------------------
-
-  function buildUI() {
-    var container = document.getElementById('docsfw-search-container');
-    _results      = document.getElementById('docsfw-search-results');
-    if (!container || !_results) { return; }
-
-    // Input
-    _input = document.createElement('input');
-    _input.type        = 'search';
-    _input.id          = 'docsfw-search-input';
-    _input.placeholder = '検索...';
-    _input.autocomplete = 'off';
-    _input.setAttribute('aria-label', 'ドキュメント検索');
-
-    _input.addEventListener('input', onInput);
-
-    _input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') {
-        hideOverlay();
-        _input.blur();
-      } else if (e.key === 'Enter') {
-        // Navigate to first result
-        var first = _results.querySelector('.docsfw-result-item');
-        if (first) { window.location.href = first.getAttribute('data-href'); }
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        var items = _results.querySelectorAll('.docsfw-result-item');
-        if (items.length > 0) { items[0].focus(); }
-      }
-    });
-
-    container.appendChild(_input);
-
-    // Keyboard navigation in results
-    _results.addEventListener('click', function (e) {
-      var item = e.target.closest('.docsfw-result-item');
-      if (item) { window.location.href = item.getAttribute('data-href'); }
-    });
-
-    _results.addEventListener('keydown', function (e) {
-      var items = Array.prototype.slice.call(_results.querySelectorAll('.docsfw-result-item'));
-      var idx = items.indexOf(document.activeElement);
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        if (idx + 1 < items.length) { items[idx + 1].focus(); }
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        if (idx > 0) { items[idx - 1].focus(); } else { _input.focus(); }
-      } else if (e.key === 'Enter' && idx >= 0) {
-        window.location.href = items[idx].getAttribute('data-href');
-      } else if (e.key === 'Escape') {
-        hideOverlay();
-        _input.focus();
-      }
-    });
-
-    // Close overlay when clicking outside
-    document.addEventListener('click', function (e) {
-      if (!container.contains(e.target) && !_results.contains(e.target)) {
-        hideOverlay();
-      }
-    });
+  function openSearch() {
+    document.dispatchEvent(new CustomEvent('docsfw:search-open'));
+    document.body.classList.add('docsfw-search-open');
+    input.focus();
+    if (input.value.trim()) { search(input.value); }
   }
 
-  // ---------------------------------------------------------------------------
-  // Entry point
-  // ---------------------------------------------------------------------------
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildUI);
-  } else {
-    buildUI();
+  function onKeydown(event) {
+    var options = items();
+    if (event.key === 'Escape') {
+      event.preventDefault(); closeSearch(true);
+    } else if (event.key === 'ArrowDown' && options.length) {
+      event.preventDefault(); select(selectedIndex < 0 ? 0 : selectedIndex + 1, true);
+    } else if (event.key === 'ArrowUp' && options.length) {
+      event.preventDefault();
+      if (document.activeElement !== input && selectedIndex <= 0) { selectedIndex = -1; input.focus(); }
+      else { select(selectedIndex < 0 ? options.length - 1 : selectedIndex - 1, true); }
+    } else if (event.key === 'Enter' && document.activeElement === input && options.length) {
+      event.preventDefault(); window.location.href = options[Math.max(0, selectedIndex)].href;
+    }
   }
+
+  function build() {
+    container = document.getElementById('docsfw-search-container');
+    if (!container) { return; }
+    container.innerHTML =
+      '<button type="button" class="docsfw-search-icon" aria-label="' + esc(text.open) + '">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3a6.5 6.5 0 0 1 5.18 10.43L21.25 20 20 21.25l-6.57-6.57A6.5 6.5 0 1 1 9.5 3m0 2a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z"/></svg></button>' +
+      '<div class="docsfw-search-form"><button type="button" class="docsfw-search-back" aria-label="' + esc(text.back) + '">' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11v2H7.8l5.6 5.6L12 20l-8-8 8-8 1.4 1.4L7.8 11H20Z"/></svg></button>' +
+        '<input type="search" id="docsfw-search-input" autocomplete="off" role="combobox" aria-autocomplete="list" ' +
+          'aria-expanded="false" aria-controls="docsfw-search-results" aria-label="' + esc(text.label) +
+          '" placeholder="' + esc(text.placeholder) + '"></div>' +
+      '<div id="docsfw-search-results" role="listbox"></div>' +
+      '<div class="docsfw-search-backdrop"></div>';
+    input = document.getElementById('docsfw-search-input');
+    results = document.getElementById('docsfw-search-results');
+
+    container.querySelector('.docsfw-search-icon').addEventListener('click', openSearch);
+    container.querySelector('.docsfw-search-back').addEventListener('click', function () { closeSearch(true); });
+    container.querySelector('.docsfw-search-backdrop').addEventListener('click', function () { closeSearch(true); });
+    input.addEventListener('focus', function () { if (input.value.trim()) { search(input.value); } });
+    input.addEventListener('input', function () {
+      clearTimeout(debounceTimer);
+      if (!input.value.trim()) { lastQuery = ''; setExpanded(false); return; }
+      debounceTimer = setTimeout(function () { search(input.value); }, 200);
+    });
+    input.addEventListener('keydown', onKeydown);
+    results.addEventListener('keydown', onKeydown);
+    results.addEventListener('click', function (event) {
+      if (event.target.closest && event.target.closest('.docsfw-result-item')) { closeSearch(false); }
+    });
+    document.addEventListener('click', function (event) {
+      if (!mobile.matches && !container.contains(event.target)) { setExpanded(false); }
+    });
+    document.addEventListener('docsfw:drawer-open', function () { closeSearch(false); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && document.body.classList.contains('docsfw-search-open')) { closeSearch(true); }
+    });
+    var onLayout = function () { closeSearch(false); };
+    if (mobile.addEventListener) { mobile.addEventListener('change', onLayout); } else { mobile.addListener(onLayout); }
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', build); }
+  else { build(); }
 }());

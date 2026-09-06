@@ -1199,3 +1199,199 @@ pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docs
 /* MkDocs と同じく、暗色 1 色のヘッダー アイコンだけを反転する。 */
 [data-md-color-scheme="slate"] .docsfw-git-icon--github,
 [data-md-color-scheme="slate"] .docsfw-git-icon--gitbucket { filter: invert(1); }
+
+/* ===== MkDocs と同期する静的 HTML ヘッダー ===== */
+
+:root {
+  --docsfw-header-body-height: 48px;
+  --docsfw-header-height: 60px;
+}
+
+body {
+  padding-top: calc(var(--docsfw-header-height) + 10px);
+}
+
+.docsfw-header {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--docsfw-header-body-height);
+  color: var(--docsfw-quote);
+  background: var(--docsfw-header-bg);
+  z-index: 1070;
+}
+
+.docsfw-header::after {
+  content: "";
+  position: absolute;
+  top: var(--docsfw-header-body-height);
+  left: 0;
+  width: 100%;
+  height: 12px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--docsfw-header-border);
+  background: var(--docsfw-bg);
+}
+
+.docsfw-header-inner {
+  display: flex;
+  align-items: center;
+  height: var(--docsfw-header-body-height);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.docsfw-header-button,
+.docsfw-header-action > a,
+#docsfw-theme-toggle {
+  display: inline-flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--docsfw-quote);
+  line-height: 1;
+}
+
+.docsfw-header-button:hover,
+.docsfw-header-action > a:hover,
+#docsfw-theme-toggle:hover {
+  color: var(--docsfw-link-hover);
+  background: transparent;
+  text-decoration: none;
+}
+
+.docsfw-header-button:focus-visible,
+.docsfw-header-action > a:focus-visible,
+#docsfw-theme-toggle:focus-visible {
+  outline: 2px solid var(--docsfw-focus);
+  outline-offset: -2px;
+}
+
+.docsfw-header-button svg,
+.docsfw-drawer-logo svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.docsfw-header-title {
+  position: relative;
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 8px;
+  box-sizing: border-box;
+}
+
+.docsfw-header .doc-title {
+  display: block;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  color: var(--docsfw-quote);
+  font-size: 18px;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+.docsfw-header-meta {
+  position: absolute;
+  top: 24px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 12px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.docsfw-header .navbar-text {
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  color: var(--docsfw-quote);
+  font-size: 14px;
+  line-height: 20px;
+  text-overflow: ellipsis;
+}
+
+.docsfw-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 48px;
+}
+
+.docsfw-header-action[hidden] {
+  display: none !important;
+}
+
+.docsfw-header-action img,
+#docsfw-theme-toggle svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  max-width: none;
+}
+
+.docsfw-logo {
+  display: none;
+}
+
+.docsfw-menu-button {
+  appearance: none;
+  cursor: pointer;
+}
+
+.docsfw-main-content [id] {
+  scroll-margin-top: 84px;
+}
+
+@media (max-width: 767px) {
+  .docsfw-aux-action {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1625px) {
+  .docsfw-logo {
+    display: inline-flex;
+  }
+
+  .docsfw-menu-button {
+    display: none;
+  }
+
+  .docsfw-primary-sidebar,
+  .docsfw-secondary-sidebar {
+    top: var(--docsfw-header-height);
+    height: calc(100vh - var(--docsfw-header-height));
+  }
+}
+
+@media print {
+  body {
+    padding-top: 10px;
+  }
+
+  .docsfw-header {
+    position: static;
+  }
+
+  .docsfw-header::after,
+  .docsfw-header-actions,
+  .docsfw-menu-button,
+  .docsfw-logo {
+    display: none;
+  }
+}

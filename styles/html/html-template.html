@@ -66,54 +66,75 @@ $for(header-includes)$
   $header-includes$
 $endfor$
 $if(docsfw-ui-enable)$
-  <link rel="stylesheet" href="${search-base}docsfw-ui.css" />
+  <link rel="stylesheet" href="$if(docsfw-asset-base)$$docsfw-asset-base$$else$$search-base$$endif$docsfw-ui.css" />
 $endif$
 </head>
 <body>
 
 
-  $if(title)$
-  <div class="navbar navbar-static-top">
-    <div class="navbar-inner">
-      <div class="container">
-        <span class="doc-title">$title$</span>
-        <ul class="nav pull-right doc-info">
-          $for(author)$
-          <li><p class="navbar-text">$author$</p></li>
-          $endfor$
-          $if(date)$
-          <li><p class="navbar-text">$date$</p></li>
-          $endif$
+  <header class="docsfw-header" data-docsfw-component="header">
+    <nav class="docsfw-header-inner container" aria-label="Header">
+      $if(docsfw-drawer-enable)$
+      <button id="docsfw-hamburger" class="docsfw-header-button docsfw-menu-button" type="button"
+        aria-label="Navigation"
+        aria-controls="docsfw-primary-sidebar" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+      </button>
+      $endif$
+      $if(homelink)$
+      <a class="docsfw-header-button docsfw-logo" href="$homelink$" title="$docsfw-site-name$" aria-label="$docsfw-site-name$">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55C14.36 20.35 17.52 19 21 19V8c-3.48 0-6.64 1.35-9 3.55M12 8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Z"/></svg>
+      </a>
+      $else$
+      <span class="docsfw-header-button docsfw-logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55C14.36 20.35 17.52 19 21 19V8c-3.48 0-6.64 1.35-9 3.55M12 8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Z"/></svg>
+      </span>
+      $endif$
+      <div class="docsfw-header-title">
+        <span class="doc-title">$if(title)$$title$$else$$docsfw-site-name$$endif$</span>
+        <span class="docsfw-header-meta">
+        $for(author)$
+          <span class="navbar-text">$author$</span>
+        $endfor$
+        $if(date)$
+          <span class="navbar-text">$date$</span>
+        $endif$
+        </span>
+      </div>
+      <div class="docsfw-header-actions">
           $if(details-switch-root)$
-          <li id="docsfw-details-li" hidden><a id="docsfw-details-link" href="#"
-            ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></li>
+        <span id="docsfw-details-li" class="docsfw-header-action docsfw-aux-action" hidden><a id="docsfw-details-link" href="#"
+          ><img id="docsfw-details-icon" class="docsfw-details-icon" src="$details-icon-base$docsfw-details-icon.svg" alt="" /></a></span>
           $endif$
           $if(doxygen-url)$
-          <li id="docsfw-doxygen-li"><a id="docsfw-doxygen-link" href="$doxygen-url$" target="doxygen-page"
-            title="Doxygen" aria-label="Doxygen"><img class="docsfw-doxygen-icon" src="$doxygen-icon$" alt="Doxygen" /></a></li>
+        <span id="docsfw-doxygen-li" class="docsfw-header-action docsfw-aux-action"><a id="docsfw-doxygen-link" href="$doxygen-url$" target="doxygen-page"
+          title="Doxygen" aria-label="Doxygen"><img class="docsfw-doxygen-icon" src="$doxygen-icon$" alt="" /></a></span>
           $endif$
           $if(git-url)$
-          <li id="docsfw-git-li"><a id="docsfw-git-link" href="$git-url$" target="source-file"
-            title="Git" aria-label="Git"><img class="docsfw-git-icon$if(git-provider)$ docsfw-git-icon--$git-provider$$endif$" src="$git-icon$" alt="Git" /></a></li>
+        <span id="docsfw-git-li" class="docsfw-header-action docsfw-aux-action"><a id="docsfw-git-link" href="$git-url$" target="source-file"
+          title="Git" aria-label="Git"><img class="docsfw-git-icon$if(git-provider)$ docsfw-git-icon--$git-provider$$endif$" src="$git-icon$" alt="" /></a></span>
           $endif$
           $if(docx-url)$
-          <li id="docsfw-docx-li" hidden><a id="docsfw-docx-link" href="$docx-url$" download$if(docx-download-name-encoded)$ data-docx-download-name-encoded="$docx-download-name-encoded$"$endif$
-            title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="Word" /></a></li>
+        <span id="docsfw-docx-li" class="docsfw-header-action docsfw-aux-action" hidden><a id="docsfw-docx-link" href="$docx-url$" download$if(docx-download-name-encoded)$ data-docx-download-name-encoded="$docx-download-name-encoded$"$endif$
+          title="Word (docx)" aria-label="Word (docx)"><img class="docsfw-docx-icon" src="$docx-icon$" alt="" /></a></span>
           $endif$
-        </ul>
+        $if(docsfw-search-enable)$
+        <div id="docsfw-search-container" class="docsfw-search-container"></div>
+        $endif$
       </div>
-    </div>
-  </div>
-  $endif$
+    </nav>
+  </header>
   <div class="container docsfw-layout-container">
     <div class="row docsfw-layout">
-      $if(docsfw-ui-enable)$
-      <aside id="docsfw-primary-sidebar" class="span3 docsfw-primary-sidebar" aria-label="文書ナビゲーション">
+      $if(docsfw-drawer-enable)$
+      <aside id="docsfw-primary-sidebar" class="span3 docsfw-primary-sidebar" aria-label="文書ナビゲーション" aria-hidden="true">
         <div class="well toc">
-
-        $if(search-enable)$
+        <div id="docsfw-drawer-title" class="docsfw-drawer-title">
+          <span class="docsfw-drawer-logo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 11.55C9.64 9.35 6.48 8 3 8v11c3.48 0 6.64 1.35 9 3.55C14.36 20.35 17.52 19 21 19V8c-3.48 0-6.64 1.35-9 3.55M12 8c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Z"/></svg></span>
+          <span class="docsfw-drawer-site-name">$if(docsfw-site-name)$$docsfw-site-name$ ($docsfw-variant$)$else$Documents$endif$</span>
+        </div>
+        $if(docsfw-nav-enable)$
         <div id="docsfw-home-container"></div>
-        <div id="docsfw-search-container"></div>
         <nav id="docsfw-tree"></nav>
         $endif$
         <hr class="docsfw-toc-separator" />
@@ -897,26 +918,20 @@ $if(details-switch-root)$
   </script>
 $endif$
 $if(docsfw-ui-enable)$
-  $if(search-enable)$
-  <!-- Search results overlay (positioned by docsfw-ui.css) -->
-  <div id="docsfw-search-results"></div>
-  $endif$
-  <!-- Navigation button and backdrop for the combined narrow-screen drawer -->
-  <button id="docsfw-hamburger" aria-label="ナビゲーション" aria-expanded="false">&#8250;</button>
+  <!-- Backdrop for the combined narrow-screen drawer -->
+  $if(docsfw-drawer-enable)$
   <div id="docsfw-nav-backdrop"></div>
+  $endif$
   <!-- Pass context to client-side scripts -->
   <script>
-    window.__DOCSFW_BASE__    = "$search-base$";
+    window.__DOCSFW_BASE__    = "$if(docsfw-asset-base)$$docsfw-asset-base$$else$$search-base$$endif$";
     window.__DOCSFW_CURRENT__ = "$search-current$";
+    window.__DOCSFW_NAV_ENABLED__ = $if(docsfw-nav-enable)$true$else$false$endif$;
   </script>
-  <!-- nav-tree.js sets __DOCSFW_NAV__; docsfw-nav.js renders and places navigation -->
-  $if(search-enable)$
-  <script defer src="${search-base}nav-tree.js"></script>
-  $endif$
-  <script defer src="${search-base}docsfw-nav.js"></script>
-  $if(search-enable)$
+  <script defer src="$if(docsfw-asset-base)$$docsfw-asset-base$$else$$search-base$$endif$docsfw-nav.js"></script>
+  $if(docsfw-search-enable)$
   <!-- docsfw-search.js lazy-loads the heavy index on first user interaction -->
-  <script defer src="${search-base}docsfw-search.js"></script>
+  <script defer src="$if(docsfw-asset-base)$$docsfw-asset-base$$else$$search-base$$endif$docsfw-search.js"></script>
   $endif$
 $endif$
 

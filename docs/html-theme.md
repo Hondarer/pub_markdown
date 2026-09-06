@@ -9,6 +9,10 @@ Pandoc HTML は、OS の配色設定に合わせてライト モードまたは�
 ライト モードは従来の配色、ダーク モードは MkDocs Material の `slate` に合わせています。  
 図ソース内で明示された色や独自テーマ、既存画像の色は変更しません。
 
+標準 HTML のヘッダーは MkDocs と同じく 48px で、直後に 12px の本文背景帯を置きます。  
+ページ タイトルは 18px、発行者と発行日時は 14px、操作アイコンは 24px です。  
+1625px 以上ではロゴ、未満ではドロワーを開くメニュー ボタンを左端に表示します。
+
 ## HTML と DOCX の分岐
 
 | 出力 | Mermaid | PlantUML |
@@ -61,10 +65,12 @@ docsfw ルートで次を実行します。
 
 ```bash
 node bin/test-html-diagrams.js
+node bin/test-html-ui.js
 python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
 ```
 
 ブラウザー テストは一時ディレクトリに HTML と画面画像を生成し、その場所を表示します。  
 既存 CDN への依存を除いた標準・簡易テンプレートで、通常 HTML、単一 HTML、直接閲覧、HTTP 配信を確認します。  
 実際の図の描画、配色切り替え、選択の復元、SVG 保存、描画中の配色変更を検証します。  
+HTML UI のブラウザー テストでは、ヘッダー、ドロワー、階層切替、ページ内目次、全文検索を検証します。  
 発行処理を含む確認手順は [発行処理の保守と検証](maintenance-verification.md) を参照してください。

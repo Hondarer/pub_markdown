@@ -1009,6 +1009,7 @@ if [ -f "$configFile" ]; then
     # キーを指定して値を取得する
     mdRoot=$(parse_yaml "$config_content" "mdRoot")
     pubRoot=$(parse_yaml "$config_content" "pubRoot")
+    siteName=$(parse_yaml "$config_content" "siteName")
     if [[ "$details" == "" ]]; then
         details=$(parse_yaml "$config_content" "details")
     fi
@@ -1032,6 +1033,8 @@ if [ -f "$configFile" ]; then
     autoSetAuthor=$(parse_yaml "$config_content" "autoSetAuthor")
     mergeSubfolderDocs=$(parse_yaml "$config_content" "mergeSubfolderDocs")
     htmlNavigationLinkEnable=$(parse_yaml "$config_content" "htmlNavigationLinkEnable")
+    htmlSearchEnable=$(parse_yaml "$config_content" "htmlSearchEnable")
+    htmlNavTreeEnable=$(parse_yaml "$config_content" "htmlNavTreeEnable")
     mathLatexEnable=$(parse_yaml "$config_content" "mathLatexEnable")
     gitLinkEnable=$(parse_yaml "$config_content" "gitLinkEnable")
     doxygenLinkEnable=$(parse_yaml "$config_content" "doxygenLinkEnable")
@@ -1052,6 +1055,11 @@ export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder}/${mdRoot}"
 # 設定ファイルに pubRoot が指定されなかった場合の値を "pages" にする
 if [[ "$pubRoot" == "" ]]; then
     pubRoot="pages"
+fi
+
+# ヘッダーとドロワーに表示するサイト名。動的発行と同じ規則を使う。
+if [[ "$siteName" == "" ]]; then
+    siteName=$(basename "${workspaceFolder%/}")
 fi
 
 # 設定ファイルに details が指定されなかった場合の値を "false" にする
@@ -1206,12 +1214,11 @@ htmlTokenizeScript="${SCRIPT_DIR}/docsfw-tokenize.js"
 htmlBuildSearchScript="${SCRIPT_DIR}/build-search-index.mjs"
 htmlNavTreeScript="${SCRIPT_DIR}/generate-nav-tree.py"
 
-if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+if [[ "$htmlSearchEnable" == "true" ]]; then
     if [[ "$miniSearchScript" == "" ]]; then
         echo "Warning: MiniSearch bundle not found. Resolve node components in ${SCRIPT_DIR}."
-        echo "         Disabling htmlSearchEnable and htmlNavTreeEnable."
+        echo "         Disabling htmlSearchEnable."
         htmlSearchEnable="false"
-        htmlNavTreeEnable="false"
     fi
 fi
 
@@ -2001,8 +2008,8 @@ for langElement in ${lang}; do
             copy_if_different_timestamp "${htmlNavScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-nav.js"
             copy_if_different_timestamp "${htmlSearchUiCss}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-ui.css"
         fi
-        # 検索・全体ナビゲーション用静的アセットの配置
-        if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+        # 全文検索用静的アセットの配置
+        if [[ "$htmlSearchEnable" == "true" ]]; then
             copy_if_different_timestamp "${miniSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/minisearch.min.js"
             copy_if_different_timestamp "${htmlTokenizeScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-tokenize.js"
             copy_if_different_timestamp "${htmlSearchScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-search.js"
@@ -2105,24 +2112,34 @@ while ((${#_pending_files[@]} > 0)); do
             navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
-        # 検索・ナビゲーション メタデータの構築
-        # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        # ヘッダー、検索、ナビゲーション メタデータの構築
+        # 自己完結 HTML のサイト横断データは、兄弟の html/ から遅延ロードする。
+        _search_current="${publish_file%.*}.html"
+        _search_current="${_search_current#html/}"
         ui_metadata_args=()
+        self_contain_ui_metadata_args=()
         if [[ "$htmlTocEnable" == "true" || "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
-            ui_metadata_args=(--metadata "docsfw-ui-enable=true")
-            if [[ "$htmlSearchEnable" != "true" && "$htmlNavTreeEnable" != "true" ]]; then
-                ui_metadata_args+=(--metadata "search-base=${up_dir}")
-            fi
+            ui_metadata_args=(--metadata "docsfw-ui-enable=true" --metadata "docsfw-asset-base=${up_dir}" --metadata "search-current=${_search_current}")
+            self_contain_ui_metadata_args=(--metadata "docsfw-ui-enable=true" --metadata "docsfw-asset-base=../${up_dir}html/" --metadata "search-current=${_search_current}")
         fi
         search_metadata_args=()
+        self_contain_search_metadata_args=()
+        if [[ "$htmlSearchEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-search-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-search-enable=true")
+        fi
+        if [[ "$htmlNavTreeEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-nav-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-nav-enable=true")
+        fi
+        if [[ "$htmlTocEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-drawer-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-drawer-enable=true")
+        fi
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
-            _search_current="${publish_file%.*}.html"
-            _search_current="${_search_current#html/}"
-            search_metadata_args=(
-                --metadata "search-enable=true"
-                --metadata "search-base=${up_dir}"
-                --metadata "search-current=${_search_current}"
-            )
+            # 旧カスタム テンプレート向けの互換メタデータ。
+            search_metadata_args+=(--metadata "search-enable=true" --metadata "search-base=${up_dir}")
+            self_contain_search_metadata_args+=(--metadata "search-enable=true" --metadata "search-base=../${up_dir}html/")
         fi
 
         # DOCX ダウンロード リンク メタデータの構築
@@ -2187,7 +2204,7 @@ while ((${#_pending_files[@]} > 0)); do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/reset-table-column-width.lua" \
@@ -2221,7 +2238,7 @@ while ((${#_pending_files[@]} > 0)); do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
-                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                            "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/reset-table-column-width.lua" \
@@ -2497,24 +2514,34 @@ while ((${#_pending_files[@]} > 0)); do
             navigation_link_metadata_args=(--metadata "homelink=${up_dir}index.html")
         fi
 
-        # 検索・ナビゲーション メタデータの構築
-        # publish_file は ".md" 拡張子のままなので ".html" に変換してから html/ を除去する
+        # ヘッダー、検索、ナビゲーション メタデータの構築
+        # 自己完結 HTML のサイト横断データは、兄弟の html/ から遅延ロードする。
+        _search_current="${publish_file%.*}.html"
+        _search_current="${_search_current#html/}"
         ui_metadata_args=()
+        self_contain_ui_metadata_args=()
         if [[ "$htmlTocEnable" == "true" || "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
-            ui_metadata_args=(--metadata "docsfw-ui-enable=true")
-            if [[ "$htmlSearchEnable" != "true" && "$htmlNavTreeEnable" != "true" ]]; then
-                ui_metadata_args+=(--metadata "search-base=${up_dir}")
-            fi
+            ui_metadata_args=(--metadata "docsfw-ui-enable=true" --metadata "docsfw-asset-base=${up_dir}" --metadata "search-current=${_search_current}")
+            self_contain_ui_metadata_args=(--metadata "docsfw-ui-enable=true" --metadata "docsfw-asset-base=../${up_dir}html/" --metadata "search-current=${_search_current}")
         fi
         search_metadata_args=()
+        self_contain_search_metadata_args=()
+        if [[ "$htmlSearchEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-search-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-search-enable=true")
+        fi
+        if [[ "$htmlNavTreeEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-nav-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-nav-enable=true")
+        fi
+        if [[ "$htmlTocEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
+            search_metadata_args+=(--metadata "docsfw-drawer-enable=true")
+            self_contain_search_metadata_args+=(--metadata "docsfw-drawer-enable=true")
+        fi
         if [[ "$htmlSearchEnable" == "true" || "$htmlNavTreeEnable" == "true" ]]; then
-            _search_current="${publish_file%.*}.html"
-            _search_current="${_search_current#html/}"
-            search_metadata_args=(
-                --metadata "search-enable=true"
-                --metadata "search-base=${up_dir}"
-                --metadata "search-current=${_search_current}"
-            )
+            # 旧カスタム テンプレート向けの互換メタデータ。
+            search_metadata_args+=(--metadata "search-enable=true" --metadata "search-base=${up_dir}")
+            self_contain_search_metadata_args+=(--metadata "search-enable=true" --metadata "search-base=../${up_dir}html/")
         fi
 
         # DOCX ダウンロード リンク メタデータの構築
@@ -2682,7 +2709,7 @@ while ((${#_pending_files[@]} > 0)); do
                 build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
                 build_git_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$up_dir"
                 echo "${md_body}" | \
-                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                    "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2720,7 +2747,7 @@ while ((${#_pending_files[@]} > 0)); do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
-                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" "${navigation_link_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
+                        "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \

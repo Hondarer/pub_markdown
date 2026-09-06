@@ -1,417 +1,329 @@
 /*!
- * docsfw-nav.js
- * 1. Renders the global navigation tree from window.__DOCSFW_NAV__ into #docsfw-tree.
- * 2. Places the page-local TOC on the right at wide widths and in the combined
- *    navigation drawer below 1625px.
- * 3. Tracks the current heading in the page-local TOC.
- * 4. Appends a permalink anchor to each heading in the page body.
- * 5. Controls the off-canvas drawer (#docsfw-hamburger / #docsfw-nav-backdrop).
- *
- * Dependencies (loaded before this file via <script defer>):
- *   nav-tree.js → window.__DOCSFW_NAV__
- *
- * Globals consumed:
- *   window.__DOCSFW_NAV__      - tree object from generate-nav-tree.py
- *   window.__DOCSFW_BASE__     - relative path from this page to html root (e.g. "../../")
- *   window.__DOCSFW_CURRENT__  - this page's path relative to html root (e.g. "calc/index.html")
+ * Pandoc HTML の文書ツリー、ページ内目次、階層式ドロワーを制御する。
+ * MkDocs Material と同じ 1625px / 76.234375em の境界を使用する。
  */
 (function () {
   'use strict';
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
+  var wideLayout = window.matchMedia('(min-width: 1625px)');
+  var panelLayout = window.matchMedia('(max-width: 76.234375em)');
+  var base = window.__DOCSFW_BASE__ == null ? '' : String(window.__DOCSFW_BASE__);
+  var current = window.__DOCSFW_CURRENT__ == null ? '' : String(window.__DOCSFW_CURRENT__);
+  var panels = {};
+  var currentPanelKey = 'root';
+  var activePanelKey = 'root';
+  var panelSequence = 0;
+  var isJa = (document.documentElement.lang || 'ja').toLowerCase().indexOf('ja') === 0;
 
-  function esc(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function esc(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function href(url) {
-    var base = (window.__DOCSFW_BASE__ != null) ? String(window.__DOCSFW_BASE__) : '';
-    return base + url;
+  function href(url) { return base + url; }
+
+  function chevron(direction) {
+    var path = direction === 'back' ? 'M15.4 7.4 10.8 12l4.6 4.6L14 18l-6-6 6-6 1.4 1.4Z' :
+      'm8.6 16.6 4.6-4.6-4.6-4.6L10 6l6 6-6 6-1.4-1.4Z';
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + path + '"/></svg>';
   }
 
-  /**
-   * Return true if *node* is an ancestor of (or equal to) the current page.
-   * For directories with url=null (no index.html), falls back to node.path.
-   */
-  function isAncestorOrEqual(node, currentUrl) {
-    if (!currentUrl) { return false; }
-    var url = node.url;
-    // Exact match
-    if (url && url === currentUrl) { return true; }
-    // Derive directory prefix from URL (strip /index.html suffix)
-    var dirPrefix = null;
-    if (url) {
-      var stripped = url.replace(/\/index\.html$/, '/');
-      if (stripped !== url) { dirPrefix = stripped; }
+  function isAncestorOrEqual(node) {
+    if (!current) { return false; }
+    if (node.url && node.url === current) { return true; }
+    var prefix = '';
+    if (node.url && /\/index\.html$/.test(node.url)) { prefix = node.url.replace(/index\.html$/, ''); }
+    else if (node.path) { prefix = node.path; }
+    return !!prefix && current.indexOf(prefix) === 0;
+  }
+
+  function rowContent(node, currentId) {
+    var title = esc(node.title || '(no title)');
+    var selected = node.url && node.url === current;
+    var cls = selected ? ' class="docsfw-current" aria-current="page"' : '';
+    var id = selected && currentId ? ' id="docsfw-current-node"' : '';
+    if (node.url) { return '<a' + id + ' href="' + esc(href(node.url)) + '"' + cls + '>' + title + '</a>'; }
+    return '<span' + id + (selected ? ' class="docsfw-current"' : '') + '>' + title + '</span>';
+  }
+
+  function renderFlatNode(node) {
+    var children = node.children || [];
+    var html = '<li class="docsfw-nav-item"><div class="docsfw-nav-row">' + rowContent(node, true) + '</div>';
+    if (children.length) {
+      html += '<ul class="docsfw-nav-list">';
+      for (var i = 0; i < children.length; i++) { html += renderFlatNode(children[i]); }
+      html += '</ul>';
     }
-    // Fallback: use explicit path field (set for all directory nodes by generate-nav-tree.py)
-    if (!dirPrefix) {
-      var p = node.path;
-      if (p != null && p !== '') { dirPrefix = p; }
-    }
-    return dirPrefix ? currentUrl.indexOf(dirPrefix) === 0 : false;
+    return html + '</li>';
   }
 
-  // ---------------------------------------------------------------------------
-  // Render tree → HTML string
-  // ---------------------------------------------------------------------------
+  function allocatePanel(node, parentKey) {
+    var key = 'panel-' + (++panelSequence);
+    panels[key] = { key: key, node: node, parent: parentKey };
+    if (isAncestorOrEqual(node)) { currentPanelKey = key; }
+    return key;
+  }
 
-  /**
-   * Render a single nav tree node.
-   * Adds id="docsfw-current-node" to the element that represents the current page.
-   *
-   * @param {Object}  node    - { title, url, children }
-   * @param {string}  current - current page URL (relative to html root)
-   * @param {boolean} isRoot  - true for the virtual root (renders children only)
-   * @returns {string} HTML fragment
-   */
-  function renderNode(node, current, isRoot) {
-    var children   = node.children  || [];
-    var hasKids    = children.length > 0;
-    var isCurrent  = !!(node.url && node.url === current);
-    var isAncestor = hasKids && isAncestorOrEqual(node, current);
-
-    if (isRoot) {
-      var parts = [];
-      for (var i = 0; i < children.length; i++) {
-        parts.push(renderNode(children[i], current, false));
+  function registerPanels(nodes, parentKey) {
+    for (var i = 0; i < nodes.length; i++) {
+      var children = nodes[i].children || [];
+      if (children.length) {
+        var key = allocatePanel(nodes[i], parentKey);
+        registerPanels(children, key);
       }
-      return parts.join('');
     }
-
-    var titleHtml = esc(node.title || '(no title)');
-    var currentId = isCurrent ? ' id="docsfw-current-node"' : '';
-
-    if (!hasKids) {
-      // Leaf node
-      var cls = isCurrent ? ' class="docsfw-current"' : '';
-      if (node.url) {
-        return '<div' + currentId + '><a href="' + esc(href(node.url)) + '"' + cls + '>' + titleHtml + '</a></div>';
-      }
-      return '<div' + currentId + '><span' + cls + '>' + titleHtml + '</span></div>';
-    }
-
-    // Directory node
-    var openAttr = (isAncestor || isCurrent) ? ' open' : '';
-    var summaryInner;
-    if (node.url) {
-      var cls2 = isCurrent ? ' class="docsfw-current"' : '';
-      summaryInner = '<a href="' + esc(href(node.url)) + '"' + cls2 + '>' + titleHtml + '</a>';
-    } else {
-      summaryInner = '<span>' + titleHtml + '</span>';
-    }
-
-    var childHtml = '';
-    for (var j = 0; j < children.length; j++) {
-      childHtml += renderNode(children[j], current, false);
-    }
-
-    return (
-      '<details' + currentId + openAttr + '>' +
-        '<summary>' + summaryInner + '</summary>' +
-        '<div>' + childHtml + '</div>' +
-      '</details>'
-    );
   }
 
-  // ---------------------------------------------------------------------------
-  // Place the page-local TOC for the current viewport
-  // ---------------------------------------------------------------------------
+  function childPanelKey(node, parentKey) {
+    var keys = Object.keys(panels);
+    for (var i = 0; i < keys.length; i++) {
+      var panel = panels[keys[i]];
+      if (panel.node === node && panel.parent === parentKey) { return panel.key; }
+    }
+    return '';
+  }
 
-  /**
-   * Place #docsfw-page-toc in the right sidebar or the combined drawer.
-   * The same element is moved so heading tracking survives viewport changes.
-   */
-  function placePageToc(wideLayout) {
-    var sep     = document.querySelector('.docsfw-toc-separator');
+  function renderPanelRows(nodes, parentKey) {
+    var html = '<ul class="docsfw-nav-list">';
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      var children = node.children || [];
+      var target = children.length ? childPanelKey(node, parentKey) : '';
+      html += '<li class="docsfw-nav-item"><div class="docsfw-nav-row">' + rowContent(node, false);
+      if (target) {
+        var label = isJa ? esc(node.title || '') + 'を開く' : 'Open ' + esc(node.title || '');
+        html += '<button type="button" class="docsfw-nav-forward" data-panel-target="' + target +
+          '" aria-label="' + label + '">' + chevron('forward') + '</button>';
+      }
+      html += '</div></li>';
+    }
+    return html + '</ul>';
+  }
+
+  function renderPanel(panel) {
+    var root = panel.key === 'root';
+    var classes = 'docsfw-nav-panel' + (panel.key === activePanelKey ? ' docsfw-panel-active' : '');
+    var html = '<section class="' + classes + '" data-panel-key="' + panel.key + '"' +
+      (panel.key === activePanelKey ? '' : ' hidden') + '>';
+    if (!root) {
+      var backLabel = isJa ? '前の階層へ戻る' : 'Back to previous level';
+      html += '<div class="docsfw-panel-title"><button type="button" class="docsfw-nav-back" data-panel-target="' +
+        esc(panel.parent) + '" aria-label="' + backLabel + '">' + chevron('back') + '</button>' +
+        '<span class="docsfw-panel-title-text">' + esc(panel.node.title || '') + '</span></div>';
+    }
+    if (root && panel.node.url) {
+      html += '<div class="docsfw-panel-home docsfw-nav-row">' + rowContent(panel.node, false) + '</div>';
+    }
+    html += renderPanelRows(panel.node.children || [], panel.key);
+    return html + '</section>';
+  }
+
+  function renderNavigation(nav) {
+    var container = document.getElementById('docsfw-tree');
+    if (!container || !nav) { return; }
+    var home = document.getElementById('docsfw-home-container');
+    if (home && nav.url) {
+      var homeClass = nav.url === current ? ' class="docsfw-current" aria-current="page"' : '';
+      var homeId = nav.url === current ? ' id="docsfw-current-node"' : '';
+      home.innerHTML = '<div class="docsfw-home-link"><a' + homeId + ' href="' + esc(href(nav.url)) + '"' +
+        homeClass + '>' + esc(nav.title || 'Home') + '</a></div>';
+    }
+
+    var children = nav.children || [];
+    var flat = '<div class="docsfw-flat-nav"><ul class="docsfw-nav-list">';
+    for (var i = 0; i < children.length; i++) { flat += renderFlatNode(children[i]); }
+    flat += '</ul></div>';
+
+    panels = { root: { key: 'root', node: nav, parent: '' } };
+    panelSequence = 0;
+    currentPanelKey = 'root';
+    registerPanels(children, 'root');
+    activePanelKey = currentPanelKey;
+    var panelHtml = '<div class="docsfw-panel-nav">';
+    var keys = Object.keys(panels);
+    for (var j = 0; j < keys.length; j++) { panelHtml += renderPanel(panels[keys[j]]); }
+    panelHtml += '</div>';
+    container.innerHTML = flat + panelHtml;
+    wirePanelButtons(container);
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    if (sidebar) { sidebar.classList.toggle('docsfw-child-panel-active', activePanelKey !== 'root'); }
+  }
+
+  function setActivePanel(key, direction) {
+    if (!panels[key]) { return; }
+    activePanelKey = key;
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    if (sidebar) { sidebar.classList.toggle('docsfw-child-panel-active', key !== 'root'); }
+    var nodes = document.querySelectorAll('.docsfw-nav-panel');
+    for (var i = 0; i < nodes.length; i++) {
+      var active = nodes[i].getAttribute('data-panel-key') === key;
+      nodes[i].classList.toggle('docsfw-panel-active', active);
+      nodes[i].hidden = !active;
+      nodes[i].classList.remove('docsfw-panel-enter-forward', 'docsfw-panel-enter-back');
+      if (active && direction) { nodes[i].classList.add('docsfw-panel-enter-' + direction); }
+    }
+    placePageToc();
+    var heading = document.querySelector('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text');
+    if (heading && direction) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
+  }
+
+  function wirePanelButtons(container) {
+    container.addEventListener('click', function (event) {
+      var button = event.target.closest ? event.target.closest('[data-panel-target]') : null;
+      if (!button) { return; }
+      setActivePanel(button.getAttribute('data-panel-target'),
+        button.classList.contains('docsfw-nav-back') ? 'back' : 'forward');
+    });
+  }
+
+  function placePageToc() {
     var pageToc = document.getElementById('docsfw-page-toc');
     var secondary = document.getElementById('TOC');
-    var primary = document.getElementById('docsfw-primary-sidebar');
-
-    if (!pageToc) {
-      if (sep) { sep.remove(); }
+    if (!pageToc || !pageToc.querySelector('a[href^="#"]')) {
+      if (pageToc) { pageToc.hidden = true; }
       if (secondary) { secondary.hidden = true; }
       return;
     }
-
-    if (!pageToc.querySelector('a[href^="#"]')) {
-      pageToc.hidden = true;
-      if (secondary) { secondary.hidden = true; }
-      if (sep) { sep.hidden = true; }
+    pageToc.hidden = false;
+    pageToc.classList.remove('docsfw-combined-toc');
+    if (wideLayout.matches && secondary) {
+      var well = secondary.querySelector('.well');
+      if (well) { well.appendChild(pageToc); }
+      secondary.hidden = false;
       return;
     }
-
-    pageToc.removeAttribute('hidden');
-    if (secondary) { secondary.hidden = false; }
-
-    if (wideLayout && secondary) {
-      var secondaryWell = secondary.querySelector('.well');
-      if (secondaryWell && pageToc.parentNode !== secondaryWell) {
-        secondaryWell.appendChild(pageToc);
-      }
-      if (sep) { sep.hidden = true; }
-      return;
-    }
-
-    var currentNode = document.getElementById('docsfw-current-node');
-    if (currentNode && currentNode.tagName === 'DETAILS') {
-      var inner = currentNode.querySelector(':scope > div');
-      if (inner) {
-        currentNode.insertBefore(pageToc, inner);
-      } else {
-        currentNode.appendChild(pageToc);
-      }
-    } else if (currentNode) {
-      currentNode.appendChild(pageToc);
-    } else if (primary) {
-      var primaryWell = primary.querySelector('.well');
-      if (primaryWell) { primaryWell.appendChild(pageToc); }
-    }
-
-    if (sep) { sep.hidden = false; }
+    if (secondary) { secondary.hidden = true; }
+    pageToc.classList.add('docsfw-combined-toc');
+    var target = panelLayout.matches ? document.querySelector('.docsfw-nav-panel.docsfw-panel-active') :
+      document.querySelector('.docsfw-flat-nav');
+    if (!target) { target = document.querySelector('#docsfw-primary-sidebar > .well'); }
+    if (target) { target.appendChild(pageToc); }
   }
 
   function normalizeTocLinks() {
-    var pageToc = document.getElementById('docsfw-page-toc');
-    if (!pageToc) { return; }
-    var tocLinks = pageToc.querySelectorAll('a');
-    for (var li = 0; li < tocLinks.length; li++) {
-      tocLinks[li].textContent = tocLinks[li].textContent;
-    }
+    var toc = document.getElementById('docsfw-page-toc');
+    if (!toc) { return; }
+    var links = toc.querySelectorAll('a');
+    for (var i = 0; i < links.length; i++) { links[i].textContent = links[i].textContent; }
   }
 
-  /**
-   * Append a permalink anchor to every heading in the page body, matching the
-   * "\u00B6" that mkdocs Material renders from its toc permalink option.
-   * Headings without an id have no anchor target, so they are skipped; that
-   * includes the page title, which the template emits as a plain <H1>.
-   */
   function initHeaderLinks() {
     var content = document.getElementById('docsfw-content');
     if (!content) { return; }
-
     var headings = content.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
     for (var i = 0; i < headings.length; i++) {
-      var heading = headings[i];
-      if (heading.querySelector('a.headerlink')) { continue; }
+      if (headings[i].querySelector('a.headerlink')) { continue; }
       var link = document.createElement('a');
-      link.className = 'headerlink';
-      link.setAttribute('href', '#' + heading.id);
-      link.setAttribute('title', 'Permanent link');
-      link.textContent = '\u00B6';
-      heading.appendChild(link);
+      link.className = 'headerlink'; link.href = '#' + headings[i].id;
+      link.title = 'Permanent link'; link.textContent = '\u00B6';
+      headings[i].appendChild(link);
     }
   }
 
   function initTocTracking() {
-    var pageToc = document.getElementById('docsfw-page-toc');
+    var toc = document.getElementById('docsfw-page-toc');
     var content = document.getElementById('docsfw-content');
-    if (!pageToc || !content) { return; }
-
-    var links = Array.prototype.slice.call(pageToc.querySelectorAll('a[href^="#"]'));
+    if (!toc || !content) { return; }
+    var links = Array.prototype.slice.call(toc.querySelectorAll('a[href^="#"]'));
     var entries = links.map(function (link) {
-      var hash = link.getAttribute('href').slice(1);
-      var id;
+      var hash = link.getAttribute('href').slice(1); var id;
       try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
       return { link: link, heading: document.getElementById(id) };
     }).filter(function (entry) { return !!entry.heading; });
-
     if (!entries.length) { return; }
-
-    var activeLink = null;
     var scheduled = false;
-
-    function revealInSidebar(link) {
-      var sidebar = link.closest('.docsfw-primary-sidebar, .docsfw-secondary-sidebar');
-      if (!sidebar) { return; }
-      var sidebarRect = sidebar.getBoundingClientRect();
-      var linkRect = link.getBoundingClientRect();
-      if (linkRect.top < sidebarRect.top || linkRect.bottom > sidebarRect.bottom) {
-        sidebar.scrollTop += linkRect.top - sidebarRect.top - sidebar.clientHeight / 2;
-      }
-    }
-
-    /* Mark every heading up to and including the current one as passed, so the
-       TOC dims what the reader already scrolled through. Same semantics as
-       mkdocs Material's md-nav__link--passed; see docs/livedocs-design.md. */
-    function activate(link, index) {
-      if (activeLink === link) { return; }
-      for (var i = 0; i < links.length; i++) {
-        links[i].classList.toggle('docsfw-toc-active', links[i] === link);
-        if (links[i] === link) {
-          links[i].setAttribute('aria-current', 'location');
-        } else {
-          links[i].removeAttribute('aria-current');
-        }
+    function update() {
+      scheduled = false; var selected = 0;
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].heading.getBoundingClientRect().top <= 84) { selected = i; } else { break; }
       }
       for (var j = 0; j < entries.length; j++) {
-        entries[j].link.classList.toggle('docsfw-toc-passed', j <= index);
-      }
-      activeLink = link;
-      revealInSidebar(link);
-    }
-
-    function update() {
-      scheduled = false;
-      var selectedIndex = 0;
-      for (var i = 0; i < entries.length; i++) {
-        if (entries[i].heading.getBoundingClientRect().top <= 32) {
-          selectedIndex = i;
-        } else {
-          break;
-        }
-      }
-      activate(entries[selectedIndex].link, selectedIndex);
-    }
-
-    function scheduleUpdate() {
-      if (!scheduled) {
-        scheduled = true;
-        window.requestAnimationFrame(update);
+        entries[j].link.classList.toggle('docsfw-toc-passed', j <= selected);
+        entries[j].link.classList.toggle('docsfw-toc-active', j === selected);
+        if (j === selected) { entries[j].link.setAttribute('aria-current', 'location'); }
+        else { entries[j].link.removeAttribute('aria-current'); }
       }
     }
-
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('hashchange', scheduleUpdate);
-    update();
+    window.addEventListener('scroll', function () {
+      if (!scheduled) { scheduled = true; window.requestAnimationFrame(update); }
+    }, { passive: true });
+    window.addEventListener('hashchange', update); update();
   }
 
-  // ---------------------------------------------------------------------------
-  // Mobile off-canvas drawer
-  // ---------------------------------------------------------------------------
+  function closeDrawer(restoreFocus) {
+    var button = document.getElementById('docsfw-hamburger');
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    document.body.classList.remove('docsfw-nav-open');
+    if (button) { button.setAttribute('aria-expanded', 'false'); }
+    if (sidebar) { sidebar.setAttribute('aria-hidden', wideLayout.matches ? 'false' : 'true'); }
+    if (restoreFocus && button && !wideLayout.matches) { button.focus(); }
+  }
 
-  function initHamburger() {
-    var btn      = document.getElementById('docsfw-hamburger');
+  function openDrawer() {
+    var button = document.getElementById('docsfw-hamburger');
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    document.dispatchEvent(new CustomEvent('docsfw:drawer-open'));
+    document.body.classList.add('docsfw-nav-open');
+    if (button) { button.setAttribute('aria-expanded', 'true'); }
+    if (sidebar) { sidebar.setAttribute('aria-hidden', 'false'); }
+    if (panelLayout.matches) { setActivePanel(currentPanelKey); }
+    var selected = document.querySelector(panelLayout.matches ?
+      '.docsfw-nav-panel.docsfw-panel-active .docsfw-current' : '.docsfw-flat-nav .docsfw-current');
+    if (selected) { selected.scrollIntoView({ block: 'center', behavior: 'auto' }); }
+  }
+
+  function initDrawer() {
+    var button = document.getElementById('docsfw-hamburger');
     var backdrop = document.getElementById('docsfw-nav-backdrop');
-    var sidebar  = document.getElementById('docsfw-primary-sidebar');
-
-    if (!btn) { return; }
-
-    function isOpen() {
-      return document.body.classList.contains('docsfw-nav-open');
-    }
-
-    function openDrawer() {
-      document.body.classList.add('docsfw-nav-open');
-      btn.setAttribute('aria-expanded', 'true');
-      btn.textContent = '‹'; // ‹
-      // Scroll current node into view inside the drawer.
-      var cn = document.getElementById('docsfw-current-node');
-      if (cn) {
-        // Small delay to let CSS transition start, then scroll.
-        setTimeout(function () {
-          cn.scrollIntoView({ block: 'center', behavior: 'instant' });
-        }, 50);
-      }
-    }
-
-    function closeDrawer() {
-      document.body.classList.remove('docsfw-nav-open');
-      btn.setAttribute('aria-expanded', 'false');
-      btn.textContent = '›'; // ›
-    }
-
-    btn.addEventListener('click', function () {
-      if (isOpen()) { closeDrawer(); } else { openDrawer(); }
+    var sidebar = document.getElementById('docsfw-primary-sidebar');
+    if (!button || !sidebar) { return; }
+    button.setAttribute('aria-label', isJa ? 'ナビゲーション' : 'Navigation');
+    sidebar.setAttribute('aria-label', isJa ? '文書ナビゲーション' : 'Document navigation');
+    sidebar.setAttribute('aria-hidden', wideLayout.matches ? 'false' : 'true');
+    button.addEventListener('click', function () {
+      if (document.body.classList.contains('docsfw-nav-open')) { closeDrawer(true); } else { openDrawer(); }
     });
-
-    if (backdrop) {
-      backdrop.addEventListener('click', closeDrawer);
-    }
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && isOpen()) { closeDrawer(); }
+    if (backdrop) { backdrop.addEventListener('click', function () { closeDrawer(true); }); }
+    sidebar.addEventListener('click', function (event) {
+      var link = event.target.closest ? event.target.closest('a[href]') : null;
+      if (link) { closeDrawer(false); }
     });
-
-    // Close drawer when any link inside the sidebar is clicked.
-    if (sidebar) {
-      sidebar.addEventListener('click', function (e) {
-        var a = e.target.closest ? e.target.closest('a') : null;
-        if (a && a.getAttribute('href')) {
-          closeDrawer();
-        }
-      });
-    }
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && document.body.classList.contains('docsfw-nav-open')) { closeDrawer(true); }
+    });
+    document.addEventListener('docsfw:search-open', function () { closeDrawer(false); });
   }
 
-  // ---------------------------------------------------------------------------
-  // Entry point
-  // ---------------------------------------------------------------------------
+  function loadNavigation(done) {
+    if (!window.__DOCSFW_NAV_ENABLED__) { done(null); return; }
+    if (window.__DOCSFW_NAV__) { done(window.__DOCSFW_NAV__); return; }
+    var script = document.createElement('script'); script.src = base + 'nav-tree.js';
+    script.onload = function () { done(window.__DOCSFW_NAV__ || null); };
+    script.onerror = function () {
+      var container = document.getElementById('docsfw-tree');
+      if (container) { container.innerHTML = '<p class="docsfw-nav-unavailable">' +
+        (isJa ? '文書一覧を読み込めませんでした。' : 'Document navigation is unavailable.') + '</p>'; }
+      done(null);
+    };
+    document.head.appendChild(script);
+  }
+
+  function onLayoutChange() {
+    closeDrawer(false);
+    if (panelLayout.matches) { setActivePanel(currentPanelKey); }
+    placePageToc();
+  }
 
   function init() {
-    // Runs before the branching below, so the anchors are added on every path.
-    initHeaderLinks();
-
-    var container = document.getElementById('docsfw-tree');
-    var nav       = window.__DOCSFW_NAV__;
-    var current   = window.__DOCSFW_CURRENT__;
-    var wideLayout = window.matchMedia('(min-width: 1625px)');
-    var onLayoutChange = function (event) { placePageToc(event.matches); };
+    initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); placePageToc();
+    loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); });
     if (wideLayout.addEventListener) {
-      wideLayout.addEventListener('change', onLayoutChange);
+      wideLayout.addEventListener('change', onLayoutChange); panelLayout.addEventListener('change', onLayoutChange);
     } else {
-      wideLayout.addListener(onLayoutChange);
+      wideLayout.addListener(onLayoutChange); panelLayout.addListener(onLayoutChange);
     }
-
-    if (!container) {
-      placePageToc(wideLayout.matches);
-      normalizeTocLinks();
-      initTocTracking();
-      initHamburger();
-      return;
-    }
-
-    if (!nav) {
-      // nav-tree.js not yet generated (first build); hide tree and keep the
-      // page-local TOC available in the responsive layout.
-      container.style.display = 'none';
-      placePageToc(wideLayout.matches);
-      normalizeTocLinks();
-      initTocTracking();
-      initHamburger();
-      return;
-    }
-
-    // Build home link (root index page).
-    var homeHtml = '';
-    if (nav.url) {
-      var isCurrRoot = (nav.url === current);
-      var homeCls    = isCurrRoot ? ' class="docsfw-current"' : '';
-      var homeId     = isCurrRoot ? ' id="docsfw-current-node"' : '';
-      homeHtml = (
-        '<div class="docsfw-home-link"' + homeId + '>' +
-          '<a href="' + esc(href(nav.url)) + '"' + homeCls + '> ' + esc(nav.title || 'Home') + '</a>' +
-        '</div>'
-      );
-    }
-
-    var homeContainer = document.getElementById('docsfw-home-container');
-    if (homeContainer) { homeContainer.innerHTML = homeHtml; }
-    container.innerHTML = renderNode(nav, current, true);
-
-    placePageToc(wideLayout.matches);
-    normalizeTocLinks();
-    initTocTracking();
-
-    // Scroll the current node into view within the sidebar (desktop).
-    var currentNode = document.getElementById('docsfw-current-node');
-    if (currentNode) {
-      currentNode.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }
-
-    // Wire up the mobile hamburger.
-    initHamburger();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
 }());

@@ -101,7 +101,7 @@ framework/docsfw/
 ### 本文マーカー
 
 検索インデックス生成スクリプトが本文テキストを抽出する際のマーカーです。  
-テンプレートの chrome (navbar、サイドバー等) を除外し、本文のみを索引対象にします。
+テンプレートの chrome (ヘッダー、サイドバー等) を除外し、本文のみを索引対象にします。
 
 ```html
 <main id="docsfw-content">
@@ -109,12 +109,15 @@ framework/docsfw/
 </main>
 ```
 
-### 左右サイドバーへの UI 挿入
+### ヘッダーと左右サイドバーへの UI 挿入
 
-左サイドバーに全体ナビゲーションと検索、右サイドバーに Pandoc が生成するページ内目次を配置します。
+ヘッダーに検索、左サイドバーに全体ナビゲーション、右サイドバーに Pandoc が生成するページ内目次を配置します。
 
 ```html
-<div id="docsfw-search-container"></div>   ← 検索ボックスが動的に挿入される
+<header class="docsfw-header">
+  <button id="docsfw-hamburger"></button> ← 1625px 未満のメニュー
+  <div id="docsfw-search-container"></div> ← 検索 UI が動的に挿入される
+</header>
 <nav id="docsfw-tree"></nav>               ← ナビツリーが描画される
 <aside id="TOC" class="docsfw-secondary-sidebar">
   <div id="docsfw-page-toc">...</div>       ← ページ内目次
@@ -126,22 +129,23 @@ framework/docsfw/
 Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 315px の三列を 25px 間隔で表示します。  
 全体幅は 1595px です。
 
-1625px 未満では本文を最大 870px で中央配置し、文書ツリーとページ内目次を幅 `min(80vw, 320px)` の左ドロワーへ統合します。
+1625px 未満では本文を最大 870px で中央配置し、文書ツリーとページ内目次を幅 `min(80vw, 320px)` の左ドロワーへ統合します。  
+ヘッダーは MkDocs と同じく、本体 48px と背景帯 12px の合計 60px です。
 
 ### </body> 直前の JS
 
 ```html
-<div id="docsfw-search-results"></div>
 <script>
-  window.__DOCSFW_BASE__    = "$search-base$";
+  window.__DOCSFW_BASE__    = "$docsfw-asset-base$";
   window.__DOCSFW_CURRENT__ = "$search-current$";
+  window.__DOCSFW_NAV_ENABLED__ = true;
 </script>
-<script defer src="${search-base}nav-tree.js"></script>
-<script defer src="${search-base}docsfw-nav.js"></script>
-<script defer src="${search-base}docsfw-search.js"></script>
+<script defer src="$docsfw-asset-base$docsfw-nav.js"></script>
+<script defer src="$docsfw-asset-base$docsfw-search.js"></script>
 ```
 
-`$search-base$` は `up_dir` (ページ深さ分の `../`) と同じ値です。  
+`$docsfw-asset-base$` は、通常 HTML では `up_dir` (ページ深さ分の `../`) と同じ値です。  
+自己完結 HTML では兄弟の `html/` を指し、文書ツリーと検索索引を共用します。  
 `$search-current$` はページの `html/` ルートからの相対パス (例: `calc/index.html`) です。
 
 ## 検索エンジン (MiniSearch)
@@ -210,10 +214,11 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 MkDocs Material の `md-nav__link--passed` と同じ意味論で、現在の見出しにも付きますが、アクティブの色が後勝ちします。  
 配色と太字を使わない理由は [動的発行基盤の「ページ内目次の状態表現」](livedocs-design.md) を参照してください。
 
-1625px 未満では、`docsfw-nav.js` が目次要素を左ドロワーの現在ページ配下へ移します。  
-画面幅が 1625px の境界を越えたときは同じ要素を移動し、目次の複製と状態の不一致を防ぎます。
+1625px 未満では、`docsfw-nav.js` が目次要素を左ドロワーへ移します。  
+1220px から 1624px では連続した文書一覧の末尾へ置き、約 1220px 未満では現在ページを含む階層の一覧末尾へ置きます。  
+画面幅が 1625px または約 1220px の境界を越えたときは同じ要素を移動し、目次の複製と状態の不一致を防ぎます。
 
-- **フォールバック**: 現在ページがツリーにない場合は、狭い画面のドロワー末尾に目次を表示します。
+- **フォールバック**: 現在ページがツリーにない場合は、ドロワーのルート一覧末尾に目次を表示します。
 - **見出し無しページ**: `$toc$` が出力されないため、右サイドバーとドロワー内の区切り線を表示しません。
 
 ### 見出しのパーマリンク
@@ -228,16 +233,26 @@ MkDocs Material の `toc.permalink` が生成するアンカーに合わせる�
 すでに `a.headerlink` を持つ見出しは対象外です。  
 表示仕様は [見出し書式](heading-style.md) を参照してください。
 
-### 狭い画面の展開ボタンとドロワー
+### 狭い画面のメニューボタンとドロワー
 
 1625px 未満では、全体ナビゲーションとページ内目次を一つの左ドロワーで提供します。
 
-- 左上に固定表示されるボタン (`›`) をタップするとサイドバーが左からスライド イン。  
-  ドロワーが開くとボタンのアイコンが `‹` に変わり、ドロワーの右端へ移動します。
-- ドロワー内は検索ボックス + 全体ナビゲーション ツリー + 現在ページの見出しで構成されます。
-- バック ドロップのタップ・Esc キー・ナビ リンクのクリックでドロワーを閉じます。
+- ヘッダー左端のメニューボタンを押すと、ヘッダー直下からサイドバーがスライド インします。
+- 1220px から 1624px では文書一覧を連続表示します。
+- 約 1220px 未満では階層ごとの板を表示し、右向きアイコンで子階層へ進み、左向きアイコンで戻ります。
+- 根の板にはロゴと `siteName (variant)` を表示します。
+- バック ドロップ、Esc キー、ナビゲーション リンク、ページ内目次リンクでドロワーを閉じます。
 - 実装は左サイドバー (`#docsfw-primary-sidebar`) を `position: fixed` のドロワーに変換する CSS と、  
-  `body.docsfw-nav-open` クラスのトグルで制御します (DOM の複製なし)。
+  `body.docsfw-nav-open` クラスのトグルで制御します。ページ内目次は複製せず、同じ要素を移動します。
+
+検索は 60em 以上でヘッダー内の幅 234px の入力欄、60em 未満で検索アイコンから開くパネルとして表示します。  
+検索パネルとドロワーは同時に開きません。
+
+### 自己完結 HTML
+
+自己完結 HTML にはヘッダー、CSS、操作スクリプトを埋め込みます。  
+文書ツリー、MiniSearch、トークナイザー、検索索引は、成果物の重複を避けるため兄弟の `html/` から読み込みます。  
+自己完結 HTML だけを別の場所へコピーした場合は、本文とページ内目次を表示できますが、文書ツリーと全文検索は利用できません。
 
 ## 部分発行 (--relativeFile) 時の動作
 

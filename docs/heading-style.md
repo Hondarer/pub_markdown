@@ -148,4 +148,4 @@ GitHub 由来の `a.anchor` は `styles/html/html-style.css` に定義が残っ�
 ## 一致させない項目
 
 - 見出し内のリンクの色。pandoc は Bootstrap の `h1 a { color: #333 }`、MkDocs は `.md-typeset a` の `#4183C4` です。
-- ダーク モードの実際の色。静的発行はライト固定です。MkDocs は Material の変数を通して切り替わります。
+- ダーク モードの実際の色。静的発行と MkDocs は、それぞれの配色変数を通して切り替わります。
