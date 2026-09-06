@@ -14,9 +14,12 @@
     max-width: 1595px;
   }
 
+  /* 先頭の余白は docsfw-header-meta.css の .md-header::after (高さ 12px の帯)
+     がヘッダー自身の高さとして持つ。ここで重ねて持たせると 2 重になるため、
+     既定の padding-top (Material は 1.2rem) を打ち消すだけにする。 */
   .md-sidebar--primary,
   .md-sidebar--secondary {
-    padding-top: 12px;
+    padding-top: 0;
   }
 
   .md-sidebar--primary {
@@ -27,6 +30,9 @@
     width: 315px;
   }
 
+  /* 既定は padding-top: .6rem で、ヘッダーとの間隔が画面幅で伸び縮みする。
+     先頭の余白はヘッダー自身の高さ (docsfw-header-meta.css) で持たせるため、
+     ここでは 0 にする。 */
   .md-main__inner > .md-content > .md-content__inner {
     margin-left: 25px !important;
     margin-right: 25px !important;

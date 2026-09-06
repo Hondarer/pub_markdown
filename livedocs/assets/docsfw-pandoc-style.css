@@ -481,8 +481,12 @@ body {
 /* ヘッダー                                                                  */
 /* ------------------------------------------------------------------------ */
 
-/* html-style.css の .navbar-inner が持つ下端の境界線に相当する。 */
-.md-header {
+/* html-style.css の .navbar-inner が持つ下端の境界線に相当する。
+   .md-header 自身へ付けると、docsfw-header-meta.css の .md-header::after
+   (本文と同じ背景色の帯 12px) の下端まで線が下がってしまう。線は灰色の
+   ヘッダー本体 (.md-header__inner、高さ 48px) の直後に置きたいため、
+   ヘッダー自身ではなく内側の nav へ付ける。 */
+.md-header__inner {
   border-bottom: 1px solid var(--md-primary-fg-color--dark);
 }
 
