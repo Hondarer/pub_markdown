@@ -16,8 +16,13 @@
   top: 0;
 }
 /* 描画待ちの図は、レイアウトが飛ばないように最小の高さを確保する。
-   MkDocs (docsfw-livedocs.css) の同名ルールと見た目を揃えるため、値をここに集約する。 */
+   MkDocs (docsfw-livedocs.css) の同名ルールと見た目を揃えるため、値をここに集約する。
+   Pandoc HTML の figure は display: flex; align-items: center; のため、
+   図はフレックス アイテムとして生ソースの内容幅まで縮む。align-self: stretch で
+   描画待ちの間だけ幅いっぱいに広げ、MkDocs (display: block) と見た目を揃える。
+   figure の外や MkDocs のように flex コンテナーの外では align-self は無視される。 */
 .docsfw-plantuml[aria-busy="true"] {
+  align-self: stretch;
   min-height: 3rem;
   background-image: linear-gradient(
     90deg,
