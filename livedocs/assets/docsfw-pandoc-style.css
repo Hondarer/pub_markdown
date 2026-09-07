@@ -410,15 +410,18 @@ body {
   line-height: 21px;
 }
 
-/* 広い画面の展開ツリーでは、入れ子の先頭リンクの上マージンが祖先要素へ
-   相殺され、親項目の直後だけ行送りが詰まる。Pandoc HTML と同じ 8.75px を
-   list の内側余白として確保し、先頭リンク自身のマージンは重ねない。
+/* 展開ツリーでは、入れ子の先頭リンクの上マージンが祖先要素へ相殺され、
+   親項目の直後だけ行送りが詰まる。Pandoc HTML と同じ 8.75px を list の
+   内側余白として確保し、先頭リンク自身のマージンは重ねない。
    対象は「現在ページを含むため自動展開されたフォルダー」
    (.md-nav__item--active) に限らない。ユーザーが手動で開いたフォルダーも
    同じ構造で行送りが詰まるため、開閉状態そのもの (input.md-nav__toggle の
    :checked。アクティブな項目もサーバー側で checked 属性が付くため包含される)
-   を条件にする。 */
-@media screen and (min-width: 1625px) {
+   を条件にする。
+   3 ペイン (1625px 以上) だけでなく、連続一覧のドロワー
+   (76.25em 以上 1624px 以下。docsfw-livedocs.css 参照) でも同じ入れ子構造を
+   使うため、下限を Material と同じ 76.25em に緩和し、両方の幅で効かせる。 */
+@media screen and (min-width: 76.25em) {
   .md-nav--primary .md-nav__item--nested > .md-nav__toggle:checked ~ .md-nav > .md-nav__list {
     padding-top: 8.75px;
   }

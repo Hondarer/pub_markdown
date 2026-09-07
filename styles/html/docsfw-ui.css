@@ -1008,6 +1008,12 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     font: 700 14px/21px sans-serif;
   }
   .docsfw-drawer-logo { display: none; }
+  /* .docsfw-drawer-title の padding-bottom: 12px に加えて、#docsfw-tree a,
+     .docsfw-home-link a (共通ルール) の margin-top: 8.75px が乗ると、
+     見出しと先頭リンクの間だけ約 20.75px に広がる。広幅レイアウト
+     (min-width: 1625px、本ファイル下方) と同じく、先頭リンクの
+     margin-top を打ち消し、padding-bottom の 12px だけにそろえる。 */
+  .docsfw-home-link a { margin-top: 0; }
 }
 
 @keyframes docsfw-panel-forward {
