@@ -7,7 +7,6 @@
   const queue = [];
   let running = false;
   let serial = 0;
-  let visibility;
 
   function theme() {
     return document.body.getAttribute("data-md-color-scheme") === "slate" ? "dark" : "default";
@@ -168,7 +167,7 @@
 
   function scan() {
     for (const [block] of states) {
-      if (!block.isConnected) { states.delete(block); if (visibility) { visibility.unobserve(block); } }
+      if (!block.isConnected) { states.delete(block); }
     }
     document.querySelectorAll(selector).forEach(block => {
       if (states.has(block)) { return; }
@@ -181,22 +180,11 @@
         addCaption(block, state.prepared.caption);
       }
       states.set(block, state);
-      if (kind === "plantuml" && visibility) { visibility.observe(block); }
-      else { enqueue(state); }
+      enqueue(state);
     });
   }
 
   function initialize() {
-    if (window.IntersectionObserver) {
-      visibility = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            visibility.unobserve(entry.target);
-            enqueue(states.get(entry.target));
-          }
-        });
-      }, { rootMargin: "400px" });
-    }
     let previous = theme();
     new MutationObserver(() => {
       const current = theme();

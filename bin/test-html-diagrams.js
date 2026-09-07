@@ -167,11 +167,7 @@ async function settled(page) {
 async function exercise(page, url, name) {
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
   await page.goto(url, { waitUntil: 'load' });
-  // 画面外の図も検証対象へ入れる。
-  for (const block of await page.$$('.docsfw-plantuml')) {
-    await block.scrollIntoView();
-    await page.waitForFunction(el => el.dataset.docsfwState === 'done', { timeout: 90000 }, block);
-  }
+  assert(await page.$$eval('.docsfw-plantuml', nodes => nodes.some(el => el.getBoundingClientRect().top > innerHeight)));
   await settled(page);
   const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(el => el.textContent));
   assert.equal(errors.length, 2, JSON.stringify(errors));
@@ -210,10 +206,6 @@ async function exercise(page, url, name) {
   assert.equal(exported, displayed);
   await page.reload({ waitUntil: 'load' });
   assert.equal(await page.$eval('body', el => el.dataset.mdColorScheme), 'slate');
-  for (const block of await page.$$('.docsfw-plantuml')) {
-    await block.scrollIntoView();
-    await page.waitForFunction(el => el.dataset.docsfwState === 'done', { timeout: 90000 }, block);
-  }
   await settled(page);
   // 狭い画面の見た目だけ撮る。390px で PlantUML を再描画すると TeaVM が戻らず、
   // 続く setViewport が CDP 待ちで落ちるため、配色切替は mobileTheme() で見る。
@@ -240,6 +232,40 @@ async function race(page) {
   assert.deepEqual(await page.evaluate(() => window.calls), [false, true]);
   assert.equal(await page.$eval('.docsfw-plantuml svg', el => el.textContent), 'true');
   console.log('theme change during rendering: passed');
+}
+
+async function sequentialAfterDomReady(page) {
+  await page.goto('about:blank');
+  await page.setContent('<body data-md-color-scheme="default"><main style="padding-top: 2000px">' +
+    ['A', 'B', 'C'].map(name => '<div class="docsfw-plantuml">@startuml\n' + name + ' -> X\n@enduml</div>').join('') +
+    '</main></body>');
+  await page.evaluate(() => {
+    window.calls = [];
+    window.activeCalls = 0;
+    window.maxActiveCalls = 0;
+    window.docsfwLoadPlantuml = async () => ({ renderToString(source, ok) {
+      window.calls.push(source.find(line => line.includes(' -> ')).split(' ')[0]);
+      window.activeCalls += 1;
+      window.maxActiveCalls = Math.max(window.maxActiveCalls, window.activeCalls);
+      setTimeout(() => {
+        window.activeCalls -= 1;
+        ok('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+      }, 20);
+    } });
+  });
+  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+  await settled(page);
+  const result = await page.evaluate(() => ({
+    calls: window.calls,
+    maxActiveCalls: window.maxActiveCalls,
+    scrollY: window.scrollY,
+    firstTop: document.querySelector('.docsfw-plantuml').getBoundingClientRect().top
+  }));
+  assert.deepEqual(result.calls, ['A', 'B', 'C']);
+  assert.equal(result.maxActiveCalls, 1);
+  assert.equal(result.scrollY, 0);
+  assert(result.firstTop > 600, JSON.stringify(result));
+  console.log('offscreen PlantUML sequential rendering after DOM ready: passed');
 }
 
 async function clip(page, url) {
@@ -317,6 +343,7 @@ async function main() {
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     await exercise(page, 'http://127.0.0.1:' + server.address().port + '/normal.html', 'http');
     await race(page);
+    await sequentialAfterDomReady(page);
   } finally {
     await browser.close();
     server.close();

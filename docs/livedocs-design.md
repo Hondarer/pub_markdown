@@ -679,7 +679,7 @@ docsfw が使用する GPL 版とは一部の図種やスプライトで結果�
 
 Pandoc HTML と共用する `styles/browser/docsfw-diagrams.js` が描画します。  
 `bin/build-browser-assets.js` が PlantUML エンジン、Graphviz、同梱アイコンを含むローダーを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
-配色変更時の再描画、直列化、遅延描画、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
+配色変更時の再描画、DOM 構築完了後の直列描画、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
 
 ## 図の枠とキャプション
 
@@ -1504,7 +1504,7 @@ make servedocs
 
 | 確認対象 | ページ | 確認内容 |
 |---|---|---|
-| PlantUML の多量描画 | `app/example/docs/sequence.md` | 遅延描画がスクロールに追従すること |
+| PlantUML の多量描画 | `app/example/docs/sequence.md` | 画面外の図も文書内の先頭から順に描画されること |
 | PlantUML の図種 | `framework/docsfw/docs/sample/plantuml-showcase.md` | 図種ごとの描画結果と docsfw との差異 |
 | Mermaid | `framework/docsfw/docs/sample/mermaid-showcase.md` | 描画とサイズ正規化 |
 | キャプション | `framework/docsfw/docs/sample/mermaid-caption.md` | `CodeBlock:` 由来のキャプション |
