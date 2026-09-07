@@ -159,10 +159,54 @@ async function main() {
     await new Promise(resolve => setTimeout(resolve, 100));
     assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
     await page.evaluate(() => scrollTo(0, 2900));
-    await new Promise(resolve => setTimeout(resolve, 100));
-    assert.equal(await page.$eval('#docsfw-top', node => node.hidden), false);
-    assert.equal(await page.$eval('#docsfw-top', node => node.getAttribute('aria-label')), 'ページの先頭へ戻る');
-    await page.click('#docsfw-top');
+    await page.waitForFunction(() => {
+      const node = document.getElementById('docsfw-top');
+      return !node.hidden && getComputedStyle(node).opacity === '1';
+    });
+    assert.equal(await page.$eval('#docsfw-top', node => node.tagName), 'BUTTON');
+    assert.equal(await page.$eval('#docsfw-top', node => node.getAttribute('aria-label')), 'ページトップへ戻る');
+    assert.equal(await page.$eval('#docsfw-top-label', node => node.textContent), 'ページトップへ戻る');
+    assert.equal(await page.$eval('#docsfw-top', node => node.getAttribute('title') || ''), '');
+    assert.deepEqual(await page.$eval('#docsfw-top', node => {
+      const style = getComputedStyle(node);
+      return {
+        top: style.top,
+        fontSize: style.fontSize,
+        paddingTop: style.paddingTop,
+        paddingRight: style.paddingRight,
+        paddingBottom: style.paddingBottom,
+        paddingLeft: style.paddingLeft,
+        borderRadius: style.borderRadius
+      };
+    }), {
+      top: '76px',
+      fontSize: '14px',
+      paddingTop: '8px',
+      paddingRight: '16px',
+      paddingBottom: '8px',
+      paddingLeft: '16px',
+      borderRadius: '32px'
+    });
+    assert.equal(await page.$eval('#docsfw-top svg', node => getComputedStyle(node).width), '24px');
+    await page.screenshot({ path: path.join(output, 'back-to-top.png'), fullPage: false });
+    await page.setViewport({ width: 1700, height: 800 });
+    await page.waitForFunction(() => document.getElementById('docsfw-top').hidden);
+    await page.evaluate(() => scrollTo(0, 3000));
+    await new Promise(resolve => setTimeout(resolve, 50));
+    await page.evaluate(() => scrollTo(0, 2800));
+    await page.waitForFunction(() => {
+      const node = document.getElementById('docsfw-top');
+      return !node.hidden && getComputedStyle(node).opacity === '1';
+    });
+    const topBox = await page.$eval('#docsfw-top', node => {
+      const rect = node.getBoundingClientRect();
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+    });
+    await page.mouse.move(topBox.x, topBox.y);
+    await page.waitForFunction(() =>
+      getComputedStyle(document.getElementById('docsfw-top')).backgroundColor === 'rgb(0, 85, 128)');
+    assert.equal(await page.$eval('#docsfw-top', node => getComputedStyle(node).color), 'rgb(255, 255, 255)');
+    await page.mouse.click(topBox.x, topBox.y);
     assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
     await page.waitForFunction(() => scrollY < 5);
     assert.equal(await page.$eval('#docsfw-content h1', node => document.activeElement === node), true);

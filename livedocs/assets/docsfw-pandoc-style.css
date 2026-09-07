@@ -26,6 +26,23 @@ body {
   line-height: 1.5;
 }
 
+/* Material は html { font-size: 125% } (1rem = 20px) を基準にし、
+   100em (1600px) 以上で 137.5%、125em (2000px) 以上で 150% へ上げる。
+   rem のまま残る部品 (.md-top など) が pandoc 発行版より大きくなるため、
+   同じメディアクエリで 125% に戻し、画面幅によらず 1rem = 20px とする。
+   extra_css は main.css より後に読まれる。 */
+@media screen and (min-width: 100em) {
+  html {
+    font-size: 125%;
+  }
+}
+
+@media screen and (min-width: 125em) {
+  html {
+    font-size: 125%;
+  }
+}
+
 /* ------------------------------------------------------------------------ */
 /* 見出し                                                                    */
 /* ------------------------------------------------------------------------ */
@@ -316,10 +333,8 @@ body {
 }
 
 /* admonition の寸法は、Material の rem 指定を 1rem = 20px として px へ換算した
-   固定値にする。Material は @media (min-width: 100em) で root を 137.5% へ
-   上げるため、rem のままでは 1600px 以上の画面で動的発行だけが約 10% 大きく
-   なり、pandoc 発行版 (styles/html/html-style.css) と一致しない。
-   同じ値を両側へ置く。 */
+   固定値にする。html の font-size は 125% に固定するが、pandoc 発行版
+   (styles/html/html-style.css) と同じ px を両側へ置く。 */
 
 .md-typeset .admonition {
   margin: 25px 0;

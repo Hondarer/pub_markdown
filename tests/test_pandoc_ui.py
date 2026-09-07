@@ -82,6 +82,18 @@ class PandocUiContractTest(unittest.TestCase):
             self.assertIn('lang="en"', result)
             self.assertIn('Site (example) (en-details)</span>', result)
 
+    def test_back_to_top_matches_material(self):
+        self.assertIn('<button type="button" id="docsfw-top" hidden>', self.template)
+        self.assertIn('M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z',
+                      self.template)
+        self.assertNotIn('<a href="#" id="docsfw-top"', self.template)
+        self.assertIn("ページトップへ戻る", self.nav)
+        self.assertNotIn("ページの先頭へ戻る", self.nav)
+        self.assertIn("addEventListener('resize'", self.nav)
+        self.assertIn("top: calc(var(--docsfw-header-height) + 16px)", self.ui_style)
+        self.assertIn("--docsfw-accent-bg: #ffffff", self.style)
+        self.assertIn("--docsfw-accent-bg: #1f2129", self.style)
+
     def test_default_toc_matches_source_heading_level_three(self):
         start = self.publisher.index('if [[ "$htmlTocDepth" == "" ]]')
         end = self.publisher.index('\n# 設定ファイルに mathLatexEnable', start)

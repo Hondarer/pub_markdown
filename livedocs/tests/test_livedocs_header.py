@@ -137,8 +137,7 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertNotIn("max-width: 76.1875em", text)
 
     def test_search_box_width_uses_fixed_pixel_sizes(self):
-        """100em / 125em 以上での html font-size 拡大により検索ボックスが
-        さらに広がらないこと (rem ではなく px で固定していること)。"""
+        """検索ボックスの幅が rem ではなく px で固定されていること。"""
         with open(META_CSS, "r", encoding="utf-8") as handle:
             text = handle.read()
         self.assertNotRegex(text, r"width:\s*\d+(?:\.\d+)?rem")
@@ -393,6 +392,27 @@ class DrawerBoxTest(unittest.TestCase):
             re.escape('[dir="rtl"] .md-sidebar--primary')
             + r"\s*\{[^}]*border-left:\s*1px solid var\(--md-primary-fg-color--dark\)",
         )
+
+
+class HtmlRootFontSizeTest(unittest.TestCase):
+    """広い画面でも html の font-size を 125% に固定すること。"""
+
+    def test_html_root_font_size_stays_at_125_percent(self):
+        """1600px / 2000px でも Material の html font-size 拡大を 125% に戻すこと。"""
+        with open(PANDOC_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*100em\)\s*\{[\s\S]*?"
+            r"html\s*\{[^}]*font-size:\s*125%",
+        )
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*125em\)\s*\{[\s\S]*?"
+            r"html\s*\{[^}]*font-size:\s*125%",
+        )
+        self.assertNotRegex(text, r"html\s*\{[^}]*font-size:\s*137\.5%")
+        self.assertNotRegex(text, r"html\s*\{[^}]*font-size:\s*150%")
 
 
 class HeaderBorderWidthTest(unittest.TestCase):

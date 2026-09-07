@@ -210,6 +210,14 @@ extra_javascript:
     assert.equal(await navOpacityAfterHover('.code-expander-toolbar'), '0');
     assert.equal(await navOpacityAfterHover('.code-expander-hint'), '0');
     assert.equal(await navOpacityAfterHover('.code-expander-scroll'), '1');
+    for (const width of [1700, 2100]) {
+      await page.setViewport({width, height: 900});
+      assert.equal(
+        await page.evaluate(() => getComputedStyle(document.documentElement).fontSize),
+        '20px',
+        'html font-size at ' + width,
+      );
+    }
     assert.deepEqual(errors, []);
     console.log('PASS: MkDocs code expander wrap, threshold, collapse hint, full copy, mermaid skipped, copy hover on code only');
 

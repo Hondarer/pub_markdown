@@ -15,8 +15,7 @@
 }
 
 /* 静的発行の .doc-title, .doc-info, .navbar-text { font-size: 14px } と一致する。
-   Material は 1600px 以上で html の font-size を 137.5% へ上げるため、rem では
-   ヘッダーだけが拡大する。px で固定して最小の 14px を保つ。
+   html の font-size は 125% に固定するが、ヘッダーは pandoc と同じ px にする。
    色は本文より一段淡い副次情報として --md-primary-bg-color--light を使う。
    この変数は docsfw-pandoc-style.css が default と slate の双方で定義している。 */
 .docsfw-header-meta > span {
@@ -25,8 +24,7 @@
   line-height: normal;
 }
 
-/* Material は広い画面で html の font-size を上げるため、rem を使う標準ヘッダー
-   も拡大する。各要素を既存の最小値で固定し、画面幅による拡大を防ぐ。 */
+/* 標準ヘッダーは rem 指定のため、pandoc と同じ px へ置き換えて画面幅で変えない。 */
 .md-header__title {
   font-size: 18px;
   height: 48px;
@@ -60,13 +58,9 @@
   letter-spacing: normal;
 }
 
-/* Material はヘッダーの寸法をすべて rem で指定している。100em (1600px) 以上で
-   html の font-size が 137.5%、125em (2000px) 以上で 150% へ上がるため、rem の
-   ままでは画面幅に応じて検索ボックスの幅も、ヘッダーの高さと余白も広がり続ける。
-   文字とアイコンは上で px に固定済みのため、伸びるのは箱と余白だけになり、
-   ヘッダーだけが間延びして見える。
-   タイトル領域、ボタン、検索ボックスはいずれも等倍で 48px に収まるため、
-   等倍 (html の 125%、20px 相当) の換算値へそろえて px で固定する。 */
+/* Material はヘッダーの寸法をすべて rem で指定している。
+   html の font-size は 125% に固定するが、タイトル領域、ボタン、検索ボックスは
+   いずれも等倍で 48px に収まるため、1rem = 20px の換算値へそろえて px で固定する。 */
 .md-header__inner {
   padding: 0 4px;
 }
@@ -84,8 +78,8 @@
   padding: 8px;
 }
 
-/* 60em 未満では検索も 40px 四方のボタンになり、html の font-size 拡大が始まる
-   1600px にも届かないため、入力欄として並ぶ 60em 以上だけを対象にする。 */
+/* 60em 未満では検索も 40px 四方のボタンになるため、入力欄として並ぶ
+   60em 以上だけを対象にする。 */
 @media screen and (min-width: 60em) {
   .md-header .md-search {
     padding: 4px 0;

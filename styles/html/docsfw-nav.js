@@ -319,9 +319,8 @@
   function initBackToTop() {
     var button = document.getElementById('docsfw-top');
     if (!button) { return; }
-    var label = isJa ? 'ページの先頭へ戻る' : 'Back to top';
+    var label = isJa ? 'ページトップへ戻る' : 'Back to top';
     button.setAttribute('aria-label', label);
-    button.title = label;
     var labelEl = document.getElementById('docsfw-top-label');
     if (labelEl) { labelEl.textContent = label; }
 
@@ -337,6 +336,12 @@
     }
     window.addEventListener('scroll', function () {
       if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }, { passive: true });
+    /* MkDocs Material は viewport のサイズ変化でも direction が上スクロール
+       でなくなるため hidden になる。resize でも同様に消す。 */
+    window.addEventListener('resize', function () {
+      button.hidden = true;
+      lastY = window.scrollY;
     }, { passive: true });
 
     button.addEventListener('click', function (event) {

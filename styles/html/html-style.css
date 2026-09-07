@@ -15,6 +15,7 @@
   --docsfw-link: #4183C4;
   --docsfw-link-hover: #005580;
   --docsfw-nav-accent: #1a5faa;
+  --docsfw-accent-bg: #ffffff;
   --docsfw-absent: #cc0000;
   --docsfw-code-bg: #f8f8f8;
   --docsfw-code-fg: black;
@@ -79,6 +80,7 @@ html[data-md-color-scheme="slate"] {
   --docsfw-link: #6ea9dd;
   --docsfw-link-hover: #9cc7ea;
   --docsfw-nav-accent: #9cc7ea;
+  --docsfw-accent-bg: #1f2129;
   --docsfw-absent: #f85149;
   --docsfw-code-bg: #272a35;
   --docsfw-code-fg: #f0f0f0;

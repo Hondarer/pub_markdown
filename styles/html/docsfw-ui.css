@@ -1232,51 +1232,71 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
 /* --- ページ上部へ戻るボタン (MkDocs Material の .md-top 相当) ---------- */
 
-/* [hidden] (UA スタイルシート) と同じ詳細度のため、既定を display: none にし、
-   :not([hidden]) 側でだけ表示する。#docsfw-top { display: flex } のように
-   単純化すると常に表示されてしまう。 */
+/* Material の .md-top を 1rem = 20px で px 化した値。
+   上端はヘッダー実高 60px + 16px。
+   [hidden] の UA の display: none は、.md-top と同じく display: block で上書きし、
+   不透明度と transform で出す。非表示への遷移は即時 (transition-duration: 0ms)。
+   width: fit-content は、button の shrink-to-fit を明示し、旧テンプレートの
+   a#docsfw-top が display: block で全幅になるのを防ぐ。 */
 #docsfw-top {
-  display: none;
+  display: block;
   position: fixed;
-  top: calc(var(--docsfw-header-height) + 8px);
+  top: calc(var(--docsfw-header-height) + 16px);
   left: 50%;
-  transform: translateX(-50%);
   z-index: 1060;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  box-sizing: border-box;
+  width: fit-content;
+  margin: 0;
+  padding: 8px 16px;
   border: none;
-  border-radius: 20px;
+  border-radius: 32px;
   background: var(--docsfw-bg);
   color: var(--docsfw-muted);
-  font-size: 12px;
-  line-height: 1.4;
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  font-size: 14px;
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  appearance: none;
+  -webkit-appearance: none;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
-  transition: color 125ms, background-color 125ms;
+  box-shadow: 0 4px 10px #0000001a, 0 0 1px #00000040;
+  transform: translate(-50%);
+  transition: color 125ms, background-color 125ms, transform 125ms cubic-bezier(.4, 0, .2, 1), opacity 125ms;
 }
 
-#docsfw-top:not([hidden]) {
-  display: inline-flex;
+#docsfw-top[hidden] {
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 4px);
+  transition-duration: 0ms;
 }
 
 #docsfw-top:hover,
 #docsfw-top:focus {
-  color: var(--docsfw-nav-accent);
+  background-color: var(--docsfw-link-hover);
+  color: var(--docsfw-accent-bg);
   text-decoration: none;
   outline: none;
 }
 
 #docsfw-top svg {
-  width: 16px;
-  height: 16px;
+  display: inline-block;
+  width: 24px;
+  height: 24px;
   fill: currentColor;
-  flex: 0 0 auto;
+  vertical-align: -0.5em;
 }
 
 @media (prefers-reduced-motion: reduce) {
   #docsfw-top {
     transition: none;
+  }
+}
+
+@media print {
+  #docsfw-top {
+    display: none;
   }
 }
