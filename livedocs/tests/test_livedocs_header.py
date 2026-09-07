@@ -306,6 +306,9 @@ class DrawerTopSpacingTest(unittest.TestCase):
 
         ドロワーは画面の高さいっぱいのため、下端の 12px が無いと一覧の
         最後の項目が画面の下端に接する。
+        Material は 76.25em 以上で scrollwrap へピクセル高さを書く。
+        3 ペインから縮めると inset の bottom よりその高さが勝ち、下端の
+        12px が画面外へ出る。height: auto で inset に箱を戻す。
         """
         text = self._read_css()
         match = re.search(
@@ -318,6 +321,11 @@ class DrawerTopSpacingTest(unittest.TestCase):
             drawer,
             re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
             + r"\s*\{[^}]*inset:\s*12px 0\s*;",
+        )
+        self.assertRegex(
+            drawer,
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*height:\s*auto\s*!important",
         )
         self.assertNotRegex(
             drawer,

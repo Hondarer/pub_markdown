@@ -1220,6 +1220,12 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 高さが `100%` のままだと下端がその分だけ画面の外へ出て、下端の 12px の余白も画面外に落ちます。  
 ヘッダーの高さ 60px は `docsfw-header-meta.css` の `:root` に `--docsfw-header-height` として持ち、`.md-sidebar` の `top` と共有します。
 
+Material は約 1220px 以上で `.md-sidebar__scrollwrap` へもピクセル高さを `style` 属性へ書き込みます。  
+この値は 3 ペインの sticky 用で、マウント時に一度だけ測った `offsetTop` から引きます。  
+3 ペインからドロワーへ幅を変えると、`offsetTop` が 0 のまま残ります。  
+絶対配置の `inset: 12px 0` よりインラインの `height` が優先され、下端の 12px が画面の外へ出ます。  
+1624px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` の上下で箱を決めます。
+
 ドロワーでは、一覧の右にスクロール バー以外の空きを作りません。  
 `scrollbar-gutter: stable` は 3 ペインで一覧の幅がスクロール バーの有無で動かないための指定ですが、ドロワーでは幅が狭く、予約した分がそのまま右端の余白になります。  
 予約幅はブラウザーのスクロール バー幅で決まるため、拡大率によっても変わります。  
