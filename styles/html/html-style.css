@@ -716,7 +716,7 @@ pre code {
   font-size: 13px;
   line-height: 19px;
   overflow: auto;
-  padding: 6px 10px;
+  padding: 11px 16px;
   border-radius: 3px; }
 
 pre {
@@ -724,7 +724,7 @@ pre {
   font-size: 16px;
   line-height: 19px;
   overflow: auto;
-  padding: 6px 10px;
+  padding: 11px 16px;
   border-radius: 3px; }
 
 pre code, pre tt {
@@ -758,11 +758,11 @@ div.sourceCode {
   background-color: var(--docsfw-code-bg);
   border: 1px solid var(--docsfw-border);
   border-radius: 3px;
-  padding: 6px 0 6px 10px; }
+  padding: 11px 0 11px 16px; }
 
 div.sourceCode > pre {
   border: none;
-  padding: 0 10px 0 0;
+  padding: 0 16px 0 0;
   min-width: max-content; }
 
 figure {
@@ -1184,7 +1184,9 @@ pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docs
 }
 
 body {
-  padding-top: calc(var(--docsfw-header-height) + 10px);
+  /* mkdocs (docsfw-livedocs.css の .md-content__inner + h1 の margin-top)
+     の実測の余白 (20px) に合わせる。 */
+  padding-top: calc(var(--docsfw-header-height) + 20px);
 }
 
 .docsfw-header {

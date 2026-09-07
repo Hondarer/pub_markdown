@@ -71,6 +71,15 @@ function Meta(meta)
         end
     end
 
+    -- abstract (概要本文) が 1 行の YAML フロー スカラーの場合、Pandoc は
+    -- MetaInlines として扱い <p> で囲まれない裸のテキストを出力する。
+    -- mkdocs (livedocs_abstract_hook.py) は概要本文を常に Markdown の
+    -- ブロック パーサーへ通し <p> 付きで出力するため、見た目をそろえるために
+    -- MetaInlines のときだけ段落として包み直す。
+    if meta.abstract and pandoc.utils.type(meta.abstract) == "Inlines" then
+        meta.abstract = pandoc.MetaBlocks({ pandoc.Para(meta.abstract) })
+    end
+
     -- 目次に対する処理
     if FORMAT == "docx" then
         -- docx 出力の場合
