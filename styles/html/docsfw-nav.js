@@ -1,11 +1,11 @@
 /*!
  * Pandoc HTML の文書ツリー、ページ内目次、階層式ドロワーを制御する。
- * MkDocs Material と同じ 1625px / 76.234375em の境界を使用する。
+ * MkDocs Material と同じ 1400px / 76.234375em の境界を使用する。
  */
 (function () {
   'use strict';
 
-  var wideLayout = window.matchMedia('(min-width: 1625px)');
+  var wideLayout = window.matchMedia('(min-width: 1400px)');
   var panelLayout = window.matchMedia('(max-width: 76.234375em)');
   var base = window.__DOCSFW_BASE__ == null ? '' : String(window.__DOCSFW_BASE__);
   var current = window.__DOCSFW_CURRENT__ == null ? '' : String(window.__DOCSFW_CURRENT__);

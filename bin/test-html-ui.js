@@ -147,11 +147,22 @@ async function main() {
     await page.evaluate(() => { document.documentElement.setAttribute('data-md-color-scheme', 'slate'); });
     assert.equal(await page.$eval('.doc-title', node => getComputedStyle(node).color), 'rgba(255, 255, 255, 0.87)');
     await page.evaluate(() => { document.documentElement.setAttribute('data-md-color-scheme', 'default'); scrollTo(0, 0); });
-    for (const width of [1624, 1625, 1700]) {
+    for (const width of [1399, 1400, 1700]) {
       await page.setViewport({width, height:900});
-      await page.waitForFunction(wide => !!document.querySelector('#docsfw-page-toc').closest('#TOC') === wide, {}, width >= 1625);
+      await page.waitForFunction(wide => !!document.querySelector('#docsfw-page-toc').closest('#TOC') === wide, {}, width >= 1400);
     }
     await page.screenshot({ path: path.join(output, 'wide.png'), fullPage: false });
+
+    // 中間 3 列 (1400px〜1624px) は、3 列 PC (1625px 以上) と同じくハンバーガーを
+    // 隠し、ページ内目次が右の列になるが、左右列は 240px/210px と狭い。
+    await page.setViewport({ width: 1500, height: 900 });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#docsfw-hamburger')).display === 'none');
+    assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('#TOC')));
+    const midSidebarWidth = (await dimensions(page, '#docsfw-primary-sidebar')).width;
+    await page.setViewport({ width: 1700, height: 900 });
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#docsfw-hamburger')).display === 'none');
+    const wideSidebarWidth = (await dimensions(page, '#docsfw-primary-sidebar')).width;
+    assert(midSidebarWidth < wideSidebarWidth);
 
     // ページ上部へ戻るボタン: 下スクロール中は出さず、上スクロールで表示する。
     assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
@@ -211,7 +222,7 @@ async function main() {
     await page.waitForFunction(() => scrollY < 5);
     assert.equal(await page.$eval('#docsfw-content h1', node => document.activeElement === node), true);
 
-    await page.setViewport({ width: 1400, height: 900 });
+    await page.setViewport({ width: 1300, height: 900 });
     await page.waitForFunction(() => getComputedStyle(document.querySelector('#docsfw-hamburger')).display !== 'none');
     await page.click('#docsfw-hamburger');
     await new Promise(resolve => setTimeout(resolve, 300));

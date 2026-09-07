@@ -1,5 +1,6 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
-// 3 ペインから中間幅へ縮めたあと、ドロワー末尾の下端 12px が残ることを検証する。
+// 3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあと、
+// ドロワー末尾の下端 12px が残ることを検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -121,17 +122,17 @@ extra_javascript:
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
     await new Promise(resolve => setTimeout(resolve, 300));
-    await page.setViewport({width: 1400, height: 900});
+    await page.setViewport({width: 1300, height: 900});
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1400');
+    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1300');
 
-    await page.setViewport({width: 1400, height: 900});
+    await page.setViewport({width: 1300, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
     await new Promise(resolve => setTimeout(resolve, 300));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'reload 1400');
+    assertBottomInset(await drawerEndMetrics(), 'reload 1300');
 
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});

@@ -2,9 +2,9 @@
 (function () {
   'use strict';
 
-  var wideLayout = window.matchMedia('(min-width: 1625px)');
+  var wideLayout = window.matchMedia('(min-width: 1400px)');
   /* Material がナビゲーションを入れ子の板 (スライド パネル) にする境界。
-     打ち消す相手と一致させるため、docsfw の 1624px ではなくこの値を使う。 */
+     打ち消す相手と一致させるため、docsfw の 1399px ではなくこの値を使う。 */
   var panelLayout = window.matchMedia('(max-width: 76.234375em)');
   var toc = null;
   var originalParent = null;
@@ -26,7 +26,7 @@
      開くと現在ページが属する板を表示する。根の一覧へ入れた目次は表示中の板の
      背面に回り、見出しだけが板の行に重なって見える。この幅では、現在ページの
      リンクが属する一覧 (= 表示中の板の一覧) を入れ先にする。
-     1220px から 1624px の帯は板にならず一覧が 1 本につながるため、従来どおり
+     1220px から 1399px の帯は板にならず一覧が 1 本につながるため、従来どおり
      根の一覧の最後へ入れる。 */
   function getPanelList() {
     var activeLink = document.querySelector(

@@ -45,13 +45,20 @@ class PandocUiContractTest(unittest.TestCase):
 
     def test_breakpoints_match_livedocs(self):
         for marker in (
-            "(max-width: 1624px)",
+            "(max-width: 1399px)",
             "(max-width: 76.234375em)",
             "(max-width: 59.984375em)",
         ):
             self.assertIn(marker, self.ui_style)
-        self.assertIn("(min-width: 1625px)", self.nav)
+        self.assertIn("(min-width: 1400px)", self.nav)
         self.assertIn("(max-width: 76.234375em)", self.nav)
+
+    def test_intermediate_three_column_breakpoint(self):
+        """1400px〜1624px は、左右列を 2/3 幅にした中間 3 列であること。"""
+        self.assertIn("(min-width: 1400px) and (max-width: 1624px)", self.style)
+        self.assertIn("grid-template-columns: 240px 870px 210px", self.style)
+        self.assertIn("grid-template-columns: 360px 870px 315px", self.style)
+        self.assertIn("(min-width: 1400px)", self.ui_style)
 
     def test_search_and_navigation_flags_are_independent(self):
         self.assertIn('htmlSearchEnable=$(parse_yaml "$config_content" "htmlSearchEnable")', self.publisher)

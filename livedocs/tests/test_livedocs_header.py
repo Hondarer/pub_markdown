@@ -311,7 +311,7 @@ class DrawerTopSpacingTest(unittest.TestCase):
         """
         text = self._read_css()
         match = re.search(
-            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
             text,
         )
         self.assertIsNotNone(match)
@@ -342,7 +342,7 @@ class DrawerBoxTest(unittest.TestCase):
 
     def _drawer_block(self):
         match = re.search(
-            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
             self._read_css(),
         )
         self.assertIsNotNone(match, "docsfw の境界の media が無い")

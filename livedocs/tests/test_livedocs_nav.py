@@ -81,7 +81,7 @@ class DrawerWidthTest(unittest.TestCase):
     def _docsfw_drawer_block(self):
         text = _read(LIVEDOCS_CSS)
         match = re.search(
-            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
             text,
         )
         self.assertIsNotNone(match, "docsfw の境界の media が無い")
@@ -110,6 +110,41 @@ class DrawerWidthTest(unittest.TestCase):
         )
 
 
+class IntermediateThreeColumnTest(unittest.TestCase):
+    """1400px〜1624px は、左右列を 2/3 幅にした中間 3 列であること。
+
+    3 列 PC (1625px 以上) の左 360px/右 315px に対し、この段は
+    1.5 倍化前の値である左 240px/右 210px を使う。
+    """
+
+    def _block(self):
+        text = _read(LIVEDOCS_CSS)
+        match = re.search(
+            r"@media screen and \(min-width:\s*1400px\)"
+            r" and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match, "中間 3 列の media が無い")
+        return match.group(1)
+
+    def test_sidebar_widths_are_two_thirds_of_the_wide_layout(self):
+        block = self._block()
+        self.assertRegex(
+            block,
+            re.escape(".md-sidebar--primary") + r"\s*\{[^}]*width:\s*240px",
+        )
+        self.assertRegex(
+            block,
+            re.escape(".md-sidebar--secondary") + r"\s*\{[^}]*width:\s*210px",
+        )
+
+    def test_grid_max_width_matches_the_narrower_columns(self):
+        self.assertRegex(
+            self._block(),
+            re.escape(".md-grid") + r"\s*\{[^}]*max-width:\s*1370px",
+        )
+
+
 class FlatDrawerScrollTest(unittest.TestCase):
     """連続一覧のドロワーで、スクロール バーが見出しの下から始まること。
 
@@ -123,7 +158,7 @@ class FlatDrawerScrollTest(unittest.TestCase):
         text = _read(LIVEDOCS_CSS)
         match = re.search(
             r"@media screen and \(min-width:\s*76\.25em\)"
-            r" and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            r" and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
             text,
         )
         self.assertIsNotNone(match, "連続一覧の帯の media が無い")
@@ -251,14 +286,14 @@ class DrawerCloseTest(unittest.TestCase):
     def _docsfw_drawer_block(self):
         text = _read(LIVEDOCS_CSS)
         match = re.search(
-            r"@media screen and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            r"@media screen and \(max-width:\s*1399px\)\s*\{([\s\S]*?)\n\}",
             text,
         )
         self.assertIsNotNone(match, "docsfw の境界の media が無い")
         return match.group(1)
 
     def test_overlay_covers_the_docsfw_breakpoint(self):
-        """Material の覆いは 76.2344em 未満だけのため、1624px まで広げること。
+        """Material の覆いは 76.2344em 未満だけのため、1399px まで広げること。
 
         覆いが無い幅では、本文を押してもドロワーが閉じない。
         """

@@ -60,7 +60,56 @@
   }
 }
 
-@media screen and (max-width: 1624px) {
+/* 中間 3 列 (左右ナビゲーションを 2/3 幅にした段)。全体幅の関係
+   (左右列 + 本文 870px + 列間 25px×2 + body 左右 padding 30px = 三列化の境界)
+   は 360px/315px 版と同じで、1.5 倍化前 (240px/210px、1400px 境界) の値と一致する。
+   3 ペイン (1625px 以上、本ファイル上方) の内容を複製し、幅の数値だけを差し替える。 */
+@media screen and (min-width: 1400px) and (max-width: 1624px) {
+  .md-grid {
+    max-width: 1370px;
+  }
+
+  .md-sidebar--primary,
+  .md-sidebar--secondary {
+    padding-top: 0;
+  }
+
+  .md-sidebar--primary {
+    width: 240px;
+  }
+
+  .md-sidebar--secondary {
+    width: 210px;
+  }
+
+  .md-main__inner > .md-content > .md-content__inner {
+    margin-left: 25px !important;
+    margin-right: 25px !important;
+    padding-top: 0;
+  }
+
+  .md-main__inner {
+    margin-top: 0;
+  }
+
+  [dir="ltr"] .md-sidebar--primary .md-sidebar__inner {
+    padding-right: 10px;
+  }
+
+  [dir="rtl"] .md-sidebar--primary .md-sidebar__inner {
+    padding-left: 10px;
+  }
+
+  [dir="ltr"] .md-sidebar--secondary .md-sidebar__inner {
+    padding-right: 0;
+  }
+
+  [dir="rtl"] .md-sidebar--secondary .md-sidebar__inner {
+    padding-left: 0;
+  }
+}
+
+@media screen and (max-width: 1399px) {
   .md-grid {
     max-width: 902px;
   }
@@ -153,7 +202,7 @@
 
   /* ドロワーの外を押したときに閉じるための覆い (label for="__drawer") は、
      Material 自身のドロワーと同じ 76.2344em 未満でしか出ない。docsfw は
-     1624px 以下をドロワーにするため、その間の幅では本文を押しても閉じない。
+     1399px 以下をドロワーにするため、その間の幅では本文を押しても閉じない。
      Material の指定と同じ内容を、docsfw の境界へも広げる。
      覆いは .md-container より前にあり、ドロワーと同じ z-index 5 のため、
      重なりの順はドロワーが上のままになる。 */
@@ -211,7 +260,7 @@
    通常フローから外れる。統合した目次は一覧 (.md-nav__list) の中の項目として
    入れるため (assets/docsfw-responsive-nav.js)、板やスライド パネル向けの
    体裁を目次の範囲だけ戻し、広い画面の目次と同じ見た目にそろえる。
-   境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく
+   境界は打ち消す相手と一致させるため、docsfw の 1399px ではなく
    Material と同じ 76.234375em を使う。 */
 @media screen and (max-width: 76.234375em) {
   /* 板には板自身の見出し (戻る矢印とページ名の帯) があるため、上端の 12px は
@@ -275,7 +324,7 @@
   }
 }
 
-/* 連続一覧のドロワー (約 1220px から 1624px) で、垂直スクロール バーを見出しの
+/* 連続一覧のドロワー (約 1220px から 1399px) で、垂直スクロール バーを見出しの
    下から始める。Pandoc HTML と同じ見え方にそろえる。
    Material はこの幅を 3 ペインと同じ扱いにし、.md-nav--primary .md-nav__title へ
    position: sticky を当てる。見た目は留まるが、スクロール領域には見出しが
@@ -284,13 +333,14 @@
    ドロワーの高さを分け合う固定領域にする。
    Material 自身も約 1220px 未満の板表示では同じ構造 (.md-nav--primary を
    縦方向の flex にし、.md-nav__list だけを overflow-y: auto にする) を持つ。
-   境界は打ち消す相手と一致させるため、docsfw の 1625px ではなく
-   Material と同じ 76.25em を使う。
+   境界は打ち消す相手と一致させるため、docsfw の 1400px ではなく
+   Material と同じ 76.25em を使う。上限は 1400px から始まる中間 3 列と重ならない
+   よう 1399px までとする。
    .md-sidebar__inner に左右の余白は無く、.md-nav__list の余白も左だけのため、
    スクロール バーの位置とインデントは変わらない。 */
-@media screen and (min-width: 76.25em) and (max-width: 1624px) {
+@media screen and (min-width: 76.25em) and (max-width: 1399px) {
   /* 上下の 12px を残したまま、この要素ではスクロールしない
-     (inset と margin は 1624px 以下のブロックの指定をそのまま使う)。 */
+     (inset と margin は 1399px 以下のブロックの指定をそのまま使う)。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     overflow: hidden;
   }

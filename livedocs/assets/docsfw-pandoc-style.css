@@ -433,9 +433,10 @@ body {
    同じ構造で行送りが詰まるため、開閉状態そのもの (input.md-nav__toggle の
    :checked。アクティブな項目もサーバー側で checked 属性が付くため包含される)
    を条件にする。
-   3 ペイン (1625px 以上) だけでなく、連続一覧のドロワー
-   (76.25em 以上 1624px 以下。docsfw-livedocs.css 参照) でも同じ入れ子構造を
-   使うため、下限を Material と同じ 76.25em に緩和し、両方の幅で効かせる。 */
+   3 ペイン (1625px 以上) と中間 3 列 (1400px 以上 1624px 以下) だけでなく、
+   連続一覧のドロワー (76.25em 以上 1399px 以下。docsfw-livedocs.css 参照) でも
+   同じ入れ子構造を使うため、下限を Material と同じ 76.25em に緩和し、
+   すべての幅で効かせる。 */
 @media screen and (min-width: 76.25em) {
   .md-nav--primary .md-nav__item--nested > .md-nav__toggle:checked ~ .md-nav > .md-nav__list {
     padding-top: 8.75px;

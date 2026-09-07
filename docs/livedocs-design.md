@@ -130,7 +130,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 44 | docx 出力 | 対象外 | 本基盤の要件どおり |
 | 45 | ページ内目次 | 維持 | Material の右サイドバー。`toc_depth: 3` |
 | 46 | サイト内ナビゲーション ツリー | 維持 | Material の左サイドバー。並びは本文の `\toc` と同じ |
-| 47 | ページ内目次のナビゲーション ツリーへのマージ | 維持 | 1625px 以上は左右分離、未満は左ドロワーへ統合 |
+| 47 | ページ内目次のナビゲーション ツリーへのマージ | 維持 | 1400px 以上は左右分離、未満は左ドロワーへ統合 |
 | 48 | 全文検索 | 簡略 | Material 標準検索。日本語の既知の弱点があり、緩和策を実装済み (詳細は後述) |
 | 49 | `file://` での動作 | 対象外 | `mkdocs serve` の HTTP 前提 |
 | 50 | モバイル オフキャンバス ドロワー | 簡略 | Material 標準。板見出しだけ `theme/partials/nav-item.html` を上書きし、"<" は戻る、フォルダー名はインデックス ページがあれば実リンクにする (詳細は後述) |
@@ -1112,7 +1112,7 @@ Material は `.md-nav__link` に `transition: color 125ms` を持ちますが、
 カードが消えれば見えない余白になるだけで、TOC の字下げと横幅、本文の開始位置が変わらないためです。
 
 `.well` はテンプレート内で TOC にしか使われていないため、この指定の影響は TOC に閉じます。  
-1625px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
+1400px 未満ではページ内目次を左ドロワーへ移すため、右側の `.well` は表示しません。
 
 TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separator`) は、狭い画面で文書ツリーとページ内目次を区切るために使用します。
 
@@ -1156,7 +1156,7 @@ Material の `.md-nav__link` が持つ `margin-top: .625em` を、両側でそ�
 
 静的発行の目次には Bootstrap の `template.css` (CDN) が `.toc ul > li > a` (0,2,3) で `padding: 3px 15px` を当て、`.toc ul > li > a:hover` で `text-decoration: none` と `background-color: #eeeeee` を当てます。  
 どちらも `docsfw-ui.css` の指定より詳細度が高いため、行間もホバーの下線も効かず、ホバーで灰色の帯が出ていました。  
-また 1625px 未満では目次が文書ツリーの中へ移るため、`#docsfw-tree a` (1,0,1) が状態の色に勝ちます。
+また 1400px 未満では目次が文書ツリーの中へ移るため、`#docsfw-tree a` (1,0,1) が状態の色に勝ちます。
 
 そこで `docsfw-ui.css` の目次の状態指定は、クラスではなく `#docsfw-page-toc` を起点にします。  
 `#docsfw-page-toc a` は両方より詳細度が高いか同等で、同等の `#docsfw-tree a` に対してはファイル内で後に置いて勝たせます。  
@@ -1168,18 +1168,34 @@ Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a
 
 ### ナビゲーションの幅と切り替え
 
+ウインドウ幅は四段階で切り替わります。
+
+| 段階 | 幅 |
+|---|---|
+| スマートフォン | 767px 以下 |
+| 1 列表示・階層ごとの板 | 768px から約 1220px 未満 |
+| 1 列表示・連続一覧のドロワー | 約 1220px から 1399px |
+| 中間 3 列 | 1400px から 1624px |
+| 3 列 (PC) | 1625px 以上 |
+
 Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 315px の三列を 25px 間隔で表示します。  
 全体幅は 1595px です。
 
-1625px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
-画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。
+1400px から 1624px は、左右列を 2/3 幅 (左 240px、右 210px、全体 1370px) にした中間 3 列です。  
+本文約 870px と列間 25px は 3 列 (PC) と変えず、`assets/docsfw-livedocs.css` の 1625px 以上のブロックを複製し、幅の数値だけを差し替えて実装します。  
+全体幅 + body の左右 padding 30px = 三列化の境界という関係はそのまま保たれ、1370px + 30px = 1400px です。  
+この 240px/210px という値は、左右ナビゲーションの幅を 1.5 倍にする前 (1400px 境界) の値と一致します。
+
+1400px 未満では本文を最大 870px で中央配置し、`docsfw-responsive-nav.js` が Material のページ内目次を左の文書ナビゲーション内へ移します。  
+画面幅の変更時は同じ DOM 要素を元の右サイドバーと左ドロワーの間で移し、Material の `toc.follow` と現在見出し表示を維持します。  
+中間 3 列 (1400px 以上) は 3 列 (PC) と同じくドロワーを使わないため、この移動の境界も `docsfw-responsive-nav.js` の `wideLayout` を 1625px ではなく 1400px にして合わせます。
 
 Pandoc HTML の `docsfw-nav.js` も同じ境界を使用します。  
-1220px から 1624px では連続一覧を表示し、約 1220px 未満では文書階層ごとの板と戻る操作を表示します。  
+1220px から 1399px では連続一覧を表示し、約 1220px 未満では文書階層ごとの板と戻る操作を表示します。  
 ページ内目次は MkDocs と同様に、連続一覧または現在表示中の板の末尾へ移します。
 
 移す先は `li.md-nav__item.docsfw-combined-toc` で、幅によって入れる一覧が変わります。  
-1220px から 1624px では、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾です。  
+1220px から 1399px では、文書ツリーの一覧 `.md-nav--primary > .md-nav__list` の末尾です。  
 Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary` とその配下の `.md-nav` を `position: absolute` と `height: 100%` の入れ子の板 (スライド パネル) にし、一覧だけをスクロールさせます。  
 ドロワーを開くと、現在ページが属する板が表示されます。  
 根の一覧の末尾へ入れると、目次は表示中の板の背面に回り、見出しだけが板の行に重なって見えます。  
@@ -1192,7 +1208,7 @@ Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary`
 Material の `.md-nav--primary .md-nav__link` の `padding: 0.6rem 0.8rem` がタップしやすい高さを、`[dir="ltr"] .md-nav--primary .md-nav--secondary .md-nav … .md-nav__link` の `padding-left` が階層のインデントを持ちます。  
 項目ごとの区切り線も残し、ファイル一覧からの続きとして並べます。  
 `assets/docsfw-livedocs.css` の `@media screen and (max-width: 76.234375em)` で戻すのは、各階層の絶対配置、見出しの戻る矢印、目次の見出しの左右余白、目次の一覧の内側の影と独立スクロール、一覧のスクロール スナップです。  
-境界は打ち消す相手と一致させるため、docsfw の 1624px ではなく Material と同じ値を使います。  
+境界は打ち消す相手と一致させるため、docsfw の 1399px ではなく Material と同じ値を使います。  
 スクロール スナップの打ち消しは `.md-nav--primary .md-nav__title ~ .md-nav__list` の形で書きます。  
 Material の指定がこの形 (クラス 3 個) のため、`.md-nav--primary > .md-nav__list` (クラス 2 個) では詳細度で負け、目次の見出しがスナップ点になって一覧を末尾まで送れません。
 
@@ -1202,14 +1218,14 @@ docsfw は目次をファイル一覧の続きとして並べるため、この�
 境界はここでも打ち消す相手と同じ値を使います。
 
 左ドロワーの幅は `min(80vw, 320px)` で、閉じた位置と開く量の両方が同じ値を参照します。  
-Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1625px より内側でこの指定と重なります。  
+Material 自身のドロワーは `max-width: 76.2344em` (既定フォントで約 1220px) から効き始めるため、docsfw の 1400px より内側でこの指定と重なります。  
 Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left: -12.1rem` を、`[dir="rtl"]` に `right: -12.1rem` を当てます。  
 `width` だけが docsfw の値になると、幅と閉じた位置が食い違い、閉じたドロワーの右端が本文の左に残ります。  
 そのため `left` と `right` は `[dir]` を付けて詳細度をそろえ、後勝ちさせます。  
 開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
 
-1625px 以上の左ナビは `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
-1625px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
+1400px 以上の左ナビ (中間 3 列と 3 列 PC) は `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
+1400px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
 同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。  
 下端にも同じ 12px を置きます。これが無いと一覧の最後の項目が画面の下端に接します。  
 約 1220px 未満の板には板自身の見出し (戻る矢印とページ名の帯) があるため、上端の 12px は板の上の白帯になります。  
@@ -1231,20 +1247,20 @@ Material は約 1220px 以上で `.md-sidebar__scrollwrap` へもピクセル高
 この値は 3 ペインの sticky 用で、マウント時に一度だけ測った `offsetTop` から引きます。  
 3 ペインでマウントすると、そこで取得した `offsetTop` の値 0 が、ドロワーへ幅を変えたあとも高さ計算に使われます。  
 絶対配置の `inset: 12px 0` よりインラインの `height` が優先され、下端の 12px が画面の外へ出ます。  
-1624px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` の上下で箱を決めます。
+1399px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` の上下で箱を決めます。
 
 ドロワーでは、一覧の右にスクロール バー以外の空きを作りません。  
 `scrollbar-gutter: stable` は 3 ペインで一覧の幅がスクロール バーの有無で動かないための指定ですが、ドロワーでは幅が狭く、予約した分がそのまま右端の余白になります。  
 予約幅はブラウザーのスクロール バー幅で決まるため、拡大率によっても変わります。  
 板の中では板自身の一覧がスクロールし、ドロワー側のスクロール バーは出ないため、予約分は使われません。  
-1624px 以下では `scrollbar-gutter: auto` に戻し、`.md-sidebar__inner` の左右余白 10px も 0 にします。  
+1399px 以下では `scrollbar-gutter: auto` に戻し、`.md-sidebar__inner` の左右余白 10px も 0 にします。  
 この余白の規則は消さずに 0 を指定します。消すと Material が `@supports selector(::-webkit-scrollbar)` の中で当てる `padding-right: calc(100% - 11.5rem)` が出ます。
 
-連続一覧の帯 (約 1220px から 1624px) では、垂直スクロール バーを見出しの下から始めます。  
+連続一覧の帯 (約 1220px から 1399px) では、垂直スクロール バーを見出しの下から始めます。  
 Material はこの幅を 3 ペインと同じ扱いにし、見出し `.md-nav--primary .md-nav__title` へ `position: sticky` を当てます。  
 見た目は留まりますが、スクロール領域には見出しが含まれたままのため、スクロール バーが見出しの高さ (約 33px) だけ上へ伸びます。  
 `.md-sidebar__scrollwrap` を `overflow: hidden` にし、`.md-sidebar__inner` と `.md-nav--primary` を縦方向の flex にして、見出しを固定領域、一覧 `.md-nav--primary > .md-nav__list` をスクロール コンテナーにします。  
-Material 自身も約 1220px 未満の板表示では同じ構造を持ちます。境界は打ち消す相手と一致させるため、docsfw の 1625px ではなく Material と同じ 76.25em を使います。  
+Material 自身も約 1220px 未満の板表示では同じ構造を持ちます。境界は打ち消す相手と一致させるため、docsfw の 1400px ではなく Material と同じ 76.25em を使います。  
 `.md-sidebar__inner` に左右の余白は無く、一覧の余白も左だけのため、スクロール バーの位置とインデントは変わりません。  
 Material の `.md-nav` が持つ `margin-bottom: -.4rem` は、この幅では戻します。  
 flex 項目では外側 (margin box) だけが 8px 縮み、border box は親の内側より 8px 高いまま残ります。  
@@ -1264,7 +1280,7 @@ Pandoc HTML 側の同じ表現は [全文検索・全体ナビゲーション機
 
 ドロワーを閉じる操作も、Material の範囲では足りません。  
 ドロワーの外を押したときに閉じる覆い (`.md-overlay`) は、Material 自身のドロワーと同じ 76.2344em 未満でしか出ません。  
-その間の幅では本文を押しても閉じないため、Material と同じ指定を docsfw の 1624px の境界へも広げます。  
+その間の幅では本文を押しても閉じないため、Material と同じ指定を docsfw の 1399px の境界へも広げます。  
 覆いは `.md-container` より前にあり、ドロワーと同じ `z-index: 5` のため、重なりの順はドロワーが上のままです。
 
 ドロワーの中のページ内目次は、同じページのアンカーへ移動するだけでページ遷移が起きません。  
