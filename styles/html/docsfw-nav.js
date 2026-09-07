@@ -135,9 +135,11 @@
       (panel.key === activePanelKey ? '' : ' hidden') + '>';
     if (!root) {
       var backLabel = isJa ? '前の階層へ戻る' : 'Back to previous level';
+      var titleHtml = panel.node.url ?
+        '<a class="docsfw-panel-title-text" href="' + esc(href(panel.node.url)) + '">' + esc(panel.node.title || '') + '</a>' :
+        '<span class="docsfw-panel-title-text">' + esc(panel.node.title || '') + '</span>';
       html += '<div class="docsfw-panel-title"><button type="button" class="docsfw-nav-back" data-panel-target="' +
-        esc(panel.parent) + '" aria-label="' + backLabel + '">' + chevron('back') + '</button>' +
-        '<span class="docsfw-panel-title-text">' + esc(panel.node.title || '') + '</span></div>';
+        esc(panel.parent) + '" aria-label="' + backLabel + '">' + chevron('back') + '</button>' + titleHtml + '</div>';
     }
     /* 見出しを除いた本体を 1 つの箱にまとめる。ドロワー幅が狭い段では、この箱だけを
        スクロールさせて、垂直スクロールバーが見出しへ掛からないようにする。 */

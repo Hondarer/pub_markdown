@@ -932,6 +932,18 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     display: block;
   }
 
+  /* インデックス ページを持つフォルダーでは、見出しのフォルダー名部分が
+     そのページへの実リンクになる。既定のリンク色・下線を打ち消し、
+     "<" と同じ色 (--docsfw-quote) で表示する。 */
+  a.docsfw-panel-title-text {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a.docsfw-panel-title-text:hover {
+    text-decoration: underline;
+  }
+
   .docsfw-nav-forward,
   .docsfw-nav-back {
     display: inline-flex;

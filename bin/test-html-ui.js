@@ -43,7 +43,7 @@ function prepare() {
         { title: 'Look & Feel 同期', url: 'guide/current.html', children: [] },
         { title: '別ページ', url: 'guide/other.html', children: [] }
       ]
-    }, {title: '閉じた分類', url: 'other/index.html', children: [
+    }, {title: '閉じた分類', url: null, children: [
       {title: '隠れたページ', url: 'other/page.html', children: []}
     ]}]
   }) + ';\n');
@@ -257,8 +257,23 @@ async function main() {
     assert.equal(Math.round((await dimensions(page, panelBody)).top), 172);
     assert(await page.$eval(panelBody, node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
-    await page.click('.docsfw-nav-back');
+
+    // 見出しのフォルダー名は、インデックス ページ (node.url) があれば実リンクになる。
+    const guideTitleLink = await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text',
+      node => ({ tag: node.tagName, href: node.getAttribute('href') }));
+    assert.equal(guideTitleLink.tag, 'A');
+    assert.equal(guideTitleLink.href, 'guide/index.html');
+
+    await page.click('.docsfw-nav-panel.docsfw-panel-active .docsfw-nav-back');
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey === 'root'));
+
+    // インデックス ページを持たないフォルダーでは、フォルダー名はリンクにならない。
+    await page.click('button.docsfw-nav-forward[aria-label="閉じた分類を開く"]');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    assert.equal(await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text', node => node.tagName), 'SPAN');
+    await page.click('.docsfw-nav-panel.docsfw-panel-active .docsfw-nav-back');
+    assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey === 'root'));
+
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 
