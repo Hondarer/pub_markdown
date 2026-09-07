@@ -111,8 +111,9 @@
      占めるため、これが無いと一覧の最後の項目が画面の下端に接する。
      Material の JS は 76.25em 以上でこの要素へピクセル高さを style 属性で
      書く。3 ペインの sticky では正しいが、ドロワーでは inset の bottom より
-     優先される。3 ペインで測った offsetTop (0) のままだと下端が画面外へ
-     12px はみ出す。height を auto に戻し、inset の top / bottom で箱を決める。 */
+     優先される。3 ペインで取得した offsetTop (0) がドロワーへ幅を変えた
+     あとも高さ計算に使われると、下端が画面外へ 12px はみ出す。
+     height を auto に戻し、inset の top / bottom で箱を決める。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     position: absolute;
     inset: 12px 0;

@@ -8,6 +8,7 @@ const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
 const puppeteer = require(path.join(root, 'bin/node_modules/puppeteer'));
+const {buildBrowserLaunchOptions} = require(path.join(root, 'bin/browser-launch-options'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-nav-drawer-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 
@@ -62,11 +63,10 @@ extra_javascript:
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${server.address().port}/`;
-    browser = await puppeteer.launch({
+    browser = await puppeteer.launch(buildBrowserLaunchOptions({
       headless: true,
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/local/bin/chrome',
       args: ['--no-sandbox', '--disable-crash-reporter'],
-    });
+    }));
     const page = await browser.newPage();
 
     async function openDrawerAndScrollEnd() {

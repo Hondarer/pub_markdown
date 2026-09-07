@@ -1222,7 +1222,7 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 
 Material は約 1220px 以上で `.md-sidebar__scrollwrap` へもピクセル高さを `style` 属性へ書き込みます。  
 この値は 3 ペインの sticky 用で、マウント時に一度だけ測った `offsetTop` から引きます。  
-3 ペインからドロワーへ幅を変えると、`offsetTop` が 0 のまま残ります。  
+3 ペインでマウントすると、そこで取得した `offsetTop` の値 0 が、ドロワーへ幅を変えたあとも高さ計算に使われます。  
 絶対配置の `inset: 12px 0` よりインラインの `height` が優先され、下端の 12px が画面の外へ出ます。  
 1624px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` の上下で箱を決めます。
 
