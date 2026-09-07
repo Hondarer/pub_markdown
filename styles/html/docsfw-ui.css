@@ -778,7 +778,11 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     height: calc(100dvh - var(--docsfw-header-height));
     margin: 0 !important;
     padding: 0;
-    overflow-y: auto !important;
+    /* 見出しはドロワーの高さを分け合う固定領域とし、スクロールは本体
+       (.docsfw-drawer-body とその内側) だけが持つ。ドロワー全体をスクロール
+       コンテナーにすると、見出しが position: sticky で留まっていても垂直
+       スクロール バーは見出しの高さまで伸び、MkDocs Material と揃わない。 */
+    overflow: hidden !important;
     border-right: 1px solid var(--docsfw-header-border);
     background: var(--docsfw-bg);
     box-shadow: none;
@@ -806,10 +810,22 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   #docsfw-primary-sidebar > .well {
-    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
     margin: 0 !important;
     padding: 12px 0;
     box-sizing: border-box;
+  }
+
+  .docsfw-drawer-title {
+    flex: 0 0 auto;
+  }
+
+  .docsfw-drawer-body {
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .docsfw-flat-nav {
@@ -842,23 +858,47 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   #docsfw-primary-sidebar > .well {
-    padding-top: 0;
+    padding: 0;
+  }
+
+  /* 板ごとに見出しを持つため、スクロールは板の本体 (.docsfw-panel-body) が持つ。 */
+  .docsfw-drawer-body,
+  #docsfw-tree {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #docsfw-tree {
+    flex: 1 1 auto;
   }
 
   .docsfw-flat-nav {
     display: none;
   }
 
-  .docsfw-panel-nav {
-    display: block;
+  .docsfw-panel-nav,
+  .docsfw-nav-panel.docsfw-panel-active {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .docsfw-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .docsfw-drawer-title,
   .docsfw-panel-title {
     display: block;
-    position: sticky;
-    top: 0;
-    z-index: 2;
+    flex: 0 0 auto;
+    /* .docsfw-nav-back と .docsfw-drawer-logo の絶対配置の基準を保つ。 */
+    position: relative;
     height: 112px;
     padding: 60px 16px 12px;
     border-bottom: 1px solid var(--docsfw-divider);
@@ -950,13 +990,19 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 }
 
 @media (min-width: 76.25em) and (max-width: 1624px) {
-  #docsfw-primary-sidebar > .well { padding: 12px 8px 12px 12px; }
+  /* 横方向の余白は .well ではなく見出しと本体が持つ。垂直スクロール バーを
+     ドロワーの右端に置くため、本体をスクロール コンテナーにする。 */
+  #docsfw-primary-sidebar > .well { padding: 12px 0; }
+
+  .docsfw-drawer-body {
+    padding: 0 8px 0 12px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   .docsfw-drawer-title {
     display: block;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    padding-bottom: 12px;
+    padding: 0 8px 12px 12px;
     background: var(--docsfw-bg);
     color: var(--docsfw-quote);
     font: 700 14px/21px sans-serif;

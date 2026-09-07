@@ -118,7 +118,9 @@ framework/docsfw/
   <button id="docsfw-hamburger"></button> ← 1625px 未満のメニュー
   <div id="docsfw-search-container"></div> ← 検索 UI が動的に挿入される
 </header>
-<nav id="docsfw-tree"></nav>               ← ナビツリーが描画される
+<div id="docsfw-drawer-body">              ← 狭い画面でのスクロール コンテナー
+  <nav id="docsfw-tree"></nav>             ← ナビツリーが描画される
+</div>
 <aside id="TOC" class="docsfw-secondary-sidebar">
   <div id="docsfw-page-toc">...</div>       ← ページ内目次
 </aside>
@@ -253,6 +255,11 @@ MkDocs Material の `.md-top` に合わせ、`#docsfw-top` をヘッダー直下
 - 1220px から 1624px では文書一覧を連続表示します。
 - 約 1220px 未満では階層ごとの板を表示し、右向きアイコンで子階層へ進み、左向きアイコンで戻ります。
 - 根の板にはロゴと `siteName (variant)` を表示します。
+- 見出しは固定し、その下の本体だけをスクロールさせます。垂直スクロール バーは見出しの下から始まります。  
+  ドロワー全体をスクロール コンテナーにすると、見出しが `position: sticky` で留まっていても  
+  スクロール バーは見出しの高さまで伸びます。  
+  1220px から 1624px では `.docsfw-drawer-body`、約 1220px 未満では板の本体 `.docsfw-panel-body` が  
+  スクロール コンテナーです。
 - バック ドロップ、Esc キー、ナビゲーション リンク、ページ内目次リンクでドロワーを閉じます。
 - 実装は左サイドバー (`#docsfw-primary-sidebar`) を `position: fixed` のドロワーに変換する CSS と、  
   `body.docsfw-nav-open` クラスのトグルで制御します。ページ内目次は複製せず、同じ要素を移動します。

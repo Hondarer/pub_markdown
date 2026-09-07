@@ -139,8 +139,10 @@ $endif$
           <span class="docsfw-drawer-site-name">$if(docsfw-site-name)$$docsfw-site-name$ ($docsfw-variant$)$else$Documents$endif$</span>
         </div>
         $if(docsfw-nav-enable)$
-        <div id="docsfw-home-container"></div>
-        <nav id="docsfw-tree"></nav>
+        <div id="docsfw-drawer-body" class="docsfw-drawer-body">
+          <div id="docsfw-home-container"></div>
+          <nav id="docsfw-tree"></nav>
+        </div>
         $endif$
         <hr class="docsfw-toc-separator" />
 

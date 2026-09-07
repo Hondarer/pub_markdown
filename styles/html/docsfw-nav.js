@@ -139,11 +139,14 @@
         esc(panel.parent) + '" aria-label="' + backLabel + '">' + chevron('back') + '</button>' +
         '<span class="docsfw-panel-title-text">' + esc(panel.node.title || '') + '</span></div>';
     }
+    /* 見出しを除いた本体を 1 つの箱にまとめる。ドロワー幅が狭い段では、この箱だけを
+       スクロールさせて、垂直スクロールバーが見出しへ掛からないようにする。 */
+    html += '<div class="docsfw-panel-body">';
     if (root && panel.node.url) {
       html += '<div class="docsfw-panel-home docsfw-nav-row">' + rowContent(panel.node, false) + '</div>';
     }
     html += renderPanelRows(panel.node.children || [], panel.key);
-    return html + '</section>';
+    return html + '</div></section>';
   }
 
   function renderNavigation(nav) {
@@ -230,8 +233,12 @@
     }
     if (secondary) { secondary.hidden = true; }
     pageToc.classList.add('docsfw-combined-toc');
-    var target = panelLayout.matches ? document.querySelector('.docsfw-nav-panel.docsfw-panel-active') :
+    var target = panelLayout.matches ?
+      document.querySelector('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-body') :
       document.querySelector('.docsfw-flat-nav');
+    if (!target && panelLayout.matches) {
+      target = document.querySelector('.docsfw-nav-panel.docsfw-panel-active');
+    }
     if (!target) { target = document.querySelector('#docsfw-primary-sidebar > .well'); }
     if (target) { target.appendChild(pageToc); }
   }

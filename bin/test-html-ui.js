@@ -190,6 +190,10 @@ async function main() {
     assert.equal(await page.$eval('#docsfw-page-toc a.docsfw-toc-passed', node => getComputedStyle(node).color), 'rgb(117, 117, 117)');
     await page.evaluate(() => scrollTo(0, 0));
 
+    // 垂直スクロール バーは見出しの下から始まる。ドロワー自体はスクロールさせない。
+    assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
+    assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).top), 105);
+    assert(await page.$eval('.docsfw-drawer-body', node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'drawer.png'), fullPage: false });
     await page.click('#docsfw-nav-backdrop');
     assert.equal(await page.$eval('#docsfw-hamburger', node => node.getAttribute('aria-expanded')), 'false');
@@ -203,6 +207,11 @@ async function main() {
     assert.equal((await dimensions(page, '.docsfw-panel-title')).height, 112);
     assert.equal((await dimensions(page, '.docsfw-panel-title')).top, 60);
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-nav-panel.docsfw-panel-active')));
+    // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
+    assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
+    const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';
+    assert.equal(Math.round((await dimensions(page, panelBody)).top), 172);
+    assert(await page.$eval(panelBody, node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
     await page.click('.docsfw-nav-back');
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey === 'root'));
