@@ -28,7 +28,7 @@ function buildBrowserAssets(sourceDir, outputDir) {
   const libraries = ['viz-global.js', 'emoji.js', 'openiconic.js']
     .map(name => fs.readFileSync(path.join(sourceDir, name), 'utf8')).join('\n;\n');
   // ローカル ES モジュールの外部読み込みは file:// で CORS に阻まれる。
-  // data URL の自己完結したモジュールと classic script を使い、import の相対参照を残さない。
+  // Blob URL の自己完結したモジュールと classic script を使い、import の相対参照を残さない。
   // see: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules
   const license = fs.readFileSync(path.join(sourceDir, 'LICENSE'), 'utf8');
   // HTML の script 要素として埋め込むため、内容中の "</script" がタグを閉じないようにする。
@@ -45,7 +45,14 @@ function buildBrowserAssets(sourceDir, outputDir) {
     '<script type="module">\n' +
     'let enginePromise;\n' +
     'function loadEngine() {\n' +
-    '  if (!enginePromise) { enginePromise = import("data:text/javascript;base64,' + engine + '"); }\n' +
+    // iPhone の Edge では data URL の import でページが停止し、Blob URL では描画できた。
+    // see: https://github.com/Hondarer/plantuml-core-test/blob/main/docs/13.html
+    // モジュールの追加処理と再描画に備え、Blob URL は iframe の破棄まで保持する。
+    '  if (!enginePromise) {\n' +
+    '    const bytes = Uint8Array.from(atob("' + engine + '"), c => c.charCodeAt(0));\n' +
+    '    const url = URL.createObjectURL(new Blob([bytes], { type: "text/javascript" }));\n' +
+    '    enginePromise = import(url);\n' +
+    '  }\n' +
     '  return enginePromise;\n' +
     '}\n' +
     'window.addEventListener("message", function (event) {\n' +

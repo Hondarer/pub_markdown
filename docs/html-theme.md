@@ -65,7 +65,11 @@ Salt の画像が必要な場合は DOCX を使用してください。
 ## 直接閲覧と単一 HTML
 
 `bin/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
-PlantUML エンジンを data URL のモジュールとして読み込み、Graphviz と同梱アイコン資産もローダーに含めます。  
+PlantUML エンジンを Base64 からバイト列へ復元し、隠し iframe 内で Blob URL のモジュールとして読み込みます。  
+Graphviz と同梱アイコン資産もローダーに含めます。  
+iPhone の Edge で data URL の import が失敗し、Blob URL では描画できたため、この方式を使います。  
+比較条件は [PlantUML の切り分け試験](https://github.com/Hondarer/plantuml-core-test) の試験 09 と 13 を参照してください。  
+Blob URL は追加処理と再描画のため、iframe の破棄まで保持します。  
 ローカルの ES モジュールを相対パスで取得しないため、`file://` での直接閲覧と Pandoc の `--embed-resources` に対応します。  
 上記の隠し `iframe` も `srcdoc` による同一文書内の構築であり、追加のファイルや外部 URL を必要としません。  
 図の描画のためにサーバーへソースを送信しません。  

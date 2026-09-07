@@ -166,12 +166,22 @@ async function settled(page) {
 
 async function exercise(page, url, name) {
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  const moduleRequests = [];
+  const recordModule = request => {
+    if (request.resourceType() === 'script' && request.frame() !== page.mainFrame()) {
+      moduleRequests.push(request.url());
+    }
+  };
+  page.on('request', recordModule);
   await page.goto(url, { waitUntil: 'load' });
   assert(await page.$$eval('.docsfw-plantuml', nodes => nodes.some(el => el.getBoundingClientRect().top > innerHeight)));
   await settled(page);
   const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(el => el.textContent));
   assert.equal(errors.length, 2, JSON.stringify(errors));
   assert.equal(await page.$$eval('.docsfw-plantuml > svg', nodes => nodes.length), 3);
+  page.off('request', recordModule);
+  assert(moduleRequests.some(url => url.startsWith('blob:')), 'PlantUML module must load from a Blob URL');
+  assert(!moduleRequests.some(url => url.startsWith('data:')), 'PlantUML must not import a data URL');
   assert.equal(await page.$$eval('.docsfw-mermaid > svg', nodes => nodes.length), 2);
   assert(await page.$eval('.docsfw-diagram--error', el => el.textContent.includes('Salt')));
   if (name === 'normal') {
