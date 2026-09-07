@@ -268,6 +268,46 @@ async function sequentialAfterDomReady(page) {
   console.log('offscreen PlantUML sequential rendering after DOM ready: passed');
 }
 
+async function engineFailure(page) {
+  await page.goto('about:blank');
+  await page.setContent('<body data-md-color-scheme="default"><main>' +
+    '<div class="docsfw-plantuml">@startuml\nA -> B\n@enduml</div>' +
+    '<div class="docsfw-plantuml">@startuml\nC -> D\n@enduml</div>' +
+    '<div class="docsfw-mermaid">flowchart LR\n  A[start] --> B[end]</div>' +
+    '</main></body>');
+  await page.evaluate(() => {
+    // 隠し iframe 側の engine import が失敗した状況を模す。
+    window.docsfwLoadPlantuml = () => Promise.reject(new Error('engine import failed in sandboxed frame'));
+    window.mermaid = {
+      initialize() {},
+      async render(id, source, host) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        host.appendChild(svg);
+        return { svg: svg.outerHTML, bindFunctions: undefined };
+      },
+    };
+  });
+  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+  await settled(page);
+  const result = await page.evaluate(() => ({
+    plantumlErrors: [...document.querySelectorAll('.docsfw-plantuml')].map(el => ({
+      hasErrorClass: el.classList.contains('docsfw-diagram--error'),
+      message: el.querySelector('p')?.textContent || '',
+      source: el.querySelector('pre')?.textContent || '',
+    })),
+    mermaidSvgCount: document.querySelectorAll('.docsfw-mermaid > svg').length,
+  }));
+  assert.equal(result.plantumlErrors.length, 2);
+  for (const entry of result.plantumlErrors) {
+    assert(entry.hasErrorClass, JSON.stringify(result));
+    assert(entry.message.includes('engine import failed in sandboxed frame'), JSON.stringify(result));
+    assert(entry.source.includes('@startuml'), JSON.stringify(result));
+  }
+  // PlantUML の engine 障害は Mermaid の描画や他の PlantUML 図の完了を妨げない。
+  assert.equal(result.mermaidSvgCount, 1, JSON.stringify(result));
+  console.log('plantuml engine load failure: isolated per diagram, no hang: passed');
+}
+
 async function clip(page, url) {
   await page.goto(url, { waitUntil: 'load' });
   const block = await page.$('.docsfw-plantuml');
@@ -344,6 +384,7 @@ async function main() {
     await exercise(page, 'http://127.0.0.1:' + server.address().port + '/normal.html', 'http');
     await race(page);
     await sequentialAfterDomReady(page);
+    await engineFailure(page);
   } finally {
     await browser.close();
     server.close();

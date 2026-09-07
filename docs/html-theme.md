@@ -41,6 +41,18 @@ Mermaid は SVG の viewBox に基づいて表示寸法を 0.875 倍に補正し
 PlantUML は線幅が viewBox の外へはみ出さないよう、描画後に viewBox をわずかに広げます。  
 SVG ダウンロードは、ボタンを押した時点の図を保存します。
 
+### PlantUML の描画をメイン スレッドから分離する
+
+`@plantuml/core` のエンジン (`plantuml.js`) は数 MB あり、評価と `renderToString` 呼び出し自体がメイン スレッド上の同期処理になります。  
+文書内の PlantUML 図をすべてメイン スレッドで直接実行すると、描画中に UI が反応しなくなって見え、ブラウザーによっては描画エラーや無応答につながります。  
+これを避けるため、PlantUML の実描画は隠し `<iframe sandbox="allow-scripts">` の中で行います。  
+この `iframe` はページ内で 1 つだけ遅延生成し、`srcdoc` に自己完結した HTML を設定して構築します。外部ファイルや `data-src` によるナビゲーションは行いません。  
+`docsfw-diagrams.js` からは `postMessage` で `{ requestId, lines, dark }` を送り、`iframe` 側は `renderToString` の結果を `{ requestId, svg }` または `{ requestId, error }` として返します。  
+`window.docsfwLoadPlantuml()` が返すオブジェクトの形 (`renderToString(lines, onSuccess, onError, options)`) は変わらないため、`docsfw-diagrams.js` の直列キューや配色切り替えの扱いはこの分離と無関係に動作します。  
+`sandbox="allow-scripts"` は `allow-same-origin` を含めないため、`iframe` は不透明オリジンになり、`postMessage` の相手確認は `event.origin` ではなく `event.source` で行います。  
+Chromium 系ブラウザーでは不透明オリジンの `iframe` が別プロセスに分離されやすく、メイン スレッドの応答性が改善しやすいことを局所検証で確認しています。  
+WebKit 系 (Safari / iOS) が同一文書内の `srcdoc` `iframe` をどこまでプロセスまたはスレッド分離するかは未確認です。改善が見られない場合は、実機での再現手順を添えて報告してください。
+
 Salt は同梱するブラウザー版 PlantUML の非対応図種です。  
 HTML 内に非対応の説明と元ソースを表示し、他の図の描画は継続します。  
 描画に失敗した図も、その位置にエラーと元ソースを表示します。  
@@ -52,6 +64,7 @@ Salt の画像が必要な場合は DOCX を使用してください。
 `bin/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
 PlantUML エンジンを data URL のモジュールとして読み込み、Graphviz と同梱アイコン資産もローダーに含めます。  
 ローカルの ES モジュールを相対パスで取得しないため、`file://` での直接閲覧と Pandoc の `--embed-resources` に対応します。  
+上記の隠し `iframe` も `srcdoc` による同一文書内の構築であり、追加のファイルや外部 URL を必要としません。  
 図の描画のためにサーバーへソースを送信しません。  
 既存の HTML テンプレートが参照する CDN 資産は、この図のローダーとは別です。
 
