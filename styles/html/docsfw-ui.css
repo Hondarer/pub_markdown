@@ -1014,6 +1014,24 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
      (min-width: 1625px、本ファイル下方) と同じく、先頭リンクの
      margin-top を打ち消し、padding-bottom の 12px だけにそろえる。 */
   .docsfw-home-link a { margin-top: 0; }
+
+  /* ドロワーへ移設したページ内目次 (#docsfw-page-toc.docsfw-combined-toc) は、
+     既定 (メディア クエリ無し、本ファイル上方) の min-height: 32px /
+     padding: 5px 8px / line-height: 22px という、狭幅パネル向けのタッチ
+     ターゲットに近い行間のまま描画される。ファイル ツリー行
+     (#docsfw-tree .docsfw-flat-nav .docsfw-nav-row、本ファイル下方) は
+     margin-top: 8.75px + line-height: 21px の詰まった行間のため、同じ
+     ドロワー内で目次だけ行送りが広くなる。広幅レイアウト
+     (min-width: 1625px) では docsfw-combined-toc クラス自体が付かず
+     素の #docsfw-page-toc a (margin-top: 8.75px, line-height: 1.5 = 21px) が
+     そのまま効くため、ファイル ツリー行と同じ余白を、ここでも明示的にそろえる。
+     margin-top はここでは指定しない。#docsfw-page-toc a (本ファイル上方) の
+     margin-top: 8.75px が、この上書き後もそのまま効くため。 */
+  #docsfw-page-toc.docsfw-combined-toc a {
+    min-height: 0;
+    padding: 0;
+    line-height: 21px;
+  }
 }
 
 @keyframes docsfw-panel-forward {
