@@ -269,6 +269,61 @@
   }
 }
 
+/* 連続一覧のドロワー (約 1220px から 1624px) で、垂直スクロール バーを見出しの
+   下から始める。Pandoc HTML と同じ見え方にそろえる。
+   Material はこの幅を 3 ペインと同じ扱いにし、.md-nav--primary .md-nav__title へ
+   position: sticky を当てる。見た目は留まるが、スクロール領域には見出しが
+   含まれたままのため、スクロール バーが見出しの高さ (約 33px) だけ上へ伸びる。
+   スクロール元を scrollwrap から一覧 (.md-nav__list) へ移し、見出しを
+   ドロワーの高さを分け合う固定領域にする。
+   Material 自身も約 1220px 未満の板表示では同じ構造 (.md-nav--primary を
+   縦方向の flex にし、.md-nav__list だけを overflow-y: auto にする) を持つ。
+   境界は打ち消す相手と一致させるため、docsfw の 1625px ではなく
+   Material と同じ 76.25em を使う。
+   .md-sidebar__inner に左右の余白は無く、.md-nav__list の余白も左だけのため、
+   スクロール バーの位置とインデントは変わらない。 */
+@media screen and (min-width: 76.25em) and (max-width: 1624px) {
+  /* 上下の 12px を残したまま、この要素ではスクロールしない
+     (inset と margin は 1624px 以下のブロックの指定をそのまま使う)。 */
+  .md-sidebar--primary .md-sidebar__scrollwrap {
+    overflow: hidden;
+  }
+
+  .md-sidebar--primary .md-sidebar__inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .md-sidebar--primary .md-nav--primary {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Material の .md-nav は margin-bottom: -.4rem を持ち、一覧の
+       padding-bottom: .4rem を打ち消している。flex 項目では外側 (margin box)
+       だけが 8px 縮み、border box は親の内側より 8px 高いままになる。
+       scrollwrap は overflow: hidden でも 8px 分のスクロール量を持ち、
+       Material の JS が書いた scrollTop の分だけ見出しが上へずれる。
+       この幅では一覧自身がスクロール コンテナーで、一覧の下余白は
+       スクロール範囲の内側に入るため、打ち消し自体が要らない。 */
+    margin-bottom: 0;
+  }
+
+  .md-nav--primary > .md-nav__title {
+    flex: 0 0 auto;
+    position: static;
+  }
+
+  .md-nav--primary > .md-nav__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
 /* Material 内蔵のページ内目次の打ち消し (既定フォントで約 960px 未満)。
    Material はこの幅で、現在ページの行を目次を開くラベル ([for="__toc"]) に
    置き換え、通常のリンクを隠す。docsfw は目次をファイル一覧の続きとして

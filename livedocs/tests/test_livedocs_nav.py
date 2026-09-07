@@ -110,6 +110,63 @@ class DrawerWidthTest(unittest.TestCase):
         )
 
 
+class FlatDrawerScrollTest(unittest.TestCase):
+    """連続一覧のドロワーで、スクロール バーが見出しの下から始まること。
+
+    Material はこの幅を 3 ペインと同じ扱いにし、見出しへ ``position: sticky``
+    を当てます。見た目は留まりますが、スクロール領域には見出しが含まれた
+    ままのため、スクロール バーが見出しの高さだけ上へ伸びます。
+    Pandoc HTML と同じく、スクロール元を一覧へ移した状態を固定します。
+    """
+
+    def _flat_drawer_block(self):
+        text = _read(LIVEDOCS_CSS)
+        match = re.search(
+            r"@media screen and \(min-width:\s*76\.25em\)"
+            r" and \(max-width:\s*1624px\)\s*\{([\s\S]*?)\n\}",
+            text,
+        )
+        self.assertIsNotNone(match, "連続一覧の帯の media が無い")
+        return match.group(1)
+
+    def test_scrollwrap_does_not_scroll(self):
+        """ドロワー全体をスクロール元にしないこと。"""
+        self.assertRegex(
+            self._flat_drawer_block(),
+            re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
+            + r"\s*\{[^}]*overflow:\s*hidden",
+        )
+
+    def test_list_is_the_scroll_container(self):
+        """一覧だけがスクロールすること。"""
+        self.assertRegex(
+            self._flat_drawer_block(),
+            re.escape(".md-nav--primary > .md-nav__list")
+            + r"\s*\{[^}]*overflow-y:\s*auto",
+        )
+
+    def test_title_is_not_sticky(self):
+        """見出しは高さを分け合う固定領域にすること。"""
+        self.assertRegex(
+            self._flat_drawer_block(),
+            re.escape(".md-nav--primary > .md-nav__title")
+            + r"\s*\{[^}]*position:\s*static",
+        )
+
+    def test_nav_does_not_keep_the_negative_bottom_margin(self):
+        """Material の margin-bottom: -.4rem を戻すこと。
+
+        flex 項目では外側だけが 8px 縮み、border box は親の内側より高いまま
+        残る。scrollwrap に 8px 分のスクロール量が生まれ、Material の JS が
+        書いた scrollTop の分だけ見出しが上へずれる。
+        """
+        self.assertRegex(
+            self._flat_drawer_block(),
+            re.escape(".md-sidebar--primary .md-nav--primary")
+            + r"\s*\{[^}]*margin-bottom:\s*0",
+        )
+
+
 class MaterialOwnTocTest(unittest.TestCase):
     """Material 内蔵のページ内目次を、約 960px 未満で打ち消すこと。"""
 

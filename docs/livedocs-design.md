@@ -1227,6 +1227,18 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 1624px 以下では `scrollbar-gutter: auto` に戻し、`.md-sidebar__inner` の左右余白 10px も 0 にします。  
 この余白の規則は消さずに 0 を指定します。消すと Material が `@supports selector(::-webkit-scrollbar)` の中で当てる `padding-right: calc(100% - 11.5rem)` が出ます。
 
+連続一覧の帯 (約 1220px から 1624px) では、垂直スクロール バーを見出しの下から始めます。  
+Material はこの幅を 3 ペインと同じ扱いにし、見出し `.md-nav--primary .md-nav__title` へ `position: sticky` を当てます。  
+見た目は留まりますが、スクロール領域には見出しが含まれたままのため、スクロール バーが見出しの高さ (約 33px) だけ上へ伸びます。  
+`.md-sidebar__scrollwrap` を `overflow: hidden` にし、`.md-sidebar__inner` と `.md-nav--primary` を縦方向の flex にして、見出しを固定領域、一覧 `.md-nav--primary > .md-nav__list` をスクロール コンテナーにします。  
+Material 自身も約 1220px 未満の板表示では同じ構造を持ちます。境界は打ち消す相手と一致させるため、docsfw の 1625px ではなく Material と同じ 76.25em を使います。  
+`.md-sidebar__inner` に左右の余白は無く、一覧の余白も左だけのため、スクロール バーの位置とインデントは変わりません。  
+Material の `.md-nav` が持つ `margin-bottom: -.4rem` は、この幅では戻します。  
+flex 項目では外側 (margin box) だけが 8px 縮み、border box は親の内側より 8px 高いまま残ります。  
+`overflow: hidden` の scrollwrap にも 8px 分のスクロール量が生まれ、Material の JS が書いた `scrollTop` の分だけ見出しが上へずれます。  
+一覧の下余白はスクロール範囲の内側に入るため、打ち消し自体が要りません。  
+Pandoc HTML 側の同じ表現は [全文検索・全体ナビゲーション機能](search-and-nav.md) を参照してください。
+
 板の見出しと一覧の区切り線は、Material では一覧の内側の影 (`box-shadow: 0 .05rem 0 … inset`) です。  
 内側の影は padding box の中だけを塗るため、右のスクロール バーの列には届かず、線の 1px 分だけスクロール バーの上端が高く見えます。  
 同じ 1px を `border-top` へ移すと、線は padding box の外側でスクロール バーの列も含めて引かれ、上端が線の下からになります。  
