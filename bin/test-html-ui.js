@@ -121,7 +121,10 @@ async function main() {
     assert.equal(await toggles[1].evaluate(node => document.getElementById(node.getAttribute('aria-controls')).hidden), false);
     await page.keyboard.press('Space');
     assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
-    assert.equal((await dimensions(page, '#TOC')).top, 60);
+    // position: sticky はスクロールで自然配置が閾値 (60px) を超えるまで固定されない。
+    // margin-top: -10px を含む自然配置は 70px で、固定後 (60px) と異なるのが正しい
+    // (下の scrollTo(0, 700) 後の同じアサーションと比較)。
+    assert.equal((await dimensions(page, '#TOC')).top, 70);
     assert.equal(Math.round((await dimensions(page, '#TOC')).width * 100) / 100, 306.22);
     assert.equal(Math.round(await page.$eval('#TOC', node => node.getBoundingClientRect().right) * 100) / 100, 1643.11);
     assert.equal(Math.round((await dimensions(page, '#docsfw-primary-sidebar')).width * 100) / 100, 351.22);
