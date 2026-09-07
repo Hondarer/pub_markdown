@@ -309,6 +309,43 @@
     window.addEventListener('hashchange', update); update();
   }
 
+  function initBackToTop() {
+    var button = document.getElementById('docsfw-top');
+    if (!button) { return; }
+    var label = isJa ? 'ページの先頭へ戻る' : 'Back to top';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    var labelEl = document.getElementById('docsfw-top-label');
+    if (labelEl) { labelEl.textContent = label; }
+
+    var threshold = 400;
+    var lastY = window.scrollY;
+    var ticking = false;
+    function update() {
+      ticking = false;
+      var y = window.scrollY;
+      var scrollingUp = y < lastY;
+      button.hidden = !(y > threshold && scrollingUp);
+      lastY = y;
+    }
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; window.requestAnimationFrame(update); }
+    }, { passive: true });
+
+    button.addEventListener('click', function (event) {
+      event.preventDefault();
+      var reduceMotion = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+      var heading = document.querySelector('#docsfw-content h1');
+      if (heading) {
+        if (!heading.hasAttribute('tabindex')) { heading.setAttribute('tabindex', '-1'); }
+        heading.focus({ preventScroll: true });
+      }
+      button.hidden = true;
+    });
+  }
+
   function closeDrawer(restoreFocus) {
     var button = document.getElementById('docsfw-hamburger');
     var sidebar = document.getElementById('docsfw-primary-sidebar');
@@ -375,7 +412,7 @@
   }
 
   function init() {
-    initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); placePageToc();
+    initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); initBackToTop(); placePageToc();
     loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); revealCurrent(); });
     if (wideLayout.addEventListener) {
       wideLayout.addEventListener('change', onLayoutChange); panelLayout.addEventListener('change', onLayoutChange);

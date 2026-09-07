@@ -234,6 +234,17 @@ MkDocs Material の `toc.permalink` が生成するアンカーに合わせる�
 すでに `a.headerlink` を持つ見出しは対象外です。  
 表示仕様は [見出し書式](heading-style.md) を参照してください。
 
+### ページ上部へ戻るボタン
+
+MkDocs Material の `.md-top` に合わせ、`#docsfw-top` をヘッダー直下中央に固定表示します。
+
+- 下スクロール中、および先頭付近 (400px 以内) では非表示です。
+- 先頭から 400px を超えた位置で上スクロールすると表示します。  
+  下スクロールへ転じると、位置に関わらず再び非表示にします。
+- クリックすると先頭へスクロールし (`prefers-reduced-motion` では即座に移動)、  
+  `#docsfw-content` 内の最初の見出しへフォーカスを移します。
+- ラベルは `docsfw-nav.js` が実行時に言語判定して設定します。
+
 ### 狭い画面のメニュー ボタンとドロワー
 
 1625px 未満では、全体ナビゲーションとページ内目次を一つの左ドロワーで提供します。
@@ -245,6 +256,10 @@ MkDocs Material の `toc.permalink` が生成するアンカーに合わせる�
 - バック ドロップ、Esc キー、ナビゲーション リンク、ページ内目次リンクでドロワーを閉じます。
 - 実装は左サイドバー (`#docsfw-primary-sidebar`) を `position: fixed` のドロワーに変換する CSS と、  
   `body.docsfw-nav-open` クラスのトグルで制御します。ページ内目次は複製せず、同じ要素を移動します。
+- ドロワー表示中も本文の `overflow` は固定しません。MkDocs Material も `[data-md-toggle=drawer]:checked` で  
+  本文スクロールを止めていないため、ドロワーを開いたままホイールで本文をスクロールできます。
+- ドロワーへ移設したページ内目次でも、`docsfw-toc-passed` / `docsfw-toc-active` の色は  
+  `#docsfw-page-toc.docsfw-combined-toc a` の既定色より後に定義し、読了部の淡色化と現在見出しの強調を維持します。
 
 検索は 60em 以上でヘッダー内の幅 234px の入力欄、60em 未満で検索アイコンから開くパネルとして表示します。  
 検索パネルとドロワーは同時に開きません。  

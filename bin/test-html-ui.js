@@ -150,6 +150,20 @@ async function main() {
     }
     await page.screenshot({ path: path.join(output, 'wide.png'), fullPage: false });
 
+    // ページ上部へ戻るボタン: 下スクロール中は出さず、上スクロールで表示する。
+    assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
+    await page.evaluate(() => scrollTo(0, 3000));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
+    await page.evaluate(() => scrollTo(0, 2900));
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(await page.$eval('#docsfw-top', node => node.hidden), false);
+    assert.equal(await page.$eval('#docsfw-top', node => node.getAttribute('aria-label')), 'ページの先頭へ戻る');
+    await page.click('#docsfw-top');
+    assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);
+    await page.waitForFunction(() => scrollY < 5);
+    assert.equal(await page.$eval('#docsfw-content h1', node => document.activeElement === node), true);
+
     await page.setViewport({ width: 1400, height: 900 });
     await page.waitForFunction(() => getComputedStyle(document.querySelector('#docsfw-hamburger')).display !== 'none');
     await page.click('#docsfw-hamburger');
@@ -159,6 +173,20 @@ async function main() {
     assert.equal(Math.round(drawer.width), 320);
     assert.equal(await page.$eval('#docsfw-primary-sidebar', node => Math.round(node.getBoundingClientRect().left)), 0);
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-flat-nav')));
+
+    // ドロワー表示中でも、ホイールで本文をスクロールできる (MkDocs Material と同じ)。
+    assert.equal(await page.evaluate(() => scrollY), 0);
+    await page.mouse.move(1000, 400);
+    await page.mouse.wheel({ deltaY: 1500 });
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert(await page.evaluate(() => scrollY) > 0);
+
+    // ドロワーへ移設したページ内目次でも、読了部が薄い色になる。
+    await page.waitForSelector('#docsfw-page-toc a.docsfw-toc-passed');
+    assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-flat-nav')));
+    assert.equal(await page.$eval('#docsfw-page-toc a.docsfw-toc-passed', node => getComputedStyle(node).color), 'rgb(117, 117, 117)');
+    await page.evaluate(() => scrollTo(0, 0));
+
     await page.screenshot({ path: path.join(output, 'drawer.png'), fullPage: false });
     await page.click('#docsfw-nav-backdrop');
     assert.equal(await page.$eval('#docsfw-hamburger', node => node.getAttribute('aria-expanded')), 'false');

@@ -665,6 +665,19 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   text-decoration: none;
 }
 
+/* 上の既定色ルールと同じ詳細度 (id 1 + class 1 + 要素 1) のため、
+   後勝ちで既定色に戻ってしまう。#docsfw-page-toc a.docsfw-toc-passed /
+   .docsfw-toc-active (どちらも同詳細度) より後に置き、ドロワー内でも
+   読了部の淡色化と現在見出しの強調を有効にする。 */
+#docsfw-page-toc.docsfw-combined-toc a.docsfw-toc-passed {
+  color: var(--docsfw-muted);
+}
+
+#docsfw-page-toc.docsfw-combined-toc a.docsfw-toc-active,
+#docsfw-page-toc.docsfw-combined-toc a[aria-current="location"] {
+  color: var(--docsfw-nav-accent);
+}
+
 #docsfw-page-toc.docsfw-combined-toc a:hover {
   color: var(--docsfw-nav-accent);
   text-decoration: underline;
@@ -718,9 +731,10 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 }
 
 @media (max-width: 1624px) {
-  body.docsfw-nav-open {
-    overflow: hidden;
-  }
+  /* body.docsfw-nav-open に overflow: hidden を掛けない。MkDocs Material も
+     [data-md-toggle=drawer]:checked で本文スクロールを止めておらず (html の
+     overflow-x: hidden のみ)、ドロワー表示中もホイールで本文を
+     スクロールできる。 */
 
   #docsfw-hamburger,
   body.docsfw-nav-open #docsfw-hamburger {
@@ -1144,4 +1158,55 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
   .docsfw-drawer-logo { display: none; }
   .docsfw-home-link a { margin-top: 0; }
+}
+
+/* --- ページ上部へ戻るボタン (MkDocs Material の .md-top 相当) ---------- */
+
+/* [hidden] (UA スタイルシート) と同じ詳細度のため、既定を display: none にし、
+   :not([hidden]) 側でだけ表示する。#docsfw-top { display: flex } のように
+   単純化すると常に表示されてしまう。 */
+#docsfw-top {
+  display: none;
+  position: fixed;
+  top: calc(var(--docsfw-header-height) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1060;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 20px;
+  background: var(--docsfw-bg);
+  color: var(--docsfw-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  transition: color 125ms, background-color 125ms;
+}
+
+#docsfw-top:not([hidden]) {
+  display: inline-flex;
+}
+
+#docsfw-top:hover,
+#docsfw-top:focus {
+  color: var(--docsfw-nav-accent);
+  text-decoration: none;
+  outline: none;
+}
+
+#docsfw-top svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex: 0 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #docsfw-top {
+    transition: none;
+  }
 }
