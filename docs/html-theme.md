@@ -40,7 +40,9 @@ PlantUML は共有状態を持つため、描画完了まで直列に処理し�
 DOM 構築完了後、画面内外を問わず文書内の先頭から順に PlantUML を描画します。  
 Mermaid は SVG の viewBox に基づいて表示寸法を 0.875 倍に補正します。  
 PlantUML は線幅が viewBox の外へはみ出さないよう、描画後に viewBox をわずかに広げます。  
-SVG ダウンロードは、ボタンを押した時点の図を保存します。
+SVG ダウンロードは、ボタンを押した時点の図を保存します。  
+描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は `styles/browser/docsfw-diagrams.css` に置き、Pandoc HTML と MkDocs で共用します。  
+Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文いっぱいにします。
 
 ### PlantUML の描画をメイン スレッドから分離する
 

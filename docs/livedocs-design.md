@@ -64,7 +64,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 5 | `index.md` > `README.md` > `SKILL.md` の索引正規化 | `:2325-2352` | 維持 | ステージングで `index.md` にリネーム |
 | 6 | OpenAPI の widdershins 変換 | `:2091` | 対象外 | 対象 1 件のみ |
 | 7 | `pubpart.yaml` 等の `defaults:` | `:42-89`, `:116-161` | 対象外 | 当該ファイルの実在数 0 |
-| 8 | `publocal.yaml` の `order:` | `bin/generate-nav-tree.py:110` | 簡略 | `.nav.yml` 生成フックのみ用意 |
+| 8 | `publocal.yaml` の `order:` | `bin/generate-nav-tree.py:110`、`livedocs/bin/stage_livedocs.py` の `generate_nav_files` | 維持 | ルート `.nav.yml` の `sort:` と、`order:` があるディレクトリの明示 `nav:` で同じ規則を再現する。本ワークスペースの発行対象に `publocal.yaml` は無い |
 
 ### 前処理
 
@@ -80,7 +80,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 14 | PlantUML の SVG 化 | `styles/browser/docsfw-diagrams.js` | 共通 | HTML は `@plantuml/core` によるブラウザー描画 |
+| 14 | PlantUML の SVG 化 | `styles/browser/docsfw-diagrams.js` | 共通 | HTML は `@plantuml/core` によるブラウザー描画。実描画は隠し iframe へ分離する |
 | 15 | PlantUML の LibDeflate エンコード | `plantuml.lua:157-211` | 対象外 | サーバーを使わない |
 | 16 | `skinparam backgroundColor transparent` の注入 | `plantuml.lua:663-668` | 維持 | クライアント側 JavaScript で実施 |
 | 17 | `caption` 行と `@startuml <名前>` からのキャプション抽出 | `plantuml.lua:579-644` | 維持 | 同じ優先順を実装。`CodeBlock:` 行がある場合はそちらを優先する点も同じ |
@@ -142,6 +142,8 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 56 | `docs.warn` への警告抽出 | 簡略 | `mkdocs build --strict` で代替 |
 | 59 | 発行者 (`autoSetAuthor`) のヘッダー表示 | 維持 | ステージングで解決し、ヘッダーへ出す |
 | 60 | 発行日時と最終コミット ID (`autoSetDate`) のヘッダー表示 | 維持 | 同上。日時とコミット ID は静的発行と同じ 1 文字列 |
+| 61 | 概要 (`abstract` / `abstract-title`) | 維持 | `livedocs_abstract_hook.py` がタイトル直後へ挿入する。詳細は後述 |
+| 62 | ページ トップへ戻る | 維持 | Material の `.md-top` に合わせ、Pandoc HTML は `#docsfw-top` を置く。詳細は [全文検索・全体ナビゲーション機能](search-and-nav.md) |
 
 ### 発行と直交する機能
 
@@ -675,6 +677,7 @@ docsfw が使用する GPL 版とは一部の図種やスプライトで結果�
 
 Pandoc HTML と共用する `styles/browser/docsfw-diagrams.js` が描画します。  
 `bin/build-browser-assets.js` が PlantUML エンジン、Graphviz、同梱アイコンを含むローダーを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
+実描画は隠し iframe へ分離し、描画待ちと失敗時の見た目も共有 CSS でそろえます。  
 配色変更時の再描画、DOM 構築完了後の直列描画、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
 
 ## 図の枠とキャプション
@@ -1429,6 +1432,46 @@ Porter stemmer や英語ストップワード フィルターが ASCII 文字列
 初回の検索操作から結果が出るまで、ブラウザー上で約 10 秒の索引構築が入ります。  
 docsfw の `search-index.js` はビルド時に構築するため、この待ち時間はありません。
 
+## HTML 出力で残る差異
+
+Pandoc HTML と MkDocs HTML は、ヘッダー、左右のナビゲーション、見出し、図の描画、コード ブロックをそろえています。  
+この節は、そろえていない項目の要約です。詳細は各正本を参照してください。
+
+### 発行の役割
+
+self-contained HTML、4 バリアントの同時出力、pandoc-crossref、MiniSearch による全文検索は、動的発行の対象外です。  
+直前の「静的発行だけが持つ機能」を参照してください。
+
+Markdown の H1 の扱いは、静的発行が `--shift-heading-level-by=-1`、MkDocs がページ見出しとして本文に残す点で異なります。  
+見え方は [見出し書式](heading-style.md) で一致させます。
+
+表キャプションの行頭コロン形式 (`: キャプション`) と grid table は、Pandoc だけが解釈します。  
+動的発行では非推奨です。詳細は [sample/README.md](sample/README.md) を参照してください。
+
+### 本文とナビゲーション
+
+| 項目 | Pandoc HTML | MkDocs | 扱い |
+|---|---|---|---|
+| 見出し内のリンク色 | Bootstrap の `h1 a { color: #333 }` | `.md-typeset a` の `#4183C4` | 一致させない。[見出し書式](heading-style.md) |
+| ダーク モードの実際の色 | 静的発行の配色変数 | Material `slate` の変数 | 一致させない。同じ節 |
+| 左ナビの現在ページ | 色と左のアクセント バー (`#4A90D9`) | 色のみ | アクセント バーは動的発行に対応物がない |
+| ページ先頭の目次アクティブ | 常に先頭見出しをアクティブ | 最初の見出しを通過するまで非アクティブ | 静的発行の挙動を残す |
+| フッター | なし | 「Made with Material for MkDocs」 | 静的発行に対応先がない |
+| 全文検索 | MiniSearch + CJK bigram | Material 標準 (lunr)。複合語の既知の弱点あり | 簡略。直前の節 |
+
+ドロワーの板見出しは、戻る矢印とフォルダー名を分け、インデックス ページがあればフォルダー名を実リンクにします。  
+実装は Material のテンプレート上書きと Pandoc HTML の自前描画で異なりますが、操作はそろえています。
+
+### 図
+
+| 項目 | 内容 |
+|---|---|
+| Salt | `@plantuml/core` が非対応。HTML では説明と元ソースを表示する。画像が必要なら DOCX |
+| Gantt | ブラウザー側に Start / End / Duration の一覧が付き、面積比 1.80。詳細は次節 |
+
+描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は、`styles/browser/docsfw-diagrams.css` で共用します。  
+Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文いっぱいにします。
+
 ## PlantUML の描画差
 
 `@plantuml/core` 1.2026.7 (MIT ライセンス版、ブラウザー) と、ローカルの PlantUML 1.2026.2 (GPL 版、CLI) で  
@@ -1608,8 +1651,10 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 - 見出しの書式を HTML のタグ名でそろえると、pandoc の `--shift-heading-level-by=-1` による 1 段のずれで Markdown 上の見え方が食い違います。[見出し書式](heading-style.md) は Markdown のレベルを基準に定めています。
 - `git check-ignore` は既定で索引にあるパスを無視対象として報告しません。`get_file_git_url.sh` の `.gitignore` 判定は、追跡確認を先に行う構成のため実際には働いていません。生成 md の除外は未追跡であることで成立しています。
 - Material の `partials/header.html` は 69 行で、上流の構造も安定しています。`md-header__source` ブロックだけを差し替える上書きであれば、丸ごと上書きでも保守量は小さく収まります。
+- `publocal.yaml` の `order:` に対応する `.nav.yml` 生成は実装済みです。本ワークスペースの発行対象に `publocal.yaml` はありません。
+- PlantUML の実描画は、隠し `iframe` へ分離しました。詳細は [HTML のテーマと図の描画](html-theme.md) を参照してください。
+- 描画待ちの縞模様と描画失敗時の枠は、共有 CSS へ集約しました。Pandoc HTML の `figure` は flex のため、描画待ちの間だけ `align-self: stretch` で幅を広げます。
 
 ### 未着手の課題
 
 - Salt 図が `@plantuml/core` で描画できません。
-- `publocal.yaml` の `order:` に対応する `.nav.yml` の生成は実装済みですが、実際の発行対象には `publocal.yaml` が存在しません。
