@@ -103,7 +103,8 @@ async function main() {
     assert.deepEqual(await page.$eval('.docsfw-search-form', node => {
       const style = getComputedStyle(node, '::before');
       return {width: style.width, height: style.height, left: style.left};
-    }), {width: '24px', height: '24px', left: '10px'});
+    }), {width: '20px', height: '20px', left: '10px'});
+    assert.equal(await page.$eval('.docsfw-logo-icon--light', node => getComputedStyle(node).width), '24px');
     await page.focus('#docsfw-search-input');
     assert.equal(await page.$eval('#docsfw-search-input', node => getComputedStyle(node).boxShadow), 'rgb(74, 144, 217) 0px 0px 0px 1px');
     await page.$eval('#docsfw-search-input', node => node.blur());

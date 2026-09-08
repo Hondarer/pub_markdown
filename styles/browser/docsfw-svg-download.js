@@ -1,64 +1,98 @@
-// Pandoc HTML と MkDocs の画像・描画済み SVG を保存する。
+// Pandoc HTML と MkDocs の図操作、および画像として配置した SVG の保存を提供する。
 (function () {
   "use strict";
 
   var DIAGRAM_SELECTOR = "div.docsfw-plantuml, div.docsfw-mermaid";
-  var ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
-    + ' stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-    + '<path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M4 20h16"/></svg>';
   var SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-  // Windows のファイル名に使えない文字と、パス区切りを置き換える。
   var UNSAFE_NAME = /[\\/:*?"<>|]/g;
-
+  var ICON_SOURCE = ["M9.5 7 L5 12 L9.5 17", "M14.5 7 L19 12 L14.5 17"];
+  var ICON_DIAGRAM = ["M4 4 h6 v5 H4 z", "M14 15 h6 v5 h-6 z", "M7 9 v6 h10"];
+  var ICON_DOWNLOAD = ["M12 4 v11", "M7 10 l5 5 5-5", "M4 20 h16"];
+  var ICON_COPY = ["M9 8 h10 v12 H9 z", "M5 16 H4 V4 h10 v1"];
+  var ICON_COPIED = ["M5 12 l4 4 10-10"];
+  var ICON_ERROR = ["M6 6 l12 12", "M18 6 l-12 12"];
   var isJa = (document.documentElement.lang || "").toLowerCase().indexOf("ja") === 0;
   var counters = {};
+  var labels = isJa ? {
+    source: "ソースを表示",
+    diagram: "図を表示",
+    download: "SVG をダウンロード",
+    copySource: "ソースをコピー",
+    copyImage: "画像をコピー",
+    copied: "コピーしました",
+    copyError: "コピーできませんでした",
+    downloadError: "SVG をダウンロードできませんでした",
+  } : {
+    source: "Show source",
+    diagram: "Show diagram",
+    download: "Download SVG",
+    copySource: "Copy source",
+    copyImage: "Copy image",
+    copied: "Copied",
+    copyError: "Could not copy",
+    downloadError: "Could not download SVG",
+  };
 
-  /** 本文のルート要素を返す。 */
   function contentRoot() {
     return document.querySelector("#docsfw-content") || document.querySelector("article.md-content__inner") ||
       document.querySelector(".md-typeset");
   }
 
-  /** ページの識別子。キャプションを持たない図のファイル名に使う。 */
   function pageSlug() {
     var segments = window.location.pathname.split("/").filter(function (part) {
       return part && part !== "index.html";
     });
-    if (segments.length === 0) {
-      return "index";
-    }
+    if (segments.length === 0) { return "index"; }
     var last = segments[segments.length - 1].replace(/\.html$/i, "");
-    try {
-      return decodeURIComponent(last);
-    } catch (error) {
-      return last;
-    }
+    try { return decodeURIComponent(last); }
+    catch (error) { return last; }
   }
 
-  /** ファイル名として安全な文字列にする。 */
   function safeName(text) {
     return text.replace(UNSAFE_NAME, "_").replace(/\s+/g, " ").trim();
   }
 
-  /** 図のダウンロード ファイル名を決める。 */
   function diagramName(block) {
     var figure = block.closest("figure");
     var caption = figure ? figure.querySelector("figcaption") : null;
     var text = caption ? safeName(caption.textContent) : "";
-    if (text) {
-      return text + ".svg";
-    }
+    if (text) { return text + ".svg"; }
     var kind = block.classList.contains("docsfw-plantuml") ? "plantuml" : "mermaid";
     counters[kind] = (counters[kind] || 0) + 1;
     return pageSlug() + "-" + kind + counters[kind] + ".svg";
   }
 
-  /**
-   * ボタンの基準要素を決める。
-   *
-   * figure があれば figure、なければ対象を包む要素を新たに作る。
-   * 画像は静的発行と同じ span、図はブロック要素のため div で包む。
-   */
+  function makeIcon(pathData) {
+    var icon = document.createElementNS(SVG_NAMESPACE, "svg");
+    icon.setAttribute("viewBox", "0 0 24 24");
+    icon.setAttribute("fill", "none");
+    icon.setAttribute("stroke", "currentColor");
+    icon.setAttribute("stroke-width", "2");
+    icon.setAttribute("stroke-linecap", "round");
+    icon.setAttribute("stroke-linejoin", "round");
+    icon.setAttribute("aria-hidden", "true");
+    pathData.forEach(function (data) {
+      var path = document.createElementNS(SVG_NAMESPACE, "path");
+      path.setAttribute("d", data);
+      icon.appendChild(path);
+    });
+    return icon;
+  }
+
+  function setButtonFace(button, label, icon) {
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.replaceChildren(makeIcon(icon));
+  }
+
+  function createButton(className, label, icon) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "docsfw-diagram-action " + className;
+    setButtonFace(button, label, icon);
+    return button;
+  }
+
   function resolveHost(target, wrapperTag, wrapperClass) {
     var figure = target.closest("figure");
     if (figure) {
@@ -72,19 +106,6 @@
     return host;
   }
 
-  /** ダウンロード リンクを組み立てる。 */
-  function createLink(name) {
-    var link = document.createElement("a");
-    link.className = "docsfw-svg-dl";
-    link.setAttribute("download", name);
-    var label = isJa ? "SVG をダウンロード: " + name : "Download SVG: " + name;
-    link.title = label;
-    link.setAttribute("aria-label", label);
-    link.innerHTML = ICON;
-    return link;
-  }
-
-  /** Blob URL を経由して保存を強制する。 */
   function saveBlob(blob, name) {
     var url = URL.createObjectURL(blob);
     var temporary = document.createElement("a");
@@ -96,30 +117,113 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  /** 画像ファイルとして参照している SVG にボタンを付ける。 */
+  function parseSvg(text) {
+    var documentSvg = new DOMParser().parseFromString(text, "image/svg+xml");
+    var svg = documentSvg.documentElement;
+    if (svg.nodeName.toLowerCase() !== "svg" || documentSvg.querySelector("parsererror")) {
+      throw new Error("SVG を解釈できません。");
+    }
+    if (!svg.getAttribute("xmlns")) { svg.setAttribute("xmlns", SVG_NAMESPACE); }
+    return svg;
+  }
+
+  function svgBlob(text) {
+    return new Blob([new XMLSerializer().serializeToString(parseSvg(text))], { type: "image/svg+xml" });
+  }
+
+  function svgToPng(text) {
+    var svg;
+    try { svg = parseSvg(text); }
+    catch (error) { return Promise.reject(error); }
+    var viewBox = (svg.getAttribute("viewBox") || "").trim().split(/[ ,]+/).map(Number);
+    // Mermaid は width="100%" と実寸の height を併記するため、属性値を
+    // 数値化すると縦横比が崩れる。viewBox があれば両辺ともそこから決める。
+    var width = viewBox.length === 4 ? viewBox[2] : parseFloat(svg.getAttribute("width"));
+    var height = viewBox.length === 4 ? viewBox[3] : parseFloat(svg.getAttribute("height"));
+    if (!(width > 0) || !(height > 0)) { return Promise.reject(new Error("図の寸法を取得できません。")); }
+
+    var sourceUrl = URL.createObjectURL(new Blob([
+      new XMLSerializer().serializeToString(svg),
+    ], { type: "image/svg+xml" }));
+    return new Promise(function (resolve, reject) {
+      var image = new Image();
+      image.onload = function () {
+        try {
+          var canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.ceil(width));
+          canvas.height = Math.max(1, Math.ceil(height));
+          var context = canvas.getContext("2d");
+          if (!context) { throw new Error("Canvas を利用できません。"); }
+          context.drawImage(image, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function (blob) {
+            URL.revokeObjectURL(sourceUrl);
+            if (blob) { resolve(blob); }
+            else { reject(new Error("PNG を生成できません。")); }
+          }, "image/png");
+        } catch (error) {
+          URL.revokeObjectURL(sourceUrl);
+          reject(error);
+        }
+      };
+      image.onerror = function () {
+        URL.revokeObjectURL(sourceUrl);
+        reject(new Error("SVG を画像として読み込めません。"));
+      };
+      image.src = sourceUrl;
+    });
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise(function (resolve, reject) {
+      var textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.cssText = "position:fixed;left:-9999px;top:0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        if (document.execCommand("copy")) { resolve(); }
+        else { reject(new Error("copy command was rejected")); }
+      } catch (error) { reject(error); }
+      finally { textarea.remove(); }
+    });
+  }
+
+  function showTemporaryFace(button, label, icon, restore) {
+    if (button._docsfwResetTimer) { clearTimeout(button._docsfwResetTimer); }
+    setButtonFace(button, label, icon);
+    button._docsfwResetTimer = setTimeout(function () {
+      button._docsfwResetTimer = null;
+      restore();
+    }, 1800);
+  }
+
   function attachToImage(img) {
     var src = img.getAttribute("src") || "";
-    // data:, http(s): などスキーム付きの src は対象外
     if (/^[a-z][a-z0-9+.\-]*:/i.test(src)) { return; }
     var path = src.split("#")[0].split("?")[0];
-    if (!/\.svg$/i.test(path)) { return; }
-    if (img.closest(".docsfw-svg-dl-host")) { return; }
+    if (!/\.svg$/i.test(path) || img.closest(".docsfw-svg-dl-host")) { return; }
 
     var name;
     try { name = decodeURIComponent(path.split("/").pop()); }
     catch (error) { name = path.split("/").pop(); }
-
     var host = resolveHost(img, "span", "docsfw-svg-dl-wrap");
-    var link = createLink(name);
+    var link = document.createElement("a");
+    link.className = "docsfw-svg-dl";
+    link.setAttribute("download", name);
     link.href = src;
+    var label = isJa ? "SVG をダウンロード: " + name : "Download SVG: " + name;
+    link.title = label;
+    link.setAttribute("aria-label", label);
+    link.appendChild(makeIcon(ICON_DOWNLOAD));
     host.appendChild(link);
 
-    // download 属性が無視されて SVG が表示される環境があるため、
-    // http(s) では Blob URL を経由して保存を強制する
     link.addEventListener("click", function (event) {
       if (window.location.protocol !== "http:" && window.location.protocol !== "https:") { return; }
       event.preventDefault();
-      // 資格情報入り URL では相対 src の fetch が TypeError になるため、資格情報を除去する
       var fetchSrc = src;
       try {
         var resolved = new URL(src, window.location.href);
@@ -132,39 +236,69 @@
         return response.blob();
       }).then(function (blob) {
         saveBlob(new Blob([blob], { type: "application/octet-stream" }), name);
-      }).catch(function () {
-        // 取得に失敗した場合は従来のリンク挙動にフォールバックする
-        window.location.href = src;
-      });
+      }).catch(function () { window.location.href = src; });
     });
   }
 
-  /** インライン描画した図にボタンを付ける。 */
   function attachToDiagram(block) {
-    var svg = block.querySelector(":scope > svg");
-    if (!svg) { return; }
-    if (block.closest(".docsfw-svg-dl-host")) { return; }
-
+    if (block.dataset.docsfwToolsAttached || !window.docsfwDiagramTools) { return; }
+    block.dataset.docsfwToolsAttached = "true";
     var name = diagramName(block);
     var host = resolveHost(block, "div", "docsfw-svg-dl-block");
-    var link = createLink(name);
-    link.href = "#";
-    host.appendChild(link);
+    var toolbar = document.createElement("div");
+    toolbar.className = "docsfw-diagram-toolbar";
+    var toggle = createButton("docsfw-diagram-toggle", labels.source, ICON_SOURCE);
+    var download = createButton("docsfw-svg-dl", labels.download, ICON_DOWNLOAD);
+    var copy = createButton("docsfw-diagram-copy", labels.copyImage, ICON_COPY);
+    toolbar.append(toggle, download, copy);
+    host.appendChild(toolbar);
 
-    link.addEventListener("click", function (event) {
-      event.preventDefault();
-      var current = block.querySelector(":scope > svg");
-      if (!current) { return; }
-      var clone = current.cloneNode(true);
-      if (!clone.getAttribute("xmlns")) {
-        clone.setAttribute("xmlns", SVG_NAMESPACE);
-      }
-      var text = new XMLSerializer().serializeToString(clone);
-      saveBlob(new Blob([text], { type: "image/svg+xml" }), name);
+    function updateView() {
+      var source = window.docsfwDiagramTools.getView(block) === "source";
+      var sourceVisible = !!block.querySelector(":scope > .docsfw-diagram-source");
+      host.classList.toggle("docsfw-diagram-source-host", sourceVisible);
+      setButtonFace(toggle, source ? labels.diagram : labels.source, source ? ICON_DIAGRAM : ICON_SOURCE);
+      setButtonFace(copy, source ? labels.copySource : labels.copyImage, ICON_COPY);
+    }
+
+    toggle.addEventListener("click", function () {
+      var source = window.docsfwDiagramTools.getView(block) === "source";
+      var operation = source ? window.docsfwDiagramTools.showDiagram(block) :
+        window.docsfwDiagramTools.showSource(block);
+      operation.then(updateView).catch(function () {});
     });
+    block.addEventListener("docsfw-diagram-viewchange", updateView);
+
+    download.addEventListener("click", function () {
+      window.docsfwDiagramTools.renderSvg(block, "default").then(function (text) {
+        saveBlob(svgBlob(text), name);
+      }).catch(function () {
+        showTemporaryFace(download, labels.downloadError, ICON_ERROR, function () {
+          setButtonFace(download, labels.download, ICON_DOWNLOAD);
+        });
+      });
+    });
+
+    copy.addEventListener("click", function () {
+      var source = window.docsfwDiagramTools.getView(block) === "source";
+      var operation;
+      if (source) {
+        operation = copyText(window.docsfwDiagramTools.getSource(block));
+      } else if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+        var png = window.docsfwDiagramTools.renderSvg(block, "default").then(svgToPng);
+        operation = navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
+      } else {
+        operation = Promise.reject(new Error("image clipboard is unavailable"));
+      }
+      operation.then(function () {
+        showTemporaryFace(copy, labels.copied, ICON_COPIED, updateView);
+      }).catch(function () {
+        showTemporaryFace(copy, labels.copyError, ICON_ERROR, updateView);
+      });
+    });
+    updateView();
   }
 
-  /** 現時点の本文を走査してボタンを付ける。 */
   function scan(root) {
     root.querySelectorAll("img").forEach(attachToImage);
     root.querySelectorAll(DIAGRAM_SELECTOR).forEach(attachToDiagram);
@@ -172,18 +306,13 @@
 
   function initialize() {
     var root = contentRoot();
-    if (!root) { return; }
-    if (root.dataset.docsfwSvgObserved) { return; }
+    if (!root || root.dataset.docsfwSvgObserved) { return; }
     root.dataset.docsfwSvgObserved = "true";
     scan(root);
-
-    // PlantUML と Mermaid は非同期に描画されるため、<svg> の挿入を監視する。
-    // 描画側のスクリプトへ呼び出しを埋め込まないことで、読み込み順に依存しない。
     if (typeof MutationObserver !== "function") { return; }
-    new MutationObserver(function () {
-      root.querySelectorAll(DIAGRAM_SELECTOR).forEach(attachToDiagram);
-    }).observe(root, { childList: true, subtree: true });
+    new MutationObserver(function () { scan(root); }).observe(root, { childList: true, subtree: true });
   }
+
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initialize); }
   else { initialize(); }
   if (window.document$ && typeof window.document$.subscribe === "function") {

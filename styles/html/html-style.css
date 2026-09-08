@@ -76,7 +76,7 @@ html[data-md-color-scheme="slate"] {
   --docsfw-expander: #c4c6cc;
   --docsfw-expander-hover: #ffffff;
   --docsfw-header-bg: #1f2129;
-  --docsfw-header-border: #14161c;
+  --docsfw-header-border: rgba(255, 255, 255, 0.32);
   --docsfw-link: #6ea9dd;
   --docsfw-link-hover: #9cc7ea;
   --docsfw-nav-accent: #9cc7ea;
@@ -756,6 +756,19 @@ pre code, pre tt {
   font-size: 14px;
   border: none; }
 
+/* DOM 構築後、図描画スクリプトが初回ソース要素を作るまでの表示。 */
+.docsfw-mermaid:not([data-docsfw-view]),
+.docsfw-plantuml:not([data-docsfw-view]) {
+  margin: 0;
+  padding: 11px 16px;
+  border: 1px solid var(--docsfw-border);
+  border-radius: 3px;
+  background-color: var(--docsfw-code-bg);
+  color: var(--docsfw-code-fg);
+  font-size: 14px;
+  line-height: 19px;
+}
+
 pre.mermaid {
   background: transparent;
   border: none;
@@ -806,6 +819,24 @@ figure {
 figcaption {
   margin-top: 8px;
   line-height: 1.1;
+}
+
+/* ソース表示では figure 自身を単一の枠にし、内側のコード枠を重ねない。 */
+figure.docsfw-diagram-source-host {
+  padding: 0;
+}
+
+figure.docsfw-diagram-source-host .docsfw-diagram-source {
+  border: none;
+  border-radius: 0;
+}
+
+figure.docsfw-diagram-source-host > figcaption {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid var(--docsfw-border);
 }
 
 div[data-custom-style="Source Code Caption"] {
@@ -1098,7 +1129,7 @@ mark {
   print-color-adjust: exact;
 }
 
-/* 本文中 SVG の「ダウンロード」とコード ブロックの「コピー」は同じホバー チップ。
+/* 本文中の図操作とコード ブロックの「コピー」は同じホバー チップ。
    アイコンの基準要素は position: relative。SVG は figure があれば figure、
    なければ画像を包む span (.docsfw-svg-dl-wrap)。コードは
    .code-expander-wrapper。 */
@@ -1111,6 +1142,7 @@ mark {
   max-width: 100%; }
 
 .docsfw-svg-dl,
+.docsfw-diagram-action,
 .docsfw-code-copy {
   position: absolute;
   top: 4px;
@@ -1131,6 +1163,8 @@ mark {
   margin: 0; }
 
 .docsfw-svg-dl-host:hover .docsfw-svg-dl,
+.docsfw-svg-dl-host:hover .docsfw-diagram-action,
+.docsfw-diagram-action:focus,
 .docsfw-svg-dl:focus,
 .code-expander-scroll:hover ~ .docsfw-code-copy,
 .docsfw-code-copy:hover,
@@ -1138,10 +1172,42 @@ mark {
   opacity: 1; }
 
 .docsfw-svg-dl svg,
+.docsfw-diagram-action svg,
 .docsfw-code-copy svg {
   width: 16px;
   height: 16px;
   display: block; }
+
+.docsfw-diagram-toolbar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+}
+
+.docsfw-diagram-toolbar .docsfw-diagram-action {
+  position: static;
+}
+
+.docsfw-svg-dl-block {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 1em 0;
+}
+
+.docsfw-plantuml > .docsfw-diagram-source,
+.docsfw-mermaid > .docsfw-diagram-source {
+  margin: 0;
+}
+
+@media (hover: none) {
+  .docsfw-diagram-toolbar .docsfw-diagram-action {
+    opacity: 1;
+  }
+}
 
 /* スクロール バー。
    Bootstrap の template.css (CDN) は 12px 幅、トラック rgba(0,0,0,.1)、
@@ -1350,8 +1416,8 @@ body {
 .docsfw-header-action img,
 #docsfw-theme-toggle svg {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   max-width: none;
 }
 
@@ -1374,7 +1440,7 @@ html[data-md-color-scheme="slate"] {
   .docsfw-logo { display: inline-flex; }
 }
 
-/* Pandoc html の左上アイコン。既定 (ライト) は黒地、ダークは既定色 (青) を出す。 */
+/* Pandoc html の左上アイコン。ライトは黒、ダークは MkDocs ヘッダーと同じ白系。 */
 .docsfw-logo-icon {
   width: 24px;
   height: 24px;

@@ -615,11 +615,12 @@ def _split_caption_label(paragraph):
     return label_match.group(1), trimmed
 
 
-def _figure_open_tag(label):
+def _figure_open_tag(label, diagram_source=False):
     """``docsfw-figure`` の開始タグを組み立てる。"""
+    classes = "docsfw-figure docsfw-diagram-source-host" if diagram_source else "docsfw-figure"
     if label:
-        return '<figure class="docsfw-figure" id="{}" markdown="1">'.format(label)
-    return '<figure class="docsfw-figure" markdown="1">'
+        return '<figure class="{}" id="{}" markdown="1">'.format(classes, label)
+    return '<figure class="{}" markdown="1">'.format(classes)
 
 
 def _figcaption_lines(paragraph):
@@ -633,6 +634,33 @@ def _figcaption_lines(paragraph):
     lines[0] = '<figcaption class="docsfw-caption" markdown="span">' + lines[0]
     lines[-1] = lines[-1] + "</figcaption>"
     return lines
+
+
+def _plantuml_caption(lines):
+    """PlantUML ソース内のキャプションを取得する。"""
+    caption = ""
+    for line in lines:
+        match = re.match(r"^\s*caption\s*(.*?)\s*$", line, re.IGNORECASE)
+        if match:
+            caption = match.group(1)
+    if not caption:
+        for line in lines:
+            match = re.match(r"^\s*@start\w+\s+(.+?)\s*$", line)
+            if match:
+                caption = match.group(1)
+                break
+    return re.sub(r"~(.)", r"\1", caption)
+
+
+def _wrap_diagram_with_caption(out, diagram_block, caption):
+    """直前の図フェンスを内部キャプション付きの figure へ包む。"""
+    block_start, block_end, _lang = diagram_block
+    figure = [_figure_open_tag("", True), ""]
+    figure.extend(out[block_start:block_end])
+    figure.append("")
+    figure.extend(_figcaption_lines([caption]))
+    figure.extend(["", "</figure>", ""])
+    out[block_start:] = figure
 
 
 def convert_captions(text):
@@ -658,6 +686,8 @@ def convert_captions(text):
     diagram_block = None
     fence_start = None
     fence_lang = None
+    fence_content = []
+    internal_caption = ""
 
     while index < len(lines):
         line = lines[index]
@@ -665,21 +695,29 @@ def convert_captions(text):
         if fence_match:
             marker = fence_match.group(1)[0]
             if fence is None:
+                if diagram_block is not None and internal_caption:
+                    _wrap_diagram_with_caption(out, diagram_block, internal_caption)
+                    diagram_block = None
+                    internal_caption = ""
                 fence = marker
                 diagram_match = _DIAGRAM_FENCE_RE.match(line)
                 fence_start = len(out) if diagram_match else None
                 fence_lang = diagram_match.group(1) if diagram_match else None
+                fence_content = []
                 diagram_block = None
             elif fence == marker:
                 fence = None
                 if fence_start is not None:
                     diagram_block = (fence_start, len(out) + 1, fence_lang)
+                    internal_caption = _plantuml_caption(fence_content) if fence_lang == "plantuml" else ""
             out.append(line)
             index += 1
             continue
 
         if fence is not None:
             out.append(line)
+            if fence_start is not None:
+                fence_content.append(line)
             index += 1
             continue
 
@@ -696,7 +734,7 @@ def convert_captions(text):
 
             if caption_match.group(1) == "CodeBlock" and _is_after_diagram(out, diagram_block):
                 block_start, block_end, _lang = diagram_block
-                figure = [_figure_open_tag(label), ""]
+                figure = [_figure_open_tag(label, True), ""]
                 figure.extend(out[block_start:block_end])
                 figure.append("")
                 figure.extend(_figcaption_lines(paragraph))
@@ -708,6 +746,7 @@ def convert_captions(text):
                 if index < len(lines) and lines[index].strip():
                     out.append("")
                 diagram_block = None
+                internal_caption = ""
                 continue
 
             attrs = [".docsfw-caption"]
@@ -719,10 +758,18 @@ def convert_captions(text):
             diagram_block = None
             continue
 
-        if line.strip():
+        if line.strip() and diagram_block is not None and internal_caption:
+            _wrap_diagram_with_caption(out, diagram_block, internal_caption)
             diagram_block = None
+            internal_caption = ""
+        elif line.strip():
+            diagram_block = None
+            internal_caption = ""
         out.append(line)
         index += 1
+
+    if diagram_block is not None and internal_caption:
+        _wrap_diagram_with_caption(out, diagram_block, internal_caption)
 
     return "\n".join(out)
 

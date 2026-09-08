@@ -570,6 +570,10 @@ return {
                 return el
             end
 
+            -- HTML のソース表示には利用者が記述した内容を残す。
+            -- 描画用に追加する style と背景指定は別の属性へ保持する。
+            local originalText = el.text
+
             ---------------------------------------------------------------------
 
             -- キャプションは codeblock-caption-line.lua が "CodeBlock:" 行から
@@ -667,8 +671,10 @@ return {
             ---------------------------------------------------------------------
 
             if FORMAT and FORMAT:match("html") then
-                local text = resultString:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")
-                local block = pandoc.RawBlock("html", '<div class="docsfw-plantuml">' .. text .. '</div>')
+                local text = originalText:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")
+                local renderText = resultString:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;")
+                local block = pandoc.RawBlock("html", '<div class="docsfw-plantuml" data-docsfw-view="diagram" data-docsfw-render-source="' .. renderText .. '">' ..
+                    '<pre class="docsfw-diagram-source"><code>' .. text .. '</code></pre></div>')
                 if caption == nil then
                     return block
                 end
@@ -679,7 +685,8 @@ return {
                     table.insert(inlines, pandoc.LineBreak())
                 end
                 if #inlines > 0 then table.remove(inlines) end
-                return pandoc.Figure({ block }, inlines, pandoc.Attr(identifier, { "plantuml-figure" }))
+                return pandoc.Figure({ block }, inlines,
+                    pandoc.Attr(identifier, { "plantuml-figure", "docsfw-diagram-source-host" }))
             end
 
             local encoded_text = encode(resultString)

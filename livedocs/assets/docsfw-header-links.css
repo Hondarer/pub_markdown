@@ -1,7 +1,7 @@
 /* ヘッダーの単一ページ リンク (Doxygen / Git) のスタイル。
-   寸法と間隔は Material のヘッダー ボタン (配色トグル、検索) にそろえる。
-   静的発行の 18px ではなく Material の 1.2rem を採る理由は
-   docs/livedocs-design.md の「ヘッダーへの配置」を参照。 */
+   寸法と間隔はヘッダー右上の配色トグル、検索とそろえる。
+   右上アイコンを 20px にする理由は
+   docs/livedocs-design.md の「アイコンの寸法と間隔」を参照。 */
 
 .docsfw-header-links {
   align-items: center;
@@ -16,7 +16,7 @@
   }
 }
 
-/* モード切替、Doxygen、Git の 24px アイコンは、既定の 8px より小さい 4px の
+/* モード切替、Doxygen、Git の 20px アイコンは、既定の 8px より小さい 4px の
    余白にする。検索、メニュー、ロゴの操作領域は変えない。 */
 .md-header__option .md-header__button,
 .docsfw-header-links .md-header__button {
@@ -32,9 +32,9 @@
    contain で縦横比を保ったまま同じ枠に収める。 */
 .docsfw-header-links .md-header__button img {
   display: block;
-  height: 24px;
+  height: 20px;
   object-fit: contain;
-  width: 24px;
+  width: 20px;
 }
 
 /* 検索ボックス自身は左マージンを持たないため、直前のアイコンとの間隔が、

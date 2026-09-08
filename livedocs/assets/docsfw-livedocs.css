@@ -408,7 +408,21 @@
   display: block;
   margin: 1em 0;
   overflow-x: auto;
-  text-align: center;
+  text-align: left;
+}
+
+/* DOM 構築後、図描画スクリプトが初回ソース要素を作るまでの表示。 */
+.md-typeset .docsfw-plantuml:not([data-docsfw-view]),
+.md-typeset .docsfw-mermaid:not([data-docsfw-view]) {
+  margin: 16px 0;
+  padding: 0.7720588235em 1.1764705882em;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 3px;
+  background-color: var(--md-code-bg-color);
+  color: var(--md-code-fg-color);
+  font-family: var(--md-code-font-family);
+  font-size: 14px;
+  line-height: 19px;
 }
 
 /* キャプションを持つ図の枠。pandoc 発行版の
@@ -445,26 +459,39 @@
   height: auto;
 }
 
+/* ソース表示では figure 自身を単一の枠にし、内側のコード枠を重ねない。 */
+.md-typeset figure.docsfw-diagram-source-host {
+  padding: 0;
+}
+
+.md-typeset figure.docsfw-diagram-source-host > .docsfw-plantuml:not([data-docsfw-view]),
+.md-typeset figure.docsfw-diagram-source-host > .docsfw-mermaid:not([data-docsfw-view]),
+.md-typeset figure.docsfw-diagram-source-host .docsfw-diagram-source {
+  border: none;
+  border-radius: 0;
+}
+
+.md-typeset figure.docsfw-diagram-source-host > figcaption {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 8px;
+  border-top: 1px solid var(--md-default-fg-color--lighter);
+}
+
 .md-typeset .docsfw-plantuml svg,
 .md-typeset .docsfw-mermaid svg {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
   max-width: 100%;
   height: auto;
 }
 
 /* 描画待ちの図は、レイアウトが飛ばないように最小の高さを確保する。 */
-.md-typeset .docsfw-plantuml[aria-busy="true"] {
+.md-typeset .docsfw-plantuml[aria-busy="true"],
+.md-typeset .docsfw-mermaid[aria-busy="true"] {
   min-height: 3rem;
-  background-image: linear-gradient(
-    90deg,
-    var(--md-default-fg-color--lightest) 25%,
-    transparent 25%,
-    transparent 50%,
-    var(--md-default-fg-color--lightest) 50%,
-    var(--md-default-fg-color--lightest) 75%,
-    transparent 75%
-  );
-  background-size: 1.5rem 1.5rem;
-  opacity: 0.35;
 }
 
 .md-typeset .docsfw-diagram--error {
@@ -580,17 +607,26 @@
 }
 
 /* キャプションを持たない図には figure が無いため、包む要素を別に作る。
-   図はブロック要素なので span ではなく div とし、ボタンが図の右端へ来るよう
-   内容幅に縮める。上下の余白は包まれた図から引き継ぐ。 */
+   図はブロック要素なので span ではなく div とし、初回描画前、描画後、
+   ソース表示のどの状態でも本文幅を維持する。 */
 .md-typeset .docsfw-svg-dl-block {
   display: block;
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
-  margin: 1em auto;
+  margin: 1em 0;
+}
+
+.md-typeset .docsfw-svg-dl-block.docsfw-diagram-source-host {
+  width: 100%;
 }
 
 .md-typeset .docsfw-svg-dl-block > .docsfw-plantuml,
 .md-typeset .docsfw-svg-dl-block > .docsfw-mermaid {
+  margin: 0;
+}
+
+.md-typeset .docsfw-plantuml > .docsfw-diagram-source,
+.md-typeset .docsfw-mermaid > .docsfw-diagram-source {
   margin: 0;
 }
 
@@ -609,7 +645,33 @@
   color: var(--md-typeset-a-color);
 }
 
+.md-typeset .docsfw-diagram-action {
+  position: static;
+  opacity: 0;
+  transition: opacity 0.15s;
+  background: var(--md-default-bg-color);
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 3px;
+  padding: 3px;
+  line-height: 0;
+  color: var(--md-typeset-a-color);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.md-typeset .docsfw-diagram-toolbar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+}
+
 .md-typeset .docsfw-svg-dl-host:hover .docsfw-svg-dl,
+.md-typeset .docsfw-svg-dl-host:hover .docsfw-diagram-action,
+.md-typeset .docsfw-diagram-action:focus,
 .md-typeset .docsfw-svg-dl:focus {
   opacity: 1;
 }
@@ -618,6 +680,18 @@
   width: 16px;
   height: 16px;
   display: block;
+}
+
+.md-typeset .docsfw-diagram-action svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+@media (hover: none) {
+  .md-typeset .docsfw-diagram-toolbar .docsfw-diagram-action {
+    opacity: 1;
+  }
 }
 
 /* ------------------------------------------------------------------------ */

@@ -43,6 +43,40 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("height: calc(100dvh - var(--docsfw-header-height))", self.ui_style)
         self.assertIn("border-right: 1px solid var(--docsfw-header-border)", self.ui_style)
 
+    def test_header_right_icons_are_twenty_pixels(self):
+        """ヘッダー右上の操作アイコンは 20px、左端のロゴとメニューは 24px であること。"""
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-header-action img\s*,\s*#docsfw-theme-toggle svg"
+            r"\s*\{[^}]*width:\s*20px[^}]*height:\s*20px",
+        )
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-header-button svg\s*,\s*\.docsfw-drawer-logo svg"
+            r"\s*\{[^}]*width:\s*24px[^}]*height:\s*24px",
+        )
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-logo-icon\s*\{[^}]*width:\s*24px[^}]*height:\s*24px",
+        )
+        self.assertRegex(
+            self.ui_style,
+            r"\.docsfw-search-icon svg\s*,\s*\.docsfw-search-back svg"
+            r"\s*\{[^}]*width:\s*20px[^}]*height:\s*20px",
+        )
+        self.assertRegex(
+            self.ui_style,
+            r"\.docsfw-search-form::before\s*\{[^}]*width:\s*20px[^}]*height:\s*20px",
+        )
+
+    def test_dark_logo_icon_uses_white_foreground(self):
+        """ダークの Pandoc ロゴは MkDocs ヘッダーと同じ白系であること。"""
+        dark = (ROOT / "styles/html/docsfw-pandoc-icon.svg").read_text(encoding="utf-8")
+        light = (ROOT / "styles/html/docsfw-pandoc-icon-light.svg").read_text(encoding="utf-8")
+        self.assertIn('fill="#ffffff"', dark)
+        self.assertNotRegex(dark, r'fill="#4093[Dd][Aa]"')
+        self.assertIn('fill="#000000"', light)
+
     def test_breakpoints_match_livedocs(self):
         for marker in (
             "(max-width: 1399px)",

@@ -43,7 +43,7 @@
   function addCaption(block, caption) {
     if (!caption || block.closest("figure")) { return; }
     const figure = document.createElement("figure");
-    figure.className = "docsfw-figure";
+    figure.className = "docsfw-figure docsfw-diagram-source-host";
     block.before(figure);
     figure.appendChild(block);
     const element = document.createElement("figcaption");
@@ -60,6 +60,15 @@
     source.textContent = state.source;
     state.block.replaceChildren(message, source);
     state.block.classList.add("docsfw-diagram--error");
+  }
+
+  function sourceElement(state) {
+    const source = document.createElement("pre");
+    source.className = "docsfw-diagram-source";
+    const code = document.createElement("code");
+    code.textContent = state.source;
+    source.appendChild(code);
+    return source;
   }
 
   function normalizeMermaid(block) {
@@ -94,7 +103,7 @@
     if (attrHeight > 0) { svg.setAttribute("height", String(attrHeight + pad * 2)); }
   }
 
-  async function draw(state, selectedTheme) {
+  async function draw(state, selectedTheme, portable) {
     if (state.kind === "plantuml") {
       if (/^\s*@startsalt\b/im.test(state.source)) {
         throw new Error("この HTML では Salt 図を描画できません。元のソースを表示します。");
@@ -110,7 +119,13 @@
       });
     }
     if (!window.mermaid) { throw new Error("Mermaid の描画エンジンを読み込めません。"); }
-    window.mermaid.initialize({ startOnLoad: false, theme: selectedTheme, securityLevel: "loose" });
+    window.mermaid.initialize({
+      startOnLoad: false,
+      theme: selectedTheme,
+      securityLevel: "loose",
+      // foreignObject を含む SVG は Canvas を汚染するため、保存・コピー用には SVG の text を使う。
+      htmlLabels: !portable,
+    });
     const host = document.createElement("div");
     host.className = "docsfw-diagram-measure";
     document.body.appendChild(host);
@@ -121,34 +136,82 @@
     }
   }
 
+  function applyDiagram(state, result, selectedTheme) {
+    if (!state.block.isConnected || state.view !== "diagram" || selectedTheme !== theme()) { return; }
+    state.block.innerHTML = result.svg;
+    const host = state.block.closest("figure");
+    if (host) { host.classList.remove("docsfw-diagram-source-host"); }
+    state.block.classList.remove("docsfw-diagram--error");
+    if (result.bindFunctions) { result.bindFunctions(state.block); }
+    if (state.kind === "mermaid") { normalizeMermaid(state.block); }
+    if (state.kind === "plantuml") { normalizePlantuml(state.block); }
+    state.block.dataset.docsfwTheme = selectedTheme;
+    state.block.dispatchEvent(new CustomEvent("docsfw-diagram-viewchange", { bubbles: true }));
+  }
+
+  function requestRender(state, selectedTheme, portable) {
+    const cacheKey = selectedTheme + (portable ? ":portable" : "");
+    if (state.cache.has(cacheKey)) {
+      const result = state.cache.get(cacheKey);
+      if (!portable) { applyDiagram(state, result, selectedTheme); }
+      return Promise.resolve(result.svg);
+    }
+    if (state.pending.has(cacheKey)) { return state.pending.get(cacheKey); }
+
+    let resolveRender;
+    let rejectRender;
+    const promise = new Promise((resolve, reject) => {
+      resolveRender = resolve;
+      rejectRender = reject;
+    });
+    state.pending.set(cacheKey, promise);
+    if (!portable) {
+      state.block.dataset.docsfwState = "rendering";
+      state.block.setAttribute("aria-busy", "true");
+    }
+    queue.push({ state, selectedTheme, portable: !!portable, cacheKey, resolve: resolveRender, reject: rejectRender });
+    drain();
+    return promise;
+  }
+
   async function drain() {
     if (running) { return; }
     running = true;
     try {
       while (queue.length) {
-        const state = queue.shift();
-        if (!state.block.isConnected) { state.queued = false; continue; }
-        const selectedTheme = theme();
-        state.block.dataset.docsfwState = "rendering";
-        state.block.setAttribute("aria-busy", "true");
+        const job = queue.shift();
+        const state = job.state;
+        const selectedTheme = job.selectedTheme;
+        if (!state.block.isConnected) {
+          state.pending.delete(job.cacheKey);
+          job.reject(new Error("図が文書から取り除かれました。"));
+          continue;
+        }
+        if (!job.portable) {
+          state.block.dataset.docsfwState = "rendering";
+          state.block.setAttribute("aria-busy", "true");
+        }
         try {
-          const result = await draw(state, selectedTheme);
-          if (state.block.isConnected && selectedTheme === theme()) {
-            state.block.innerHTML = result.svg;
-            state.block.classList.remove("docsfw-diagram--error");
-            if (result.bindFunctions) { result.bindFunctions(state.block); }
-            if (state.kind === "mermaid") { normalizeMermaid(state.block); }
-            if (state.kind === "plantuml") { normalizePlantuml(state.block); }
-          }
+          const result = await draw(state, selectedTheme, job.portable);
+          state.cache.set(job.cacheKey, result);
+          if (!job.portable) { applyDiagram(state, result, selectedTheme); }
+          job.resolve(result.svg);
         } catch (error) {
-          if (state.block.isConnected && selectedTheme === theme()) { showError(state, error); }
+          if (!job.portable && state.block.isConnected && state.view === "diagram" && selectedTheme === theme()) {
+            showError(state, error);
+          }
+          job.reject(error);
         } finally {
-          state.queued = false;
-          state.block.removeAttribute("aria-busy");
-          state.block.dataset.docsfwState = "done";
-          state.block.dataset.docsfwTheme = selectedTheme;
-          // 描画中の切り替えを取りこぼさず、古い結果は表示しない。
-          if (state.block.isConnected && selectedTheme !== theme()) { enqueue(state); }
+          state.pending.delete(job.cacheKey);
+          if (!job.portable) {
+            state.block.removeAttribute("aria-busy");
+            state.block.dataset.docsfwState = "done";
+            if (selectedTheme === theme()) { state.block.dataset.docsfwTheme = selectedTheme; }
+          }
+          // 描画中の切り替えを取りこぼさず、現在の配色を用意する。
+          if (state.block.isConnected && state.view === "diagram" && selectedTheme !== theme()) {
+            requestRender(state, theme()).catch(() => {});
+          }
         }
       }
     } finally {
@@ -159,10 +222,25 @@
   function enqueue(state) {
     if (!state || !state.block.isConnected) { return; }
     state.active = true;
-    if (state.queued) { return; }
-    state.queued = true;
-    queue.push(state);
-    drain();
+    requestRender(state, theme()).catch(() => {});
+  }
+
+  function setView(state, view) {
+    if (!state || !state.block.isConnected || (view !== "source" && view !== "diagram")) {
+      return Promise.reject(new Error("図の表示状態を変更できません。"));
+    }
+    state.view = view;
+    state.block.dataset.docsfwView = view;
+    if (view === "source") {
+      state.block.replaceChildren(sourceElement(state));
+      const host = state.block.closest("figure");
+      if (host) { host.classList.add("docsfw-diagram-source-host"); }
+      state.block.classList.remove("docsfw-diagram--error");
+      state.block.dispatchEvent(new CustomEvent("docsfw-diagram-viewchange", { bubbles: true }));
+      return Promise.resolve();
+    }
+    state.block.dispatchEvent(new CustomEvent("docsfw-diagram-viewchange", { bubbles: true }));
+    return requestRender(state, theme());
   }
 
   function scan() {
@@ -173,16 +251,52 @@
       if (states.has(block)) { return; }
       const kind = block.classList.contains("docsfw-plantuml") ? "plantuml" : "mermaid";
       const source = block.textContent;
-      const state = { block, source, kind, active: false, queued: false };
+      const renderSource = block.dataset.docsfwRenderSource || source;
+      const state = {
+        block,
+        source,
+        kind,
+        active: false,
+        view: "diagram",
+        cache: new Map(),
+        pending: new Map(),
+      };
       block.dataset.docsfwSource = source;
+      block.dataset.docsfwView = "diagram";
       if (kind === "plantuml") {
-        state.prepared = preparePlantuml(source);
+        state.prepared = preparePlantuml(renderSource);
         addCaption(block, state.prepared.caption);
       }
+      const host = block.closest("figure");
+      if (host) { host.classList.add("docsfw-diagram-source-host"); }
       states.set(block, state);
+      // 初回描画前から、表示切り替え後と同じ要素とスタイルで元ソースを示す。
+      block.replaceChildren(sourceElement(state));
       enqueue(state);
     });
   }
+
+  window.docsfwDiagramTools = {
+    getSource(block) {
+      const state = states.get(block);
+      return state ? state.source : "";
+    },
+    getView(block) {
+      const state = states.get(block);
+      return state ? state.view : "";
+    },
+    showSource(block) {
+      return setView(states.get(block), "source");
+    },
+    showDiagram(block) {
+      return setView(states.get(block), "diagram");
+    },
+    renderSvg(block, selectedTheme) {
+      const state = states.get(block);
+      if (!state) { return Promise.reject(new Error("図が見つかりません。")); }
+      return requestRender(state, selectedTheme === "dark" ? "dark" : "default", true);
+    },
+  };
 
   function initialize() {
     let previous = theme();

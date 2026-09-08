@@ -528,9 +528,13 @@ body {
 
   --docsfw-nav-accent: #9cc7ea;
 
+  /* --dark はヘッダー・フッター・サイドバーの境界線に使うため、Material の
+     パレット規約どおり基準色より暗い派生値にすると、暗い背景の上でほぼ黒に
+     沈んでしまう。html-style.css の --docsfw-header-rule と同じ明色 (白の
+     半透明) に差し替え、境界線として視認できるようにする。 */
   --md-primary-fg-color: #1f2129;
   --md-primary-fg-color--light: #2b2e39;
-  --md-primary-fg-color--dark: #14161c;
+  --md-primary-fg-color--dark: rgba(255, 255, 255, 0.32);
   --md-primary-bg-color: rgba(255, 255, 255, 0.87);
   --md-primary-bg-color--light: rgba(255, 255, 255, 0.54);
 
@@ -577,8 +581,8 @@ body {
 }
 
 /* Material の検索フォームは、色の濃いヘッダーを前提に背景を #00000042 と
-   している。淡色ヘッダーでは入力文字が読めなくなるため、薄いティントへ
-   変える。
+   している。docsfw のヘッダーは淡色 (ライト) / 暗い灰 (ダーク) のため、
+   Pandoc HTML の .docsfw-search-form と同じく前景の 7% ティントへ変える。
    この指定が効くのは min-width: 60em の、検索フォームがヘッダーの中に
    置かれる場合だけ。それ未満の幅では検索がオーバーレイになり、背景は
    --md-default-bg-color のままでよい。 */
@@ -589,6 +593,14 @@ body {
 
   [data-md-color-scheme="default"] .md-search__form:hover {
     background-color: rgba(0, 0, 0, 0.14);
+  }
+
+  [data-md-color-scheme="slate"] .md-search__form {
+    background-color: color-mix(in srgb, var(--md-primary-bg-color) 7%, transparent);
+  }
+
+  [data-md-color-scheme="slate"] .md-search__form:hover {
+    background-color: color-mix(in srgb, var(--md-primary-bg-color) 14%, transparent);
   }
 }
 

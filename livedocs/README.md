@@ -105,7 +105,7 @@ make stopdocs
 | `../styles/browser/docsfw-diagrams.js` | Pandoc HTML と共通の PlantUML / Mermaid 描画 |
 | `assets/docsfw-mathjax.js` | MathJax の設定 |
 | `assets/docsfw-responsive-nav.js` | Pandoc HTML と共通の左右ナビゲーション配置 |
-| `../styles/browser/docsfw-svg-download.js` | 本文中の SVG のダウンロード ボタン |
+| `../styles/browser/docsfw-svg-download.js` | PlantUML / Mermaid の操作と本文中の SVG のダウンロード |
 | `assets/docsfw-livedocs.css` | 追加スタイル |
 | `assets/docsfw-header-links.css` | ヘッダー内アイコンのスタイル |
 | `assets/docsfw-header-meta.css` | ヘッダーの発行者と発行日時のスタイル |

@@ -118,6 +118,7 @@ function generate() {
     const html = fs.readFileSync(path.join(output, filename), 'utf8');
     assert(html.includes('class="docsfw-mermaid"'));
     assert(html.includes('class="docsfw-plantuml"'));
+    assert.equal((html.match(/class="docsfw-diagram-source"/g) || []).length, 7);
     assert(!/<img[^>]+(?:puml_|mermaid_)/.test(html));
     assert(html.includes('id="fig:sequence"'));
     assert(html.includes('id="fig:flow"'));
@@ -174,7 +175,6 @@ async function exercise(page, url, name) {
   };
   page.on('request', recordModule);
   await page.goto(url, { waitUntil: 'load' });
-  assert(await page.$$eval('.docsfw-plantuml', nodes => nodes.some(el => el.getBoundingClientRect().top > innerHeight)));
   await settled(page);
   const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(el => el.textContent));
   assert.equal(errors.length, 2, JSON.stringify(errors));
@@ -184,6 +184,25 @@ async function exercise(page, url, name) {
   assert(!moduleRequests.some(url => url.startsWith('data:')), 'PlantUML must not import a data URL');
   assert.equal(await page.$$eval('.docsfw-mermaid > svg', nodes => nodes.length), 2);
   assert(await page.$eval('.docsfw-diagram--error', el => el.textContent.includes('Salt')));
+  assert.equal(await page.$$eval('.plantuml-figure .docsfw-diagram-toolbar', nodes => nodes.length), 1);
+  assert.equal(await page.$$eval('.plantuml-figure .docsfw-diagram-action', nodes => nodes.length), 3);
+  const captionedWidths = await page.evaluate(async () => {
+    const results = [];
+    for (const block of document.querySelectorAll('.mermaid-figure > .docsfw-mermaid, .plantuml-figure > .docsfw-plantuml')) {
+      const host = block.closest('figure');
+      const toggle = host.querySelector('.docsfw-diagram-toggle');
+      const diagramWidth = host.getBoundingClientRect().width;
+      toggle.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const sourceWidth = host.getBoundingClientRect().width;
+      toggle.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      results.push({ diagramWidth, sourceWidth });
+    }
+    return results;
+  });
+  assert(captionedWidths.length === 2 && captionedWidths.every(item =>
+    Math.abs(item.diagramWidth - item.sourceWidth) < 1), JSON.stringify(captionedWidths));
   if (name === 'normal') {
     await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
     await page.waitForFunction(() => document.body.dataset.mdColorScheme === 'slate');
@@ -203,17 +222,143 @@ async function exercise(page, url, name) {
   assert.equal(await page.$eval('body', el => getComputedStyle(el).backgroundColor), 'rgb(30, 33, 41)');
   assert.equal(await page.$eval('body', el => el.dataset.mdColorScheme), 'slate');
   await page.screenshot({ path: path.join(output, name + '-dark.png'), fullPage: true });
-  // 保存時に古い SVG を閉じ込めていないことを確認する。
+  // ソース表示は原文を保って左寄せになり、コピー対象も原文になる。
+  const sourceResult = await page.evaluate(async () => {
+    const block = document.querySelector('.plantuml-figure .docsfw-plantuml');
+    const expected = block.dataset.docsfwSource;
+    let copied = '';
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      writeText(text) { copied = text; return Promise.resolve(); },
+    } });
+    block.closest('.docsfw-svg-dl-host').querySelector('.docsfw-diagram-toggle').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const source = block.querySelector('.docsfw-diagram-source');
+    block.closest('.docsfw-svg-dl-host').querySelector('.docsfw-diagram-copy').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    return {
+      expected,
+      shown: source.textContent,
+      copied,
+      align: getComputedStyle(source).textAlign,
+      lineHeight: getComputedStyle(source).lineHeight,
+    };
+  });
+  assert.equal(sourceResult.shown, sourceResult.expected);
+  assert.equal(sourceResult.copied, sourceResult.expected);
+  assert(!sourceResult.expected.includes('skinparam backgroundColor transparent'));
+  assert.equal(sourceResult.align, 'left');
+  assert.equal(sourceResult.lineHeight, '19px');
+  await page.click('.plantuml-figure .docsfw-diagram-toggle');
+  await page.waitForSelector('.plantuml-figure .docsfw-plantuml > svg');
+
+  // ダーク表示中も、ダウンロードと画像コピーはライトテーマの結果を使う。
   const exported = await page.evaluate(async () => {
-    let saved;
+    let savedResolve;
+    const savedPromise = new Promise(resolve => { savedResolve = resolve; });
     const original = URL.createObjectURL;
-    URL.createObjectURL = blob => { saved = blob; return original(blob); };
+    URL.createObjectURL = blob => { savedResolve(blob); return original(blob); };
     document.querySelector('.plantuml-figure .docsfw-svg-dl').click();
+    const saved = await savedPromise;
     URL.createObjectURL = original;
     return saved.text();
   });
   const displayed = await page.$eval('.docsfw-plantuml > svg', svg => new XMLSerializer().serializeToString(svg));
-  assert.equal(exported, displayed);
+  const expectedLight = await page.evaluate(async () => {
+    const block = document.querySelector('.plantuml-figure .docsfw-plantuml');
+    const text = await window.docsfwDiagramTools.renderSvg(block, 'default');
+    const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+    if (!svg.getAttribute('xmlns')) { svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); }
+    return new XMLSerializer().serializeToString(svg);
+  });
+  assert.equal(exported, expectedLight);
+  assert.notEqual(exported, displayed);
+
+  const copiedImage = await page.evaluate(async () => {
+    const originalRender = window.docsfwDiagramTools.renderSvg;
+    let requestedTheme = '';
+    let expectedRatio;
+    window.docsfwDiagramTools.renderSvg = function (block, selectedTheme) {
+      requestedTheme = selectedTheme;
+      return originalRender.call(this, block, selectedTheme).then(text => {
+        const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+        const box = svg.getAttribute('viewBox').trim().split(/[ ,]+/).map(Number);
+        expectedRatio = box[2] / box[3];
+        return text;
+      });
+    };
+    window.ClipboardItem = function (items) { this.items = items; };
+    let copied;
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      write(items) {
+        return Promise.resolve(items[0].items['image/png']).then(async blob => {
+          const bitmap = await createImageBitmap(blob);
+          copied = { type: blob.type, size: blob.size, width: bitmap.width, height: bitmap.height };
+          bitmap.close();
+        });
+      },
+    } });
+    document.querySelector('.plantuml-figure .docsfw-diagram-copy').click();
+    for (let i = 0; i < 100 && !copied; i += 1) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    return { requestedTheme, expectedRatio, copied };
+  });
+  assert.equal(copiedImage.requestedTheme, 'default');
+  assert.equal(copiedImage.copied.type, 'image/png');
+  assert(copiedImage.copied.size > 0);
+  assert(Math.abs(copiedImage.copied.width - copiedImage.copied.height * copiedImage.expectedRatio) <= 1.1,
+    JSON.stringify(copiedImage));
+  if (name === 'normal') {
+    const mermaidImage = await page.evaluate(async () => {
+      const block = document.querySelector('.docsfw-mermaid');
+      const host = block.closest('.docsfw-svg-dl-host');
+      let copied;
+      let expectedRatio;
+      const originalRender = window.docsfwDiagramTools.renderSvg;
+      window.docsfwDiagramTools.renderSvg = function (target, selectedTheme) {
+        return originalRender.call(this, target, selectedTheme).then(text => {
+          const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+          const box = svg.getAttribute('viewBox').trim().split(/[ ,]+/).map(Number);
+          expectedRatio = box[2] / box[3];
+          return text;
+        });
+      };
+      window.ClipboardItem = function (items) { this.items = items; };
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+        write(items) {
+          return Promise.resolve(items[0].items['image/png']).then(async blob => {
+            const bitmap = await createImageBitmap(blob);
+            copied = { width: bitmap.width, height: bitmap.height };
+            bitmap.close();
+          });
+        },
+      } });
+      host.querySelector('.docsfw-diagram-copy').click();
+      for (let i = 0; i < 100 && !copied; i += 1) {
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      return { copied, expectedRatio };
+    });
+    assert(Math.abs(mermaidImage.copied.width - mermaidImage.copied.height * mermaidImage.expectedRatio) <= 1.1,
+      JSON.stringify(mermaidImage));
+  }
+  const copyFailure = await page.evaluate(async () => {
+    const button = document.querySelector('.plantuml-figure .docsfw-diagram-copy');
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+      write() { return Promise.reject(new Error('clipboard denied')); },
+    } });
+    button.click();
+    for (let i = 0; i < 50 && !button.getAttribute('aria-label').includes('できません'); i += 1) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    return {
+      label: button.getAttribute('aria-label'),
+      actions: [...button.closest('.docsfw-diagram-toolbar').querySelectorAll('button')]
+        .map(action => ({ type: action.type, label: action.getAttribute('aria-label') })),
+    };
+  });
+  assert(copyFailure.label.includes('コピーできませんでした'));
+  assert(copyFailure.actions.every(action => action.type === 'button' && action.label));
   await page.reload({ waitUntil: 'load' });
   assert.equal(await page.$eval('body', el => el.dataset.mdColorScheme), 'slate');
   await settled(page);
@@ -242,6 +387,100 @@ async function race(page) {
   assert.deepEqual(await page.evaluate(() => window.calls), [false, true]);
   assert.equal(await page.$eval('.docsfw-plantuml svg', el => el.textContent), 'true');
   console.log('theme change during rendering: passed');
+}
+
+async function diagramStateMatrix(page) {
+  await page.goto('about:blank');
+  await page.setContent('<body data-md-color-scheme="default"><main id="docsfw-content">' +
+    '<div class="docsfw-plantuml">@startuml\nA -> B\n@enduml</div>' +
+    '<div class="docsfw-mermaid">flowchart LR\nA --> B</div></main></body>');
+  await page.addStyleTag({ path: path.join(root, 'styles/html/html-style.css') });
+  await page.addStyleTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.css') });
+  await page.evaluate(() => {
+    window.matrix = {};
+    window.matrix.plantuml = new Promise(resolve => { window.matrix.resolvePlantuml = resolve; });
+    window.matrix.mermaid = new Promise(resolve => { window.matrix.resolveMermaid = resolve; });
+    window.docsfwLoadPlantuml = async () => {
+      await window.matrix.plantuml;
+      return { renderToString(lines, ok) {
+        ok('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120"></svg>');
+      } };
+    };
+    window.mermaid = {
+      initialize() {},
+      async render() {
+        await window.matrix.mermaid;
+        return { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="200" viewBox="0 0 400 200"></svg>' };
+      },
+    };
+  });
+  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-svg-download.js') });
+
+  async function states() {
+    return page.$$eval('.docsfw-plantuml, .docsfw-mermaid', blocks => blocks.map(block => {
+      const source = block.querySelector('.docsfw-diagram-source');
+      const host = block.closest('.docsfw-svg-dl-host');
+      return {
+        busy: block.getAttribute('aria-busy'),
+        source: !!source,
+        svg: !!block.querySelector(':scope > svg'),
+        align: source ? getComputedStyle(source).textAlign : '',
+        margin: source ? getComputedStyle(source).margin : '',
+        background: source ? getComputedStyle(source).backgroundColor : '',
+        hatch: getComputedStyle(block).backgroundImage,
+        opacity: getComputedStyle(block).opacity,
+        width: host.getBoundingClientRect().width,
+      };
+    }));
+  }
+
+  const initial = await states();
+  assert(initial.every(item => item.busy === 'true' && item.source && !item.svg && item.align === 'left'),
+    JSON.stringify(initial));
+  assert(initial.every(item => item.margin === '0px' && item.background !== 'rgba(0, 0, 0, 0)' &&
+    item.hatch === 'none' && item.opacity === '1'),
+    JSON.stringify(initial));
+  await page.evaluate(() => window.matrix.resolvePlantuml());
+  await page.waitForSelector('.docsfw-plantuml > svg');
+  const rendering = await states();
+  assert(rendering[0].svg && rendering[1].source && rendering[1].busy === 'true' &&
+    rendering[1].hatch === 'none' && rendering[1].opacity === '1',
+    JSON.stringify(rendering));
+  await page.evaluate(() => window.matrix.resolveMermaid());
+  await page.waitForSelector('.docsfw-mermaid > svg');
+  const diagram = await states();
+  assert(diagram.every(item => item.svg && item.busy === null), JSON.stringify(diagram));
+  const exporting = await page.evaluate(async () => {
+    const original = window.docsfwDiagramTools.renderSvg;
+    const results = [];
+    for (const block of document.querySelectorAll('.docsfw-plantuml, .docsfw-mermaid')) {
+      let release;
+      window.docsfwDiagramTools.renderSvg = () => new Promise(resolve => { release = resolve; });
+      block.closest('.docsfw-svg-dl-host').querySelector('.docsfw-svg-dl').click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      results.push({
+        busy: block.getAttribute('aria-busy'),
+        hatch: getComputedStyle(block).backgroundImage,
+        opacity: getComputedStyle(block).opacity,
+      });
+      release('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>');
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    window.docsfwDiagramTools.renderSvg = original;
+    return results;
+  });
+  assert(exporting.every(item => item.busy === null && item.hatch === 'none' && item.opacity === '1'),
+    JSON.stringify(exporting));
+  await page.evaluate(async () => {
+    for (const block of document.querySelectorAll('.docsfw-plantuml, .docsfw-mermaid')) {
+      await window.docsfwDiagramTools.showSource(block);
+    }
+  });
+  const source = await states();
+  assert(source.every((item, index) => item.source && item.align === 'left' && item.margin === '0px' &&
+    Math.abs(item.width - diagram[index].width) < 1), JSON.stringify({ diagram, source }));
+  console.log('Pandoc PlantUML/Mermaid four-state layout: passed');
 }
 
 async function sequentialAfterDomReady(page) {
@@ -354,6 +593,35 @@ async function mobileTheme(page, url) {
   console.log('narrow viewport theme toggle: passed');
 }
 
+async function initialSourceAlignment(page, url) {
+  await page.setJavaScriptEnabled(false);
+  await page.goto(url, { waitUntil: 'load' });
+  const styles = await page.$$eval('.docsfw-plantuml, .docsfw-mermaid', blocks => blocks.map(block => {
+    const source = block.querySelector('.docsfw-diagram-source');
+    const style = getComputedStyle(source);
+    const figure = block.closest('figure');
+    return {
+      hasSource: !!source,
+      align: style.textAlign,
+      background: style.backgroundColor,
+      border: style.borderStyle,
+      paddingLeft: style.paddingLeft,
+      family: style.fontFamily,
+      lineHeight: style.lineHeight,
+      sourceBorder: style.borderStyle,
+      hostBorder: figure ? getComputedStyle(figure).borderStyle : 'none',
+    };
+  }));
+  assert(styles.length > 0);
+  assert(styles.every(style => style.hasSource && style.align === 'left' && style.background !== 'rgba(0, 0, 0, 0)' &&
+    ((style.hostBorder === 'solid' && style.sourceBorder === 'none') ||
+      (style.hostBorder === 'none' && style.sourceBorder === 'solid')) &&
+    parseFloat(style.paddingLeft) > 0 && /mono|Consolas|Menlo/i.test(style.family) &&
+    style.lineHeight === '19px'),
+  JSON.stringify(styles));
+  console.log('source before diagram rendering: styled and left aligned');
+}
+
 async function main() {
   console.log('Artifacts: ' + output);
   generate();
@@ -367,6 +635,9 @@ async function main() {
     await clipPage.setViewport({ width: 800, height: 600 });
     await clip(clipPage, pathToFileURL(path.join(output, 'clip.html')).href);
     await mobileTheme(clipPage, pathToFileURL(path.join(output, 'theme-mobile.html')).href);
+    const sourcePage = await clipBrowser.newPage();
+    await initialSourceAlignment(sourcePage, pathToFileURL(path.join(output, 'normal.html')).href);
+    await sourcePage.close();
   } finally { await clipBrowser.close(); }
   const browser = await launch();
   const server = http.createServer((req, res) => {
@@ -392,6 +663,7 @@ async function main() {
     await page.setViewport({ width: 1440, height: 1100 });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     await exercise(page, 'http://127.0.0.1:' + server.address().port + '/normal.html', 'http');
+    await diagramStateMatrix(page);
     await race(page);
     await sequentialAfterDomReady(page);
     await engineFailure(page);

@@ -1,14 +1,37 @@
 /* 図ソースは JavaScript 無効時も読める形で残す。SVG 内の明示色は上書きしない。 */
 .docsfw-mermaid, .docsfw-plantuml {
   white-space: pre-wrap;
-  text-align: center;
+  text-align: left;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
   line-height: normal;
   overflow-x: auto;
 }
+/* JavaScript が初回ソース要素へ置き換える前にも、無装飾の生テキストを見せない。 */
+.docsfw-mermaid:not([data-docsfw-view]),
+.docsfw-plantuml:not([data-docsfw-view]) {
+  white-space: pre;
+  font-family: var(--md-code-font-family, Consolas, Menlo, monospace);
+}
 .docsfw-mermaid > svg, .docsfw-plantuml > svg {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
   max-width: 100%;
   height: auto;
+}
+.docsfw-diagram-source {
+  box-sizing: border-box;
+  margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  text-align: left;
+  white-space: pre;
+}
+.docsfw-diagram-source > code {
+  text-align: left;
+  white-space: inherit;
 }
 .docsfw-diagram-measure {
   position: absolute;
@@ -21,20 +44,10 @@
    図はフレックス アイテムとして生ソースの内容幅まで縮む。align-self: stretch で
    描画待ちの間だけ幅いっぱいに広げ、MkDocs (display: block) と見た目を揃える。
    figure の外や MkDocs のように flex コンテナーの外では align-self は無視される。 */
-.docsfw-plantuml[aria-busy="true"] {
+.docsfw-plantuml[aria-busy="true"],
+.docsfw-mermaid[aria-busy="true"] {
   align-self: stretch;
   min-height: 3rem;
-  background-image: linear-gradient(
-    90deg,
-    var(--md-default-fg-color--lightest, var(--docsfw-subtle-bg, #eaeaea)) 25%,
-    transparent 25%,
-    transparent 50%,
-    var(--md-default-fg-color--lightest, var(--docsfw-subtle-bg, #eaeaea)) 50%,
-    var(--md-default-fg-color--lightest, var(--docsfw-subtle-bg, #eaeaea)) 75%,
-    transparent 75%
-  );
-  background-size: 1.5rem 1.5rem;
-  opacity: 0.35;
 }
 .docsfw-diagram--error {
   padding: 0.6rem 0.8rem;

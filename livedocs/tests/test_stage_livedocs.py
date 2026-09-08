@@ -480,7 +480,7 @@ class ConvertCaptionsTest(unittest.TestCase):
         )
         self.assertEqual(
             convert_captions(source),
-            '<figure class="docsfw-figure" markdown="1">\n'
+            '<figure class="docsfw-figure docsfw-diagram-source-host" markdown="1">\n'
             "\n"
             "```mermaid\n"
             "sequenceDiagram\n"
@@ -502,7 +502,10 @@ class ConvertCaptionsTest(unittest.TestCase):
             "CodeBlock: ラベル付き {#fig:sample}\n"
         )
         result = convert_captions(source)
-        self.assertIn('<figure class="docsfw-figure" id="fig:sample" markdown="1">', result)
+        self.assertIn(
+            '<figure class="docsfw-figure docsfw-diagram-source-host" id="fig:sample" markdown="1">',
+            result,
+        )
         self.assertIn(
             '<figcaption class="docsfw-caption" markdown="span">ラベル付き</figcaption>',
             result,
@@ -555,6 +558,65 @@ class ConvertCaptionsTest(unittest.TestCase):
             "つぎの段落。\n"
         )
         self.assertEqual(convert_captions(source), source)
+
+    def test_wraps_plantuml_internal_caption_before_mkdocs_rendering(self):
+        source = (
+            "```plantuml\n"
+            "@startuml テスト\n"
+            "caption 図の見出し\n"
+            "Alice -> Bob\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "つぎの段落。\n"
+        )
+        result = convert_captions(source)
+        self.assertIn(
+            '<figure class="docsfw-figure docsfw-diagram-source-host" markdown="1">',
+            result,
+        )
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">図の見出し</figcaption>',
+            result,
+        )
+        self.assertEqual(result.count("<figure"), 1)
+
+    def test_external_caption_takes_priority_over_plantuml_internal_caption(self):
+        source = (
+            "```plantuml\n"
+            "@startuml\n"
+            "caption 内部の見出し\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "CodeBlock: 外部の見出し\n"
+        )
+        result = convert_captions(source)
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">外部の見出し</figcaption>',
+            result,
+        )
+        self.assertNotIn(">内部の見出し</figcaption>", result)
+        self.assertEqual(result.count("<figure"), 1)
+
+    def test_wraps_consecutive_plantuml_internal_captions(self):
+        source = (
+            "```plantuml\n"
+            "@startuml\n"
+            "caption 1 個目\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "```plantuml\n"
+            "@startmindmap\n"
+            "caption 2 個目\n"
+            "@endmindmap\n"
+            "```\n"
+        )
+        result = convert_captions(source)
+        self.assertEqual(result.count("<figure"), 2)
+        self.assertIn(">1 個目</figcaption>", result)
+        self.assertIn(">2 個目</figcaption>", result)
 
     def test_ignores_caption_separated_from_diagram_by_text(self):
         source = (

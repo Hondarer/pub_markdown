@@ -19,7 +19,7 @@
         (dark ? "Switch to light mode" : "Switch to dark mode");
       button.title = label;
       button.setAttribute("aria-label", label);
-      button.innerHTML = '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">' +
+      button.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2">' +
         (dark ? '<circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12l2 2M4 20l2-2M18 6l2-2"/>' :
           '<path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11Z"/>') + '</svg>';
     }

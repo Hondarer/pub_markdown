@@ -212,23 +212,31 @@ class OverrideHeaderTest(unittest.TestCase):
         with open(links_css, "r", encoding="utf-8") as handle:
             link_css = handle.read()
         for selector in (
-            ".md-header .md-icon > svg",
             ".md-header .md-logo > img",
             ".md-header .md-logo > svg",
-            ".md-header .md-search__icon",
+            '.md-header__button[for="__drawer"] > svg',
         ):
             self.assertRegex(
                 meta_css,
                 re.escape(selector) + r"\s*,?\s*(?:\n|.)*?height:\s*24px",
             )
+        for selector in (
+            ".md-header__option .md-icon > svg",
+            '.md-header__button[for="__search"] > svg',
+            ".md-header .md-search__icon",
+        ):
+            self.assertRegex(
+                meta_css,
+                re.escape(selector) + r"\s*,?\s*(?:\n|.)*?height:\s*20px",
+            )
         self.assertRegex(
             link_css,
             re.escape(".docsfw-header-links .md-header__button img")
-            + r"\s*\{[^}]*height:\s*24px[^}]*width:\s*24px",
+            + r"\s*\{[^}]*height:\s*20px[^}]*width:\s*20px",
         )
 
     def test_mode_doxygen_and_git_icon_buttons_use_four_pixel_padding(self):
-        """24px の右側アイコンだけは既定の 8px より小さい余白を使うこと。"""
+        """20px の右側アイコンだけは既定の 8px より小さい余白を使うこと。"""
         links_css = os.path.join(MKDOCS_DIR, "assets", "docsfw-header-links.css")
         with open(links_css, "r", encoding="utf-8") as handle:
             text = handle.read()
@@ -413,6 +421,25 @@ class HtmlRootFontSizeTest(unittest.TestCase):
         )
         self.assertNotRegex(text, r"html\s*\{[^}]*font-size:\s*137\.5%")
         self.assertNotRegex(text, r"html\s*\{[^}]*font-size:\s*150%")
+
+
+class SearchFormTintTest(unittest.TestCase):
+    """ヘッダー内検索フォームの背景が Pandoc HTML と同じティントであること。"""
+
+    def test_wide_search_form_tint_matches_pandoc(self):
+        """60em 以上のライトは黒 7%、ダークはヘッダー文字色 7% であること。"""
+        with open(PANDOC_CSS, "r", encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertRegex(
+            text,
+            re.escape('[data-md-color-scheme="default"] .md-search__form')
+            + r"\s*\{[^}]*background-color:\s*rgba\(0,\s*0,\s*0,\s*0\.07\)",
+        )
+        self.assertRegex(
+            text,
+            re.escape('[data-md-color-scheme="slate"] .md-search__form')
+            + r"\s*\{[^}]*background-color:\s*color-mix\(in srgb,\s*var\(--md-primary-bg-color\)\s*7%",
+        )
 
 
 class HeaderBorderWidthTest(unittest.TestCase):
