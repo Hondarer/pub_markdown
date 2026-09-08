@@ -589,7 +589,7 @@ mkdocs 側で「概要」や「Abstract」を自動補完することはしま�
 
 ### 見た目の一致
 
-概要タイトルの太字だけを、静的発行と動的発行の両方に同じ規則で追加します。  
+概要タイトルには、通常の見出しと同じテーマ追従色と太字を、静的発行と動的発行の両方に追加します。<br>
 静的発行は `styles/html/html-style.css` の `.abstract-title`、  
 動的発行は `docsfw-pandoc-style.css` の `.md-typeset .abstract-title` です。  
 それ以外の装飾は無く、概要ブロックの本文は通常の段落と同じ見た目になります。

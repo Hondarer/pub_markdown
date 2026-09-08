@@ -4,6 +4,7 @@
 import os
 import sys
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
@@ -22,6 +23,17 @@ def _page(meta):
 
 
 class OnPageContentTest(unittest.TestCase):
+    def test_abstract_title_uses_heading_color(self):
+        """概要タイトルは通常の見出しと同じテーマ追従色であること。"""
+        style = (Path(BIN_DIR).parent / "assets" / "docsfw-pandoc-style.css").read_text(
+            encoding="utf-8"
+        )
+        self.assertRegex(
+            style,
+            r"\.md-typeset \.abstract-title\s*\{"
+            r"[^}]*color:\s*var\(--md-default-fg-color--light\)",
+        )
+
     def test_no_abstract_leaves_html_untouched(self):
         html = "<h1>タイトル</h1>\n<p>本文</p>"
         result = on_page_content(html, _page({}), CONFIG, None)

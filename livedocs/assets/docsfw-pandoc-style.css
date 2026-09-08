@@ -185,8 +185,9 @@ body {
 
 /* bin/livedocs_abstract_hook.py が挿入する概要ブロック。
    pandoc 発行版の ../../styles/html/html-style.css の .abstract-title と
-   同じ太字だけを付け、それ以外は本文と同じ見た目にする。 */
+   同じ見出し色と太字を付け、それ以外は本文と同じ見た目にする。 */
 .md-typeset .abstract-title {
+  color: var(--md-default-fg-color--light);
   font-weight: bold;
 }
 

@@ -101,6 +101,13 @@ class PandocUiContractTest(unittest.TestCase):
             r"[^}]*color:\s*inherit[^}]*opacity:\s*0\.7",
         )
 
+    def test_abstract_title_uses_heading_color(self):
+        """概要タイトルは通常の見出しと同じテーマ追従色であること。"""
+        self.assertRegex(
+            self.style,
+            r"\.abstract-title\s*\{[^}]*color:\s*var\(--docsfw-muted\)",
+        )
+
     def test_breakpoints_match_livedocs(self):
         for marker in (
             "(max-width: 1399px)",
