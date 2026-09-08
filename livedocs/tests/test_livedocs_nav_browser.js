@@ -1,6 +1,6 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
-// 3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあと、
-// ドロワー末尾の下端 12px が残ることを検証する。
+// ドロワーを開いたときに現在文書が中央へ表示されることと、3 ペインから
+// 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -36,11 +36,20 @@ docs = target / 'docs'
 docs.mkdir()
 md = ${JSON.stringify('# Drawer margin\n\n' + headings())}
 (docs / 'index.md').write_text(md, encoding='utf-8')
+section = docs / 'section'
+section.mkdir()
+(section / 'index.md').write_text('# Section\n', encoding='utf-8')
+for index in range(50):
+    (section / f'page-{index:02d}.md').write_text(
+        f'# Page {index:02d}\n\n本文です。\n', encoding='utf-8'
+    )
 vendor_own_assets(str(docs / 'assets'))
 (target / 'mkdocs.yml').write_text("""site_name: Test
 theme:
   name: material
   font: false
+  features:
+    - navigation.indexes
 markdown_extensions:
   - toc:
       permalink: true
@@ -70,7 +79,7 @@ extra_javascript:
     }));
     const page = await browser.newPage();
 
-    async function openDrawerAndScrollEnd() {
+    async function openDrawer() {
       await page.waitForFunction(() => {
         const button = document.querySelector('label.md-header__button[for="__drawer"]');
         return button && getComputedStyle(button).display !== 'none';
@@ -78,6 +87,10 @@ extra_javascript:
       await page.click('label.md-header__button[for="__drawer"]');
       await page.waitForSelector('.docsfw-combined-toc');
       await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
+    async function openDrawerAndScrollEnd() {
+      await openDrawer();
       await page.evaluate(() => {
         const lists = Array.from(document.querySelectorAll('.md-sidebar--primary .md-nav__list'));
         for (const list of lists) {
@@ -118,6 +131,63 @@ extra_javascript:
       assert.ok(data.lastBottom <= data.innerHeight - 11, label + ' last item ' + JSON.stringify(data));
     }
 
+    async function currentPageMetrics() {
+      return page.evaluate(() => {
+        const links = Array.from(document.querySelectorAll(
+          '.md-sidebar--primary .md-nav__link--active[href]'
+        ));
+        const active = links.find(link => !link.closest('.docsfw-combined-toc'));
+        let scrollContainer = active ? active.parentElement : null;
+        while (scrollContainer) {
+          const overflow = getComputedStyle(scrollContainer).overflowY;
+          if ((overflow === 'auto' || overflow === 'scroll') &&
+              scrollContainer.scrollHeight > scrollContainer.clientHeight + 1) break;
+          scrollContainer = scrollContainer.parentElement;
+        }
+        if (!active || !scrollContainer) {
+          return {found: !!active, hasScrollContainer: !!scrollContainer};
+        }
+        const activeRect = active.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        return {
+          found: true,
+          hasScrollContainer: true,
+          text: active.textContent.trim(),
+          activeCenter: (activeRect.top + activeRect.bottom) / 2,
+          containerCenter: (containerRect.top + containerRect.bottom) / 2,
+          scrollTop: scrollContainer.scrollTop,
+          pageScrollY: window.scrollY,
+        };
+      });
+    }
+
+    function assertCurrentPageCentered(data, label) {
+      assert.ok(data.found, label + ' current page ' + JSON.stringify(data));
+      assert.ok(data.hasScrollContainer, label + ' scroll container ' + JSON.stringify(data));
+      assert.equal(data.text, 'Page 25', label + ' selected link ' + JSON.stringify(data));
+      assert.ok(data.scrollTop > 0, label + ' scrollTop ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.activeCenter - data.containerCenter) <= 2,
+        label + ' center ' + JSON.stringify(data));
+      assert.equal(data.pageScrollY, 0, label + ' page scroll ' + JSON.stringify(data));
+    }
+
+    await page.setViewport({width: 1300, height: 900});
+    await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
+    await openDrawer();
+    assertCurrentPageCentered(await currentPageMetrics(), 'reload 1300');
+
+    await page.setViewport({width: 1800, height: 900});
+    await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
+    await page.setViewport({width: 1300, height: 900});
+    await new Promise(resolve => setTimeout(resolve, 400));
+    await openDrawer();
+    assertCurrentPageCentered(await currentPageMetrics(), 'resize 1800 to 1300');
+
+    await page.setViewport({width: 1100, height: 900});
+    await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
+    await openDrawer();
+    assertCurrentPageCentered(await currentPageMetrics(), 'reload 1100');
+
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
@@ -143,7 +213,7 @@ extra_javascript:
     await openDrawerAndScrollEnd();
     assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100');
 
-    console.log('PASS: MkDocs drawer keeps 12px bottom inset after wide-to-mid resize');
+    console.log('PASS: MkDocs drawer centers current page and keeps 12px bottom inset');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

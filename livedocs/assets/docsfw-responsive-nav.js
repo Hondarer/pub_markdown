@@ -10,6 +10,19 @@
   var originalParent = null;
   var originalNextSibling = null;
   var combinedContainer = null;
+  var drawerToggle = null;
+
+  /* ページ内目次も現在見出しへ .md-nav__link--active を付けるため、
+     文書ツリーの現在ページだけを選ぶ。 */
+  function getActivePageLink() {
+    var links = document.querySelectorAll(
+      '.md-sidebar--primary .md-nav__link--active[href]'
+    );
+    for (var i = 0; i < links.length; i++) {
+      if (!links[i].closest('.docsfw-combined-toc')) { return links[i]; }
+    }
+    return null;
+  }
 
   function resolveElements() {
     var nextToc = document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
@@ -29,9 +42,7 @@
      1220px から 1399px の帯は板にならず一覧が 1 本につながるため、従来どおり
      根の一覧の最後へ入れる。 */
   function getPanelList() {
-    var activeLink = document.querySelector(
-      '.md-sidebar--primary .md-nav__link--active'
-    );
+    var activeLink = getActivePageLink();
     if (!activeLink || !activeLink.closest) { return null; }
 
     /* 現在ページ自身が節 (navigation.indexes の索引ページ) の場合、開くのは
@@ -121,6 +132,28 @@
     if (drawer) { drawer.checked = false; }
   }
 
+  /* 中幅では実際のスクロール コンテナーを .md-nav__list へ移しているため、
+     Material が .md-sidebar__scrollwrap に書く初期位置は効かない。
+     Pandoc HTML と同じく、ドロワーを開くたびに現在ページを中央へ出す。 */
+  function revealCurrentPage() {
+    if (wideLayout.matches || !drawerToggle || !drawerToggle.checked) { return; }
+    var activeLink = getActivePageLink();
+    if (!activeLink) { return; }
+    window.requestAnimationFrame(function () {
+      if (drawerToggle && drawerToggle.checked && activeLink.isConnected) {
+        activeLink.scrollIntoView({ block: 'center', behavior: 'auto' });
+      }
+    });
+  }
+
+  function bindDrawerToggle() {
+    var nextToggle = document.getElementById('__drawer');
+    if (nextToggle === drawerToggle) { return; }
+    if (drawerToggle) { drawerToggle.removeEventListener('change', revealCurrentPage); }
+    drawerToggle = nextToggle;
+    if (drawerToggle) { drawerToggle.addEventListener('change', revealCurrentPage); }
+  }
+
   function init() {
     if (!toc || !toc.isConnected) {
       toc = null;
@@ -129,6 +162,7 @@
       combinedContainer = null;
     }
     placeToc();
+    bindDrawerToggle();
   }
 
   [wideLayout, panelLayout].forEach(function (query) {

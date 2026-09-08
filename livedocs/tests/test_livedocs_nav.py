@@ -75,6 +75,24 @@ class CombinedTocPlacementTest(unittest.TestCase):
         )
 
 
+class DrawerInitialPositionTest(unittest.TestCase):
+    """ドロワーを開いたとき、現在の文書を中央へ表示すること。"""
+
+    def test_page_toc_active_link_is_excluded(self):
+        """ページ内目次の現在見出しを、現在の文書と誤認しないこと。"""
+        text = _read(RESPONSIVE_NAV_JS)
+        self.assertIn(".md-nav__link--active[href]", text)
+        self.assertIn("!links[i].closest('.docsfw-combined-toc')", text)
+
+    def test_opening_drawer_centers_the_current_page(self):
+        text = _read(RESPONSIVE_NAV_JS)
+        self.assertIn("addEventListener('change', revealCurrentPage)", text)
+        self.assertIn(
+            "activeLink.scrollIntoView({ block: 'center', behavior: 'auto' })",
+            text,
+        )
+
+
 class DrawerWidthTest(unittest.TestCase):
     """ドロワーでは、一覧の右にスクロール バー以外の空きを作らないこと。"""
 

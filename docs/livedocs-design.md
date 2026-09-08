@@ -1298,6 +1298,11 @@ Pandoc HTML 側の同じ表現は [全文検索・全体ナビゲーション機
 Material がドロワーを閉じるのは遷移のときだけのため、押した見出しがドロワーの背後に隠れたままになります。  
 `docsfw-responsive-nav.js` が目次のリンクの押下を受け、`#__drawer` のチェックを外して閉じます。
 
+ドロワーを開いたときは、現在の文書リンクをスクロール領域の中央へ表示します。  
+連続一覧の帯では、実際のスクロール コンテナーを `.md-sidebar__scrollwrap` から `.md-nav__list` へ移しているため、Material が外側の要素へ設定する初期スクロール位置は反映されません。  
+`docsfw-responsive-nav.js` はページ内目次の現在見出しを除外して現在の文書リンクを選び、Pandoc HTML と同じ `scrollIntoView` の指定で中央へ移します。  
+この処理は連続一覧と階層ごとの板の両方に適用し、ドロワーを開くたびに実行します。
+
 ### 静的発行側の対応
 
 Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw-ui.css` と `docsfw-nav.js` で同じ寸法と操作を実装します。  
