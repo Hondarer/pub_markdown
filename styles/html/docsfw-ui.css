@@ -1017,7 +1017,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     padding: 0 8px 12px 12px;
     background: var(--docsfw-bg);
     color: var(--docsfw-quote);
-    font: 700 14px/21px sans-serif;
+    font: 700 14px/21px 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
   }
   .docsfw-drawer-logo { display: none; }
   /* .docsfw-drawer-title の padding-bottom: 12px に加えて、#docsfw-tree a,

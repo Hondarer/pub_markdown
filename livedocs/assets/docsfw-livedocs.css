@@ -375,6 +375,10 @@
   .md-nav--primary > .md-nav__list {
     flex: 1 1 auto;
     min-height: 0;
+    /* Material の padding-bottom: .4rem は、一覧の末尾に Pandoc HTML には
+       無い 8px の余白を加える。この幅では画面下端の 12px を scrollwrap の
+       inset で別に確保しているため、一覧自身の下余白は持たせない。 */
+    padding-bottom: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
   }

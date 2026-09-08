@@ -109,6 +109,7 @@ extra_javascript:
     async function drawerEndMetrics() {
       return page.evaluate(() => {
         const wrap = document.querySelector('.md-sidebar--primary .md-sidebar__scrollwrap');
+        const rootList = document.querySelector('.md-nav--primary > .md-nav__list');
         const links = document.querySelectorAll('.docsfw-combined-toc a');
         const last = links[links.length - 1];
         const wrapRect = wrap.getBoundingClientRect();
@@ -121,6 +122,7 @@ extra_javascript:
           lastBottom: lastRect ? lastRect.bottom : null,
           lastCount: links.length,
           inlineHeight: wrap.style.height,
+          rootListPaddingBottom: rootList ? getComputedStyle(rootList).paddingBottom : null,
         };
       });
     }
@@ -129,6 +131,10 @@ extra_javascript:
       assert.ok(data.lastCount > 0, label + ' toc ' + JSON.stringify(data));
       assert.ok(Math.abs(data.gapWrap - 12) <= 1.5, label + ' wrap gap ' + JSON.stringify(data));
       assert.ok(data.lastBottom <= data.innerHeight - 11, label + ' last item ' + JSON.stringify(data));
+    }
+
+    function assertContinuousListHasNoBottomPadding(data, label) {
+      assert.equal(data.rootListPaddingBottom, '0px', label + ' list padding ' + JSON.stringify(data));
     }
 
     async function currentPageMetrics() {
@@ -195,14 +201,18 @@ extra_javascript:
     await page.setViewport({width: 1300, height: 900});
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1300');
+    const resizedEnd = await drawerEndMetrics();
+    assertBottomInset(resizedEnd, 'resize 1800 to 1300');
+    assertContinuousListHasNoBottomPadding(resizedEnd, 'resize 1800 to 1300');
 
     await page.setViewport({width: 1300, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
     await new Promise(resolve => setTimeout(resolve, 300));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'reload 1300');
+    const reloadedEnd = await drawerEndMetrics();
+    assertBottomInset(reloadedEnd, 'reload 1300');
+    assertContinuousListHasNoBottomPadding(reloadedEnd, 'reload 1300');
 
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});

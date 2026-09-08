@@ -232,6 +232,15 @@ async function main() {
     assert.equal(Math.round(drawer.width), 320);
     assert.equal(await page.$eval('#docsfw-primary-sidebar', node => Math.round(node.getBoundingClientRect().left)), 0);
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-flat-nav')));
+    assert.deepEqual(await page.$eval('.docsfw-drawer-title', node => {
+      const title = getComputedStyle(node);
+      const tree = getComputedStyle(document.querySelector('#docsfw-tree'));
+      return {
+        fontFamilyMatchesTree: title.fontFamily === tree.fontFamily,
+        fontSize: title.fontSize,
+        lineHeight: title.lineHeight,
+      };
+    }), {fontFamilyMatchesTree: true, fontSize: '14px', lineHeight: '21px'});
 
     // ドロワー表示中でも、ホイールで本文をスクロールできる (MkDocs Material と同じ)。
     assert.equal(await page.evaluate(() => scrollY), 0);

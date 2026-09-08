@@ -198,6 +198,14 @@ class FlatDrawerScrollTest(unittest.TestCase):
             + r"\s*\{[^}]*overflow-y:\s*auto",
         )
 
+    def test_list_does_not_add_bottom_padding(self):
+        """画面下端の余白とは別の一覧内余白を残さないこと。"""
+        self.assertRegex(
+            self._flat_drawer_block(),
+            re.escape(".md-nav--primary > .md-nav__list")
+            + r"\s*\{[^}]*padding-bottom:\s*0",
+        )
+
     def test_title_is_not_sticky(self):
         """見出しは高さを分け合う固定領域にすること。"""
         self.assertRegex(
