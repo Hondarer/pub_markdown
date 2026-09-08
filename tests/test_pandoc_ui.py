@@ -77,6 +77,30 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertNotRegex(dark, r'fill="#4093[Dd][Aa]"')
         self.assertIn('fill="#000000"', light)
 
+    def test_details_switch_icon_matches_material_palette_button(self):
+        """概要／詳細切り替えはテーマ別の無彩色と Material のホバー表現を使うこと。"""
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-details-icon\s*\{[^}]*filter:\s*brightness\(0\)",
+        )
+        self.assertRegex(
+            self.style,
+            r'html\[data-md-color-scheme="slate"\] \.docsfw-details-icon'
+            r"\s*\{[^}]*filter:\s*brightness\(0\) invert\(1\)",
+        )
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-header-button\s*,\s*\.docsfw-header-action > a\s*,"
+            r"\s*#docsfw-theme-toggle\s*\{[^}]*transition:\s*opacity 0\.25s",
+        )
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-header-button:hover\s*,"
+            r"\s*\.docsfw-header-action > a:hover\s*,"
+            r"\s*#docsfw-theme-toggle:hover\s*\{"
+            r"[^}]*color:\s*inherit[^}]*opacity:\s*0\.7",
+        )
+
     def test_breakpoints_match_livedocs(self):
         for marker in (
             "(max-width: 1399px)",
