@@ -40,8 +40,11 @@ section = docs / 'section'
 section.mkdir()
 (section / 'index.md').write_text('# Section\n', encoding='utf-8')
 for index in range(50):
+    body = f'# Page {index:02d}\n\n本文です。\n'
+    if index == 25:
+        body += '\n## Current page heading\n\nページ内目次の確認です。\n'
     (section / f'page-{index:02d}.md').write_text(
-        f'# Page {index:02d}\n\n本文です。\n', encoding='utf-8'
+        body, encoding='utf-8'
     )
 vendor_own_assets(str(docs / 'assets'))
 (target / 'mkdocs.yml').write_text("""site_name: Test
@@ -110,6 +113,7 @@ extra_javascript:
       return page.evaluate(() => {
         const wrap = document.querySelector('.md-sidebar--primary .md-sidebar__scrollwrap');
         const rootList = document.querySelector('.md-nav--primary > .md-nav__list');
+        const toc = document.querySelector('.docsfw-combined-toc');
         const links = document.querySelectorAll('.docsfw-combined-toc a');
         const last = links[links.length - 1];
         const wrapRect = wrap.getBoundingClientRect();
@@ -123,6 +127,7 @@ extra_javascript:
           lastCount: links.length,
           inlineHeight: wrap.style.height,
           rootListPaddingBottom: rootList ? getComputedStyle(rootList).paddingBottom : null,
+          tocMarginTop: toc ? getComputedStyle(toc).marginTop : null,
         };
       });
     }
@@ -131,6 +136,7 @@ extra_javascript:
       assert.ok(data.lastCount > 0, label + ' toc ' + JSON.stringify(data));
       assert.ok(Math.abs(data.gapWrap - 12) <= 1.5, label + ' wrap gap ' + JSON.stringify(data));
       assert.ok(data.lastBottom <= data.innerHeight - 11, label + ' last item ' + JSON.stringify(data));
+      assert.equal(data.tocMarginTop, '0px', label + ' toc margin ' + JSON.stringify(data));
     }
 
     function assertContinuousListHasNoBottomPadding(data, label) {
@@ -177,6 +183,31 @@ extra_javascript:
       assert.equal(data.pageScrollY, 0, label + ' page scroll ' + JSON.stringify(data));
     }
 
+    async function narrowTocMetrics() {
+      return page.evaluate(() => {
+        const toc = document.querySelector('.docsfw-combined-toc');
+        const title = toc && toc.querySelector('.md-nav__title');
+        return {
+          marginTop: toc ? getComputedStyle(toc).marginTop : null,
+          titlePadding: title ? getComputedStyle(title).padding : null,
+        };
+      });
+    }
+
+    async function narrowPanelCursorMetrics() {
+      return page.evaluate(() => {
+        const panel = document.querySelector('.md-nav--primary .md-nav[data-md-level="1"]');
+        const title = panel && panel.querySelector(':scope > .md-nav__title');
+        const icon = title && title.querySelector(':scope > .md-nav__icon');
+        return {
+          titleCursor: title ? getComputedStyle(title).cursor : null,
+          iconCursor: icon ? getComputedStyle(icon).cursor : null,
+          linkDecoration: title && title.querySelector(':scope > a')
+            ? getComputedStyle(title.querySelector(':scope > a')).textDecorationLine : null,
+        };
+      });
+    }
+
     await page.setViewport({width: 1300, height: 900});
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
     await openDrawer();
@@ -193,6 +224,13 @@ extra_javascript:
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
     await openDrawer();
     assertCurrentPageCentered(await currentPageMetrics(), 'reload 1100');
+    assert.deepEqual(await narrowTocMetrics(), {
+      marginTop: '0px', titlePadding: '12px 16px',
+    });
+    await page.hover('.md-nav--primary .md-nav[data-md-level="1"] > .md-nav__title > a');
+    assert.deepEqual(await narrowPanelCursorMetrics(), {
+      titleCursor: 'default', iconCursor: 'pointer', linkDecoration: 'none',
+    });
 
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});

@@ -390,8 +390,11 @@
     button.setAttribute('aria-label', isJa ? 'ナビゲーション' : 'Navigation');
     sidebar.setAttribute('aria-label', isJa ? '文書ナビゲーション' : 'Document navigation');
     sidebar.setAttribute('aria-hidden', wideLayout.matches ? 'false' : 'true');
-    button.addEventListener('click', function () {
+    button.addEventListener('click', function (event) {
       if (document.body.classList.contains('docsfw-nav-open')) { closeDrawer(true); } else { openDrawer(); }
+      /* ポインター操作では MkDocs の label と同じくフォーカス表示を残さない。
+         キーボードが生成する click は detail === 0 なのでフォーカスを維持する。 */
+      if (event.detail > 0) { button.blur(); }
     });
     if (backdrop) { backdrop.addEventListener('click', function () { closeDrawer(true); }); }
     sidebar.addEventListener('click', function (event) {

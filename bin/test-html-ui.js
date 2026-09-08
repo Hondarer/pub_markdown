@@ -227,6 +227,7 @@ async function main() {
     await page.waitForFunction(() => getComputedStyle(document.querySelector('#docsfw-hamburger')).display !== 'none');
     await page.click('#docsfw-hamburger');
     await new Promise(resolve => setTimeout(resolve, 300));
+    assert.notEqual(await page.$eval('#docsfw-hamburger', node => document.activeElement === node), true);
     const drawer = await dimensions(page, '#docsfw-primary-sidebar');
     assert.equal(Math.round(drawer.top), 60);
     assert.equal(Math.round(drawer.width), 320);
@@ -271,7 +272,44 @@ async function main() {
     assert.equal((await dimensions(page, '.docsfw-panel-title')).display, 'block');
     assert.equal((await dimensions(page, '.docsfw-panel-title')).height, 112);
     assert.equal((await dimensions(page, '.docsfw-panel-title')).top, 60);
+    assert.deepEqual(await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title', node => {
+      const title = getComputedStyle(node);
+      const text = node.querySelector('.docsfw-panel-title-text');
+      const textStyle = getComputedStyle(text);
+      const backStyle = getComputedStyle(node.querySelector('.docsfw-nav-back'));
+      return {
+        color: title.color,
+        textColor: textStyle.color,
+        backColor: backStyle.color,
+        textHeight: text.getBoundingClientRect().height,
+        textMarginTop: textStyle.marginTop,
+        whiteSpace: textStyle.whiteSpace,
+        overflow: textStyle.overflow,
+        textOverflow: textStyle.textOverflow,
+      };
+    }), {
+      color: 'rgba(0, 0, 0, 0.54)',
+      textColor: 'rgba(0, 0, 0, 0.54)',
+      backColor: 'rgba(0, 0, 0, 0.54)',
+      textHeight: 21,
+      textMarginTop: '0px',
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    });
+    await page.hover('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text');
+    assert.equal(await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text',
+      node => getComputedStyle(node).textDecorationLine), 'none');
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-nav-panel.docsfw-panel-active')));
+    assert.deepEqual(await page.$eval('#docsfw-page-toc.docsfw-combined-toc', node => {
+      const title = node.querySelector('.docsfw-toc-title');
+      return {
+        marginTop: getComputedStyle(node).marginTop,
+        padding: getComputedStyle(node).padding,
+        titleHeight: title.getBoundingClientRect().height,
+        titlePadding: getComputedStyle(title).padding,
+      };
+    }), {marginTop: '0px', padding: '12px 0px 0px', titleHeight: 45, titlePadding: '12px 16px'});
     // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
     const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';
@@ -295,6 +333,12 @@ async function main() {
     await page.click('.docsfw-nav-panel.docsfw-panel-active .docsfw-nav-back');
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey === 'root'));
 
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
+    assert.equal(await page.$eval('#docsfw-hamburger', node => document.activeElement === node), true);
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.body.classList.contains('docsfw-nav-open'));
+    assert.equal(await page.$eval('#docsfw-hamburger', node => document.activeElement === node), true);
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 

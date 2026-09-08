@@ -306,6 +306,23 @@ class PanelSeparatorTest(unittest.TestCase):
         )
 
 
+class PanelHeaderPointerTest(unittest.TestCase):
+    """狭幅の板見出しで、操作できる要素だけをポインター表示にすること。"""
+
+    def test_only_back_icon_uses_pointer_cursor(self):
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            re.escape(".md-nav--primary .md-nav__title")
+            + r"\s*\{[^}]*cursor:\s*default",
+        )
+        self.assertRegex(
+            text,
+            re.escape(".md-nav--primary .md-nav__title > .md-nav__icon")
+            + r"\s*\{[^}]*cursor:\s*pointer",
+        )
+
+
 class DrawerCloseTest(unittest.TestCase):
     """ドロワーを開いた状態から、外を押しても目次を押しても閉じられること。"""
 
@@ -353,6 +370,14 @@ class CombinedTocStyleTest(unittest.TestCase):
         )
         self.assertIsNotNone(match, "Material と同じ境界の media が無い")
         return match.group(1)
+
+    def test_toc_separator_has_no_outer_gap(self):
+        """最後の文書行とページ内目次の区切り線を空けないこと。"""
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            re.escape(".docsfw-combined-toc") + r"\s*\{[^}]*margin:\s*0",
+        )
 
     def test_nested_toc_navigations_are_static(self):
         block = self._drawer_block()

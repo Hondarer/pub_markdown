@@ -837,7 +837,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   #docsfw-page-toc.docsfw-combined-toc {
-    margin: 16px 0 0;
+    margin: 0;
     padding: 12px 12px 0;
     border-top: 1px solid var(--docsfw-divider);
   }
@@ -926,6 +926,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
   .docsfw-panel-title {
     padding: 60px 16px 12px;
+    color: var(--docsfw-chrome-muted, rgba(0, 0, 0, 0.54));
   }
 
   .docsfw-panel-title-text {
@@ -933,15 +934,25 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   /* インデックス ページを持つフォルダーでは、見出しのフォルダー名部分が
-     そのページへの実リンクになる。既定のリンク色・下線を打ち消し、
-     "<" と同じ色 (--docsfw-quote) で表示する。 */
-  a.docsfw-panel-title-text {
+     そのページへの実リンクになる。#docsfw-tree a の本文色と 8.75px の
+     上余白を打ち消し、MkDocs の板見出しと同じ位置と色で表示する。 */
+  #docsfw-tree a.docsfw-panel-title-text {
+    margin: 0;
     color: inherit;
     text-decoration: none;
   }
 
-  a.docsfw-panel-title-text:hover {
-    text-decoration: underline;
+  #docsfw-tree a.docsfw-panel-title-text:hover { text-decoration: none; }
+
+  .docsfw-panel-title .docsfw-nav-back {
+    color: inherit;
+  }
+
+  /* MkDocs の .md-nav__title と同じく、長い階層名は 1 行の末尾を省略する。 */
+  #docsfw-tree .docsfw-panel-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .docsfw-nav-forward,
@@ -978,6 +989,21 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     padding: 12px 16px;
     line-height: 21px;
     border-top: 1px solid var(--docsfw-divider);
+  }
+
+  /* 外枠の 12px と見出し行の 12px を縦方向だけに重ね、MkDocs の
+     .docsfw-combined-toc と .md-nav__title の構造へそろえる。 */
+  #docsfw-page-toc.docsfw-combined-toc {
+    padding: 12px 0 0;
+  }
+
+  .docsfw-combined-toc .docsfw-toc-title {
+    min-height: 45px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .docsfw-nav-forward {
