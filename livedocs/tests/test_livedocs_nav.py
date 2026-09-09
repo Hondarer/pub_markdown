@@ -51,10 +51,10 @@ class CombinedTocPlacementTest(unittest.TestCase):
         self.assertIn(".md-sidebar--primary .md-nav__link--active", text)
         self.assertIn("closest('.md-nav__list')", text)
 
-    def test_section_index_page_uses_its_own_panel(self):
-        """現在ページ自身が節の索引ページなら、その節の一覧へ入れること。"""
+    def test_section_index_page_uses_the_visible_parent_panel(self):
+        """節の索引ページでも、現在リンクが見える親の一覧へ入れること。"""
         text = _read(RESPONSIVE_NAV_JS)
-        self.assertIn(":scope > nav.md-nav > .md-nav__list", text)
+        self.assertNotIn(":scope > nav.md-nav > .md-nav__list", text)
 
     def test_container_moves_when_the_target_list_changes(self):
         """幅が変わって入れ先が変わったら、器を作り直さず移すこと。"""
@@ -136,6 +136,38 @@ class DrawerWidthTest(unittest.TestCase):
             + re.escape(".md-main__inner > .md-content > .md-content__inner")
             + r"\s*\{[^}]*margin-left:\s*20px\s*!important;"
             + r"[^}]*margin-right:\s*20px\s*!important",
+        )
+
+    def test_narrow_root_panel_matches_pandoc_dimensions(self):
+        """狭幅のルート板はPandocと同じロゴ寸法、行高、アイコン色を使うこと。"""
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            re.escape(".md-nav--primary > .md-nav__title .md-logo > svg")
+            + r"\s*\{[^}]*width:\s*24px;[^}]*height:\s*24px",
+        )
+        self.assertRegex(
+            text,
+            re.escape(
+                ".md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container"
+            )
+            + r"\s*\{[^}]*min-height:\s*48px",
+        )
+        self.assertRegex(
+            text,
+            r'\[data-md-color-scheme="default"\] '
+            + re.escape(".md-nav--primary > .md-nav__title")
+            + r"\s*\{[^}]*background-color:\s*#eaeaea;[^}]*color:\s*#777777",
+        )
+        self.assertRegex(
+            text,
+            re.escape(
+                ".md-nav--primary > .md-nav__list > .md-nav__item"
+                " > .md-nav__container\n  > .md-nav__link > .md-nav__icon"
+            )
+            + r"\s*\{[^}]*color:\s*var\(--md-default-fg-color--light\)"
+            + r"[^}]*font-size:\s*18px[^}]*width:\s*18px\s*!important;"
+            + r"[^}]*height:\s*18px\s*!important",
         )
 
     def test_tablet_content_uses_pandoc_side_margins(self):

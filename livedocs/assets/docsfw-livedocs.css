@@ -269,6 +269,31 @@
    境界は打ち消す相手と一致させるため、docsfw の 1399px ではなく
    Material と同じ 76.234375em を使う。 */
 @media screen and (max-width: 76.234375em) {
+  /* ルート板のロゴ、行、進むアイコンを Pandoc の狭幅パネルへそろえる。 */
+  [data-md-color-scheme="default"] .md-nav--primary > .md-nav__title {
+    background-color: #eaeaea;
+    color: #777777;
+  }
+
+  .md-nav--primary > .md-nav__title .md-logo > img,
+  .md-nav--primary > .md-nav__title .md-logo > svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link,
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container {
+    min-height: 48px;
+  }
+
+  .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__container
+  > .md-nav__link > .md-nav__icon {
+    color: var(--md-default-fg-color--light);
+    font-size: 18px;
+    width: 18px !important;
+    height: 18px !important;
+  }
+
   /* Material は階層見出し全体を戻る操作用の label にするが、戻ることを示す
      ポインター カーソルは実際の戻るアイコン上だけに限定する。 */
   .md-nav--primary .md-nav__title {

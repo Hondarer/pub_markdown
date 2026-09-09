@@ -51,6 +51,8 @@ vendor_own_assets(str(docs / 'assets'))
 theme:
   name: material
   font: false
+  palette:
+    scheme: default
   features:
     - navigation.indexes
 markdown_extensions:
@@ -59,6 +61,7 @@ markdown_extensions:
       toc_depth: 3
 extra_css:
   - assets/docsfw-livedocs.css
+  - assets/docsfw-pandoc-style.css
   - assets/docsfw-header-meta.css
 extra_javascript:
   - assets/docsfw-responsive-nav.js
@@ -237,6 +240,57 @@ extra_javascript:
       }
     }
     await layoutPage.close();
+
+    const narrowRootPage = await browser.newPage();
+    await narrowRootPage.setViewport({width: 520, height: 900});
+    await narrowRootPage.goto(url, {waitUntil: 'domcontentloaded'});
+    const narrowRootMetrics = await narrowRootPage.evaluate(() => {
+      const root = document.querySelector('.md-nav--primary');
+      const title = root.querySelector(':scope > .md-nav__title');
+      const logo = root.querySelector(':scope > .md-nav__title .md-logo svg').getBoundingClientRect();
+      const item = root.querySelector(':scope > .md-nav__list > .md-nav__item--nested');
+      const row = item.querySelector(':scope > .md-nav__container').getBoundingClientRect();
+      const icon = item.querySelector(':scope > .md-nav__container .md-nav__icon');
+      const iconRect = icon.getBoundingClientRect();
+      const iconLabel = icon.parentElement.getBoundingClientRect();
+      const rowStyle = getComputedStyle(item.querySelector(':scope > .md-nav__container'));
+      return {
+        logoWidth: logo.width,
+        logoHeight: logo.height,
+        titleBackground: getComputedStyle(title).backgroundColor,
+        titleColor: getComputedStyle(title).color,
+        itemHeight: item.getBoundingClientRect().height,
+        rowHeight: row.height,
+        rowMinHeight: rowStyle.minHeight,
+        rowPadding: rowStyle.padding,
+        iconColor: getComputedStyle(icon).color,
+        iconWidth: iconRect.width,
+        iconHeight: iconRect.height,
+        iconLabelHeight: iconLabel.height,
+      };
+    });
+    assert.deepEqual(narrowRootMetrics, {
+      logoWidth: 24,
+      logoHeight: 24,
+      titleBackground: 'rgb(234, 234, 234)',
+      titleColor: 'rgb(119, 119, 119)',
+      itemHeight: 49,
+      rowHeight: 48,
+      rowMinHeight: '48px',
+      rowPadding: '12px 16px',
+      iconColor: 'rgba(0, 0, 0, 0.54)',
+      iconWidth: 18,
+      iconHeight: 18,
+      iconLabelHeight: 18,
+    });
+    assert.equal(
+      await narrowRootPage.$eval(
+        '.md-nav--primary > .md-nav__list > .docsfw-combined-toc',
+        node => getComputedStyle(node).display !== 'none'
+      ),
+      true
+    );
+    await narrowRootPage.close();
 
     async function narrowTocMetrics() {
       return page.evaluate(() => {

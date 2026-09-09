@@ -45,14 +45,9 @@
     var activeLink = getActivePageLink();
     if (!activeLink || !activeLink.closest) { return null; }
 
-    /* 現在ページ自身が節 (navigation.indexes の索引ページ) の場合、開くのは
-       その節の板になる。親の一覧ではなく、節が持つ一覧を入れ先にする。 */
-    var activeItem = activeLink.closest('.md-nav__item');
-    var nestedList = activeItem
-      ? activeItem.querySelector(':scope > nav.md-nav > .md-nav__list')
-      : null;
-
-    return nestedList || activeLink.closest('.md-nav__list');
+    /* navigation.indexes の索引ページでも、ドロワーを開いた直後は現在リンクが
+       ある一覧を表示する。子階層へ先回りせず、見えている一覧へ入れる。 */
+    return activeLink.closest('.md-nav__list');
   }
 
   function getTargetList() {
