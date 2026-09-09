@@ -1,6 +1,9 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
 // ドロワーを開いたときに現在文書が中央へ表示されることと、3 ペインから
 // 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
+// 板 (スライド パネル) になる幅では、どの階層の板を見ていてもページ内目次が
+// その板の一覧の続きに並ぶことと、上位の板へ戻してから開き直したドロワーが
+// 横へずれないことも検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -38,7 +41,9 @@ md = ${JSON.stringify('# Drawer margin\n\n' + headings())}
 (docs / 'index.md').write_text(md, encoding='utf-8')
 section = docs / 'section'
 section.mkdir()
-(section / 'index.md').write_text('# Section\n', encoding='utf-8')
+(section / 'index.md').write_text(
+    '# Section\n\n## Section overview\n\n本文です。\n\n## Section details\n\n本文です。\n',
+    encoding='utf-8')
 for index in range(50):
     body = f'# Page {index:02d}\n\n本文です。\n'
     if index == 25:
@@ -343,6 +348,98 @@ extra_javascript:
       titleCursor: 'default', iconCursor: 'pointer', linkDecoration: 'none',
     });
 
+    /* 板になる幅では、表示中の板の一覧の続きにページ内目次が並ぶ。
+       navigation.indexes の索引ページは、現在ページのリンクが 1 つ上の一覧に
+       あるまま、その節自身の板が開いた状態で始まる。板を戻っても目次が
+       表示中の板へ付いてくることを、初期表示と根の板の双方で確認する。 */
+    await page.evaluateOnNewDocument(() => {
+      window.__docsfwVisiblePanel = function () {
+        var nav = document.querySelector('.md-sidebar--primary nav.md-nav--primary');
+        for (;;) {
+          var list = nav.querySelector(':scope > .md-nav__list');
+          if (!list) return nav;
+          var child = null;
+          for (var i = 0; i < list.children.length; i++) {
+            var toggle = list.children[i].querySelector(':scope > input.md-nav__toggle');
+            var panel = list.children[i].querySelector(':scope > nav.md-nav');
+            if (toggle && panel && toggle.checked && toggle.id !== '__toc') child = panel;
+          }
+          if (!child) return nav;
+          nav = child;
+        }
+      };
+    });
+
+    async function panelTocPlacement() {
+      return page.evaluate(() => {
+        const panel = window.__docsfwVisiblePanel();
+        const list = panel.querySelector(':scope > .md-nav__list');
+        const toc = document.querySelector('.docsfw-combined-toc');
+        const links = toc ? toc.querySelectorAll('a[href^="#"]') : [];
+        const rect = links.length ? links[0].getBoundingClientRect() : null;
+        const bounds = panel.getBoundingClientRect();
+        const title = panel.querySelector(':scope > .md-nav__title');
+        return {
+          panelTitle: title ? title.textContent.trim() : 'root',
+          inVisiblePanel: !!toc && toc.parentElement === list,
+          linkCount: links.length,
+          firstLinkInPanel: !!rect && rect.width > 0 &&
+            rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1,
+        };
+      });
+    }
+
+    async function goBackOnePanel() {
+      await page.evaluate(() => {
+        const panel = window.__docsfwVisiblePanel();
+        const back = panel.querySelector(':scope > .md-nav__title > label.md-nav__icon');
+        if (back) back.click();
+      });
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    function assertTocFollowsPanel(data, label) {
+      assert.ok(data.inVisiblePanel, label + ' toc panel ' + JSON.stringify(data));
+      assert.ok(data.linkCount > 0, label + ' toc links ' + JSON.stringify(data));
+      assert.ok(data.firstLinkInPanel, label + ' toc position ' + JSON.stringify(data));
+    }
+
+    await page.setViewport({width: 1100, height: 900});
+    await page.goto(url + 'section/', {waitUntil: 'domcontentloaded'});
+    await openDrawer();
+    const sectionPanelToc = await panelTocPlacement();
+    assert.equal(sectionPanelToc.panelTitle, 'Section', 'index panel ' +
+      JSON.stringify(sectionPanelToc));
+    assertTocFollowsPanel(sectionPanelToc, 'index panel');
+    await goBackOnePanel();
+    const rootPanelToc = await panelTocPlacement();
+    assert.equal(rootPanelToc.panelTitle, 'Test', 'root panel ' + JSON.stringify(rootPanelToc));
+    assertTocFollowsPanel(rootPanelToc, 'root panel');
+
+    /* 上位の板へ戻してからドロワーを閉じ、開き直しても中身が横へずれない。
+       表示していない板は translateX で右へ退避しているため、そこにある
+       現在ページの行へスクロールすると .md-sidebar__scrollwrap が横へ動き、
+       overflow-x: hidden で戻す手段が無くなる。 */
+    await page.setViewport({width: 1100, height: 900});
+    await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
+    await openDrawer();
+    await goBackOnePanel();
+    await page.click('label.md-header__button[for="__drawer"]');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await openDrawer();
+    const reopened = await page.evaluate(() => {
+      const sidebar = document.querySelector('.md-sidebar--primary');
+      const wrap = sidebar.querySelector('.md-sidebar__scrollwrap');
+      const primary = sidebar.querySelector('nav.md-nav--primary');
+      return {
+        scrollLeft: Math.round(wrap.scrollLeft),
+        offset: Math.round(
+          primary.getBoundingClientRect().left - sidebar.getBoundingClientRect().left),
+      };
+    });
+    assert.deepEqual(reopened, {scrollLeft: 0, offset: 0},
+      'reopened drawer ' + JSON.stringify(reopened));
+
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
@@ -372,7 +469,8 @@ extra_javascript:
     await openDrawerAndScrollEnd();
     assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100');
 
-    console.log('PASS: MkDocs drawer centers current page and keeps 12px bottom inset');
+    console.log('PASS: MkDocs drawer centers current page, keeps 12px bottom inset, ' +
+      'merges the page toc into every panel and reopens without shifting');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

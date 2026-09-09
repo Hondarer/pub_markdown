@@ -34,20 +34,40 @@
     }
   }
 
+  /* 表示中の板 (スライド パネル) の nav を返す。
+     Material は約 1220px 未満でナビゲーションを入れ子の板にし、どの板を見せるかは
+     各階層のチェックボックス (.md-nav__toggle) が checked かどうかで決まる。
+     根の板から checked の子板をたどり、行き着いた板が表示中の板になる。
+     現在ページのリンクが属する一覧は、表示中の板の一覧とは限らない。
+     navigation.indexes の索引ページでは、その節自身の板が開いた状態で始まり、
+     リンクは 1 つ上の一覧にある。戻る操作でも表示中の板だけが変わる。 */
+  function getVisiblePanelNav() {
+    var nav = document.querySelector('.md-sidebar--primary nav.md-nav--primary');
+    while (nav) {
+      var list = nav.querySelector(':scope > .md-nav__list');
+      if (!list) { return nav; }
+      var child = null;
+      for (var i = 0; i < list.children.length; i++) {
+        var toggle = list.children[i].querySelector(':scope > input.md-nav__toggle');
+        var panel = list.children[i].querySelector(':scope > nav.md-nav');
+        /* __toc は現在ページの行に付くページ内目次の開閉で、板ではない。
+           重なった場合は後ろの要素が上に描かれるため、最後の checked を採る。 */
+        if (toggle && panel && toggle.checked && toggle.id !== '__toc') { child = panel; }
+      }
+      if (!child) { return nav; }
+      nav = child;
+    }
+    return nav;
+  }
+
   /* 目次を入れる一覧を決める。
-     Material は約 1220px 未満でナビゲーションを入れ子の板にし、ドロワーを
-     開くと現在ページが属する板を表示する。根の一覧へ入れた目次は表示中の板の
-     背面に回り、見出しだけが板の行に重なって見える。この幅では、現在ページの
-     リンクが属する一覧 (= 表示中の板の一覧) を入れ先にする。
+     根の一覧へ入れた目次は表示中の板の背面に回り、見出しだけが板の行に重なって
+     見える。板になる幅では、表示中の板の一覧を入れ先にする。
      1220px から 1399px の帯は板にならず一覧が 1 本につながるため、従来どおり
      根の一覧の最後へ入れる。 */
   function getPanelList() {
-    var activeLink = getActivePageLink();
-    if (!activeLink || !activeLink.closest) { return null; }
-
-    /* navigation.indexes の索引ページでも、ドロワーを開いた直後は現在リンクが
-       ある一覧を表示する。子階層へ先回りせず、見えている一覧へ入れる。 */
-    return activeLink.closest('.md-nav__list');
+    var nav = getVisiblePanelNav();
+    return nav ? nav.querySelector(':scope > .md-nav__list') : null;
   }
 
   function getTargetList() {
@@ -127,17 +147,36 @@
     if (drawer) { drawer.checked = false; }
   }
 
+  /* ドロワーは横方向へスクロールしない。表示していない板は translateX で
+     右へ退避しているだけのため、.md-sidebar__scrollwrap の scrollWidth は
+     板の枚数だけ横に広い。何かの拍子に横位置が動くと、overflow-x: hidden で
+     スクロール バーが出ず、利用者には戻す手段が無い。常に左端へ戻す。 */
+  function resetHorizontalScroll() {
+    var wrap = document.querySelector('.md-sidebar--primary .md-sidebar__scrollwrap');
+    if (wrap && wrap.scrollLeft !== 0) { wrap.scrollLeft = 0; }
+  }
+
   /* 中幅では実際のスクロール コンテナーを .md-nav__list へ移しているため、
      Material が .md-sidebar__scrollwrap に書く初期位置は効かない。
-     Pandoc HTML と同じく、ドロワーを開くたびに現在ページを中央へ出す。 */
+     Pandoc HTML と同じく、ドロワーを開くたびに現在ページを中央へ出す。
+     板になる幅では、表示中の板に現在ページの行が無いことがある。上位の板へ
+     戻してからドロワーを開き直した場合がこれで、行は右へ退避した板の中に
+     ある。そこへ scrollIntoView すると横スクロールが起き、ドロワーの中身が
+     左へずれたまま戻らない。現在ページの行が表示中の板にあるときだけ
+     中央へ出す。Pandoc HTML の openDrawer が表示中の板の中の現在行だけを
+     選ぶ動作と同じにそろえる。 */
   function revealCurrentPage() {
     if (wideLayout.matches || !drawerToggle || !drawerToggle.checked) { return; }
     var activeLink = getActivePageLink();
     if (!activeLink) { return; }
+    if (panelLayout.matches && activeLink.closest('.md-nav__list') !== getPanelList()) {
+      resetHorizontalScroll();
+      return;
+    }
     window.requestAnimationFrame(function () {
-      if (drawerToggle && drawerToggle.checked && activeLink.isConnected) {
-        activeLink.scrollIntoView({ block: 'center', behavior: 'auto' });
-      }
+      if (!drawerToggle || !drawerToggle.checked || !activeLink.isConnected) { return; }
+      activeLink.scrollIntoView({ block: 'center', behavior: 'auto' });
+      resetHorizontalScroll();
     });
   }
 
@@ -169,6 +208,17 @@
   });
 
   document.addEventListener('click', closeDrawerFromToc);
+
+  /* 板の出し入れはチェックボックスの状態変化で起きる。change は文書まで
+     上がるため、ここで受けて目次を新しい表示中の板へ移す。
+     Pandoc HTML (docsfw-nav.js の setActivePanel) と同じく、どの階層の板を
+     見ていてもファイル単位の目次に続けてページ内目次を出す。 */
+  document.addEventListener('change', function (event) {
+    var target = event.target;
+    if (!target || !target.classList) { return; }
+    if (!target.classList.contains('md-nav__toggle') || target.id === '__toc') { return; }
+    placeToc();
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
