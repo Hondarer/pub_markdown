@@ -86,6 +86,24 @@ async function main() {
     await page.goto(pathToFileURL(path.join(output, 'current.html')).href);
     await page.waitForSelector('.docsfw-flat-nav');
 
+    for (const width of [730, 1302, 1770]) {
+      await page.setViewport({ width, height: 900 });
+      const content = await page.$eval('.docsfw-main-content', node => {
+        const rect = node.getBoundingClientRect();
+        const heading = node.querySelector('h1').getBoundingClientRect();
+        return { top: heading.top, left: rect.left, right: rect.right };
+      });
+      assert.ok(Math.abs(content.top - 88) <= 1,
+        width + 'px content top ' + JSON.stringify(content));
+      if (width <= 767) {
+        assert.ok(Math.abs(content.left - 20) <= 1,
+          width + 'px content left ' + JSON.stringify(content));
+        assert.ok(Math.abs(content.right - (width - 20)) <= 1,
+          width + 'px content right ' + JSON.stringify(content));
+      }
+    }
+    await page.setViewport({ width: 1700, height: 900 });
+
     assert.equal((await dimensions(page, '.docsfw-header')).height, 48);
     assert(['flex', 'inline-flex'].includes((await dimensions(page, '.docsfw-logo')).display));
     assert.equal((await dimensions(page, '#docsfw-hamburger')).display, 'none');
@@ -122,10 +140,9 @@ async function main() {
     assert.equal(await toggles[1].evaluate(node => document.getElementById(node.getAttribute('aria-controls')).hidden), false);
     await page.keyboard.press('Space');
     assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
-    // position: sticky はスクロールで自然配置が閾値 (60px) を超えるまで固定されない。
-    // margin-top: -10px を含む自然配置は 70px で、固定後 (60px) と異なるのが正しい
-    // (下の scrollTo(0, 700) 後の同じアサーションと比較)。
-    assert.equal((await dimensions(page, '#TOC')).top, 70);
+    // 本文上端を MkDocs とそろえたため、ナビゲーションも初期表示から
+    // position: sticky の固定位置 (60px) に達する。
+    assert.equal((await dimensions(page, '#TOC')).top, 60);
     assert.equal(Math.round((await dimensions(page, '#TOC')).width * 100) / 100, 306.22);
     assert.equal(Math.round(await page.$eval('#TOC', node => node.getBoundingClientRect().right) * 100) / 100, 1643.11);
     assert.equal(Math.round((await dimensions(page, '#docsfw-primary-sidebar')).width * 100) / 100, 351.22);

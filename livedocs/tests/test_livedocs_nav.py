@@ -113,6 +113,48 @@ class DrawerWidthTest(unittest.TestCase):
             + r"\s*\{[^}]*scrollbar-gutter:\s*auto",
         )
 
+    def test_content_starts_immediately_below_the_header(self):
+        """1 列表示でも3列表示と同じ本文上端を使うこと。"""
+        block = self._docsfw_drawer_block()
+        self.assertRegex(
+            block,
+            re.escape(".md-main__inner > .md-content > .md-content__inner")
+            + r"\s*\{[^}]*padding-top:\s*0",
+        )
+        self.assertRegex(
+            block,
+            re.escape(".md-main__inner")
+            + r"\s*\{[^}]*margin-top:\s*0",
+        )
+
+    def test_phone_content_uses_pandoc_side_margins(self):
+        """767px以下の本文はPandocと同じ左右20pxを使うこと。"""
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            r"@media screen and \(max-width:\s*767px\)\s*\{[\s\S]*?"
+            + re.escape(".md-main__inner > .md-content > .md-content__inner")
+            + r"\s*\{[^}]*margin-left:\s*20px\s*!important;"
+            + r"[^}]*margin-right:\s*20px\s*!important",
+        )
+
+    def test_tablet_content_uses_pandoc_side_margins(self):
+        """768pxから929pxの本文はPandocと同じ左右30pxを使うこと。"""
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*768px\) and \(max-width:\s*929px\)"
+            r"\s*\{[\s\S]*?\.md-main__inner\s*\{[^}]*max-width:\s*none",
+        )
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*768px\) and \(max-width:\s*929px\)"
+            r"\s*\{[\s\S]*?"
+            + re.escape(".md-main__inner > .md-content > .md-content__inner")
+            + r"\s*\{[^}]*margin-left:\s*30px\s*!important;"
+            + r"[^}]*margin-right:\s*30px\s*!important",
+        )
+
     def test_inner_has_no_side_padding(self):
         """3 ペイン用の 10px は、ドロワーでは一覧と縁の間の空きになる。"""
         block = self._docsfw_drawer_block()

@@ -183,6 +183,61 @@ extra_javascript:
       assert.equal(data.pageScrollY, 0, label + ' page scroll ' + JSON.stringify(data));
     }
 
+    async function bodyStartMetrics(targetPage) {
+      return targetPage.evaluate(() => {
+        const header = document.querySelector('.md-header').getBoundingClientRect();
+        const headerInner = document.querySelector('.md-header__inner').getBoundingClientRect();
+        const drawerIcon = document.querySelector('.md-header__button[for="__drawer"] svg')
+          .getBoundingClientRect();
+        const headerTitle = document.querySelector('.md-header__title').getBoundingClientRect();
+        const mainNode = document.querySelector('.md-main__inner');
+        const innerNode = document.querySelector('.md-content__inner');
+        const main = mainNode.getBoundingClientRect();
+        const content = innerNode.getBoundingClientRect();
+        return {
+          headerBottom: header.bottom,
+          headerInnerLeft: headerInner.left,
+          drawerIconLeft: drawerIcon.left,
+          headerTitleLeft: headerTitle.left,
+          mainTop: main.top,
+          mainMarginTop: getComputedStyle(mainNode).marginTop,
+          contentPaddingTop: getComputedStyle(innerNode).paddingTop,
+          contentLeft: content.left,
+          contentRight: content.right,
+        };
+      });
+    }
+
+    const layoutPage = await browser.newPage();
+    for (const width of [360, 767, 768, 900, 922, 929, 930, 1100, 1219, 1220, 1399, 1400, 1700]) {
+      await layoutPage.setViewport({width, height: 900});
+      await layoutPage.goto(url, {waitUntil: 'domcontentloaded'});
+      const metrics = await bodyStartMetrics(layoutPage);
+      assert.equal(metrics.mainMarginTop, '0px', width + 'px main margin ' + JSON.stringify(metrics));
+      assert.equal(metrics.contentPaddingTop, '0px', width + 'px content padding ' + JSON.stringify(metrics));
+      assert.ok(Math.abs(metrics.mainTop - metrics.headerBottom) <= 1,
+        width + 'px content start ' + JSON.stringify(metrics));
+      if (width <= 767) {
+        assert.ok(Math.abs(metrics.contentLeft - 20) <= 1,
+          width + 'px content left ' + JSON.stringify(metrics));
+        assert.ok(Math.abs(metrics.contentRight - (width - 20)) <= 1,
+          width + 'px content right ' + JSON.stringify(metrics));
+      } else if (width <= 929) {
+        assert.ok(Math.abs(metrics.contentLeft - 30) <= 1,
+          width + 'px content left ' + JSON.stringify(metrics));
+        assert.ok(Math.abs(metrics.contentRight - (width - 30)) <= 1,
+          width + 'px content right ' + JSON.stringify(metrics));
+        const headerLeft = Math.max(0, (width - 902) / 2);
+        assert.ok(Math.abs(metrics.headerInnerLeft - headerLeft) <= 1,
+          width + 'px header left ' + JSON.stringify(metrics));
+        assert.ok(Math.abs(metrics.drawerIconLeft - (headerLeft + 16)) <= 1,
+          width + 'px drawer icon left ' + JSON.stringify(metrics));
+        assert.ok(Math.abs(metrics.headerTitleLeft - (headerLeft + 72)) <= 1,
+          width + 'px header title left ' + JSON.stringify(metrics));
+      }
+    }
+    await layoutPage.close();
+
     async function narrowTocMetrics() {
       return page.evaluate(() => {
         const toc = document.querySelector('.docsfw-combined-toc');

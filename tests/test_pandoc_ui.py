@@ -38,6 +38,7 @@ class PandocUiContractTest(unittest.TestCase):
     def test_header_and_drawer_share_current_dimensions(self):
         self.assertIn("--docsfw-header-body-height: 48px", self.style)
         self.assertIn("--docsfw-header-height: 60px", self.style)
+        self.assertIn("padding-top: calc(var(--docsfw-header-height) + 8px)", self.style)
         self.assertIn("scroll-margin-top: 84px", self.style)
         self.assertIn("--docsfw-drawer-width: min(80vw, 320px)", self.ui_style)
         self.assertIn("height: calc(100dvh - var(--docsfw-header-height))", self.ui_style)

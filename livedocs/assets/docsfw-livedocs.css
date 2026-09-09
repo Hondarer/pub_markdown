@@ -117,6 +117,12 @@
   .md-main__inner > .md-content > .md-content__inner {
     margin-left: 16px !important;
     margin-right: 16px !important;
+    /* 3 列表示と同じく、ヘッダー自身が持つ 12px の背景帯だけを先頭余白にする。 */
+    padding-top: 0;
+  }
+
+  .md-main__inner {
+    margin-top: 0;
   }
 
   /* Material 自身のドロワーは max-width: 76.2344em (既定フォントで約 1220px) で
@@ -414,6 +420,26 @@
 
   .md-nav--primary .md-nav__link[for="__toc"] + .md-nav__link {
     display: flex;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .md-main__inner > .md-content > .md-content__inner {
+    margin-left: 20px !important;
+    margin-right: 20px !important;
+  }
+}
+
+/* Pandoc は 768px 以上で body の左右に 30px を確保し、930px で本文幅が
+   上限の 870px に達する。この範囲だけ同じ余白と幅の関係にする。 */
+@media screen and (min-width: 768px) and (max-width: 929px) {
+  .md-main__inner {
+    max-width: none;
+  }
+
+  .md-main__inner > .md-content > .md-content__inner {
+    margin-left: 30px !important;
+    margin-right: 30px !important;
   }
 }
 

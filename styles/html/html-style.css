@@ -1275,9 +1275,9 @@ pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docs
 }
 
 body {
-  /* mkdocs (docsfw-livedocs.css の .md-content__inner + h1 の margin-top)
-     の実測の余白 (20px) に合わせる。 */
-  padding-top: calc(var(--docsfw-header-height) + 20px);
+  /* MkDocs と同じ本文見出し位置にする。h1 自身の 20px と合わせると、
+     ヘッダー下端から見出し上端まで 28px になる。 */
+  padding-top: calc(var(--docsfw-header-height) + 8px);
 }
 
 .docsfw-header {
