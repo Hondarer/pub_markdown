@@ -1172,14 +1172,13 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 }
 
-/* Match Material's navigation spacing at its root font-size breakpoints. */
+/* Material のナビゲーション間隔を px 化した値。
+   .md-nav__list の padding: 0 .6rem と .md-sidebar__scrollwrap の margin: 0 .2rem に対応する。
+   動的発行は assets/docsfw-pandoc-style.css で Material の 100em / 125em の
+   ルート font-size 拡大を打ち消し、画面幅によらず 1rem = 20px に固定する。
+   ここで画面幅ごとに値を変えると、広幅時に左右の目次の開始座標が
+   動的発行と 1.6px ずれるため、メディア クエリで変化させない。 */
 :root { --docsfw-nav-indent: 12px; --docsfw-nav-gutter: 4px; }
-@media (min-width: 1600px) {
-  :root { --docsfw-nav-indent: 13.2px; --docsfw-nav-gutter: 4.4px; }
-}
-@media (min-width: 2000px) {
-  :root { --docsfw-nav-indent: 14.4px; --docsfw-nav-gutter: 4.8px; }
-}
 
 .docsfw-nav-toggle {
   display: inline-flex;

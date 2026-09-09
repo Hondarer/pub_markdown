@@ -854,7 +854,9 @@ Material は `main.css` の `body` でこの 2 つを定義し、`aside, body, i
 
 Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (100em) 以上で 137.5%、2000px (125em) 以上で 150% へ上げます。  
 この拡大を残すと、`.md-top` など rem のまま残る部品が pandoc 発行版より大きくなります。  
-`assets/docsfw-pandoc-style.css` は同じメディア クエリで `html { font-size: 125% }` を再指定し、画面幅によらず 1rem = 20px に固定します。
+`assets/docsfw-pandoc-style.css` は同じメディア クエリで `html { font-size: 125% }` を再指定し、画面幅によらず 1rem = 20px に固定します。  
+静的発行の `styles/html/docsfw-ui.css` も、ナビゲーションの字下げと左右余白 (`--docsfw-nav-indent`、`--docsfw-nav-gutter`) を画面幅によらず 12px と 4px に固定します。  
+静的発行側だけを画面幅で拡大すると、1600px 以上で左右の目次の開始座標が動的発行と 1.6px ずれます。
 
 ### 色の対応
 
