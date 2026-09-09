@@ -173,6 +173,13 @@ class OverrideHeaderTest(unittest.TestCase):
             # 値は :root の変数で 1 か所に持つ。
             (":root", "--docsfw-header-height", "60px"),
             (".md-sidebar", "top", "var(--docsfw-header-height)"),
+            # 見出しのアンカー移動後の上端位置と、目次の現在項目を決める
+            # 判定線。判定線は着地位置より下に置き、引き上げ量はその差から
+            # 求める。詳細は docsfw-header-meta.css の該当節を参照。
+            (":root", "--docsfw-anchor-top", "84px"),
+            (":root", "--docsfw-anchor-line", "88px"),
+            (".md-typeset :target", "--md-scroll-margin", "var(--docsfw-anchor-top)"),
+            (".md-main", "padding-top", "var(--docsfw-main-lift)"),
         ):
             self.assertRegex(
                 declarations,
@@ -185,8 +192,9 @@ class OverrideHeaderTest(unittest.TestCase):
             )
         self.assertRegex(
             declarations,
-            re.escape(".md-typeset :target")
-            + r"\s*\{[^}]*--md-scroll-margin:\s*84px",
+            re.escape(".md-main")
+            + r"\s*\{[^}]*margin-top:\s*"
+            + re.escape("calc(-1 * var(--docsfw-main-lift))"),
         )
 
     def test_header_title_always_shows_the_document_title(self):

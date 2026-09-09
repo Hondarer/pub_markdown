@@ -1318,6 +1318,15 @@ Pandoc HTML 側の同じ表現は [全文検索・全体ナビゲーション機
 Material がドロワーを閉じるのは遷移のときだけのため、押した見出しがドロワーの背後に隠れたままになります。  
 `docsfw-responsive-nav.js` が目次のリンクの押下を受け、`#__drawer` のチェックを外して閉じます。
 
+ページ内目次の現在項目は、見出しの上端が判定線より上にあるかどうかで決まります。  
+Material はこの判定線を、ヘッダーの高さ + 0.8 x (`.md-main__inner` と `.md-main` の上端の差) で求めます。  
+既定では本文の上余白 1.5rem がこの差を作りますが、docsfw は本文をヘッダー直後から始めるため差が 0 になり、判定線がヘッダーの下端と重なります。  
+アンカーで移動した見出しは `--md-scroll-margin` の 84px に着地するため判定線より下に残り、1 つ前の見出しが現在項目のままになります。  
+`assets/docsfw-header-meta.css` で `.md-main` の上端だけを引き上げ、同じ量の `padding-top` で `.md-main__inner` の位置を戻します。  
+表示と文書の高さは変えずに差だけを作り、判定線を 88px へ下げます。  
+判定線は着地位置より下に置きます。Material は h1 から h3 の `:target` にだけ `--md-scroll-offset` の戻しを入れるため、着地位置は最大で `--md-scroll-margin` と等しくなります。  
+Pandoc HTML の `docsfw-nav.js` は上端 84px 以下を現在位置とし、境界を含めます。MkDocs 側は境界を含めないため、判定線を 4px 下へ置いてそろえます。
+
 ドロワーを開いたときは、現在の文書リンクをスクロール領域の中央へ表示します。  
 連続一覧の帯では、実際のスクロール コンテナーを `.md-sidebar__scrollwrap` から `.md-nav__list` へ移しているため、Material が外側の要素へ設定する初期スクロール位置は反映されません。  
 `docsfw-responsive-nav.js` はページ内目次の現在見出しを除外して現在の文書リンクを選び、Pandoc HTML と同じ `scrollIntoView` の指定で中央へ移します。  

@@ -4,6 +4,8 @@
 // 板 (スライド パネル) になる幅では、どの階層の板を見ていてもページ内目次が
 // その板の一覧の続きに並ぶことと、上位の板へ戻してから開き直したドロワーが
 // 横へずれないことも検証する。
+// 見出しのアンカーへ移動したとき、目次の現在項目がその見出しになることも
+// 検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -440,6 +442,37 @@ extra_javascript:
     assert.deepEqual(reopened, {scrollLeft: 0, offset: 0},
       'reopened drawer ' + JSON.stringify(reopened));
 
+    /* 見出しのアンカーへ移動したとき、目次の現在項目がその見出しになる。
+       Material は見出しの上端が判定線より上にあるかどうかで現在項目を決める。
+       判定線が着地位置より上にあると、1 つ前の見出しが現在項目のまま残る。 */
+    async function anchoredTocMetrics() {
+      return page.evaluate(() => {
+        const toc = document.querySelector('.docsfw-combined-toc') ||
+          document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
+        const target = document.getElementById('heading-20');
+        const header = document.querySelector('.md-header').getBoundingClientRect();
+        return {
+          active: Array.from(toc.querySelectorAll('a.md-nav__link--active'))
+            .map(node => node.textContent.trim()),
+          targetTop: Math.round(target.getBoundingClientRect().top),
+          headerBottom: Math.round(header.bottom),
+        };
+      });
+    }
+
+    for (const width of [1100, 1500]) {
+      await page.setViewport({width, height: 900});
+      await page.goto(url, {waitUntil: 'domcontentloaded'});
+      await page.waitForSelector('.md-sidebar--primary');
+      await page.goto(url + '#heading-20', {waitUntil: 'domcontentloaded'});
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const anchored = await anchoredTocMetrics();
+      assert.deepEqual(anchored.active, ['Heading 20'],
+        width + 'px anchor active ' + JSON.stringify(anchored));
+      assert.ok(anchored.targetTop > anchored.headerBottom,
+        width + 'px anchor landing ' + JSON.stringify(anchored));
+    }
+
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
@@ -470,7 +503,8 @@ extra_javascript:
     assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100');
 
     console.log('PASS: MkDocs drawer centers current page, keeps 12px bottom inset, ' +
-      'merges the page toc into every panel and reopens without shifting');
+      'merges the page toc into every panel, reopens without shifting ' +
+      'and marks the anchored heading as current');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

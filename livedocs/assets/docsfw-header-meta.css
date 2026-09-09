@@ -185,8 +185,41 @@
    合計として rem で書かれている。本文の文字サイズは px で固定済みのため、
    ここだけが画面幅で伸びないよう固定する。
    60px (ヘッダーの高さ) + 24px (余白) = 84px。 */
+:root {
+  --docsfw-anchor-top: 84px;
+}
+
 .md-typeset :target {
-  --md-scroll-margin: 84px;
+  --md-scroll-margin: var(--docsfw-anchor-top);
+}
+
+/* 目次の現在位置の判定線を、アンカー移動後の見出しより下へ置く。
+
+   Material は目次の現在項目を、見出しの上端が判定線より上にあるかどうかで
+   決めている (bundle.*.min.js の関数 _s)。判定線は
+   ヘッダーの高さ + 0.8 x (.md-main__inner と .md-main の上端の差)
+   で、既定では本文の上余白 1.5rem がこの差を作る。
+   docsfw は本文をヘッダー直後から始めるためこの差が 0 で、判定線が
+   ヘッダーの下端と重なる。アンカー移動後の見出しは 84px に着地するため
+   判定線より下に残り、1 つ前の見出しが現在項目のままになる。
+
+   .md-main の上端だけを引き上げ、同じ量の padding で .md-main__inner の
+   位置を戻す。表示と文書の高さは変えずに、差だけを作る。
+   引き上げ量 = (判定線 - ヘッダーの高さ) / 0.8。
+   判定線は着地位置より下に置く必要がある。Material は h1 から h3 の
+   :target に --md-scroll-offset で 0.2rem の戻しを入れるが、h5 と h6 には
+   入れないため、着地位置は最大で --md-scroll-margin と等しくなる。
+   Pandoc HTML の docsfw-nav.js は上端 84px 以下を現在位置とし、境界を
+   含める。MkDocs 側は境界を含めないため、判定線を 4px 下へ置いてそろえる。 */
+:root {
+  --docsfw-anchor-line: 88px;
+  --docsfw-main-lift: calc(
+    (var(--docsfw-anchor-line) - var(--docsfw-header-height)) / 0.8);
+}
+
+.md-main {
+  margin-top: calc(-1 * var(--docsfw-main-lift));
+  padding-top: var(--docsfw-main-lift);
 }
 
 /* ヘッダー タイトルは、本文のスクロールに応じてサイト名 (1つ目の
