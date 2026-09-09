@@ -31,7 +31,7 @@ function headings() {
 import pathlib, sys
 root, target = map(pathlib.Path, sys.argv[1:])
 sys.path.insert(0, str(root / 'livedocs/bin'))
-from vendor_assets import vendor_own_assets
+from vendor_assets import vendor_own_assets, vendor_theme
 docs = target / 'docs'
 docs.mkdir()
 md = ${JSON.stringify('# Drawer margin\n\n' + headings())}
@@ -47,9 +47,11 @@ for index in range(50):
         body, encoding='utf-8'
     )
 vendor_own_assets(str(docs / 'assets'))
+vendor_theme(str(target))
 (target / 'mkdocs.yml').write_text("""site_name: Test
 theme:
   name: material
+  custom_dir: theme
   font: false
   palette:
     scheme: default
