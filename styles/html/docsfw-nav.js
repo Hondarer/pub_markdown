@@ -183,7 +183,7 @@
     if (sidebar) { sidebar.classList.toggle('docsfw-child-panel-active', activePanelKey !== 'root'); }
   }
 
-  function setActivePanel(key, direction) {
+  function setActivePanel(key, direction, viaKeyboard) {
     if (!panels[key]) { return; }
     activePanelKey = key;
     var sidebar = document.getElementById('docsfw-primary-sidebar');
@@ -197,8 +197,11 @@
       if (active && direction) { nodes[i].classList.add('docsfw-panel-enter-' + direction); }
     }
     placePageToc();
+    /* ポインター操作では、切替後の見出しにフォーカス枠を残さない。
+       キーボード操作 (click の detail === 0) のときだけ見出しへフォーカスし、
+       スクリーン リーダーと目視の双方に遷移先の階層を伝える。 */
     var heading = document.querySelector('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text');
-    if (heading && direction) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
+    if (heading && direction && viaKeyboard) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
   }
 
   function wirePanelButtons(container) {
@@ -213,7 +216,7 @@
       var button = event.target.closest ? event.target.closest('[data-panel-target]') : null;
       if (!button) { return; }
       setActivePanel(button.getAttribute('data-panel-target'),
-        button.classList.contains('docsfw-nav-back') ? 'back' : 'forward');
+        button.classList.contains('docsfw-nav-back') ? 'back' : 'forward', event.detail === 0);
     });
   }
 
