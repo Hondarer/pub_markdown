@@ -1275,6 +1275,8 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
 
 1400px 以上の左ナビ (中間 3 列と 3 列 PC) は `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
+1400px 以上の左右ナビの内容下端は、`.md-sidebar__inner` の `padding-bottom: 24px` で Pandoc HTML の `.well` とそろえます。  
+Material の `.md-sidebar__scrollwrap` は親 `.md-sidebar` の下余白を覆うため、スクロール内容側に余白を持たせます。  
 1400px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
 同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。  
 下端にも同じ 12px を置きます。これが無いと一覧の最後の項目が画面の下端に接します。  

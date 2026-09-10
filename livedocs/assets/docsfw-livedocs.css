@@ -109,6 +109,15 @@
   }
 }
 
+/* Material の scrollwrap は親 sidebar の下余白まで覆うため、Pandoc HTML の
+   左右ナビと同じ 24px をスクロール内容側に置く。 */
+@media screen and (min-width: 1400px) {
+  .md-sidebar--primary .md-sidebar__inner,
+  .md-sidebar--secondary .md-sidebar__inner {
+    padding-bottom: 24px;
+  }
+}
+
 @media screen and (max-width: 1399px) {
   .md-grid {
     max-width: 902px;

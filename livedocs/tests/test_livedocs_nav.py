@@ -237,6 +237,21 @@ class IntermediateThreeColumnTest(unittest.TestCase):
         )
 
 
+class WideSidebarBottomSpacingTest(unittest.TestCase):
+    """1400px 以上の左右ナビは Pandoc と同じ下端余白を持つこと。"""
+
+    def test_sidebar_inner_has_pandoc_bottom_spacing(self):
+        text = _read(LIVEDOCS_CSS)
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*1400px\)\s*\{[\s\S]*?"
+            + re.escape(".md-sidebar--primary .md-sidebar__inner,")
+            + r"\s*"
+            + re.escape(".md-sidebar--secondary .md-sidebar__inner")
+            + r"\s*\{[^}]*padding-bottom:\s*24px",
+        )
+
+
 class FlatDrawerScrollTest(unittest.TestCase):
     """連続一覧のドロワーで、スクロール バーが見出しの下から始まること。
 

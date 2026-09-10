@@ -1,6 +1,8 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
 // ドロワーを開いたときに現在文書が中央へ表示されることと、3 ペインから
 // 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
+// 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 24px が残ることを
+// 検証する。
 // 板 (スライド パネル) になる幅では、どの階層の板を見ていてもページ内目次が
 // その板の一覧の続きに並ぶことと、上位の板へ戻してから開き直したドロワーが
 // 横へずれないことも検証する。
@@ -249,6 +251,56 @@ extra_javascript:
       }
     }
     await layoutPage.close();
+
+    async function wideSidebarEndMetrics(targetPage, sidebarSelector, lastLinkText) {
+      return targetPage.evaluate(async ({sidebarSelector, lastLinkText}) => {
+        const wrap = document.querySelector(sidebarSelector + ' .md-sidebar__scrollwrap');
+        const inner = document.querySelector(sidebarSelector + ' .md-sidebar__inner');
+        const link = Array.from(inner.querySelectorAll('a.md-nav__link'))
+          .find(node => node.textContent.trim() === lastLinkText);
+        const pageScrollBefore = window.scrollY;
+        wrap.scrollTop = wrap.scrollHeight;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const wrapRect = wrap.getBoundingClientRect();
+        const linkRect = link.getBoundingClientRect();
+        return {
+          found: !!link,
+          paddingBottom: getComputedStyle(inner).paddingBottom,
+          bottomGap: wrapRect.bottom - linkRect.bottom,
+          pageScrollBefore,
+          pageScrollAfter: window.scrollY,
+        };
+      }, {sidebarSelector, lastLinkText});
+    }
+
+    function assertWideSidebarEnd(data, label) {
+      assert.ok(data.found, label + ' last link ' + JSON.stringify(data));
+      assert.equal(data.paddingBottom, '24px', label + ' padding ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.bottomGap - 24.5) <= 1.5,
+        label + ' bottom gap ' + JSON.stringify(data));
+      assert.equal(data.pageScrollAfter, data.pageScrollBefore,
+        label + ' page scroll ' + JSON.stringify(data));
+    }
+
+    const widePage = await browser.newPage();
+    for (const width of [1400, 1700]) {
+      await widePage.setViewport({width, height: 900});
+      await widePage.goto(url, {waitUntil: 'domcontentloaded'});
+      await widePage.waitForSelector('.md-sidebar--secondary .md-sidebar__scrollwrap');
+      await widePage.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
+      assertWideSidebarEnd(
+        await wideSidebarEndMetrics(widePage, '.md-sidebar--secondary', 'Heading 40'),
+        width + 'px right sidebar'
+      );
+
+      await widePage.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
+      await widePage.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
+      assertWideSidebarEnd(
+        await wideSidebarEndMetrics(widePage, '.md-sidebar--primary', 'Page 49'),
+        width + 'px left sidebar'
+      );
+    }
+    await widePage.close();
 
     const narrowRootPage = await browser.newPage();
     await narrowRootPage.setViewport({width: 520, height: 900});
@@ -502,9 +554,9 @@ extra_javascript:
     await openDrawerAndScrollEnd();
     assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100');
 
-    console.log('PASS: MkDocs drawer centers current page, keeps 12px bottom inset, ' +
-      'merges the page toc into every panel, reopens without shifting ' +
-      'and marks the anchored heading as current');
+    console.log('PASS: MkDocs wide sidebars keep a 24px bottom gap; drawer centers ' +
+      'the current page, keeps a 12px bottom inset, merges the page toc into every ' +
+      'panel, reopens without shifting and marks the anchored heading as current');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));
