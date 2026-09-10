@@ -590,6 +590,19 @@ blockquote p {
   font-weight: normal;
   line-height: 1.5; }
 
+.docsfw-caption {
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+  text-align: center;
+  line-height: 1.1; }
+
+/* 表のキャプションは表の上に置き、本文カラム幅で折り返す。
+   table の margin-top と相殺されないよう、直後の表の上余白を 0 にする。 */
+.docsfw-table-caption {
+  margin: 12px 0 8px; }
+
+.docsfw-table-caption + table {
+  margin-top: 0; }
+
 .table {
   width: auto;
 }
@@ -597,6 +610,7 @@ blockquote p {
 table {
   padding: 0;
   border-spacing: 0;
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
   font-size: 15px;
   border-collapse: collapse;
   min-width: auto;

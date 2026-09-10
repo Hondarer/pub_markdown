@@ -270,11 +270,15 @@ body {
    `.md-typeset table:not([class])` はこのルールより詳細度が高いため、
    ここで width: auto を指定して上書きし、内容幅に縮められるようにする。 */
 .md-typeset table:not([class]) {
+  border: 0;
   border-collapse: collapse;
   display: table;
   margin: 12px auto;
   width: auto;
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans',
+    'Hiragino Kaku Gothic ProN', sans-serif;
   font-size: 15px;
+  font-feature-settings: normal;
   line-height: 22.5px;
 }
 
@@ -294,7 +298,13 @@ body {
 
 .md-typeset table:not([class]) th {
   font-weight: 400;
+  min-width: 0;
   background-color: var(--md-default-fg-color--lightest);
+}
+
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td {
+  box-sizing: content-box;
 }
 
 .md-typeset table:not([class]) tr {

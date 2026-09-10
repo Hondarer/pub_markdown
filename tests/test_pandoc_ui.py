@@ -1,6 +1,7 @@
 """Pandoc HTML のヘッダーとドロワーに対するソース契約テスト。"""
 
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -16,6 +17,12 @@ class PandocUiContractTest(unittest.TestCase):
         cls.simple = (ROOT / "styles/html/html-simple-template.html").read_text(encoding="utf-8")
         cls.style = (ROOT / "styles/html/html-style.css").read_text(encoding="utf-8")
         cls.ui_style = (ROOT / "styles/html/docsfw-ui.css").read_text(encoding="utf-8")
+        cls.livedocs_style = (ROOT / "livedocs/assets/docsfw-livedocs.css").read_text(
+            encoding="utf-8"
+        )
+        cls.livedocs_pandoc_style = (
+            ROOT / "livedocs/assets/docsfw-pandoc-style.css"
+        ).read_text(encoding="utf-8")
         cls.nav = (ROOT / "styles/html/docsfw-nav.js").read_text(encoding="utf-8")
         cls.publisher = (ROOT / "bin/pub_markdown_core.sh").read_text(encoding="utf-8")
 
@@ -108,6 +115,80 @@ class PandocUiContractTest(unittest.TestCase):
             self.style,
             r"\.abstract-title\s*\{[^}]*color:\s*var\(--docsfw-muted\)",
         )
+
+    def test_table_caption_uses_body_width_and_eight_pixel_gap(self):
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-table-caption\s*\{[^}]*margin:\s*12px 0 8px",
+        )
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-table-caption \+ table\s*\{[^}]*margin-top:\s*0",
+        )
+        self.assertIn(
+            ".docsfw-table-caption + .md-typeset__scrollwrap",
+            self.livedocs_style,
+        )
+        self.assertIn(
+            "> .md-typeset__table > table",
+            self.livedocs_style,
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            r"\.docsfw-caption code\s*\{[^}]*line-height:\s*16\.5px",
+        )
+
+    def test_livedocs_table_cells_match_pandoc_dimensions(self):
+        font_stack = (
+            "font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', "
+            "'Hiragino Kaku Gothic ProN', sans-serif"
+        )
+        self.assertIn(font_stack, re.sub(r"\s+", " ", self.style))
+        self.assertIn(font_stack, re.sub(r"\s+", " ", self.livedocs_style))
+        self.assertIn(font_stack, re.sub(r"\s+", " ", self.livedocs_pandoc_style))
+        table_rule = re.search(
+            r"\.md-typeset table:not\(\[class\]\)\s*\{([^}]*)\}",
+            self.livedocs_pandoc_style,
+        )
+        self.assertIsNotNone(table_rule)
+        self.assertIn("border: 0", table_rule.group(1))
+        self.assertIn("font-feature-settings: normal", table_rule.group(1))
+        self.assertRegex(
+            self.livedocs_pandoc_style,
+            r"table:not\(\[class\]\) th\s*\{[^}]*min-width:\s*0",
+        )
+        self.assertRegex(
+            self.livedocs_pandoc_style,
+            r"table:not\(\[class\]\) th,\s*"
+            r"\.md-typeset table:not\(\[class\]\) td\s*"
+            r"\{[^}]*box-sizing:\s*content-box",
+        )
+
+    def test_table_caption_filter_is_used_only_for_html(self):
+        lines = self.publisher.splitlines()
+        listing_indices = [
+            index for index, line in enumerate(lines)
+            if "pandoc-filters/listing-caption-style.lua" in line
+        ]
+        self.assertEqual(len(listing_indices), 6)
+
+        html_count = 0
+        for index in listing_indices:
+            output_line = next(
+                line for line in lines[index:]
+                if " -t html " in line or " -t docx " in line
+            )
+            has_table_filter = (
+                index + 1 < len(lines)
+                and "pandoc-filters/table-caption-style.lua" in lines[index + 1]
+            )
+            if " -t html " in output_line:
+                html_count += 1
+                self.assertTrue(has_table_filter)
+            else:
+                self.assertFalse(has_table_filter)
+
+        self.assertEqual(html_count, 4)
 
     def test_breakpoints_match_livedocs(self):
         for marker in (

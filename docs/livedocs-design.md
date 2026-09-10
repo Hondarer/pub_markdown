@@ -100,7 +100,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 25 | GitHub アラート 6 種 | 616 | 維持 | `markdown-callouts`。`DEPRECATED` はステージングで変換 |
 | 26 | `+hard_line_breaks` | 371 ファイル | 維持 | `markdown.extensions.nl2br` |
 | 27 | 表 | 789 | 維持 | `tables` 拡張 |
-| 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換。Pandoc がもう 1 つ受け付ける行頭のコロンだけの形式 (`: キャプション`) は対象外とし、`docs/sample/README.md` で非推奨と明記する |
+| 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換し、直前の表の前へ挿入する。Pandoc がもう 1 つ受け付ける行頭のコロンだけの形式 (`: キャプション`) は対象外とし、`docs/sample/README.md` で非推奨と明記する |
 | 29 | `CodeBlock:` キャプション | 68 | 簡略 | PlantUML / Mermaid フェンスの直後にある場合は、フェンスとともに `md_in_html` の `figure` へ包む。それ以外は `.docsfw-caption` の段落にする |
 | 30 | pandoc-crossref の採番と相互参照 | ラベル 22 / 参照 7 | 対象外 | ラベルは id として残す |
 | 31 | 数式 | 51 | 維持 | `pymdownx.arithmatex` と MathJax |

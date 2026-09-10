@@ -2234,6 +2234,7 @@ while ((${#_pending_files[@]} > 0)); do
                             "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
                             "${math_jax_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
@@ -2265,6 +2266,7 @@ while ((${#_pending_files[@]} > 0)); do
                                 "${crossref_metadata_args[@]}" \
                                 "${pandoc_crossref_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
                                 "${math_jax_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
@@ -2741,6 +2743,7 @@ while ((${#_pending_files[@]} > 0)); do
                         "${crossref_metadata_args[@]}" \
                         "${pandoc_crossref_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
                         "${math_jax_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
@@ -2779,6 +2782,7 @@ while ((${#_pending_files[@]} > 0)); do
                             "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
                             "${math_jax_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \

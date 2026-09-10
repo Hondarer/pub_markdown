@@ -546,7 +546,69 @@ class ConvertCaptionsTest(unittest.TestCase):
             "{: .docsfw-caption }\n"
             "\n"
             "表のキャプション\n"
-            "{: .docsfw-caption }\n",
+            "{: .docsfw-caption .docsfw-table-caption }\n",
+        )
+
+    def test_moves_table_caption_before_preceding_table(self):
+        source = (
+            "| 項目 | 値 |\n"
+            "|---|---|\n"
+            "| A | B |\n"
+            "\n"
+            "Table: 表のキャプション\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "表のキャプション\n"
+            "{: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "| 項目 | 値 |\n"
+            "|---|---|\n"
+            "| A | B |\n"
+            "\n",
+        )
+
+    def test_moves_labeled_table_caption_with_id_and_classes(self):
+        source = (
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n"
+            "\n"
+            "Table: ラベル付き {#tbl:sample}\n"
+        )
+        result = convert_captions(source)
+        self.assertTrue(result.startswith(
+            "ラベル付き\n"
+            "{: #tbl:sample .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "| 項目 |\n"
+        ))
+
+    def test_moves_caption_for_table_without_outer_pipes(self):
+        source = "項目 | 値\n---|---\nA | B\n\nTable: 表のキャプション\n"
+        self.assertTrue(convert_captions(source).startswith(
+            "表のキャプション\n"
+            "{: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "項目 | 値\n"
+        ))
+
+    def test_keeps_table_caption_when_preceding_block_is_not_table(self):
+        source = "通常の段落。\n\nTable: 表ではないキャプション\n"
+        self.assertEqual(
+            convert_captions(source),
+            "通常の段落。\n"
+            "\n"
+            "表ではないキャプション\n"
+            "{: .docsfw-caption .docsfw-table-caption }\n",
+        )
+
+    def test_keeps_codeblock_caption_below_table(self):
+        source = "| 項目 |\n|---|\n| A |\n\nCodeBlock: コードのキャプション\n"
+        self.assertEqual(
+            convert_captions(source),
+            "| 項目 |\n|---|\n| A |\n\n"
+            "コードのキャプション\n{: .docsfw-caption }\n",
         )
 
     def test_keeps_diagram_without_caption(self):

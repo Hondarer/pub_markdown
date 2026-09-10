@@ -583,13 +583,44 @@
 .md-typeset .docsfw-caption {
   margin: 8px 0 0;
   color: var(--md-typeset-color);
+  font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans',
+    'Hiragino Kaku Gothic ProN', sans-serif;
   font-size: 16px;
+  font-feature-settings: normal;
   line-height: 1.1;
   text-align: center;
   /* Material の .md-typeset figcaption は italic で、幅を 24rem に絞る。
      pandoc 発行版の figcaption はどちらも持たないため、既定へ戻す。 */
   font-style: normal;
   max-width: none;
+}
+
+/* Material のインライン コードは 22.5px の行高を持つため、キャプションの
+   行ボックスだけが Pandoc HTML より高くならないように同じ寸法へ戻す。 */
+.md-typeset .docsfw-caption code {
+  padding-right: 5px;
+  padding-left: 5px;
+  font-feature-settings: normal;
+  line-height: 16.5px;
+  white-space: nowrap;
+}
+
+.md-typeset .docsfw-table-caption {
+  margin: 12px 0 8px;
+}
+
+/* Material は JavaScript の実行後に table を .md-typeset__table と
+   .md-typeset__scrollwrap へ移すため、実行前後の表の上余白を打ち消す。 */
+.md-typeset .docsfw-table-caption + .md-typeset__scrollwrap,
+.md-typeset .docsfw-table-caption + table,
+.md-typeset .docsfw-table-caption + .md-typeset__table,
+.md-typeset .docsfw-table-caption + .md-typeset__table > table {
+  margin-top: 0;
+}
+
+.md-typeset .docsfw-table-caption + .md-typeset__scrollwrap
+  > .md-typeset__table > table {
+  margin-top: 0;
 }
 
 /* nl2br が段落末尾に付ける <br> は、キャプションでは余白になるので消す。

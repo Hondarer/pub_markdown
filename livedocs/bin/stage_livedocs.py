@@ -92,6 +92,10 @@ _H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 _PAGEBREAK_RE = re.compile(r"^[ \t]*\\(?:newpage|pagebreak)[ \t]*$")
 _LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)\)")
 _CAPTION_RE = re.compile(r"^(Table|CodeBlock):[ \t]*(.*)$")
+_TABLE_SEPARATOR_RE = re.compile(
+    r"^(?=[^\n]*\|)[ \t]*\|?[ \t]*:?-+:?[ \t]*"
+    r"(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$"
+)
 # figure で包む対象のフェンス。字下げされたフェンス (リスト内など) は
 # md_in_html が生の HTML として扱えないため、行頭のものだけを対象にする。
 _DIAGRAM_FENCE_RE = re.compile(r"^(?:```+|~~~+)[ \t]*(plantuml|mermaid)\b")
@@ -672,6 +676,8 @@ def convert_captions(text):
     - PlantUML / Mermaid フェンスの直後に置かれた ``CodeBlock:`` は、フェンスと
       ともに ``md_in_html`` の ``figure`` へ包みます。pandoc 発行版が図に
       ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - 表の直後に置かれた ``Table:`` は、表の前へ移して
+      ``.docsfw-table-caption`` クラスを付けます。
     - それ以外は ``.docsfw-caption`` クラスを付けた段落として表現します。
 
     ``{#fig:xxx}`` などのラベルは id として残します。
@@ -688,11 +694,18 @@ def convert_captions(text):
     fence_lang = None
     fence_content = []
     internal_caption = ""
+    # 直前に閉じた Markdown 表の ``(out 上の開始位置, 終了位置)``。
+    table_block = None
+    block_start = None
+    block_has_table_separator = False
 
     while index < len(lines):
         line = lines[index]
         fence_match = _FENCE_RE.match(line)
         if fence_match:
+            table_block = None
+            block_start = None
+            block_has_table_separator = False
             marker = fence_match.group(1)[0]
             if fence is None:
                 if diagram_block is not None and internal_caption:
@@ -749,13 +762,23 @@ def convert_captions(text):
                 internal_caption = ""
                 continue
 
+            is_table_caption = caption_match.group(1) == "Table"
             attrs = [".docsfw-caption"]
+            if is_table_caption:
+                attrs.append(".docsfw-table-caption")
             if label:
                 attrs.insert(0, "#" + label)
             # attr_list はブロック要素に対して、属性だけの行を要求する。
             paragraph.append("{{: {} }}".format(" ".join(attrs)))
-            out.extend(paragraph)
+            if is_table_caption and table_block is not None:
+                block_start, _block_end = table_block
+                out[block_start:block_start] = paragraph + [""]
+            else:
+                out.extend(paragraph)
             diagram_block = None
+            table_block = None
+            block_start = None
+            block_has_table_separator = False
             continue
 
         if line.strip() and diagram_block is not None and internal_caption:
@@ -765,6 +788,18 @@ def convert_captions(text):
         elif line.strip():
             diagram_block = None
             internal_caption = ""
+
+        if line.strip():
+            table_block = None
+            if block_start is None:
+                block_start = len(out)
+                block_has_table_separator = False
+            if _TABLE_SEPARATOR_RE.match(line):
+                block_has_table_separator = True
+        elif block_start is not None:
+            table_block = (block_start, len(out)) if block_has_table_separator else None
+            block_start = None
+            block_has_table_separator = False
         out.append(line)
         index += 1
 
