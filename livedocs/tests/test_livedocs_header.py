@@ -380,8 +380,8 @@ class DrawerBoxTest(unittest.TestCase):
             meta = handle.read()
         self.assertRegex(meta, r"--docsfw-header-height:\s*60px")
 
-    def test_panel_layout_drops_the_top_band(self):
-        """板には板自身の見出しがあるため、上端の 12px は白帯になる。"""
+    def test_panel_layout_drops_the_outer_bands(self):
+        """板では上下の帯を除き、スクロール バーを画面下端まで伸ばすこと。"""
 
         block = re.search(
             r"@media screen and \(max-width:\s*76\.234375em\)\s*\{([\s\S]*?)\n\}",
@@ -391,7 +391,7 @@ class DrawerBoxTest(unittest.TestCase):
         self.assertRegex(
             block.group(1),
             re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
-            + r"\s*\{[^}]*inset:\s*0 0 12px",
+            + r"\s*\{[^}]*inset:\s*0;",
         )
 
     def test_drawer_edge_has_a_border(self):

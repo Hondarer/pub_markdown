@@ -327,6 +327,23 @@ async function main() {
         titlePadding: getComputedStyle(title).padding,
       };
     }), {marginTop: '0px', padding: '12px 0px 0px', titleHeight: 45, titlePadding: '12px 16px'});
+    assert.deepEqual(await page.$$eval('#docsfw-page-toc.docsfw-combined-toc a', nodes =>
+      nodes.slice(0, 3).map(node => ({
+        height: node.getBoundingClientRect().height,
+        padding: getComputedStyle(node).padding,
+        lineHeight: getComputedStyle(node).lineHeight,
+        marginTop: getComputedStyle(node).marginTop,
+        borderTopWidth: getComputedStyle(node).borderTopWidth,
+        itemBorderTopWidth: getComputedStyle(node.parentElement).borderTopWidth,
+      }))
+    ), [
+      {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',
+        borderTopWidth: '0px', itemBorderTopWidth: '0px'},
+      {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',
+        borderTopWidth: '0px', itemBorderTopWidth: '1px'},
+      {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',
+        borderTopWidth: '0px', itemBorderTopWidth: '1px'},
+    ]);
     // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
     const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';

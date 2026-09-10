@@ -988,7 +988,18 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     min-height: 45px;
     padding: 12px 16px;
     line-height: 21px;
+    margin-top: 0;
+    border-top: 0;
+  }
+
+  /* Material と同じく、45px のリンクの外側に 1px の区切り線を置く。
+     先頭行は目次の外枠が区切るため、リスト項目自身の線を重ねない。 */
+  #docsfw-page-toc.docsfw-combined-toc li {
     border-top: 1px solid var(--docsfw-divider);
+  }
+
+  #docsfw-page-toc.docsfw-combined-toc > ul > li:first-child {
+    border-top: 0;
   }
 
   /* 外枠の 12px と見出し行の 12px を縦方向だけに重ね、MkDocs の

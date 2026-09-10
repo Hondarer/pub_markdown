@@ -317,10 +317,10 @@
     text-decoration: none;
   }
 
-  /* 板には板自身の見出し (戻る矢印とページ名の帯) があるため、上端の 12px は
-     板の上の白帯になる。上端だけ 0 にし、下端の 12px は残す。 */
+  /* 板には板自身の見出し (戻る矢印とページ名の帯) があるため、上下の帯を
+     持たせず、Pandoc と同じく一覧のスクロール バーを画面下端まで伸ばす。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
-    inset: 0 0 12px;
+    inset: 0;
   }
 
   /* 目次の各階層がスライド パネル (絶対配置) になるのを止める。 */
@@ -330,11 +330,31 @@
     z-index: auto;
   }
 
-  /* 行の体裁はこの幅のものをそのまま使う。Material の
-     .md-nav--primary .md-nav__link の padding: 0.6rem 0.8rem がタップ領域を、
-     [dir] 付きの .md-nav--primary .md-nav--secondary .md-nav … .md-nav__link の
-     padding-left が階層のインデントを持つ。区切り線 (.md-nav__item の
-     border-top) も残し、ファイル一覧からの続きとして並べる。 */
+  /* 行の上下はこの幅のものをそのまま使う。Material の
+     .md-nav--primary .md-nav__link の padding: 0.6rem 0.8rem がタップ領域を持つ。
+     左右は Material が 60em 以上で各リストへ加える 12px を打ち消し、
+     Pandoc と同じく先頭を 16px、子階層を 32px に固定する。
+     区切り線 (.md-nav__item の border-top) も残し、ファイル一覧からの
+     続きとして並べる。 */
+  [dir="ltr"] .md-nav--primary .docsfw-combined-toc .md-nav__list {
+    padding-left: 0;
+  }
+
+  [dir="rtl"] .md-nav--primary .docsfw-combined-toc .md-nav__list {
+    padding-right: 0;
+  }
+
+  [dir="ltr"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav__link {
+    padding-left: 32px;
+  }
+
+  [dir="rtl"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav__link {
+    padding-right: 32px;
+  }
 
   /* 目次の見出しも行の左端にそろえる。 */
   .md-nav--primary .docsfw-combined-toc .md-nav__title {
@@ -435,6 +455,17 @@
     padding-bottom: 0;
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  /* 連続一覧でもページ内目次の子階層を Pandoc と同じ 16px 刻みにする。 */
+  [dir="ltr"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list {
+    padding-left: 16px;
+  }
+
+  [dir="rtl"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list {
+    padding-right: 16px;
   }
 }
 

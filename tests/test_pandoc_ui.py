@@ -51,6 +51,30 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("height: calc(100dvh - var(--docsfw-header-height))", self.ui_style)
         self.assertIn("border-right: 1px solid var(--docsfw-header-border)", self.ui_style)
 
+    def test_narrow_page_toc_rows_match_material_dimensions(self):
+        """最狭ドロワーのページ内目次は 45px のリンクと 1px の区切りにすること。"""
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-page-toc.docsfw-combined-toc a")
+            + r"\s*\{[^}]*min-height:\s*45px;"
+            + r"[^}]*padding:\s*12px 16px;"
+            + r"[^}]*line-height:\s*21px;"
+            + r"[^}]*margin-top:\s*0;"
+            + r"[^}]*border-top:\s*0",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-page-toc.docsfw-combined-toc li")
+            + r"\s*\{[^}]*border-top:\s*1px solid var\(--docsfw-divider\)",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape(
+                "#docsfw-page-toc.docsfw-combined-toc > ul > li:first-child"
+            )
+            + r"\s*\{[^}]*border-top:\s*0",
+        )
+
     def test_header_right_icons_are_twenty_pixels(self):
         """ヘッダー右上の操作アイコンは 20px、左端のロゴとメニューは 24px であること。"""
         self.assertRegex(

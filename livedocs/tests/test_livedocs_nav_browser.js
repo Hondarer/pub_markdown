@@ -3,6 +3,8 @@
 // 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
 // 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 24px が残ることを
 // 検証する。
+// ドロワー内のページ内目次は、Material の 960px 境界をまたいでも文字の
+// 開始位置が動かず、各階層が Pandoc と同じ位置になることも検証する。
 // 板 (スライド パネル) になる幅では、どの階層の板を見ていてもページ内目次が
 // その板の一覧の続きに並ぶことと、上位の板へ戻してから開き直したドロワーが
 // 横へずれないことも検証する。
@@ -27,7 +29,10 @@ function run(command, args, options = {}) {
 }
 
 function headings() {
-  return Array.from({length: 40}, (_, index) => '## Heading ' + (index + 1) + '\n\n本文です。\n').join('\n');
+  return Array.from({length: 40}, (_, index) =>
+    '## Heading ' + (index + 1) + '\n\n本文です。\n' +
+    (index === 0 ? '\n### Nested heading\n\n子見出しです。\n' : '')
+  ).join('\n');
 }
 
 (async function () {
@@ -146,10 +151,12 @@ extra_javascript:
       });
     }
 
-    function assertBottomInset(data, label) {
+    function assertBottomInset(data, label, expectedGap = 12) {
       assert.ok(data.lastCount > 0, label + ' toc ' + JSON.stringify(data));
-      assert.ok(Math.abs(data.gapWrap - 12) <= 1.5, label + ' wrap gap ' + JSON.stringify(data));
-      assert.ok(data.lastBottom <= data.innerHeight - 11, label + ' last item ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.gapWrap - expectedGap) <= 1.5,
+        label + ' wrap gap ' + JSON.stringify(data));
+      assert.ok(data.lastBottom <= data.innerHeight - expectedGap + 1,
+        label + ' last item ' + JSON.stringify(data));
       assert.equal(data.tocMarginTop, '0px', label + ' toc margin ' + JSON.stringify(data));
     }
 
@@ -251,6 +258,35 @@ extra_javascript:
       }
     }
     await layoutPage.close();
+
+    async function drawerTocTextPositions(targetPage) {
+      return targetPage.evaluate(() => {
+        const drawer = document.querySelector('.md-sidebar--primary').getBoundingClientRect();
+        const links = Array.from(document.querySelectorAll('.docsfw-combined-toc a.md-nav__link'));
+        const position = text => {
+          const link = links.find(node => node.textContent.trim() === text);
+          const range = document.createRange();
+          range.selectNodeContents(link);
+          return range.getBoundingClientRect().left - drawer.left;
+        };
+        return {topLevel: position('Heading 1'), nested: position('Nested heading')};
+      });
+    }
+
+    const tocPositionPage = await browser.newPage();
+    for (const width of [959, 960, 1219, 1220, 1399]) {
+      await tocPositionPage.setViewport({width, height: 900});
+      await tocPositionPage.goto(url, {waitUntil: 'domcontentloaded'});
+      await tocPositionPage.click('label.md-header__button[for="__drawer"]');
+      await tocPositionPage.waitForSelector('.docsfw-combined-toc');
+      const positions = await drawerTocTextPositions(tocPositionPage);
+      const expected = width < 1220
+        ? {topLevel: 16, nested: 32}
+        : {topLevel: 24, nested: 40};
+      assert.deepEqual(positions, expected,
+        width + 'px drawer toc positions ' + JSON.stringify(positions));
+    }
+    await tocPositionPage.close();
 
     async function wideSidebarEndMetrics(targetPage, sidebarSelector, lastLinkText) {
       return targetPage.evaluate(async ({sidebarSelector, lastLinkText}) => {
@@ -552,11 +588,13 @@ extra_javascript:
     await page.setViewport({width: 1100, height: 900});
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100');
+    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100', 0);
 
-    console.log('PASS: MkDocs wide sidebars keep a 24px bottom gap; drawer centers ' +
-      'the current page, keeps a 12px bottom inset, merges the page toc into every ' +
-      'panel, reopens without shifting and marks the anchored heading as current');
+    console.log('PASS: MkDocs wide sidebars keep a 24px bottom gap; drawer toc keeps ' +
+      'Pandoc text positions across breakpoints, centers the current page, keeps a 12px ' +
+      'bottom inset, merges the page toc into every panel, extends the narrowest ' +
+      'scrollbar to the viewport bottom, reopens without shifting and marks the ' +
+      'anchored heading as current');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));
