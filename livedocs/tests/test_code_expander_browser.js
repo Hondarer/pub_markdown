@@ -68,6 +68,9 @@ theme:
   font: false
   features:
     - content.code.copy
+  palette:
+    - scheme: default
+    - scheme: slate
 markdown_extensions:
   - pymdownx.highlight
   - pymdownx.superfences:
@@ -140,7 +143,7 @@ extra_javascript:
       /mono|Consolas|Menlo/i.test(style.family)), JSON.stringify(initialStyles));
     await noScriptPage.close();
     const page = await browser.newPage();
-    await page.setViewport({width: 800, height: 600});
+    await page.setViewport({width: 1848, height: 900});
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(url, {waitUntil: 'networkidle0'});
@@ -309,7 +312,7 @@ extra_javascript:
     assert(diagramTools.every(item => {
       const initial = initialStyles[item.expected.startsWith('@start') ? 1 : 0];
       return item.border === initial.border && item.borderRadius === initial.borderRadius &&
-        item.paddingLeft === initial.paddingLeft && item.family === initial.family && item.fontSize === initial.fontSize &&
+        item.paddingLeft === '16px' && item.family === initial.family && item.fontSize === initial.fontSize &&
         (initial.figure ? item.hostBorderStyle === 'solid' && item.border.includes('none') :
           item.hostBorderStyle === 'none' && item.border.includes('solid'));
     }), JSON.stringify({initialStyles, diagramTools}));
@@ -371,6 +374,118 @@ extra_javascript:
     assert.equal(mermaidCopy.downloaded.type, 'image/svg+xml');
     assert.equal(mermaidCopy.downloaded.hasForeignObject, false);
     console.log('PASS: MkDocs PlantUML/Mermaid diagram tools and light-theme PNG copy');
+    async function codeAppearance(pageHandle, scheme) {
+      await pageHandle.mouse.move(0, 0);
+      await pageHandle.evaluate(selected => {
+        document.documentElement.setAttribute('data-md-color-scheme', selected);
+        document.body.setAttribute('data-md-color-scheme', selected);
+      }, scheme);
+      const read = () => pageHandle.evaluate(() => {
+        const wrapper = document.querySelectorAll('.code-expander-wrapper')[1];
+        const shell = wrapper.parentElement;
+        const first = wrapper.querySelector('.code-first');
+        const rest = wrapper.querySelector('.code-rest');
+        const firstCode = first.querySelector('code');
+        const restCode = rest.querySelector('code');
+        const toolbar = shell.querySelector('.code-expander-toolbar');
+        const button = toolbar.querySelector('.code-expander-btn');
+        const arrow = button.querySelector('.code-expander-arrow');
+        const hint = wrapper.querySelector('.code-expander-hint');
+        const shellStyle = getComputedStyle(shell);
+        const firstStyle = getComputedStyle(first);
+        const restStyle = getComputedStyle(rest);
+        const firstCodeStyle = getComputedStyle(firstCode);
+        const restCodeStyle = getComputedStyle(restCode);
+        const firstRect = first.getBoundingClientRect();
+        const restRect = rest.getBoundingClientRect();
+        const toolbarRect = toolbar.getBoundingClientRect();
+        const number = value => parseFloat(value);
+        return {
+          lineHeight: firstCodeStyle.lineHeight,
+          paddingTop: number(firstStyle.paddingTop) + number(firstCodeStyle.paddingTop),
+          paddingRight: number(firstStyle.paddingRight) + number(firstCodeStyle.paddingRight),
+          paddingBottom: number(restStyle.paddingBottom) + number(restCodeStyle.paddingBottom),
+          paddingLeft: number(firstStyle.paddingLeft) + number(firstCodeStyle.paddingLeft),
+          splitPaddingBottom: number(firstStyle.paddingBottom) + number(firstCodeStyle.paddingBottom),
+          splitPaddingTop: number(restStyle.paddingTop) + number(restCodeStyle.paddingTop),
+          firstHeight: firstRect.height,
+          restHeight: restRect.height,
+          gap: restRect.top - firstRect.bottom,
+          toolbarHeight: toolbarRect.height,
+          buttonLineHeight: getComputedStyle(button).lineHeight,
+          restDisplay: restStyle.display,
+          hintDisplay: getComputedStyle(hint).display,
+          marginTop: shellStyle.marginTop,
+          marginBottom: shellStyle.marginBottom,
+          borderBottomColor: getComputedStyle(toolbar).borderBottomColor,
+          borderTopColor: getComputedStyle(hint).borderTopColor,
+          buttonFamily: getComputedStyle(button).fontFamily,
+          bodyFamily: getComputedStyle(document.body).fontFamily,
+          buttonColor: getComputedStyle(button).color,
+          arrowColor: getComputedStyle(arrow).color,
+          hintColor: getComputedStyle(hint).color,
+          controlBackground: getComputedStyle(toolbar).backgroundColor,
+          hintBackground: getComputedStyle(hint).backgroundColor,
+        };
+      });
+      const before = await read();
+      await pageHandle.hover('.code-expander-btn');
+      const afterHoverColor = await pageHandle.$eval('.code-expander-btn', button => getComputedStyle(button).color);
+      return {...before, afterHoverColor};
+    }
+
+    function assertAppearanceGeometry(info, scheme, expanded) {
+      assert.equal(info.lineHeight, '19px', JSON.stringify(info));
+      assert.equal(info.paddingTop, 11, JSON.stringify(info));
+      assert.equal(info.paddingRight, 16, JSON.stringify(info));
+      assert.equal(info.paddingBottom, 11, JSON.stringify(info));
+      assert.equal(info.paddingLeft, 16, JSON.stringify(info));
+      assert.equal(info.splitPaddingBottom, 0, JSON.stringify(info));
+      assert.equal(info.splitPaddingTop, 0, JSON.stringify(info));
+      assert.equal(info.marginTop, '15px', JSON.stringify(info));
+      assert.equal(info.marginBottom, '15px', JSON.stringify(info));
+      assert.equal(info.borderBottomColor,
+        scheme === 'default' ? 'rgb(221, 221, 221)' : 'rgba(255, 255, 255, 0.12)');
+      assert.equal(info.borderTopColor, info.borderBottomColor);
+      assert.equal(info.buttonFamily, info.bodyFamily);
+      assert.equal(info.buttonColor, info.afterHoverColor);
+      assert.equal(info.buttonLineHeight, '22px');
+      assert.equal(info.toolbarHeight, 31);
+      assert.ok(Math.abs(info.firstHeight - 106) < 0.01, JSON.stringify(info));
+      if (expanded) {
+        assert.notEqual(info.restDisplay, 'none');
+        assert.equal(info.hintDisplay, 'none');
+        assert.ok(Math.abs(info.restHeight - 49) < 0.01, JSON.stringify(info));
+        assert.ok(Math.abs(info.gap) < 0.01, JSON.stringify(info));
+      } else {
+        assert.equal(info.restDisplay, 'none');
+        assert.equal(info.hintDisplay, 'block');
+      }
+    }
+
+    function compositeColor(foreground, background) {
+      const parse = value => value.match(/[\d.]+/g).map(Number);
+      const fg = parse(foreground);
+      const bg = parse(background);
+      const alpha = fg.length === 4 ? fg[3] : 1;
+      return fg.slice(0, 3).map((channel, index) => channel * alpha + bg[index] * (1 - alpha));
+    }
+
+    function assertVisualColorNear(pandocColor, mkdocsColor, pandocBackground, mkdocsBackground, label) {
+      const pandoc = compositeColor(pandocColor, pandocBackground);
+      const mkdocs = compositeColor(mkdocsColor, mkdocsBackground);
+      assert.ok(pandoc.every((channel, index) => Math.abs(channel - mkdocs[index]) <= 3),
+        label + ' ' + JSON.stringify({pandocColor, mkdocsColor, pandocBackground, mkdocsBackground}));
+    }
+
+    const mkdocsExpandedAppearance = {};
+    for (const scheme of ['default', 'slate']) {
+      mkdocsExpandedAppearance[scheme] = await codeAppearance(page, scheme);
+      assertAppearanceGeometry(mkdocsExpandedAppearance[scheme], scheme, true);
+    }
+    assert.notEqual(mkdocsExpandedAppearance.slate.buttonColor, mkdocsExpandedAppearance.default.buttonColor);
+    assert.notEqual(mkdocsExpandedAppearance.slate.arrowColor, mkdocsExpandedAppearance.default.arrowColor);
+
     const restDisplayExpanded = await page.evaluate(() => {
       const rest = document.querySelector('.code-rest');
       return rest ? rest.style.display : 'missing';
@@ -392,6 +507,9 @@ extra_javascript:
     assert.equal(collapsed.hint, '');
     assert.equal(collapsed.firstLines, 5);
     assert.match(collapsed.hintText, /2.*7/);
+    for (const scheme of ['default', 'slate']) {
+      assertAppearanceGeometry(await codeAppearance(page, scheme), scheme, false);
+    }
     await page.waitForFunction(() => document.querySelector('.md-code__button[data-md-type="copy"][data-clipboard-text]'));
     const copiedSource = await page.evaluate(() => {
       const buttons = [...document.querySelectorAll('.md-code__button[data-md-type="copy"]')];
@@ -503,7 +621,8 @@ extra_javascript:
     const pandocHtml = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><style>' +
       htmlStyle + '</style>' + expanderCss + '</head><body><main id="docsfw-content">' +
       '<pre><code>' + longLine + '\nshort\ncode\n</code></pre>' +
-      '<pre><code>' + longLine + '\nline2\nline3\nline4\nline5\nline6\nline7\n</code></pre>' +
+      '<div class="sourceCode"><pre><code>' + longLine +
+      '\nline2\nline3\nline4\nline5\nline6\nline7\n</code></pre></div>' +
       '</main>' + expanderJs + '</body></html>';
     const pandocServer = http.createServer((request, response) => {
       response.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -511,9 +630,34 @@ extra_javascript:
     });
     await new Promise((resolve) => pandocServer.listen(0, '127.0.0.1', resolve));
     const pandocPage = await browser.newPage();
-    await pandocPage.setViewport({width: 800, height: 600});
+    await pandocPage.setViewport({width: 1848, height: 900});
     await pandocPage.goto('http://127.0.0.1:' + pandocServer.address().port + '/', {waitUntil: 'networkidle0'});
+    for (const scheme of ['default', 'slate']) {
+      const pandocAppearance = await codeAppearance(pandocPage, scheme);
+      assertAppearanceGeometry(pandocAppearance, scheme, true);
+      const mkdocsAppearance = mkdocsExpandedAppearance[scheme];
+      assert.equal(pandocAppearance.lineHeight, mkdocsAppearance.lineHeight);
+      assert.equal(pandocAppearance.firstHeight, mkdocsAppearance.firstHeight);
+      assert.equal(pandocAppearance.restHeight, mkdocsAppearance.restHeight);
+      assert.equal(pandocAppearance.gap, mkdocsAppearance.gap);
+      assert.equal(pandocAppearance.borderBottomColor, mkdocsAppearance.borderBottomColor);
+      if (scheme === 'default') {
+        assertVisualColorNear(pandocAppearance.buttonColor, mkdocsAppearance.buttonColor,
+          pandocAppearance.controlBackground, mkdocsAppearance.controlBackground, scheme + ' button');
+        assertVisualColorNear(pandocAppearance.arrowColor, mkdocsAppearance.arrowColor,
+          pandocAppearance.controlBackground, mkdocsAppearance.controlBackground, scheme + ' arrow');
+        assertVisualColorNear(pandocAppearance.hintColor, mkdocsAppearance.hintColor,
+          pandocAppearance.hintBackground, mkdocsAppearance.hintBackground, scheme + ' hint');
+      } else {
+        assert.notEqual(pandocAppearance.buttonColor, mkdocsExpandedAppearance.default.buttonColor);
+        assert.notEqual(pandocAppearance.arrowColor, mkdocsExpandedAppearance.default.arrowColor);
+      }
+    }
     await pandocPage.click('.code-expander-btn');
+    for (const scheme of ['default', 'slate']) {
+      assertAppearanceGeometry(await codeAppearance(pandocPage, scheme), scheme, false);
+    }
+    await pandocPage.setViewport({width: 800, height: 600});
     async function copyOpacityAfterHover(selector) {
       await hoverLongChrome(pandocPage, selector);
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -529,7 +673,7 @@ extra_javascript:
     await assertStaysOnScroll(pandocPage, 1, '.docsfw-code-copy', 'pandoc long');
     await pandocPage.close();
     await new Promise((resolve) => pandocServer.close(resolve));
-    console.log('PASS: Pandoc copy hover on code only');
+    console.log('PASS: Pandoc/MkDocs code metrics, themes, expander colors, and copy hover');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

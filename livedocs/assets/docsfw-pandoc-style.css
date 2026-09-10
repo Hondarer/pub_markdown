@@ -224,7 +224,7 @@ body {
   /* 連続する fenced code block の間にも明確な余白を残す。
      Material の既定では inner pre の margin を 0 にしているため、
      外側の .highlight 側で上下余白を戻す必要がある。 */
-  margin: 0.75em 0;
+  margin: 15px 0;
   border: 1px solid var(--md-default-fg-color--lighter);
   border-radius: 3px;
 }
@@ -236,7 +236,7 @@ body {
 
 /* .highlight を伴わない単独の pre (稀なケース) 向けの保険。 */
 .md-typeset pre:not(.highlight pre) {
-  margin: 0.75em 0;
+  margin: 15px 0;
   border: 1px solid var(--md-default-fg-color--lighter);
   border-radius: 3px;
 }
@@ -248,6 +248,7 @@ body {
 .md-typeset pre:not(.highlight pre) code {
   font-size: 14px;
   line-height: 19px;
+  padding: 11px 16px;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -514,6 +515,7 @@ body {
   /* コードは html-style.css の code, tt / .highlight pre。 */
   --md-code-bg-color: #f8f8f8;
   --md-code-fg-color: #000000;
+  --docsfw-soft-border: #dddddd;
 
   /* ==mark== は html-style.css の mark (不透明の黄色)。 */
   --md-typeset-mark-color: #ffff00;
@@ -561,6 +563,7 @@ body {
   --docsfw-admonition-warning: #d29922;
   --docsfw-admonition-danger: #f85149;
   --docsfw-admonition-deprecated: #8b949e;
+  --docsfw-soft-border: rgba(255, 255, 255, 0.12);
 }
 
 /* ------------------------------------------------------------------------ */

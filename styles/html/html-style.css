@@ -7,9 +7,6 @@
   --docsfw-secondary: #333333;
   --docsfw-quote: #777777;
   --docsfw-quiet: #888;
-  --docsfw-hint: #999;
-  --docsfw-expander: #444;
-  --docsfw-expander-hover: #222;
   --docsfw-header-bg: #f7f7f7;
   --docsfw-header-border: #d4d4d4;
   --docsfw-link: #4183C4;
@@ -72,9 +69,6 @@ html[data-md-color-scheme="slate"] {
   --docsfw-secondary: rgba(255, 255, 255, 0.87);
   --docsfw-quote: rgba(255, 255, 255, 0.54);
   --docsfw-quiet: #a3a6b0;
-  --docsfw-hint: #a3a6b0;
-  --docsfw-expander: #c4c6cc;
-  --docsfw-expander-hover: #ffffff;
   --docsfw-header-bg: #1f2129;
   --docsfw-header-border: rgba(255, 255, 255, 0.32);
   --docsfw-link: #6ea9dd;
@@ -735,6 +729,7 @@ pre {
   background-color: #f8f8f8; }
 
 pre code {
+  display: block;
   margin: 0;
   padding: 0;
   white-space: pre;
@@ -810,6 +805,7 @@ div.sourceCode {
   background-color: var(--docsfw-code-bg);
   border: 1px solid var(--docsfw-border);
   border-radius: 3px;
+  margin: 15px 0;
   padding: 11px 0 11px 16px; }
 
 div.sourceCode > pre {

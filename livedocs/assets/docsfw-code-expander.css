@@ -14,7 +14,7 @@
   width: 100%;
   box-sizing: border-box;
   background: var(--md-code-bg-color);
-  border-bottom: 1px solid var(--md-default-fg-color--lighter);
+  border-bottom: 1px solid var(--docsfw-soft-border);
   padding: 4px;
   margin: 0;
 }
@@ -29,14 +29,10 @@
   cursor: pointer;
   font-size: 14px;
   color: var(--md-default-fg-color);
-  line-height: 1.6;
+  line-height: 22px;
   text-align: left;
   background: transparent;
   padding: 0;
-}
-
-.md-typeset .code-expander-btn:hover {
-  color: var(--md-default-fg-color);
 }
 
 .md-typeset .code-expander-btn .code-expander-arrow {
@@ -63,11 +59,11 @@
   min-width: max-content;
 }
 
-.md-typeset .code-expander-scroll > .code-first {
+.md-typeset .code-expander-scroll > .code-first > code {
   padding-bottom: 0 !important;
 }
 
-.md-typeset .code-expander-scroll > .code-rest {
+.md-typeset .code-expander-scroll > .code-rest > code {
   padding-top: 0 !important;
 }
 
@@ -77,7 +73,7 @@
   color: var(--md-default-fg-color--light);
   background: var(--md-code-bg-color);
   border: none;
-  border-top: 1px solid var(--md-default-fg-color--lighter);
+  border-top: 1px solid var(--docsfw-soft-border);
   margin: 0;
   padding: 1px 0.8em;
   text-align: center;

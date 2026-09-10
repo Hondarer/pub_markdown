@@ -216,7 +216,7 @@ $body$
     .code-expander-wrapper {
       overflow: hidden;
       position: relative;
-      background-color: #f8f8f8;
+      background-color: var(--docsfw-code-bg);
     }
     .code-expander-toolbar {
       display: flex;
@@ -236,18 +236,18 @@ $body$
       box-sizing: border-box;
       border: none;
       cursor: pointer;
+      font-family: inherit;
       font-size: 14px;
-      color: var(--docsfw-expander);
-      line-height: 1.6;
+      color: var(--docsfw-fg);
+      line-height: 22px;
       text-align: left;
       background: transparent;
       padding: 0;
     }
-    .code-expander-btn:hover { color: var(--docsfw-expander-hover); }
     .code-expander-btn .code-expander-arrow {
       display: inline-block;
       font-size: 0.7em;
-      color: var(--docsfw-hint);
+      color: var(--docsfw-muted);
       margin-right: calc(0.3em + 2px);
       transition: transform 0.15s;
     }
@@ -277,7 +277,7 @@ $body$
     .code-expander-hint {
       font-family: Consolas, Menlo, "Hiragino Sans", "Hiragino Kaku Gothic ProN", monospace;
       font-size: 14px;
-      color: var(--docsfw-hint);
+      color: var(--docsfw-muted);
       background: var(--docsfw-code-bg);
       border: none;
       border-top: 1px solid var(--docsfw-soft-border);
@@ -287,7 +287,7 @@ $body$
     }
     .code-copy-shell {
       overflow: hidden;
-      background-color: #f8f8f8;
+      background-color: var(--docsfw-code-bg);
     }
   </style>
   <script>
