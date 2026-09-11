@@ -1279,11 +1279,13 @@ Material はその範囲で `[dir="ltr"] .md-sidebar--primary` (0,2,0) に `left
 開いた状態の `transform` も、Material が `[dir="rtl"]` 付き (0,4,0) を持つので、RTL 用を同じ形で並べます。
 
 1400px 以上の左ナビ (中間 3 列と 3 列 PC) は `.md-sidebar` の `padding-top: 12px` で先頭余白を取ります。  
-1400px 以上の左右ナビの内容下端は、`.md-sidebar__inner` の `padding-bottom: 24px` で Pandoc HTML の `.well` とそろえます。  
+1400px 以上の左右ナビの内容下端は、`.md-sidebar__inner` の `padding-bottom: 12px` で Pandoc HTML の `.well` および中幅ドロワーとそろえます。  
 Material の `.md-sidebar__scrollwrap` は親 `.md-sidebar` の下余白を覆うため、スクロール内容側に余白を持たせます。  
 1400px 未満のドロワーでは `.md-sidebar--primary .md-sidebar__scrollwrap` が `position: absolute` で親を埋めるため、親の `padding-top` は効きません。  
 同じ 12px を scrollwrap の `inset` 上端へ移し、余白をスクロール領域の外に残します。  
-1220px から 1399px の連続一覧では下端にも同じ 12px を置きます。  
+1220px から 1399px の連続一覧では scrollwrap の下端を 0 にし、スクロール領域をウインドウ下端まで伸ばします。  
+一覧には `padding-bottom: 12px` を設定し、変更前と同じ内容下余白をスクロール範囲内に確保します。  
+Pandoc HTML もスクロール領域をウインドウ下端まで伸ばし、内容側の `padding-bottom: 12px` で同じ余白にそろえます。  
 約 1220px 未満の板には板自身の見出し (戻る矢印とページ名の帯) があるため、上下の帯を持たせません。  
 この幅だけ `inset: 0` にし、一覧のスクロール バーを Pandoc HTML と同じくウインドウ下端まで伸ばします。
 
@@ -1305,8 +1307,8 @@ LTR では上端と右端、RTL では上端と左端を囲み、白地と背面
 Material は約 1220px 以上で `.md-sidebar__scrollwrap` へもピクセル高さを `style` 属性へ書き込みます。  
 この値は 3 ペインの sticky 用で、マウント時に一度だけ測った `offsetTop` から引きます。  
 3 ペインでマウントすると、そこで取得した `offsetTop` の値 0 が、ドロワーへ幅を変えたあとも高さ計算に使われます。  
-絶対配置の `inset: 12px 0` よりインラインの `height` が優先され、下端の 12px が画面の外へ出ます。  
-1399px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` の上下で箱を決めます。
+絶対配置の `inset: 12px 0 0` よりインラインの `height` が優先されると、下端が画面の外へ出ます。  
+1399px 以下では `height: auto !important` でインライン指定を打ち消し、`inset` で箱を決めます。
 
 ドロワーでは、一覧の右にスクロール バー以外の空きを作りません。  
 `scrollbar-gutter: stable` は 3 ペインで一覧の幅がスクロール バーの有無で動かないための指定ですが、ドロワーでは幅が狭く、予約した分がそのまま右端の余白になります。  

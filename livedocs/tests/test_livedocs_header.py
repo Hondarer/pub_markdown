@@ -316,14 +316,12 @@ class DrawerTopSpacingTest(unittest.TestCase):
             + r"\s*\{[^}]*padding-top:\s*0",
         )
 
-    def test_drawer_scrollwrap_keeps_the_same_twelve_pixel_inset(self):
-        """絶対配置の scrollwrap は親の padding を無視するため、上下端へ移す。
+    def test_drawer_scrollwrap_reaches_the_viewport_bottom(self):
+        """絶対配置の scrollwrap は上余白を残し、下端を画面へ合わせる。
 
-        ドロワーは画面の高さいっぱいのため、下端の 12px が無いと一覧の
-        最後の項目が画面の下端に接する。
         Material は 76.25em 以上で scrollwrap へピクセル高さを書く。
-        3 ペインから縮めると inset の bottom よりその高さが勝ち、下端の
-        12px が画面外へ出る。height: auto で inset に箱を戻す。
+        3 ペインから縮めても下端が画面外へ出ないよう、height: auto で
+        inset に箱を戻す。
         """
         text = self._read_css()
         match = re.search(
@@ -335,7 +333,7 @@ class DrawerTopSpacingTest(unittest.TestCase):
         self.assertRegex(
             drawer,
             re.escape(".md-sidebar--primary .md-sidebar__scrollwrap")
-            + r"\s*\{[^}]*inset:\s*12px 0\s*;",
+            + r"\s*\{[^}]*inset:\s*12px 0 0\s*;",
         )
         self.assertRegex(
             drawer,

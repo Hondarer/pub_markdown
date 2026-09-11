@@ -1,7 +1,7 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
 // ドロワーを開いたときに現在文書が中央へ表示されることと、3 ペインから
 // 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
-// 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 24px が残ることを
+// 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 12px が残ることを
 // 検証する。
 // ドロワー内のページ内目次は、Material の 960px 境界をまたいでも文字の
 // 開始位置が動かず、各階層が Pandoc と同じ位置になることも検証する。
@@ -136,13 +136,17 @@ extra_javascript:
         const links = document.querySelectorAll('.docsfw-combined-toc a');
         const last = links[links.length - 1];
         const wrapRect = wrap.getBoundingClientRect();
+        const rootListRect = rootList ? rootList.getBoundingClientRect() : null;
         const lastRect = last ? last.getBoundingClientRect() : null;
         return {
           innerHeight: window.innerHeight,
           wrapBottom: wrapRect.bottom,
           wrapTop: wrapRect.top,
           gapWrap: window.innerHeight - wrapRect.bottom,
+          rootListBottom: rootListRect ? rootListRect.bottom : null,
+          gapRootList: rootListRect ? window.innerHeight - rootListRect.bottom : null,
           lastBottom: lastRect ? lastRect.bottom : null,
+          contentBottomGap: lastRect ? window.innerHeight - lastRect.bottom : null,
           lastCount: links.length,
           inlineHeight: wrap.style.height,
           rootListPaddingBottom: rootList ? getComputedStyle(rootList).paddingBottom : null,
@@ -151,17 +155,23 @@ extra_javascript:
       });
     }
 
-    function assertBottomInset(data, label, expectedGap = 12) {
+    function assertDrawerEnd(data, label, checksContinuousList = false) {
       assert.ok(data.lastCount > 0, label + ' toc ' + JSON.stringify(data));
-      assert.ok(Math.abs(data.gapWrap - expectedGap) <= 1.5,
+      assert.ok(Math.abs(data.gapWrap) <= 1.5,
         label + ' wrap gap ' + JSON.stringify(data));
-      assert.ok(data.lastBottom <= data.innerHeight - expectedGap + 1,
+      if (checksContinuousList) {
+        assert.ok(Math.abs(data.gapRootList) <= 1.5,
+          label + ' list gap ' + JSON.stringify(data));
+      }
+      assert.ok(data.lastBottom <= data.innerHeight + 1,
         label + ' last item ' + JSON.stringify(data));
       assert.equal(data.tocMarginTop, '0px', label + ' toc margin ' + JSON.stringify(data));
     }
 
-    function assertContinuousListHasNoBottomPadding(data, label) {
-      assert.equal(data.rootListPaddingBottom, '0px', label + ' list padding ' + JSON.stringify(data));
+    function assertContinuousListBottomPadding(data, label) {
+      assert.equal(data.rootListPaddingBottom, '12px', label + ' list padding ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.contentBottomGap - 12) <= 1.5,
+        label + ' content gap ' + JSON.stringify(data));
     }
 
     async function currentPageMetrics() {
@@ -311,8 +321,8 @@ extra_javascript:
 
     function assertWideSidebarEnd(data, label) {
       assert.ok(data.found, label + ' last link ' + JSON.stringify(data));
-      assert.equal(data.paddingBottom, '24px', label + ' padding ' + JSON.stringify(data));
-      assert.ok(Math.abs(data.bottomGap - 24.5) <= 1.5,
+      assert.equal(data.paddingBottom, '12px', label + ' padding ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.bottomGap - 12.5) <= 1.5,
         label + ' bottom gap ' + JSON.stringify(data));
       assert.equal(data.pageScrollAfter, data.pageScrollBefore,
         label + ' page scroll ' + JSON.stringify(data));
@@ -574,8 +584,8 @@ extra_javascript:
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawerAndScrollEnd();
     const resizedEnd = await drawerEndMetrics();
-    assertBottomInset(resizedEnd, 'resize 1800 to 1300');
-    assertContinuousListHasNoBottomPadding(resizedEnd, 'resize 1800 to 1300');
+    assertDrawerEnd(resizedEnd, 'resize 1800 to 1300', true);
+    assertContinuousListBottomPadding(resizedEnd, 'resize 1800 to 1300');
 
     await page.setViewport({width: 1300, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
@@ -583,8 +593,8 @@ extra_javascript:
     await new Promise(resolve => setTimeout(resolve, 300));
     await openDrawerAndScrollEnd();
     const reloadedEnd = await drawerEndMetrics();
-    assertBottomInset(reloadedEnd, 'reload 1300');
-    assertContinuousListHasNoBottomPadding(reloadedEnd, 'reload 1300');
+    assertDrawerEnd(reloadedEnd, 'reload 1300', true);
+    assertContinuousListBottomPadding(reloadedEnd, 'reload 1300');
 
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
@@ -593,12 +603,12 @@ extra_javascript:
     await page.setViewport({width: 1100, height: 900});
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawerAndScrollEnd();
-    assertBottomInset(await drawerEndMetrics(), 'resize 1800 to 1100', 0);
+    assertDrawerEnd(await drawerEndMetrics(), 'resize 1800 to 1100');
 
-    console.log('PASS: MkDocs wide sidebars keep a 24px bottom gap; drawer toc keeps ' +
+    console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, centers the current page, keeps a 12px ' +
-      'bottom inset, merges the page toc into every panel, extends the narrowest ' +
-      'scrollbar to the viewport bottom, reopens without shifting and marks the ' +
+      'content bottom gap, merges the page toc into every panel, extends drawer ' +
+      'scrollbars to the viewport bottom, reopens without shifting and marks the ' +
       'anchored heading as current');
   } finally {
     if (browser) await browser.close();

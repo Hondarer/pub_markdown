@@ -1042,10 +1042,12 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 @media (min-width: 76.25em) and (max-width: 1399px) {
   /* 横方向の余白は .well ではなく見出しと本体が持つ。垂直スクロール バーを
      ドロワーの右端に置くため、本体をスクロール コンテナーにする。 */
-  #docsfw-primary-sidebar > .well { padding: 12px 0; }
+  #docsfw-primary-sidebar > .well { padding: 12px 0 0; }
 
   .docsfw-drawer-body {
-    padding: 0 8px 0 12px;
+    /* スクロール バーは画面下端まで伸ばし、MkDocs と同じ 12px の
+       内容下余白をスクロール範囲内に確保する。 */
+    padding: 0 8px 12px 12px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -1261,7 +1263,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   #docsfw-primary-sidebar > .well,
   #TOC > .well {
     margin: 0 !important;
-    padding: 0 calc(2 * var(--docsfw-nav-gutter)) 24px var(--docsfw-nav-indent);
+    padding: 0 calc(2 * var(--docsfw-nav-gutter)) 12px var(--docsfw-nav-indent);
   }
   #docsfw-primary-sidebar { scrollbar-gutter: stable; }
   #docsfw-primary-sidebar > .well { padding-right: calc(10px + 2 * var(--docsfw-nav-gutter)); }

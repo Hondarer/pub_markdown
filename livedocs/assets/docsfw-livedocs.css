@@ -110,11 +110,11 @@
 }
 
 /* Material の scrollwrap は親 sidebar の下余白まで覆うため、Pandoc HTML の
-   左右ナビと同じ 24px をスクロール内容側に置く。 */
+   左右ナビと同じ 12px をスクロール内容側に置く。 */
 @media screen and (min-width: 1400px) {
   .md-sidebar--primary .md-sidebar__inner,
   .md-sidebar--secondary .md-sidebar__inner {
-    padding-bottom: 24px;
+    padding-bottom: 12px;
   }
 }
 
@@ -172,16 +172,16 @@
      ドロワーでは scrollwrap が position: absolute と inset で親を埋めるため、
      親の padding は効かない。同じ 12px を scrollwrap の上端へ移し、
      余白をスクロール領域の外に残す。
-     下端にも同じ 12px を置く。ドロワーはヘッダーの下から画面の下端までを
-     占めるため、これが無いと一覧の最後の項目が画面の下端に接する。
+     下端は 0 にして、スクロール領域を画面の下端まで伸ばす。中幅の一覧では
+     現在の内容下端を保つ 12px をスクロール範囲内の padding として持たせる。
      Material の JS は 76.25em 以上でこの要素へピクセル高さを style 属性で
      書く。3 ペインの sticky では正しいが、ドロワーでは inset の bottom より
      優先される。3 ペインで取得した offsetTop (0) がドロワーへ幅を変えた
-     あとも高さ計算に使われると、下端が画面外へ 12px はみ出す。
-     height を auto に戻し、inset の top / bottom で箱を決める。 */
+     あとも高さ計算に使われると、下端が画面外へはみ出す。
+     height を auto に戻し、inset で箱を決める。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     position: absolute;
-    inset: 12px 0;
+    inset: 12px 0 0;
     height: auto !important;
     margin: 0;
     overflow-y: auto;
@@ -414,7 +414,7 @@
    .md-sidebar__inner に左右の余白は無く、.md-nav__list の余白も左だけのため、
    スクロール バーの位置とインデントは変わらない。 */
 @media screen and (min-width: 76.25em) and (max-width: 1399px) {
-  /* 上下の 12px を残したまま、この要素ではスクロールしない
+  /* 上端の 12px を残したまま、この要素ではスクロールしない
      (inset と margin は 1399px 以下のブロックの指定をそのまま使う)。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {
     overflow: hidden;
@@ -450,10 +450,9 @@
   .md-nav--primary > .md-nav__list {
     flex: 1 1 auto;
     min-height: 0;
-    /* Material の padding-bottom: .4rem は、一覧の末尾に Pandoc HTML には
-       無い 8px の余白を加える。この幅では画面下端の 12px を scrollwrap の
-       inset で別に確保しているため、一覧自身の下余白は持たせない。 */
-    padding-bottom: 0;
+    /* スクロール バーは画面下端まで伸ばし、従来の内容下端はスクロール範囲内の
+       12px で保つ。 */
+    padding-bottom: 12px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }

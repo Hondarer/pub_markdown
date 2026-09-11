@@ -76,6 +76,37 @@ class PandocUiContractTest(unittest.TestCase):
             + r"\s*\{[^}]*border-top:\s*0",
         )
 
+    def test_medium_drawer_scrollbar_and_content_reach_expected_bottoms(self):
+        """中幅ではスクロール領域を画面下端へ伸ばし、内容下余白を内側に持つこと。"""
+        medium = re.search(
+            r"@media \(min-width:\s*76\.25em\) and \(max-width:\s*1399px\)"
+            r"\s*\{([\s\S]*?)\n\}",
+            self.ui_style,
+        )
+        self.assertIsNotNone(medium)
+        self.assertRegex(
+            medium.group(1),
+            re.escape("#docsfw-primary-sidebar > .well")
+            + r"\s*\{[^}]*padding:\s*12px 0 0",
+        )
+        self.assertRegex(
+            medium.group(1),
+            re.escape(".docsfw-drawer-body")
+            + r"\s*\{[^}]*padding:\s*0 8px 12px 12px",
+        )
+
+    def test_wide_sidebars_have_twelve_pixel_content_bottom_spacing(self):
+        """幅広の左右ナビは、中幅ドロワーと同じ 12px の内容下余白を持つこと。"""
+        self.assertRegex(
+            self.ui_style,
+            r"@media \(min-width:\s*1400px\)\s*\{[\s\S]*?"
+            + re.escape("#docsfw-primary-sidebar > .well,")
+            + r"\s*"
+            + re.escape("#TOC > .well")
+            + r"\s*\{[^}]*padding:\s*0 calc\(2 \* var\(--docsfw-nav-gutter\)\)"
+            + r"\s*12px var\(--docsfw-nav-indent\)",
+        )
+
     def test_header_right_icons_are_twenty_pixels(self):
         """ヘッダー右上の操作アイコンは 20px、左端のロゴとメニューは 24px であること。"""
         self.assertRegex(

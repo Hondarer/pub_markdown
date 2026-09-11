@@ -281,6 +281,8 @@ async function main() {
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
     assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).top), 105);
     assert(await page.$eval('.docsfw-drawer-body', node => node.scrollHeight > node.clientHeight));
+    assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).bottom), 900);
+    assert.equal(await page.$eval('.docsfw-drawer-body', node => getComputedStyle(node).paddingBottom), '12px');
     await page.screenshot({ path: path.join(output, 'drawer.png'), fullPage: false });
     await page.click('#docsfw-nav-backdrop');
     assert.equal(await page.$eval('#docsfw-hamburger', node => node.getAttribute('aria-expanded')), 'false');

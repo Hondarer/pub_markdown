@@ -248,7 +248,7 @@ class WideSidebarBottomSpacingTest(unittest.TestCase):
             + re.escape(".md-sidebar--primary .md-sidebar__inner,")
             + r"\s*"
             + re.escape(".md-sidebar--secondary .md-sidebar__inner")
-            + r"\s*\{[^}]*padding-bottom:\s*24px",
+            + r"\s*\{[^}]*padding-bottom:\s*12px",
         )
 
 
@@ -287,12 +287,12 @@ class FlatDrawerScrollTest(unittest.TestCase):
             + r"\s*\{[^}]*overflow-y:\s*auto",
         )
 
-    def test_list_does_not_add_bottom_padding(self):
-        """画面下端の余白とは別の一覧内余白を残さないこと。"""
+    def test_list_keeps_bottom_padding_inside_the_scroll_area(self):
+        """スクロール バーを下端へ伸ばしても、一覧の内容下余白を保つこと。"""
         self.assertRegex(
             self._flat_drawer_block(),
             re.escape(".md-nav--primary > .md-nav__list")
-            + r"\s*\{[^}]*padding-bottom:\s*0",
+            + r"\s*\{[^}]*padding-bottom:\s*12px",
         )
 
     def test_title_is_not_sticky(self):
