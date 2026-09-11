@@ -159,17 +159,20 @@
   /* 中幅では実際のスクロール コンテナーを .md-nav__list へ移しているため、
      Material が .md-sidebar__scrollwrap に書く初期位置は効かない。
      Pandoc HTML と同じく、ドロワーを開くたびに現在ページを中央へ出す。
-     板になる幅では、表示中の板に現在ページの行が無いことがある。上位の板へ
-     戻してからドロワーを開き直した場合がこれで、行は右へ退避した板の中に
-     ある。そこへ scrollIntoView すると横スクロールが起き、ドロワーの中身が
-     左へずれたまま戻らない。現在ページの行が表示中の板にあるときだけ
-     中央へ出す。Pandoc HTML の openDrawer が表示中の板の中の現在行だけを
-     選ぶ動作と同じにそろえる。 */
-  function revealCurrentPage() {
+     板になる狭幅では、ページ内目次の現在見出しを優先して中央へ出す。
+     現在見出しがない文書上端では、表示中の板に現在ページの行がある場合だけ
+     その行を中央へ出す。表示していない板の行へ scrollIntoView すると横方向へ
+     スクロールするため、表示中の一覧に含まれる項目だけを対象にする。 */
+  function revealDrawerSelection() {
     if (wideLayout.matches || !drawerToggle || !drawerToggle.checked) { return; }
-    var activeLink = getActivePageLink();
+    var activeLink = panelLayout.matches
+      ? document.querySelector(
+        '.docsfw-combined-toc a.md-nav__link--active[href^="#"]')
+      : null;
+    if (!activeLink) { activeLink = getActivePageLink(); }
     if (!activeLink) { return; }
-    if (panelLayout.matches && activeLink.closest('.md-nav__list') !== getPanelList()) {
+    var panelList = panelLayout.matches ? getPanelList() : null;
+    if (panelList && !panelList.contains(activeLink)) {
       resetHorizontalScroll();
       return;
     }
@@ -183,9 +186,9 @@
   function bindDrawerToggle() {
     var nextToggle = document.getElementById('__drawer');
     if (nextToggle === drawerToggle) { return; }
-    if (drawerToggle) { drawerToggle.removeEventListener('change', revealCurrentPage); }
+    if (drawerToggle) { drawerToggle.removeEventListener('change', revealDrawerSelection); }
     drawerToggle = nextToggle;
-    if (drawerToggle) { drawerToggle.addEventListener('change', revealCurrentPage); }
+    if (drawerToggle) { drawerToggle.addEventListener('change', revealDrawerSelection); }
   }
 
   function init() {

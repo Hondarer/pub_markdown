@@ -39,17 +39,16 @@ class CombinedTocPlacementTest(unittest.TestCase):
         text = _read(RESPONSIVE_NAV_JS)
         self.assertIn(".md-sidebar--primary nav.md-nav--primary > .md-nav__list", text)
 
-    def test_narrow_layout_uses_the_panel_of_the_active_page(self):
+    def test_narrow_layout_uses_the_visible_panel(self):
         """約 1220px 未満は、表示されている板の一覧へ入れること。
 
-        Material はこの幅でナビゲーションを入れ子の板にし、現在ページが属する
-        板を開く。根の一覧へ入れた目次は板の背面に回り、見出しだけが板の行に
-        重なって見える。
+        Material はこの幅でナビゲーションを入れ子の板にする。根の一覧へ入れた
+        目次は板の背面に回り、見出しだけが板の行に重なって見える。
         """
         text = _read(RESPONSIVE_NAV_JS)
         self.assertIn("(max-width: " + MATERIAL_DRAWER_BREAKPOINT + ")", text)
-        self.assertIn(".md-sidebar--primary .md-nav__link--active", text)
-        self.assertIn("closest('.md-nav__list')", text)
+        self.assertIn("getVisiblePanelNav()", text)
+        self.assertIn("panelList.contains(activeLink)", text)
 
     def test_section_index_page_uses_the_visible_parent_panel(self):
         """節の索引ページでも、現在リンクが見える親の一覧へ入れること。"""
@@ -76,17 +75,18 @@ class CombinedTocPlacementTest(unittest.TestCase):
 
 
 class DrawerInitialPositionTest(unittest.TestCase):
-    """ドロワーを開いたとき、現在の文書を中央へ表示すること。"""
+    """ドロワーを開いたとき、幅に対応する現在項目を表示すること。"""
 
-    def test_page_toc_active_link_is_excluded(self):
-        """ページ内目次の現在見出しを、現在の文書と誤認しないこと。"""
+    def test_current_page_lookup_excludes_page_toc(self):
+        """現在文書を探すときは、ページ内目次の現在見出しを除くこと。"""
         text = _read(RESPONSIVE_NAV_JS)
         self.assertIn(".md-nav__link--active[href]", text)
         self.assertIn("!links[i].closest('.docsfw-combined-toc')", text)
 
-    def test_opening_drawer_centers_the_current_page(self):
+    def test_opening_drawer_centers_the_selected_item(self):
         text = _read(RESPONSIVE_NAV_JS)
-        self.assertIn("addEventListener('change', revealCurrentPage)", text)
+        self.assertIn(".docsfw-combined-toc a.md-nav__link--active", text)
+        self.assertIn("addEventListener('change', revealDrawerSelection)", text)
         self.assertIn(
             "activeLink.scrollIntoView({ block: 'center', behavior: 'auto' })",
             text,

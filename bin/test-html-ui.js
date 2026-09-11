@@ -40,6 +40,9 @@ function prepare() {
   fs.writeFileSync(path.join(output, 'nav-tree.js'), 'window.__DOCSFW_NAV__=' + JSON.stringify({
     title: 'sample-site', url: 'index.html', children: [{
       title: 'ガイド', url: 'guide/index.html', path: 'guide/', children: [
+        ...Array.from({length: 24}, (_, index) => ({
+          title: '前のページ ' + index, url: 'guide/before-' + index + '.html', children: []
+        })),
         { title: 'Look & Feel 同期', url: 'guide/current.html', children: [] },
         { title: '別ページ', url: 'guide/other.html', children: [] }
       ]
@@ -163,6 +166,70 @@ async function main() {
       assert(checked > 10, width + 'px checked links: ' + checked);
     }
     await tocClickPage.close();
+
+    async function drawerSelectionMetrics(targetPage, selectedSelector) {
+      return targetPage.evaluate(selector => {
+        const selected = document.querySelector(selector);
+        const panelLayout = matchMedia('(max-width: 76.234375em)').matches;
+        const container = panelLayout
+          ? document.querySelector(
+            '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body')
+          : document.querySelector('.docsfw-drawer-body');
+        const selectedRect = selected.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        return {
+          text: selected.textContent.trim(),
+          visible: selectedRect.top >= containerRect.top - 1 &&
+            selectedRect.bottom <= containerRect.bottom + 1,
+          centerDifference: Math.abs(
+            (selectedRect.top + selectedRect.bottom) / 2 -
+            (containerRect.top + containerRect.bottom) / 2),
+          scrollTop: container.scrollTop,
+          scrollLeft: container.scrollLeft,
+          pageScrollY: window.scrollY,
+        };
+      }, selectedSelector);
+    }
+
+    const drawerFollowPage = await browser.newPage();
+    const currentFile = pathToFileURL(path.join(output, 'current.html'));
+    for (const width of [1100, 1300]) {
+      await drawerFollowPage.setViewport({width, height: 900});
+      currentFile.hash = 'section-20';
+      await drawerFollowPage.goto(currentFile.href);
+      await drawerFollowPage.waitForSelector(
+        '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]');
+      const pageScrollY = await drawerFollowPage.evaluate(() => window.scrollY);
+      await drawerFollowPage.$eval('#docsfw-hamburger', node => node.click());
+      await drawerFollowPage.waitForFunction(() =>
+        document.body.classList.contains('docsfw-nav-open'));
+      const selector = width < 1220
+        ? '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]'
+        : '.docsfw-flat-nav .docsfw-current';
+      const opened = await drawerSelectionMetrics(drawerFollowPage, selector);
+      assert.equal(opened.visible, true,
+        width + 'px opened drawer selection ' + JSON.stringify(opened));
+      assert.ok(opened.centerDifference <= 2,
+        width + 'px opened drawer center ' + JSON.stringify(opened));
+      assert.ok(opened.scrollTop > 0,
+        width + 'px opened drawer scroll ' + JSON.stringify(opened));
+      assert.equal(opened.scrollLeft, 0,
+        width + 'px opened drawer horizontal scroll ' + JSON.stringify(opened));
+      assert.equal(opened.pageScrollY, pageScrollY,
+        width + 'px opened drawer page scroll ' + JSON.stringify(opened));
+
+      await drawerFollowPage.evaluate(() =>
+        document.getElementById('section-25').scrollIntoView());
+      await drawerFollowPage.waitForSelector(
+        '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
+      const followed = await drawerSelectionMetrics(drawerFollowPage,
+        '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
+      assert.equal(followed.visible, true,
+        width + 'px followed toc selection ' + JSON.stringify(followed));
+      assert.equal(followed.scrollLeft, 0,
+        width + 'px followed toc horizontal scroll ' + JSON.stringify(followed));
+    }
+    await drawerFollowPage.close();
 
     for (const width of [730, 1302, 1770]) {
       await page.setViewport({ width, height: 900 });

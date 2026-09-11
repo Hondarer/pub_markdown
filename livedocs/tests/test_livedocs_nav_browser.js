@@ -1,6 +1,7 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
-// ドロワーを開いたときに現在文書が中央へ表示されることと、3 ペインから
-// 連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残ることを検証する。
+// ドロワーを開いたときに、狭幅では現在見出し、中幅では現在文書が表示される
+// ことと、3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px
+// が残ることを検証する。
 // 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 12px が残ることを
 // 検証する。
 // ドロワー内のページ内目次は、Material の 960px 境界をまたいでも文字の
@@ -50,9 +51,8 @@ md = ${JSON.stringify('# Drawer margin\n\n' + headings())}
 (docs / 'index.md').write_text(md, encoding='utf-8')
 section = docs / 'section'
 section.mkdir()
-(section / 'index.md').write_text(
-    '# Section\n\n## Section overview\n\n本文です。\n\n## Section details\n\n本文です。\n',
-    encoding='utf-8')
+section_md = ${JSON.stringify('# Section\n\n' + headings())}
+(section / 'index.md').write_text(section_md, encoding='utf-8')
 for index in range(50):
     body = f'# Page {index:02d}\n\n本文です。\n'
     if index == 25:
@@ -71,6 +71,7 @@ theme:
     scheme: default
   features:
     - navigation.indexes
+    - toc.follow
 markdown_extensions:
   - toc:
       permalink: true
@@ -101,13 +102,13 @@ extra_javascript:
     }));
     const page = await browser.newPage();
 
-    async function openDrawer() {
+    async function openDrawer(expectsToc = true) {
       await page.waitForFunction(() => {
         const button = document.querySelector('label.md-header__button[for="__drawer"]');
         return button && getComputedStyle(button).display !== 'none';
       });
       await page.click('label.md-header__button[for="__drawer"]');
-      await page.waitForSelector('.docsfw-combined-toc');
+      if (expectsToc) { await page.waitForSelector('.docsfw-combined-toc'); }
       await new Promise(resolve => setTimeout(resolve, 300));
     }
 
@@ -205,14 +206,49 @@ extra_javascript:
       });
     }
 
-    function assertCurrentPageCentered(data, label) {
+    function assertCurrentPageCentered(data, label, expectedText = 'Page 25') {
       assert.ok(data.found, label + ' current page ' + JSON.stringify(data));
       assert.ok(data.hasScrollContainer, label + ' scroll container ' + JSON.stringify(data));
-      assert.equal(data.text, 'Page 25', label + ' selected link ' + JSON.stringify(data));
+      assert.equal(data.text, expectedText, label + ' selected link ' + JSON.stringify(data));
       assert.ok(data.scrollTop > 0, label + ' scrollTop ' + JSON.stringify(data));
       assert.ok(Math.abs(data.activeCenter - data.containerCenter) <= 2,
         label + ' center ' + JSON.stringify(data));
       assert.equal(data.pageScrollY, 0, label + ' page scroll ' + JSON.stringify(data));
+    }
+
+    async function drawerSelectionMetrics(type) {
+      return page.evaluate(selectedType => {
+        const activeLinks = Array.from(document.querySelectorAll(
+          '.md-sidebar--primary a.md-nav__link--active[href]'));
+        const selected = selectedType === 'toc'
+          ? activeLinks.find(link => link.closest('.docsfw-combined-toc'))
+          : activeLinks.find(link => !link.closest('.docsfw-combined-toc'));
+        let scrollContainer = selected ? selected.parentElement : null;
+        while (scrollContainer) {
+          const overflow = getComputedStyle(scrollContainer).overflowY;
+          if ((overflow === 'auto' || overflow === 'scroll') &&
+              scrollContainer.scrollHeight > scrollContainer.clientHeight + 1) break;
+          scrollContainer = scrollContainer.parentElement;
+        }
+        if (!selected || !scrollContainer) {
+          return {found: !!selected, hasScrollContainer: !!scrollContainer};
+        }
+        const selectedRect = selected.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        return {
+          found: true,
+          hasScrollContainer: true,
+          text: selected.textContent.trim(),
+          visible: selectedRect.top >= containerRect.top - 1 &&
+            selectedRect.bottom <= containerRect.bottom + 1,
+          centerDifference: Math.abs(
+            (selectedRect.top + selectedRect.bottom) / 2 -
+            (containerRect.top + containerRect.bottom) / 2),
+          scrollTop: scrollContainer.scrollTop,
+          scrollLeft: scrollContainer.scrollLeft,
+          pageScrollY: window.scrollY,
+        };
+      }, type);
     }
 
     async function bodyStartMetrics(targetPage) {
@@ -363,6 +399,7 @@ extra_javascript:
       await widePage.goto(url, {waitUntil: 'domcontentloaded'});
       await widePage.waitForSelector('.md-sidebar--secondary .md-sidebar__scrollwrap');
       await widePage.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2));
+      await new Promise(resolve => setTimeout(resolve, 200));
       assertWideSidebarEnd(
         await wideSidebarEndMetrics(widePage, '.md-sidebar--secondary', 'Heading 40'),
         width + 'px right sidebar'
@@ -490,7 +527,15 @@ extra_javascript:
     await page.setViewport({width: 1100, height: 900});
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
     await openDrawer();
-    assertCurrentPageCentered(await currentPageMetrics(), 'reload 1100');
+    const narrowCurrentHeading = await drawerSelectionMetrics('toc');
+    assert.ok(narrowCurrentHeading.found && narrowCurrentHeading.hasScrollContainer,
+      'reload 1100 current heading ' + JSON.stringify(narrowCurrentHeading));
+    assert.equal(narrowCurrentHeading.visible, true,
+      'reload 1100 current heading visibility ' + JSON.stringify(narrowCurrentHeading));
+    assert.equal(narrowCurrentHeading.scrollLeft, 0,
+      'reload 1100 horizontal scroll ' + JSON.stringify(narrowCurrentHeading));
+    assert.equal(narrowCurrentHeading.pageScrollY, 0,
+      'reload 1100 page scroll ' + JSON.stringify(narrowCurrentHeading));
     assert.deepEqual(await narrowTocMetrics(), {
       marginTop: '0px', titlePadding: '12px 16px',
     });
@@ -498,6 +543,11 @@ extra_javascript:
     assert.deepEqual(await narrowPanelCursorMetrics(), {
       titleCursor: 'default', iconCursor: 'pointer', linkDecoration: 'none',
     });
+
+    await page.goto(url + 'section/page-24/', {waitUntil: 'domcontentloaded'});
+    await openDrawer(false);
+    assertCurrentPageCentered(await currentPageMetrics(),
+      'reload 1100 without page toc', 'Page 24');
 
     /* 板になる幅では、表示中の板の一覧の続きにページ内目次が並ぶ。
        navigation.indexes の索引ページは、現在ページのリンクが 1 つ上の一覧に
@@ -622,6 +672,42 @@ extra_javascript:
         width + 'px anchor landing ' + JSON.stringify(anchored));
     }
 
+    /* 板になる狭幅ではページ内の現在見出しを表示し、連続一覧になる中幅では
+       現在文書を中央へ表示する。ドロワーを開いたまま本文を移動した場合は、
+       どちらの幅でも Material の toc.follow が現在見出しを表示範囲へ追従させる。 */
+    for (const width of [1100, 1300]) {
+      await page.setViewport({width, height: 900});
+      await page.goto(url + 'section/#heading-20', {waitUntil: 'domcontentloaded'});
+      await page.waitForSelector(
+        '.docsfw-combined-toc a.md-nav__link--active[href="#heading-20"]');
+      const pageScrollY = await page.evaluate(() => window.scrollY);
+      await openDrawer();
+      const openedType = width < 1220 ? 'toc' : 'page';
+      const opened = await drawerSelectionMetrics(openedType);
+      assert.ok(opened.found && opened.hasScrollContainer,
+        width + 'px opened drawer selection ' + JSON.stringify(opened));
+      assert.equal(opened.visible, true,
+        width + 'px opened drawer visibility ' + JSON.stringify(opened));
+      assert.equal(opened.scrollLeft, 0,
+        width + 'px opened drawer horizontal scroll ' + JSON.stringify(opened));
+      assert.equal(opened.pageScrollY, pageScrollY,
+        width + 'px opened drawer page scroll ' + JSON.stringify(opened));
+      assert.equal(opened.text, width < 1220 ? 'Heading 20' : 'Section',
+        width + 'px opened drawer text ' + JSON.stringify(opened));
+
+      await page.evaluate(() => document.getElementById('heading-25').scrollIntoView());
+      await page.waitForSelector(
+        '.docsfw-combined-toc a.md-nav__link--active[href="#heading-25"]');
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const followed = await drawerSelectionMetrics('toc');
+      assert.equal(followed.text, 'Heading 25',
+        width + 'px followed toc text ' + JSON.stringify(followed));
+      assert.equal(followed.visible, true,
+        width + 'px followed toc visibility ' + JSON.stringify(followed));
+      assert.equal(followed.scrollLeft, 0,
+        width + 'px followed toc horizontal scroll ' + JSON.stringify(followed));
+    }
+
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url, {waitUntil: 'domcontentloaded'});
     await page.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
@@ -652,11 +738,11 @@ extra_javascript:
     assertDrawerEnd(await drawerEndMetrics(), 'resize 1800 to 1100');
 
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
-      'Pandoc text positions across breakpoints, centers the current page, keeps a 12px ' +
-      'content bottom gap and symmetric 12px medium toc spacing, merges the page toc into ' +
-      'every panel, extends drawer ' +
-      'scrollbars to the viewport bottom, reopens without shifting and marks the ' +
-      'anchored heading as current');
+      'Pandoc text positions across breakpoints, reveals the current heading in narrow ' +
+      'drawers and the current page in medium drawers, follows heading changes, keeps a ' +
+      '12px content bottom gap and symmetric 12px medium toc spacing, merges the page ' +
+      'toc into every panel, extends drawer scrollbars to the viewport bottom, reopens ' +
+      'without shifting and marks the anchored heading as current');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

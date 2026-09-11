@@ -291,15 +291,26 @@
     var scheduled = false;
     var activeIndex = -1;
     function followActiveLink(link) {
-      var secondary = document.getElementById('TOC');
-      if (!wideLayout.matches || !secondary || !secondary.contains(link)) { return; }
-      var bounds = secondary.getBoundingClientRect();
-      var title = toc.querySelector('.docsfw-toc-title');
-      var visibleTop = bounds.top + (title ? title.getBoundingClientRect().height : 0);
+      var scrollContainer;
+      var visibleTop;
+      if (wideLayout.matches) {
+        scrollContainer = document.getElementById('TOC');
+        if (!scrollContainer || !scrollContainer.contains(link)) { return; }
+        var title = toc.querySelector('.docsfw-toc-title');
+        visibleTop = scrollContainer.getBoundingClientRect().top +
+          (title ? title.getBoundingClientRect().height : 0);
+      } else {
+        if (!document.body.classList.contains('docsfw-nav-open')) { return; }
+        scrollContainer = link.closest(panelLayout.matches ?
+          '.docsfw-panel-body' : '.docsfw-drawer-body');
+        if (!scrollContainer) { return; }
+        visibleTop = scrollContainer.getBoundingClientRect().top;
+      }
+      var bounds = scrollContainer.getBoundingClientRect();
       var linkBounds = link.getBoundingClientRect();
       var targetCenter = (visibleTop + bounds.bottom) / 2;
       var linkCenter = (linkBounds.top + linkBounds.bottom) / 2;
-      secondary.scrollTop += linkCenter - targetCenter;
+      scrollContainer.scrollTop += linkCenter - targetCenter;
     }
     function update() {
       scheduled = false; var selected = -1;
@@ -383,8 +394,17 @@
     if (button) { button.setAttribute('aria-expanded', 'true'); }
     if (sidebar) { sidebar.setAttribute('aria-hidden', 'false'); }
     if (panelLayout.matches) { setActivePanel(currentPanelKey); }
-    var selected = document.querySelector(panelLayout.matches ?
-      '.docsfw-nav-panel.docsfw-panel-active .docsfw-current' : '.docsfw-flat-nav .docsfw-current');
+    var selected;
+    if (panelLayout.matches) {
+      selected = document.querySelector(
+        '.docsfw-nav-panel.docsfw-panel-active #docsfw-page-toc .docsfw-toc-active');
+      if (!selected) {
+        selected = document.querySelector(
+          '.docsfw-nav-panel.docsfw-panel-active .docsfw-current');
+      }
+    } else {
+      selected = document.querySelector('.docsfw-flat-nav .docsfw-current');
+    }
     if (selected) { selected.scrollIntoView({ block: 'center', behavior: 'auto' }); }
   }
 
