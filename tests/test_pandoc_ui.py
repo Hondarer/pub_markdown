@@ -238,8 +238,8 @@ class PandocUiContractTest(unittest.TestCase):
     def test_table_borders_are_opaque_and_emphasize_the_outer_frame(self):
         """表は不透明な専用色を使い、1px の外枠を内罫線より強くすること。"""
         colors = (
-            ("#adadad", "#e0e0e0"),
-            ("#66686d", "#393c43"),
+            ("#adadad", "#c4c4c4"),
+            ("#66686d", "#53565d"),
         )
         for style in (self.style, self.livedocs_pandoc_style):
             for outer, inner in colors:

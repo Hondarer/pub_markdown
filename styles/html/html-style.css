@@ -22,7 +22,7 @@
   --docsfw-focus: #4a90d9;
   --docsfw-border: rgba(0, 0, 0, 0.32);
   --docsfw-table-border-outer: #adadad;
-  --docsfw-table-border-inner: #e0e0e0;
+  --docsfw-table-border-inner: #c4c4c4;
   --docsfw-soft-border: #dddddd;
   --docsfw-divider: #e5e5e5;
   --docsfw-control-border: #ccc;
@@ -86,7 +86,7 @@ html[data-md-color-scheme="slate"] {
   --docsfw-focus: #9cc7ea;
   --docsfw-border: rgba(255, 255, 255, 0.32);
   --docsfw-table-border-outer: #66686d;
-  --docsfw-table-border-inner: #393c43;
+  --docsfw-table-border-inner: #53565d;
   --docsfw-soft-border: rgba(255, 255, 255, 0.12);
   --docsfw-divider: rgba(255, 255, 255, 0.12);
   --docsfw-control-border: rgba(255, 255, 255, 0.32);

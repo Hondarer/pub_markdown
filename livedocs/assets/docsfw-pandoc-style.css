@@ -485,7 +485,7 @@ body {
      本文リンクのホバーとは別の色なので、専用の変数に分ける。 */
   --docsfw-nav-accent: #1a5faa;
   --docsfw-table-border-outer: #adadad;
-  --docsfw-table-border-inner: #e0e0e0;
+  --docsfw-table-border-inner: #c4c4c4;
 
   /* ヘッダーは html-style.css の .navbar-inner (単色 #F7F7F7、下端 #D4D4D4、
      濃い文字)。Bootstrap 既定のグラデーションと影は同ファイルで外している。
@@ -546,7 +546,7 @@ body {
 
   --docsfw-nav-accent: #9cc7ea;
   --docsfw-table-border-outer: #66686d;
-  --docsfw-table-border-inner: #393c43;
+  --docsfw-table-border-inner: #53565d;
 
   /* --dark はヘッダー・フッター・サイドバーの境界線に使うため、Material の
      パレット規約どおり基準色より暗い派生値にすると、暗い背景の上でほぼ黒に
