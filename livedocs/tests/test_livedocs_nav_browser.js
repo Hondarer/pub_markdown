@@ -354,7 +354,8 @@ extra_javascript:
     const narrowRootMetrics = await narrowRootPage.evaluate(() => {
       const root = document.querySelector('.md-nav--primary');
       const title = root.querySelector(':scope > .md-nav__title');
-      const logo = root.querySelector(':scope > .md-nav__title .md-logo svg').getBoundingClientRect();
+      const logoNode = root.querySelector(':scope > .md-nav__title .md-logo svg');
+      const logo = logoNode.getBoundingClientRect();
       const item = root.querySelector(':scope > .md-nav__list > .md-nav__item--nested');
       const sidebar = document.querySelector('.md-sidebar--primary');
       const row = item.querySelector(':scope > .md-nav__container').getBoundingClientRect();
@@ -365,6 +366,7 @@ extra_javascript:
       return {
         logoWidth: logo.width,
         logoHeight: logo.height,
+        logoFill: getComputedStyle(logoNode).fill,
         titleBackground: getComputedStyle(title).backgroundColor,
         titleColor: getComputedStyle(title).color,
         itemHeight: item.getBoundingClientRect().height,
@@ -382,6 +384,7 @@ extra_javascript:
     assert.deepEqual(narrowRootMetrics, {
       logoWidth: 24,
       logoHeight: 24,
+      logoFill: 'rgb(119, 119, 119)',
       titleBackground: 'rgb(234, 234, 234)',
       titleColor: 'rgb(119, 119, 119)',
       itemHeight: 49,
@@ -394,6 +397,20 @@ extra_javascript:
       iconLabelHeight: 18,
       sidebarBorderTop: '1px',
       sidebarBorderRight: '1px',
+    });
+    await narrowRootPage.evaluate(() => {
+      document.documentElement.setAttribute('data-md-color-scheme', 'slate');
+      document.body.setAttribute('data-md-color-scheme', 'slate');
+    });
+    assert.deepEqual(await narrowRootPage.$eval('.md-nav--primary > .md-nav__title', title => {
+      const logo = title.querySelector('.md-logo svg');
+      return {
+        titleColor: getComputedStyle(title).color,
+        logoFill: getComputedStyle(logo).fill,
+      };
+    }), {
+      titleColor: 'rgba(255, 255, 255, 0.87)',
+      logoFill: 'rgba(255, 255, 255, 0.87)',
     });
     assert.equal(
       await narrowRootPage.$eval(

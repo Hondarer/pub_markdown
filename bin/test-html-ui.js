@@ -86,6 +86,36 @@ async function main() {
     await page.goto(pathToFileURL(path.join(output, 'current.html')).href);
     await page.waitForSelector('.docsfw-flat-nav');
 
+    const drawerLogoPage = await browser.newPage();
+    await drawerLogoPage.setViewport({ width: 1100, height: 900 });
+    await drawerLogoPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
+    await drawerLogoPage.waitForSelector('.docsfw-flat-nav');
+    await drawerLogoPage.click('#docsfw-hamburger');
+    await drawerLogoPage.waitForFunction(() => document.body.classList.contains('docsfw-nav-open'));
+    if (await drawerLogoPage.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey !== 'root')) {
+      await drawerLogoPage.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-nav-back', node => node.click());
+      await drawerLogoPage.waitForFunction(() =>
+        document.querySelector('.docsfw-nav-panel.docsfw-panel-active').dataset.panelKey === 'root');
+    }
+    for (const scheme of ['default', 'slate']) {
+      await drawerLogoPage.evaluate(value => {
+        document.documentElement.setAttribute('data-md-color-scheme', value);
+      }, scheme);
+      const logo = await drawerLogoPage.$eval('.docsfw-drawer-title', title => {
+        const svg = title.querySelector('.docsfw-drawer-logo svg');
+        const rect = svg.getBoundingClientRect();
+        return {
+          titleColor: getComputedStyle(title).color,
+          fill: getComputedStyle(svg).fill,
+          width: rect.width,
+          height: rect.height,
+        };
+      });
+      assert.equal(logo.fill, logo.titleColor, scheme + ' ' + JSON.stringify(logo));
+      assert.deepEqual({width: logo.width, height: logo.height}, {width: 24, height: 24});
+    }
+    await drawerLogoPage.close();
+
     for (const width of [730, 1302, 1770]) {
       await page.setViewport({ width, height: 900 });
       const content = await page.$eval('.docsfw-main-content', node => {

@@ -133,6 +133,21 @@ class PandocUiContractTest(unittest.TestCase):
             r"\.docsfw-search-form::before\s*\{[^}]*width:\s*20px[^}]*height:\s*20px",
         )
 
+    def test_narrow_drawer_logo_inherits_title_color(self):
+        """最狭ドロワーの Pandoc ロゴは見出しのテーマ色を継承すること。"""
+        drawer = re.search(
+            r'<div id="docsfw-drawer-title".*?</div>', self.template, re.DOTALL
+        )
+        self.assertIsNotNone(drawer)
+        markup = drawer.group(0)
+        self.assertIn('<svg class="docsfw-logo-icon"', markup)
+        self.assertNotIn("<img", markup)
+        self.assertRegex(
+            self.style,
+            r"\.docsfw-header-button svg\s*,\s*\.docsfw-drawer-logo svg"
+            r"\s*\{[^}]*fill:\s*currentColor",
+        )
+
     def test_dark_logo_icon_uses_white_foreground(self):
         """ダークの Pandoc ロゴは MkDocs ヘッダーと同じ白系であること。"""
         dark = (ROOT / "styles/html/docsfw-pandoc-icon.svg").read_text(encoding="utf-8")
