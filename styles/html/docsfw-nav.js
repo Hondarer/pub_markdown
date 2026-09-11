@@ -285,6 +285,9 @@
       return { link: link, heading: document.getElementById(id) };
     }).filter(function (entry) { return !!entry.heading; });
     if (!entries.length) { return; }
+    var anchorLine = parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue('--docsfw-anchor-line'));
+    if (!isFinite(anchorLine)) { anchorLine = 88; }
     var scheduled = false;
     var activeIndex = -1;
     function followActiveLink(link) {
@@ -301,7 +304,7 @@
     function update() {
       scheduled = false; var selected = -1;
       for (var i = 0; i < entries.length; i++) {
-        if (entries[i].heading.getBoundingClientRect().top <= 84) { selected = i; } else { break; }
+        if (entries[i].heading.getBoundingClientRect().top <= anchorLine) { selected = i; } else { break; }
       }
       if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1) {
         selected = entries.length - 1;

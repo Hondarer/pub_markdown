@@ -1288,6 +1288,8 @@ pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docs
 :root {
   --docsfw-header-body-height: 48px;
   --docsfw-header-height: 60px;
+  --docsfw-anchor-top: 84px;
+  --docsfw-anchor-line: 88px;
 }
 
 body {
@@ -1495,7 +1497,7 @@ html[data-md-color-scheme="slate"] {
 }
 
 .docsfw-main-content [id] {
-  scroll-margin-top: 84px;
+  scroll-margin-top: var(--docsfw-anchor-top);
 }
 
 @media (max-width: 767px) {

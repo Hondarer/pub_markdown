@@ -45,12 +45,21 @@ class PandocUiContractTest(unittest.TestCase):
     def test_header_and_drawer_share_current_dimensions(self):
         self.assertIn("--docsfw-header-body-height: 48px", self.style)
         self.assertIn("--docsfw-header-height: 60px", self.style)
+        self.assertIn("--docsfw-anchor-top: 84px", self.style)
+        self.assertIn("--docsfw-anchor-line: 88px", self.style)
         self.assertIn("padding-top: calc(var(--docsfw-header-height) + 8px)", self.style)
-        self.assertIn("scroll-margin-top: 84px", self.style)
+        self.assertIn("scroll-margin-top: var(--docsfw-anchor-top)", self.style)
         self.assertIn("--docsfw-drawer-width: min(80vw, 320px)", self.ui_style)
         self.assertIn("height: calc(100dvh - var(--docsfw-header-height))", self.ui_style)
         self.assertIn("border-top: 1px solid var(--docsfw-header-border)", self.ui_style)
         self.assertIn("border-right: 1px solid var(--docsfw-header-border)", self.ui_style)
+
+    def test_toc_tracking_uses_anchor_line_below_landing_position(self):
+        """TOC の判定線はアンカー着地位置より 4px 下に置くこと。"""
+        self.assertIn("getPropertyValue('--docsfw-anchor-line')", self.nav)
+        self.assertIn("if (!isFinite(anchorLine)) { anchorLine = 88; }", self.nav)
+        self.assertIn("getBoundingClientRect().top <= anchorLine", self.nav)
+        self.assertNotIn("getBoundingClientRect().top <= 84", self.nav)
 
     def test_narrow_page_toc_rows_match_material_dimensions(self):
         """最狭ドロワーのページ内目次は 45px のリンクと 1px の区切りにすること。"""

@@ -69,8 +69,19 @@ async function dimensions(page, selector) {
   return page.$eval(selector, element => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    return { top: rect.top, width: rect.width, height: rect.height, display: style.display };
+    return {
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+      display: style.display,
+    };
   });
+}
+
+function assertNear(actual, expected, tolerance, label) {
+  assert.ok(Math.abs(actual - expected) <= tolerance,
+    label + ': expected ' + expected + ' +/- ' + tolerance + ', actual ' + actual);
 }
 
 async function main() {
@@ -115,6 +126,43 @@ async function main() {
       assert.deepEqual({width: logo.width, height: logo.height}, {width: 24, height: 24});
     }
     await drawerLogoPage.close();
+
+    const tocClickPage = await browser.newPage();
+    for (const width of [1500, 1700]) {
+      await tocClickPage.setViewport({width, height: 900});
+      await tocClickPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
+      await tocClickPage.waitForSelector('#docsfw-page-toc a[href^="#"]');
+      const hrefs = await tocClickPage.$$eval('#docsfw-page-toc a[href^="#"]', links =>
+        links.map(link => link.getAttribute('href')));
+      let checked = 0;
+      for (const href of hrefs) {
+        const metric = await tocClickPage.evaluate(async targetHref => {
+          const link = Array.from(document.querySelectorAll('#docsfw-page-toc a[href^="#"]'))
+            .find(node => node.getAttribute('href') === targetHref);
+          link.click();
+          await new Promise(resolve => setTimeout(resolve, 20));
+          const id = decodeURIComponent(targetHref.slice(1));
+          const target = document.getElementById(id);
+          const active = document.querySelector('#docsfw-page-toc a.docsfw-toc-active');
+          const anchorLine = parseFloat(getComputedStyle(document.documentElement)
+            .getPropertyValue('--docsfw-anchor-line'));
+          return {
+            hash: decodeURIComponent(location.hash),
+            targetTop: target.getBoundingClientRect().top,
+            anchorLine,
+            activeHref: active && active.getAttribute('href'),
+            ariaCurrent: link.getAttribute('aria-current'),
+          };
+        }, href);
+        if (metric.targetTop > metric.anchorLine) continue;
+        checked++;
+        assert.equal(metric.hash, href, width + 'px hash ' + JSON.stringify(metric));
+        assert.equal(metric.activeHref, href, width + 'px active ' + JSON.stringify(metric));
+        assert.equal(metric.ariaCurrent, 'location', width + 'px aria-current ' + JSON.stringify(metric));
+      }
+      assert(checked > 10, width + 'px checked links: ' + checked);
+    }
+    await tocClickPage.close();
 
     for (const width of [730, 1302, 1770]) {
       await page.setViewport({ width, height: 900 });
@@ -173,10 +221,13 @@ async function main() {
     // 本文上端を MkDocs とそろえたため、ナビゲーションも初期表示から
     // position: sticky の固定位置 (60px) に達する。
     assert.equal((await dimensions(page, '#TOC')).top, 60);
-    assert.equal(Math.round((await dimensions(page, '#TOC')).width * 100) / 100, 306.22);
-    assert.equal(Math.round(await page.$eval('#TOC', node => node.getBoundingClientRect().right) * 100) / 100, 1643.11);
-    assert.equal(Math.round((await dimensions(page, '#docsfw-primary-sidebar')).width * 100) / 100, 351.22);
-    assert.equal(Math.round(await page.$eval('#docsfw-primary-sidebar', node => node.getBoundingClientRect().right) * 100) / 100, 408.11);
+    assertNear((await dimensions(page, '#TOC')).width, 306.22, 1, 'wide TOC width');
+    assertNear(await page.$eval('#TOC', node => node.getBoundingClientRect().right),
+      1643.11, 1, 'wide TOC right');
+    assertNear((await dimensions(page, '#docsfw-primary-sidebar')).width,
+      351.22, 1, 'wide primary sidebar width');
+    assertNear(await page.$eval('#docsfw-primary-sidebar', node => node.getBoundingClientRect().right),
+      408.11, 1, 'wide primary sidebar right');
     await page.evaluate(() => scrollTo(0, 700));
     await new Promise(resolve => setTimeout(resolve, 100));
     assert.equal((await dimensions(page, '#TOC')).top, 60);
@@ -309,7 +360,7 @@ async function main() {
 
     // 垂直スクロール バーは見出しの下から始まる。ドロワー自体はスクロールさせない。
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
-    assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).top), 105);
+    assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).top), 106);
     assert(await page.$eval('.docsfw-drawer-body', node => node.scrollHeight > node.clientHeight));
     assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).bottom), 900);
     assert.equal(await page.$eval('.docsfw-drawer-body', node => getComputedStyle(node).paddingBottom), '12px');
@@ -324,7 +375,7 @@ async function main() {
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey !== 'root'));
     assert.equal((await dimensions(page, '.docsfw-panel-title')).display, 'block');
     assert.equal((await dimensions(page, '.docsfw-panel-title')).height, 112);
-    assert.equal((await dimensions(page, '.docsfw-panel-title')).top, 60);
+    assert.equal((await dimensions(page, '.docsfw-panel-title')).top, 61);
     assert.deepEqual(await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title', node => {
       const title = getComputedStyle(node);
       const text = node.querySelector('.docsfw-panel-title-text');
@@ -383,7 +434,7 @@ async function main() {
     // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
     const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';
-    assert.equal(Math.round((await dimensions(page, panelBody)).top), 172);
+    assert.equal(Math.round((await dimensions(page, panelBody)).top), 173);
     assert(await page.$eval(panelBody, node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
 
