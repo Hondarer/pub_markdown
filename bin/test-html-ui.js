@@ -344,6 +344,23 @@ async function main() {
         lineHeight: title.lineHeight,
       };
     }), {fontFamilyMatchesTree: true, fontSize: '14px', lineHeight: '21px'});
+    for (const width of [1220, 1300, 1399]) {
+      await page.setViewport({ width, height: 900 });
+      const boundary = await page.$eval('#docsfw-page-toc', node => {
+        const previous = node.previousElementSibling.getBoundingClientRect();
+        const toc = node.getBoundingClientRect();
+        const title = node.querySelector('.docsfw-toc-title').getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {
+          marginTop: style.marginTop,
+          gap: Math.round((toc.top - previous.bottom) * 100) / 100,
+          titleGap: Math.round((title.top - toc.top - parseFloat(style.borderTopWidth)) * 100) / 100,
+        };
+      });
+      assert.deepEqual(boundary, {marginTop: '12px', gap: 12, titleGap: 12},
+        width + 'px drawer toc boundary ' + JSON.stringify(boundary));
+    }
+    await page.setViewport({ width: 1300, height: 900 });
 
     // ドロワー表示中でも、ホイールで本文をスクロールできる (MkDocs Material と同じ)。
     assert.equal(await page.evaluate(() => scrollY), 0);
@@ -372,6 +389,7 @@ async function main() {
     await page.setViewport({ width: 1100, height: 900 });
     await page.click('#docsfw-hamburger');
     await new Promise(resolve => setTimeout(resolve, 300));
+    assert.equal(await page.$eval('#docsfw-page-toc', node => getComputedStyle(node).marginTop), '0px');
     assert(await page.$eval('.docsfw-nav-panel.docsfw-panel-active', node => node.dataset.panelKey !== 'root'));
     assert.equal((await dimensions(page, '.docsfw-panel-title')).display, 'block');
     assert.equal((await dimensions(page, '.docsfw-panel-title')).height, 112);

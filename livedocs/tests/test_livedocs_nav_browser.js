@@ -165,7 +165,8 @@ extra_javascript:
       }
       assert.ok(data.lastBottom <= data.innerHeight + 1,
         label + ' last item ' + JSON.stringify(data));
-      assert.equal(data.tocMarginTop, '0px', label + ' toc margin ' + JSON.stringify(data));
+      assert.equal(data.tocMarginTop, checksContinuousList ? '12px' : '0px',
+        label + ' toc margin ' + JSON.stringify(data));
     }
 
     function assertContinuousListBottomPadding(data, label) {
@@ -283,6 +284,24 @@ extra_javascript:
       });
     }
 
+    async function drawerTocBoundaryMetrics(targetPage) {
+      return targetPage.evaluate(() => {
+        const toc = document.querySelector('.docsfw-combined-toc');
+        const previous = toc.previousElementSibling;
+        const lastLink = previous.querySelector(
+          ':scope > a.md-nav__link, :scope > .md-nav__container > a.md-nav__link'
+        );
+        const title = toc.querySelector('.md-nav__title');
+        const tocStyle = getComputedStyle(toc);
+        return {
+          marginTop: parseFloat(tocStyle.marginTop),
+          gap: toc.getBoundingClientRect().top - lastLink.getBoundingClientRect().bottom,
+          titleGap: title.getBoundingClientRect().top - toc.getBoundingClientRect().top -
+            parseFloat(tocStyle.borderTopWidth),
+        };
+      });
+    }
+
     const tocPositionPage = await browser.newPage();
     for (const width of [959, 960, 1219, 1220, 1399]) {
       await tocPositionPage.setViewport({width, height: 900});
@@ -295,6 +314,16 @@ extra_javascript:
         : {topLevel: 24, nested: 40};
       assert.deepEqual(positions, expected,
         width + 'px drawer toc positions ' + JSON.stringify(positions));
+      const boundary = await drawerTocBoundaryMetrics(tocPositionPage);
+      const expectedMargin = width < 1220 ? 0 : 12;
+      assert.ok(Math.abs(boundary.marginTop - expectedMargin) <= 0.01,
+        width + 'px drawer toc margin ' + JSON.stringify(boundary));
+      if (width >= 1220) {
+        assert.ok(Math.abs(boundary.gap - 12) <= 1,
+          width + 'px drawer toc boundary gap ' + JSON.stringify(boundary));
+        assert.ok(Math.abs(boundary.titleGap - 12) <= 1,
+          width + 'px drawer toc title gap ' + JSON.stringify(boundary));
+      }
     }
     await tocPositionPage.close();
 
@@ -624,7 +653,8 @@ extra_javascript:
 
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, centers the current page, keeps a 12px ' +
-      'content bottom gap, merges the page toc into every panel, extends drawer ' +
+      'content bottom gap and symmetric 12px medium toc spacing, merges the page toc into ' +
+      'every panel, extends drawer ' +
       'scrollbars to the viewport bottom, reopens without shifting and marks the ' +
       'anchored heading as current');
   } finally {

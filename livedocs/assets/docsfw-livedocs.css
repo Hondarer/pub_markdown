@@ -414,6 +414,11 @@
    .md-sidebar__inner に左右の余白は無く、.md-nav__list の余白も左だけのため、
    スクロール バーの位置とインデントは変わらない。 */
 @media screen and (min-width: 76.25em) and (max-width: 1399px) {
+  /* 区切り線の下と同じ 12px を最後の文書リンクとの間にも置く。 */
+  .docsfw-combined-toc {
+    margin-top: 12px;
+  }
+
   /* 上端の 12px を残したまま、この要素ではスクロールしない
      (inset と margin は 1399px 以下のブロックの指定をそのまま使う)。 */
   .md-sidebar--primary .md-sidebar__scrollwrap {

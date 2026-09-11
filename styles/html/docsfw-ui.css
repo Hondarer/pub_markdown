@@ -1040,6 +1040,11 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 }
 
 @media (min-width: 76.25em) and (max-width: 1399px) {
+  /* 区切り線の下と同じ 12px を最後の文書行との間にも置く。 */
+  #docsfw-page-toc.docsfw-combined-toc {
+    margin-top: 12px;
+  }
+
   /* 横方向の余白は .well ではなく見出しと本体が持つ。垂直スクロール バーを
      ドロワーの右端に置くため、本体をスクロール コンテナーにする。 */
   #docsfw-primary-sidebar > .well { padding: 12px 0 0; }

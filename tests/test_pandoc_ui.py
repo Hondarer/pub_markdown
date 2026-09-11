@@ -87,6 +87,11 @@ class PandocUiContractTest(unittest.TestCase):
 
     def test_medium_drawer_scrollbar_and_content_reach_expected_bottoms(self):
         """中幅ではスクロール領域を画面下端へ伸ばし、内容下余白を内側に持つこと。"""
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-page-toc.docsfw-combined-toc")
+            + r"\s*\{[^}]*margin:\s*0;",
+        )
         medium = re.search(
             r"@media \(min-width:\s*76\.25em\) and \(max-width:\s*1399px\)"
             r"\s*\{([\s\S]*?)\n\}",
@@ -102,6 +107,11 @@ class PandocUiContractTest(unittest.TestCase):
             medium.group(1),
             re.escape(".docsfw-drawer-body")
             + r"\s*\{[^}]*padding:\s*0 8px 12px 12px",
+        )
+        self.assertRegex(
+            medium.group(1),
+            re.escape("#docsfw-page-toc.docsfw-combined-toc")
+            + r"\s*\{[^}]*margin-top:\s*12px",
         )
 
     def test_wide_sidebars_have_twelve_pixel_content_bottom_spacing(self):

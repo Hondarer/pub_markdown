@@ -460,12 +460,19 @@ class CombinedTocStyleTest(unittest.TestCase):
         self.assertIsNotNone(match, "Material と同じ境界の media が無い")
         return match.group(1)
 
-    def test_toc_separator_has_no_outer_gap(self):
-        """最後の文書行とページ内目次の区切り線を空けないこと。"""
+    def test_toc_separator_has_symmetric_medium_drawer_spacing(self):
+        """中幅では区切り線の上下を同じ 12px 空けること。"""
         text = _read(LIVEDOCS_CSS)
         self.assertRegex(
             text,
             re.escape(".docsfw-combined-toc") + r"\s*\{[^}]*margin:\s*0",
+        )
+        self.assertRegex(
+            text,
+            r"@media screen and \(min-width:\s*76\.25em\) and "
+            r"\(max-width:\s*1399px\)\s*\{[\s\S]*?"
+            + re.escape(".docsfw-combined-toc")
+            + r"\s*\{[^}]*margin-top:\s*12px",
         )
 
     def test_nested_toc_navigations_are_static(self):
