@@ -394,10 +394,15 @@ class DrawerBoxTest(unittest.TestCase):
             + r"\s*\{[^}]*inset:\s*0;",
         )
 
-    def test_drawer_edge_has_a_border(self):
-        """白地と本文の境目を 1px の線で示すこと。"""
+    def test_drawer_edges_have_borders(self):
+        """白地の上端と本文側の境目を 1px の線で示すこと。"""
 
         block = self._drawer_block()
+        self.assertRegex(
+            block,
+            re.escape(".md-sidebar--primary")
+            + r"\s*\{[^}]*border-top:\s*1px solid var\(--md-primary-fg-color--dark\)",
+        )
         self.assertRegex(
             block,
             re.escape('[dir="ltr"] .md-sidebar--primary')

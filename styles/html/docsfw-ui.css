@@ -783,6 +783,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
        コンテナーにすると、見出しが position: sticky で留まっていても垂直
        スクロール バーは見出しの高さまで伸び、MkDocs Material と揃わない。 */
     overflow: hidden !important;
+    border-top: 1px solid var(--docsfw-header-border);
     border-right: 1px solid var(--docsfw-header-border);
     background: var(--docsfw-bg);
     box-shadow: none;

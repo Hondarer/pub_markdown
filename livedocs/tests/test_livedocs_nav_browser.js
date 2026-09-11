@@ -346,6 +346,7 @@ extra_javascript:
       const title = root.querySelector(':scope > .md-nav__title');
       const logo = root.querySelector(':scope > .md-nav__title .md-logo svg').getBoundingClientRect();
       const item = root.querySelector(':scope > .md-nav__list > .md-nav__item--nested');
+      const sidebar = document.querySelector('.md-sidebar--primary');
       const row = item.querySelector(':scope > .md-nav__container').getBoundingClientRect();
       const icon = item.querySelector(':scope > .md-nav__container .md-nav__icon');
       const iconRect = icon.getBoundingClientRect();
@@ -364,6 +365,8 @@ extra_javascript:
         iconWidth: iconRect.width,
         iconHeight: iconRect.height,
         iconLabelHeight: iconLabel.height,
+        sidebarBorderTop: getComputedStyle(sidebar).borderTopWidth,
+        sidebarBorderRight: getComputedStyle(sidebar).borderRightWidth,
       };
     });
     assert.deepEqual(narrowRootMetrics, {
@@ -379,6 +382,8 @@ extra_javascript:
       iconWidth: 18,
       iconHeight: 18,
       iconLabelHeight: 18,
+      sidebarBorderTop: '1px',
+      sidebarBorderRight: '1px',
     });
     assert.equal(
       await narrowRootPage.$eval(

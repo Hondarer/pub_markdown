@@ -49,6 +49,7 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("scroll-margin-top: 84px", self.style)
         self.assertIn("--docsfw-drawer-width: min(80vw, 320px)", self.ui_style)
         self.assertIn("height: calc(100dvh - var(--docsfw-header-height))", self.ui_style)
+        self.assertIn("border-top: 1px solid var(--docsfw-header-border)", self.ui_style)
         self.assertIn("border-right: 1px solid var(--docsfw-header-border)", self.ui_style)
 
     def test_narrow_page_toc_rows_match_material_dimensions(self):

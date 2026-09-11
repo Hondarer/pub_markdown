@@ -1299,6 +1299,9 @@ Pandoc HTML 側の `docsfw-nav.js` (`.docsfw-panel-title`) は戻るボタンと
 高さが `100%` のままだと下端がその分だけ画面の外へ出て、下端の 12px の余白も画面外に落ちます。  
 ヘッダーの高さ 60px は `docsfw-header-meta.css` の `:root` に `--docsfw-header-height` として持ち、`.md-sidebar` の `top` と共有します。
 
+ドロワーの上端と本文に接する側面には、ヘッダーおよびフッターの境界線と同じ色で 1px の線を引きます。  
+LTR では上端と右端、RTL では上端と左端を囲み、白地と背面の本文を区切ります。
+
 Material は約 1220px 以上で `.md-sidebar__scrollwrap` へもピクセル高さを `style` 属性へ書き込みます。  
 この値は 3 ペインの sticky 用で、マウント時に一度だけ測った `offsetTop` から引きます。  
 3 ペインでマウントすると、そこで取得した `offsetTop` の値 0 が、ドロワーへ幅を変えたあとも高さ計算に使われます。  

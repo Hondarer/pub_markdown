@@ -150,13 +150,14 @@
     width: var(--docsfw-drawer-width);
     height: calc(100% - var(--docsfw-header-height));
     background-color: var(--md-default-bg-color);
+    border-top: 1px solid var(--md-primary-fg-color--dark);
     transform: translateX(0);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s;
     z-index: 5;
   }
 
-  /* 本文に接する縁だけに境界線を引く。上端はヘッダーの境界線に、左端と下端は
-     画面の縁に接するため引かない。色はヘッダーとフッターの境界線にそろえる。 */
+  /* 上端と本文に接する縁に境界線を引く。左端と下端は画面の縁に接するため
+     引かない。色はヘッダーとフッターの境界線にそろえる。 */
   [dir="ltr"] .md-sidebar--primary {
     left: calc(-1 * var(--docsfw-drawer-width));
     border-right: 1px solid var(--md-primary-fg-color--dark);

@@ -249,6 +249,10 @@ async function main() {
     assert.equal(Math.round(drawer.top), 60);
     assert.equal(Math.round(drawer.width), 320);
     assert.equal(await page.$eval('#docsfw-primary-sidebar', node => Math.round(node.getBoundingClientRect().left)), 0);
+    assert.deepEqual(await page.$eval('#docsfw-primary-sidebar', node => ({
+      top: getComputedStyle(node).borderTopWidth,
+      right: getComputedStyle(node).borderRightWidth,
+    })), {top: '1px', right: '1px'});
     assert(await page.$eval('#docsfw-page-toc', node => !!node.closest('.docsfw-flat-nav')));
     assert.deepEqual(await page.$eval('.docsfw-drawer-title', node => {
       const title = getComputedStyle(node);
