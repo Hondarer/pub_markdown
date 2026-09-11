@@ -235,6 +235,32 @@ class PandocUiContractTest(unittest.TestCase):
             r"\{[^}]*box-sizing:\s*content-box",
         )
 
+    def test_table_borders_are_opaque_and_emphasize_the_outer_frame(self):
+        """表は不透明な専用色を使い、1px の外枠を内罫線より強くすること。"""
+        colors = (
+            ("#adadad", "#e0e0e0"),
+            ("#66686d", "#393c43"),
+        )
+        for style in (self.style, self.livedocs_pandoc_style):
+            for outer, inner in colors:
+                self.assertIn(f"--docsfw-table-border-outer: {outer}", style)
+                self.assertIn(f"--docsfw-table-border-inner: {inner}", style)
+            self.assertRegex(
+                style,
+                r"outline:\s*1px solid var\(--docsfw-table-border-outer\)",
+            )
+            self.assertRegex(style, r"outline-offset:\s*-1px")
+            self.assertRegex(
+                style,
+                r"border:\s*1px solid var\(--docsfw-table-border-inner\)",
+            )
+
+        self.assertRegex(self.style, r"table tr\s*\{[^}]*border:\s*0")
+        self.assertRegex(
+            self.livedocs_pandoc_style,
+            r"table:not\(\[class\]\) tr\s*\{[^}]*border:\s*0",
+        )
+
     def test_table_caption_filter_is_used_only_for_html(self):
         lines = self.publisher.splitlines()
         listing_indices = [

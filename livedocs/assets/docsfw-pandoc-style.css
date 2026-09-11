@@ -273,6 +273,8 @@ body {
 .md-typeset table:not([class]) {
   border: 0;
   border-collapse: collapse;
+  outline: 1px solid var(--docsfw-table-border-outer);
+  outline-offset: -1px;
   display: table;
   margin: 12px auto;
   width: auto;
@@ -285,7 +287,7 @@ body {
 
 .md-typeset table:not([class]) th,
 .md-typeset table:not([class]) td {
-  border: 1px solid var(--md-default-fg-color--lighter);
+  border: 1px solid var(--docsfw-table-border-inner);
   padding: 8px;
   /* .md-typeset__table の text-align: center を打ち消す。
      表そのものは中央寄せにするが、セル内の文字は左寄せのままにする
@@ -309,6 +311,7 @@ body {
 }
 
 .md-typeset table:not([class]) tr {
+  border: 0;
   background-color: var(--md-default-bg-color);
 }
 
@@ -481,6 +484,8 @@ body {
   /* 左ナビと目次は docsfw-ui.css の #1A5FAA (ホバーと現在ページ)。
      本文リンクのホバーとは別の色なので、専用の変数に分ける。 */
   --docsfw-nav-accent: #1a5faa;
+  --docsfw-table-border-outer: #adadad;
+  --docsfw-table-border-inner: #e0e0e0;
 
   /* ヘッダーは html-style.css の .navbar-inner (単色 #F7F7F7、下端 #D4D4D4、
      濃い文字)。Bootstrap 既定のグラデーションと影は同ファイルで外している。
@@ -540,6 +545,8 @@ body {
   --md-accent-bg-color--light: rgba(31, 33, 41, 0.7);
 
   --docsfw-nav-accent: #9cc7ea;
+  --docsfw-table-border-outer: #66686d;
+  --docsfw-table-border-inner: #393c43;
 
   /* --dark はヘッダー・フッター・サイドバーの境界線に使うため、Material の
      パレット規約どおり基準色より暗い派生値にすると、暗い背景の上でほぼ黒に
