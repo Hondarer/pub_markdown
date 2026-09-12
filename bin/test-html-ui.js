@@ -510,7 +510,7 @@ async function main() {
       }))
     ), [
       {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',
-        borderTopWidth: '0px', itemBorderTopWidth: '0px'},
+        borderTopWidth: '0px', itemBorderTopWidth: '1px'},
       {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',
         borderTopWidth: '0px', itemBorderTopWidth: '1px'},
       {height: 45, padding: '12px 16px', lineHeight: '21px', marginTop: '0px',

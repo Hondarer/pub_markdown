@@ -389,6 +389,15 @@
     border-top: 0;
   }
 
+  /* Material は、見出しの影が区切り線を兼ねる前提で先頭項目の線を消す
+     (.md-nav--primary .md-nav__title ~ .md-nav__list > :first-child)。
+     目次の見出しは影を消してあるため、そのままでは「目次」と最初の項目の
+     間だけ線が無くなる。ほかの行と同じ線を先頭項目へ戻す。 */
+  .md-nav--primary .docsfw-combined-toc .md-nav__title ~ .md-nav__list
+  > :first-child {
+    border-top: 0.05rem solid var(--md-default-fg-color--lightest);
+  }
+
   /* Material は一覧に scroll-snap-type: y mandatory を、目次の見出しに
      scroll-snap-align: start を当てる。目次を同じ一覧へ入れると見出しが
      スナップ点になりスクロールが跳ね、末尾まで送れない。

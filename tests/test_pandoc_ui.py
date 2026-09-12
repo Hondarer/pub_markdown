@@ -62,7 +62,10 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertNotIn("getBoundingClientRect().top <= 84", self.nav)
 
     def test_narrow_page_toc_rows_match_material_dimensions(self):
-        """最狭ドロワーのページ内目次は 45px のリンクと 1px の区切りにすること。"""
+        """最狭ドロワーのページ内目次は 45px のリンクと 1px の区切りにすること。
+
+        「目次」の見出しと先頭の項目の間にも同じ区切り線を置く。
+        """
         self.assertRegex(
             self.ui_style,
             re.escape("#docsfw-page-toc.docsfw-combined-toc a")
@@ -77,12 +80,11 @@ class PandocUiContractTest(unittest.TestCase):
             re.escape("#docsfw-page-toc.docsfw-combined-toc li")
             + r"\s*\{[^}]*border-top:\s*1px solid var\(--docsfw-divider\)",
         )
-        self.assertRegex(
+        # 「目次」の見出しと先頭の項目の間にも線を残すため、先頭行の
+        # 打ち消しは置かない。
+        self.assertNotIn(
+            "#docsfw-page-toc.docsfw-combined-toc > ul > li:first-child",
             self.ui_style,
-            re.escape(
-                "#docsfw-page-toc.docsfw-combined-toc > ul > li:first-child"
-            )
-            + r"\s*\{[^}]*border-top:\s*0",
         )
 
     def test_medium_drawer_scrollbar_and_content_reach_expected_bottoms(self):

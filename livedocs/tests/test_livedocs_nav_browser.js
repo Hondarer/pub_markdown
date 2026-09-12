@@ -11,6 +11,7 @@
 // 横へずれないことも検証する。
 // 見出しのアンカーへ移動したとき、目次の現在項目がその見出しになることも
 // 検証する。
+// 板では「目次」の見出しと先頭の項目の間にも区切り線が入ることを検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -329,11 +330,15 @@ extra_javascript:
         );
         const title = toc.querySelector('.md-nav__title');
         const tocStyle = getComputedStyle(toc);
+        const firstItem = toc.querySelector('.md-nav__list > .md-nav__item');
         return {
           marginTop: parseFloat(tocStyle.marginTop),
           gap: toc.getBoundingClientRect().top - lastLink.getBoundingClientRect().bottom,
           titleGap: title.getBoundingClientRect().top - toc.getBoundingClientRect().top -
             parseFloat(tocStyle.borderTopWidth),
+          firstItemBorderTop: parseFloat(getComputedStyle(firstItem).borderTopWidth),
+          secondItemBorderTop: parseFloat(
+            getComputedStyle(firstItem.nextElementSibling).borderTopWidth),
         };
       });
     }
@@ -354,7 +359,14 @@ extra_javascript:
       const expectedMargin = width < 1220 ? 0 : 12;
       assert.ok(Math.abs(boundary.marginTop - expectedMargin) <= 0.01,
         width + 'px drawer toc margin ' + JSON.stringify(boundary));
-      if (width >= 1220) {
+      if (width < 1220) {
+        // 板では「目次」の見出しと先頭の項目の間にも、ほかの行と同じ
+        // 区切り線を置く。
+        assert.equal(boundary.firstItemBorderTop, boundary.secondItemBorderTop,
+          width + 'px drawer toc first item border ' + JSON.stringify(boundary));
+        assert.equal(boundary.firstItemBorderTop, 1,
+          width + 'px drawer toc first item border ' + JSON.stringify(boundary));
+      } else {
         assert.ok(Math.abs(boundary.gap - 12) <= 1,
           width + 'px drawer toc boundary gap ' + JSON.stringify(boundary));
         assert.ok(Math.abs(boundary.titleGap - 12) <= 1,

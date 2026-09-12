@@ -386,12 +386,27 @@ class PanelSeparatorTest(unittest.TestCase):
             + r"\s*\{[^}]*border-top:\s*1px solid var\(--md-default-fg-color--lightest\)",
         )
 
-    def test_combined_toc_list_has_no_separator(self):
-        """目次の見出しの下には線を出さない。"""
+    def test_combined_toc_list_has_no_panel_separator(self):
+        """目次の一覧は板ではないため、一覧自身には線を出さない。"""
         self.assertRegex(
             self._block(),
             re.escape(".md-nav--primary .docsfw-combined-toc .md-nav__list")
             + r"\s*\{[^}]*border-top:\s*0",
+        )
+
+    def test_first_toc_item_keeps_a_separator_under_the_title(self):
+        """「目次」の見出しと先頭の項目の間にも区切り線を置くこと。
+
+        Material は見出しの影が区切り線を兼ねる前提で、
+        .md-nav--primary .md-nav__title ~ .md-nav__list > :first-child の
+        border-top を消す。目次の見出しは影を消しているため、戻さないと
+        「目次」と先頭の項目の間だけ線が無くなる。
+        """
+        self.assertRegex(
+            self._block(),
+            re.escape(".md-nav--primary .docsfw-combined-toc .md-nav__title ~ .md-nav__list")
+            + r"\s*>\s*:first-child\s*\{[^}]*border-top:\s*0\.05rem solid"
+            + r"\s*var\(--md-default-fg-color--lightest\)",
         )
 
 

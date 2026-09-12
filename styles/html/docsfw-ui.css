@@ -994,13 +994,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   }
 
   /* Material と同じく、45px のリンクの外側に 1px の区切り線を置く。
-     先頭行は目次の外枠が区切るため、リスト項目自身の線を重ねない。 */
+     先頭行にも線を置き、「目次」の見出しと最初の項目を区切る。 */
   #docsfw-page-toc.docsfw-combined-toc li {
     border-top: 1px solid var(--docsfw-divider);
-  }
-
-  #docsfw-page-toc.docsfw-combined-toc > ul > li:first-child {
-    border-top: 0;
   }
 
   /* 外枠の 12px と見出し行の 12px を縦方向だけに重ね、MkDocs の
