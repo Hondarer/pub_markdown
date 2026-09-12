@@ -10,7 +10,53 @@ Markdown 文書、ソース コードのコメント、メッセージ文字列�
 
 ## 実行環境とモデルの選定
 
-自身が Antigravity CLI ではなく、かつ `agy` (Antigravity CLI) が利用可能な環境である場合は、Antigravity CLI を利用して Gemini 系の最新モデルでこの作業を行ってください。
+自身が Antigravity CLI ではなく、かつ `agy` (Antigravity CLI) が利用可能な環境である場合は、以下の手順で Antigravity CLI を利用してこの推敲作業を行ってください。
+
+### モデルの選定基準
+
+`agy models` の出力から **Gemini Flash 系の最新バージョン・Medium** を選択します。  
+モデル名には CLI 内部 ID (`gemini-X.Y-flash-medium` 形式) を使用してください。表示名 (例: `Gemini 3.8 Flash (Medium)`) は `--model` に渡せません。
+
+選定の優先順位は次のとおりです。
+
+1. Gemini Flash 系の最新バージョン・Medium (例: `gemini-3.8-flash-medium`)
+2. 上記が利用できない場合は、Gemini Flash 系で利用可能な最新バージョン・Medium
+
+Pro 系や Low Effort は、日本語の推敲には推論能力と速度のバランスが不十分なため選択しないでください。
+
+### ワークスペース コンテキストのロード
+
+`--print` モードを単独で使用すると、ワークスペースの AGENTS.md、スキル、規範がロードされず、推敲品質が低下します。  
+`--add-dir` でリポジトリ ルートを指定し、ワークスペースのコンテキストをロードしてください。
+
+### プロンプトの構成
+
+推敲対象の文章だけをプロンプトに渡さず、次の要素を含めてください。
+
+- **役割と目的**: 日本語技術文書のレビューと推敲を行うこと
+- **スキル名の指定**: `review-japanese-doc` スキルに従って推敲すること
+- **対象の文章**: 推敲対象のファイル パス、またはインラインの文章
+- **出力形式**: 修正後の文章、または修正箇所と理由の一覧
+
+### 呼び出し例
+
+```bash
+# ファイルを指定して推敲を依頼する例
+agy --model gemini-3.8-flash-medium --effort medium \
+    --add-dir /path/to/repo \
+    --print "review-japanese-doc スキルと japanese-technical-writing-guideline.md の規範に従い、次のファイルの日本語を推敲してください。修正箇所と理由を一覧で提示してください。対象ファイル: path/to/target.md"
+
+# インラインで文章を渡して推敲する例
+agy --model gemini-3.8-flash-medium --effort medium \
+    --add-dir /path/to/repo \
+    --print "review-japanese-doc スキルと japanese-technical-writing-guideline.md の規範に従い、次の文章を推敲してください。修正後の文章を返してください。
+
+---
+(推敲対象の文章をここに貼り付ける)
+---"
+```
+
+> **注意**: モデル名の `3.8` の部分は `agy models` の出力に応じて最新バージョンに置き換えてください。
 
 ## 対象範囲と着手前の確認
 
