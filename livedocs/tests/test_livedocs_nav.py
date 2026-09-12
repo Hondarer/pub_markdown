@@ -93,6 +93,23 @@ class DrawerInitialPositionTest(unittest.TestCase):
         )
 
 
+class ReloadHashPositionTest(unittest.TestCase):
+    """F5 では Material の追跡より URL のフラグメントを優先すること。"""
+
+    def test_reload_with_hash_restores_the_fragment_position(self):
+        text = _read(RESPONSIVE_NAV_JS)
+        self.assertIn("entries[0].type === 'reload'", text)
+        self.assertIn("performance.navigation.type === 1", text)
+        self.assertIn("var reloadHash = window.location.hash", text)
+        self.assertIn(
+            "window.addEventListener('pageshow', restore, { once: true })", text
+        )
+        self.assertIn(
+            "target.scrollIntoView({ block: 'start', behavior: 'auto' })", text
+        )
+        self.assertIn("if (!window.location.hash || !isReloadNavigation())", text)
+
+
 class DrawerWidthTest(unittest.TestCase):
     """ドロワーでは、一覧の右にスクロール バー以外の空きを作らないこと。"""
 

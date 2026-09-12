@@ -202,6 +202,34 @@
     bindDrawerToggle();
   }
 
+  function isReloadNavigation() {
+    try {
+      var entries = performance.getEntriesByType('navigation');
+      if (entries.length) { return entries[0].type === 'reload'; }
+      return !!performance.navigation && performance.navigation.type === 1;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function restoreHashPositionOnReload() {
+    if (!window.location.hash || !isReloadNavigation()) { return; }
+    var reloadHash = window.location.hash;
+    /* Chrome は F5 で以前の絶対スクロール位置を復元する。図の描画で本文の
+       高さが変わると Material が次の見出しを現在位置として URL も更新するため、
+       追跡処理が動く前に再読み込み開始時のフラグメントへ着地し直す。 */
+    function restore() {
+      window.requestAnimationFrame(function () {
+        var hash = reloadHash.slice(1); var id;
+        try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
+        var target = document.getElementById(id);
+        if (target) { target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+      });
+    }
+    if (document.readyState === 'complete') { restore(); }
+    else { window.addEventListener('pageshow', restore, { once: true }); }
+  }
+
   [wideLayout, panelLayout].forEach(function (query) {
     if (query.addEventListener) {
       query.addEventListener('change', placeToc);
@@ -222,6 +250,8 @@
     if (!target.classList.contains('md-nav__toggle') || target.id === '__toc') { return; }
     placeToc();
   });
+
+  restoreHashPositionOnReload();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

@@ -690,6 +690,38 @@ extra_javascript:
         width + 'px anchor landing ' + JSON.stringify(anchored));
     }
 
+    /* 実サンプルでは、図の描画による約 124px の高さ変化より前に Chrome が
+       F5 前の絶対スクロール位置を復元する。再読み込みの pageshow で同じずれを
+       作り、URL、見出し位置、Material の現在項目が元のアンカーへ戻ることを
+       確認する。 */
+    const reloadHashPage = await browser.newPage();
+    await reloadHashPage.setViewport({width: 1300, height: 900});
+    await reloadHashPage.evaluateOnNewDocument(() => {
+      window.addEventListener('pageshow', () => {
+        const entries = performance.getEntriesByType('navigation');
+        if (entries.length && entries[0].type === 'reload') { scrollBy(0, 124); }
+      });
+    });
+    await reloadHashPage.goto(url + '#heading-20', {waitUntil: 'domcontentloaded'});
+    await new Promise(resolve => setTimeout(resolve, 600));
+    await reloadHashPage.reload({waitUntil: 'domcontentloaded'});
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const reloadedHash = await reloadHashPage.evaluate(() => {
+      const toc = document.querySelector('.docsfw-combined-toc') ||
+        document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
+      const target = document.getElementById('heading-20');
+      return {
+        hash: location.hash,
+        targetTop: Math.round(target.getBoundingClientRect().top),
+        active: Array.from(toc.querySelectorAll('a.md-nav__link--active'))
+          .map(node => node.textContent.trim()),
+      };
+    });
+    assert.deepEqual(reloadedHash, {
+      hash: '#heading-20', targetTop: 80, active: ['Heading 20'],
+    }, '1300px reload hash ' + JSON.stringify(reloadedHash));
+    await reloadHashPage.close();
+
     /* 板になる狭幅ではページ内の現在見出しを表示し、連続一覧になる中幅では
        現在文書を中央へ表示する。ドロワーを開いたまま本文を移動した場合は、
        どちらの幅でも Material の toc.follow が現在見出しを表示範囲へ追従させる。 */
