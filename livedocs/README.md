@@ -22,15 +22,15 @@ make servedocs
 
 初回は `livedocs/.venv` を作成し、`requirements.txt` の依存を導入します。  
 その後、ステージングを行い `mkdocs serve` を起動します。  
-ステージング中は、完了行 `staged:` の前に進行状況を 1 行ずつ出します。  
+ステージング中は、完了行 `staged:` の前に進行状況を 1 行ずつ出力します。  
 詳細は [動的発行基盤](../docs/livedocs-design.md) の make からの起動を参照してください。  
 ブラウザーで <http://127.0.0.1:8000/> を開いてください。
 
 `make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを開けます。  
-Doxybook2 の各ページからは、見出し横の Doxygen アイコンで対応する単一ページへ飛べます。  
+Doxybook2 の各ページからは、見出し横の Doxygen アイコンで対応する単一ページへ遷移できます。  
 依存関係レポートの Page リンクからは、配信中の Doxybook2 ページを開けます。  
-`make servedocs` は `make doxy` に依存しません。`pages/doxygen/` が無くても配信本体は起動します。  
-Doxygen HTML の閲覧は `make servedocs` が正本です。`make livedocs` の `site/` には入れません。
+`make servedocs` は `make doxy` に依存しません。`pages/doxygen/` が存在しなくても配信本体は起動します。  
+Doxygen HTML の閲覧は `make servedocs` が正本です。`make livedocs` の `site/` には含めません。
 
 アドレスを変える場合は `LIVEDOCS_ADDR` を指定します。
 
@@ -43,8 +43,8 @@ WSL2 の既定のネットワークモード (`nat`) では、Windows 側が同�
 別の内容が表示される場合は `netstat.exe -ano` の LISTENING 行を確認し、`LIVEDOCS_ADDR` で別のポートを指定してください。  
 詳細は [動的発行基盤](../docs/livedocs-design.md) のポートの競合を参照してください。
 
-言語と詳細ブロックは `LIVEDOCS_VARIANT` で選びます。既定は `ja-details` です。  
-値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。1 回の起動では 1 つだけ出します。
+言語と詳細ブロックは `LIVEDOCS_VARIANT` で選択します。既定は `ja-details` です。  
+値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。1 回の起動では 1 つだけ出力します。
 
 ```bash
 make servedocs LIVEDOCS_VARIANT=en
@@ -52,7 +52,7 @@ make livedocs LIVEDOCS_VARIANT=ja
 ```
 
 切り替えるときは `make servedocs` を再起動してください。  
-2 つ目の `make servedocs` を起動すると、先に動いていたこのワークスペースの serve が消えるまで待ってからステージングします。  
+2 つ目の `make servedocs` を起動すると、先に動いていたこのワークスペースの serve が終了するまで待機してからステージングします。  
 止めきれなければ起動しません。後から起動した側が残ります。
 
 ナビゲーションの展開可能なフォルダーには、対応する README のタイトルを表示します。  
@@ -69,7 +69,7 @@ make livedocs
 そのため、リンク検査を厳密に行う場合は `LIVEDOCS_STRICT=1` を指定できます。  
 リンク解決の規則は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。
 
-生成物を消す場合は次を実行します。  
+生成物を削除する場合は次を実行します。  
 `cleanlivedocs` は削除の前に、このワークスペースの `mkdocs serve` を停止します。  
 ルートの `make clean` と `make cleandocs` も同じ停止を行います。
 
@@ -120,13 +120,13 @@ make stopdocs
 | `pages/livedocs/site/` | `mkdocs build` の出力 |
 
 `pages/` はワークスペースの `.gitignore` で除外済みです。  
-`make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に消えます。
+`make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に削除されます。
 
 サイト名は、ワークスペースの `.vscode/pub_markdown.config.yaml` の `siteName` を読み、  
 `mkdocs.yml` の `site_name` へバリアント名とともに展開します。  
-未指定の場合はワークスペース フォルダー名を使います。
+未指定の場合はワークスペース フォルダー名を使用します。
 
-`mkdocs.yml` の `hooks:` に書くパスは、`vendor_assets.py` が docsfw の実際の配置と  
+`mkdocs.yml` の `hooks:` に記述するパスは、`vendor_assets.py` が docsfw の実際の配置と  
 生成先から求めます。docsfw をワークスペース内の既定位置以外へ置いた場合や、  
 `--livedocsDir` で生成先を変えた場合も、生成後のパスは実ファイルを指します。
 
@@ -148,7 +148,7 @@ make stopdocs
 詳細は [設計ドキュメントの「再生成中の配信」](../docs/livedocs-design.md) を参照してください。
 
 ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査した  
-ときの情報をキャッシュして使い回しているため、対象ファイル自身の内容以外  
+ときの情報をキャッシュして再利用しているため、対象ファイル自身の内容以外  
 (タイトル変更や新規ファイルの追加など) は反映が遅れることがあります。  
 ファイルの作成・削除・移動を検知した場合は自動でフル ステージングへ  
 切り替わります。  
@@ -186,6 +186,6 @@ python3 framework/docsfw/livedocs/bin/vendor_assets.py --workspaceFolder="$PWD" 
 ## 静的発行だけが持つ機能
 
 Word (docx) 出力、4 バリアントの同時出力、pandoc-crossref の採番、  
-概要版と詳細版の切替リンク、`file://` での動作は動的発行では扱いません。  
+概要版と詳細版の切り替えリンク、`file://` での動作は動的発行では扱いません。  
 これらが必要な場合は `make docs` を使用してください。  
 詳細は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。

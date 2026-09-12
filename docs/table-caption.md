@@ -1,6 +1,6 @@
 # 表のキャプション
 
-表のキャプションは、表の直後に空行をはさんで `Table:` 行を記載して指定します。  
+表のキャプションは、表の直後に空行を挿入し、`Table:` 行を記述して指定します。  
 キャプションは静的発行と動的発行のどちらでも表の上に表示され、本文カラム幅で折り返されます。
 
 ```markdown
@@ -11,7 +11,7 @@
 Table: 表のキャプション {#tbl:sample}
 ```
 
-キャプションの末尾に `{#tbl:xxx}` を記載すると、pandoc-crossref による採番と相互参照の対象になります。  
+キャプションの末尾に `{#tbl:xxx}` を記述すると、pandoc-crossref による採番と相互参照の対象になります。  
 ラベルがない場合も、キャプションの位置と表示は同じです。
 
 ## HTML の構造
@@ -24,8 +24,8 @@ Pandoc HTML のキャプションは `div` 要素です。
 <table id="tbl:sample">...</table>
 ```
 
-MkDocs のキャプションは、同じクラスを持つ `p` 要素です。ラベルを指定した場合、id もこの `p` 要素に付きます。  
-Material for MkDocs の JavaScript 実行後は `table` が `.md-typeset__table` と `.md-typeset__scrollwrap` に包まれます。  
+MkDocs のキャプションは、同じクラスを持つ `p` 要素です。ラベルを指定した場合、id もこの `p` 要素に付与されます。  
+Material for MkDocs の JavaScript 実行後は `table` が `.md-typeset__table` と `.md-typeset__scrollwrap` に囲まれます。  
 要素種別やラッパーの有無にかかわらず、キャプションは表の上に置き、キャプションと表の間隔を 8px にします。  
 キャプションの行高とインライン コード、および表のフォント、セルの内余白、罫線、最小幅も両発行系で同じ値にします。
 

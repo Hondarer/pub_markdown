@@ -2,9 +2,9 @@
 
 ## 概要
 
-VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示において、CSS カウンターを使用して見出し (h2〜h6) に自動的に章番号を振る方法を説明します。
+VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示において、CSS カウンターを使用して見出し (h2〜h6) に自動的に章番号を付与する方法を説明します。
 
-注: Pandoc にて h1 はドキュメントの見出しとして使用しているため、番号を付与するのは Markdown 上では h2 からとし、Pandoc の出力との一貫性を確保しています。
+注: Pandoc では h1 をドキュメントの見出しとして使用しているため、番号を付与するのは Markdown 上では h2 からとし、Pandoc の出力との一貫性を確保しています。
 
 参考: [Markdown の見出しに章番号を振る方法 (ついでに目次にも) - Qiita](https://qiita.com/UKawamura/items/42f907c88686fb3be4da)
 
@@ -17,15 +17,15 @@ VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示�
 
 ### スタイル ファイルを開く
 
-1. VS Code で任意の Markdown ファイルを開く
-2. `Ctrl+Shift+P` でコマンド パレットを開く
+1. VS Code で任意の Markdown ファイルを開きます。
+2. `Ctrl+Shift+P` でコマンド パレットを開きます。
 3. 「Markdown Preview Enhanced: Customize CSS (Global)」を選択します。
 
 `style.less` ファイルが開きます。このファイルの CSS を編集します。
 
 ### 見出し自動採番の CSS を追記する
 
-`style.less` を以下のように置換します。すでに他のカスタマイズが行われている場合は適宜マージを行ってください。
+`style.less` を以下のように置換します。すでに他のカスタマイズが行われている場合は適宜マージしてください。
 
 ```css
 /* Please visit the URL below for more information: */
@@ -125,4 +125,4 @@ h5 {
 
 ### セレクターの重複指定
 
-`.markdown-preview.markdown-preview` のようにセレクターを重複指定することで、CSS の詳細度 (specificity) を高め、Markdown Preview Enhanced のデフォルト スタイルを確実に上書きします。
+`.markdown-preview.markdown-preview` のようにセレクターを重複指定することで、CSS の詳細度 (specificity) を高め、Markdown Preview Enhanced の既定のスタイルを確実に上書きします。

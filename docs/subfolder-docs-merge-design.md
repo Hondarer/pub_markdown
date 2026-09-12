@@ -2,7 +2,7 @@
 
 ## 概要
 
-`pub_markdown_core.sh` によるドキュメント発行処理において、指定したドキュメント ルートを、メインの `mdRoot` (デフォルト: `docs`) 配下にマージします。
+`pub_markdown_core.sh` によるドキュメント発行処理において、指定したドキュメント ルートを、メインの `mdRoot` (既定値: `docs`) 配下にマージします。
 
 ### 背景
 
@@ -31,7 +31,7 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 `path` はワークスペース ルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。  
 `path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。  
-`path` が存在しない、またはディレクトリではない場合は warning を出してその項目だけを対象外にし、残りの項目で処理を継続します。  
+`path` が存在しない、またはディレクトリではない場合は warning を出力してその項目だけを対象外にし、残りの項目で処理を継続します。  
 `alias` 省略記法はサポートしません。
 
 ## パス変換ルール
@@ -52,7 +52,7 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
 
-alias を使う例:
+alias を使用する例:
 
 | ステップ | docsfw の例 |
 |----------|-------------|
@@ -65,11 +65,11 @@ alias を使う例:
 
 ### 受け入れ可能なパス形式
 
-`mergeSubfolderDocs` が指定されている場合、`relativeFile` に以下のパス形式を受け入れます。
+`mergeSubfolderDocs` が指定されている場合、`relativeFile` に次のパス形式を受け入れます。
 
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
-| メイン mdRoot パス | `docs/build-design.md` | 従来通り処理 |
+| メイン mdRoot パス | `docs/build-design.md` | 従来どおり処理 |
 | 実パス (主) | `framework/makefw/docs/make-local.md` / `framework/docsfw/docs/pipeline.md` / `.claude/skills/create-mock/SKILL.md` | 実パスを内部で仮想パスに変換して処理 |
 | 仮想パス (拡張) | `docs/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
@@ -134,4 +134,4 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 1. **エントリ形式**: `mergeSubfolderDocs` は `alias=path` 形式のみ受け付けます。旧形式や alias 省略記法はエラーです。
 2. **親ディレクトリ指定の禁止**: 指定した `path` の直下に `mdRoot` ディレクトリが存在する場合は、旧形式とみなしてエラーにします。`framework/makefw` ではなく `framework/makefw/docs` を指定してください。
 3. **サブディレクトリ名の衝突**: メイン `mdRoot` 配下に同名のディレクトリが存在する場合は、メイン側を優先します。
-4. **欠損パスの扱い**: 存在しない `path` は warning を出して対象外にし、パス変換と目次生成には実在して検出された項目だけを使用します。
+4. **欠損パスの扱い**: 存在しない `path` は warning を出力して対象外にし、パス変換と目次生成には実在して検出された項目だけを使用します。

@@ -19,21 +19,21 @@ abstract: "概要"
 
 本ドキュメントは、Markdown と Pandoc によるドキュメント発行のサンプル、運用方法およびノウハウをまとめたものです。
 
-## 言語切替
+## 言語切り替え
 
-日本語と英語を同一の Markdown に記載できます。
+日本語と英語を同一の Markdown に記述できます。
 
-発行する際に、それぞれの言語別タグを切り替えて処理を行うため、成果物は単一言語向けにできます。
+発行する際に、それぞれの言語別タグを切り替えて処理を行うため、成果物を単一言語向けに生成できます。
 
-### 記載方法
+### 記述方法
 
 #### ニュートラル言語
 
-特殊タグで囲わない限り、 Markdown はニュートラル言語として扱われ、日英双方の成果物に含まれます。
+特殊タグで囲わない限り、Markdown はニュートラル言語として扱われ、日英双方の成果物に含まれます。
 
 #### 日本語・英語
 
-以下のタグで囲うことにより、それぞれの言語別の成果物にのみ表示されます。
+次のタグで囲むことにより、それぞれの言語別の成果物にのみ表示されます。
 
 ```markdown
 <!--ja:
@@ -58,7 +58,7 @@ English Visible in Markdown
 編集時の表示・非表示は、発行後の表示状態に影響しません。
 
 <!--ja:-->
-### 記載例
+### 記述例
 <!--:ja-->
 <!--en:
 ### Sample
@@ -82,15 +82,15 @@ English Visible in Markdown
 
 ### Visual Studio Code 拡張機能
 
-以下の Visual Studio Code 拡張機能により、編集時の言語切替作業の効率化が可能です。
+次の Visual Studio Code 拡張機能により、編集時の言語切り替え作業の効率化が可能です。
 
 - [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
 
 ## 詳細情報
 
-文章に詳細情報を記載する場合は以下のタグを利用します。
+文章に詳細情報を記述する場合は次のタグを利用します。
 
-### 記載方法
+### 記述方法
 
 ```markdown
 <!--details:
@@ -106,7 +106,7 @@ English Visible in Markdown
 
 編集時の表示・非表示は、発行後の表示状態に影響しません。
 
-### 記載例
+### 記述例
 
 <!--details:
 詳細 (編集プレビューで非表示状態)
@@ -118,7 +118,7 @@ English Visible in Markdown
 
 ### Visual Studio Code 拡張機能
 
-以下の Visual Studio Code 拡張機能により、編集時の詳細切替作業の効率化が可能です。
+次の Visual Studio Code 拡張機能により、編集時の詳細切り替え作業の効率化が可能です。
 
 - [vscode-multilang-md](https://marketplace.visualstudio.com/items?itemName=TetsuoHonda.vscode-multilang-md)
 
@@ -144,7 +144,7 @@ English Visible in Markdown
 
 #### 階層数指定 (depth)
 
-- `depth=0`: 現在のディレクトリのみ (デフォルト)
+- `depth=0`: 現在のディレクトリのみ (既定値)
 - `depth=1`: 現在のディレクトリ + 1 階層下まで
 - `depth=2`: 現在のディレクトリ + 2 階層下まで
 - `depth=-1`: 制限なし (全階層を掘り下げ)
@@ -158,7 +158,7 @@ English Visible in Markdown
 ```
 
 - `"README.md"`: 特定ファイル
-- `"draft/*"`: ディレクトリ配下全て
+- `"draft/*"`: ディレクトリ配下すべて
 - `"*.tmp"`: 拡張子による除外
 
 ### 注意事項
@@ -168,17 +168,17 @@ English Visible in Markdown
 
 ### 実際の例
 
-`\toc depth=-1` による実際の出力例を以下に示します。
+`\toc depth=-1` による実際の出力例を次に示します。
 
 \toc depth=-1
 
 ## 画像の挿入
 
-画像を図として挿入する場合、Pandoc にて、タイトルが定義されていない画像は図として扱われず、書式が設定されないため、`[` `]` による図のタイトルを Markdown に記載します。
+画像を図として挿入する場合、Pandoc にて、タイトルが定義されていない画像は図として扱われず、書式が設定されないため、`[` `]` による図のタイトルを Markdown に記述します。
 
 ## PlantUML
 
-PlantUML は各プラグインとの親和性を考慮し、以下の通り Markdown に記載します。
+PlantUML は各プラグインとの親和性を考慮し、次のとおり Markdown に記述します。
 
 ### 言語名
 
@@ -189,15 +189,15 @@ plantuml とします。
 
 ### Plantuml タグ
 
-`@startuml` `@enduml` は、PlantUML プラグインにてドキュメント内の PlantUML を出力する際の識別に使うため、必ず記載します。
+`@startuml` `@enduml` は、PlantUML プラグインにてドキュメント内の PlantUML を出力する際の識別に利用するため、必ず記述します。
 
 ### タイトル
 
-`@startuml` に続いてファイル名を記載します。Visual Studio Code の PlantUML プラグインにて、エクスポートする際のファイル名に使われます。
+`@startuml` に続いてファイル名を記述します。Visual Studio Code の PlantUML プラグインにて、エクスポートする際のファイル名に使用されます。
 
-また、上記とは別に `caption` キーワードでタイトルを記載します。`caption` は、PlantUML の図の見出しとして使われるとともに、Pandoc での発行時には図のキャプションになります。
+また、上記とは別に `caption` キーワードでタイトルを記述します。`caption` は、PlantUML の図の見出しとして使用されるとともに、Pandoc での発行時には図のキャプションになります。
 
-コード ブロックの直後に `CodeBlock:` 行を記載した場合は、そちらが優先されます。相互参照のラベルを付ける場合は `CodeBlock:` 行を使います。
+コード ブロックの直後に `CodeBlock:` 行を記述した場合は、そちらが優先されます。相互参照のラベルを付ける場合は `CodeBlock:` 行を使用します。
 
 背景色は、pandoc 側で skinparam backgroundColor transparent を自動付与して透明にしています。  
 すでに skinparam backgroundColor が定義されている場合は、置換します。
@@ -225,20 +225,20 @@ plantuml とします。
 
 ### Chrome 拡張機能
 
-以下の Chrome 拡張機能により、GitBucket での PlantUML 図形のレンダリングが可能です。
+次の Chrome 拡張機能により、GitBucket での PlantUML 図形のレンダリングが可能です。
 
 - [PlantUML In-Place Preview](https://chromewebstore.google.com/detail/plantuml-in-place-preview/gkdjfofhecooaojkhbohidojebbpcene)
 
 ## Mermaid
 
-Mermaid 記法について、以下の通り Markdown に記載します。  
+Mermaid 記法について、次のとおり Markdown に記述します。  
 Mermaid と PlantUML は実現できることが重複します。PlantUML を優先して採用してください。
 
 ### タイトル
 
-コード ブロックの直後に `CodeBlock:` 行を記載します。詳細は [コード ブロックのキャプション](#コード-ブロックのキャプション) を参照してください。
+コード ブロックの直後に `CodeBlock:` 行を記述します。詳細は [コード ブロックのキャプション](#コード-ブロックのキャプション) を参照してください。
 
-### 記載例
+### 記述例
 
 ```mermaid
 sequenceDiagram
@@ -250,7 +250,7 @@ CodeBlock: Mermaid のキャプション
 
 ## コード ブロックのキャプション
 
-コード ブロックのキャプションは、ブロックの直後に空行をはさんで `CodeBlock:` 行を記載します。  
+コード ブロックのキャプションは、ブロックの直後に空行を挿入して `CodeBlock:` 行を記述します。  
 Mermaid、PlantUML、通常のソース コードのいずれも同じ記法です。
 
 ````text
@@ -261,10 +261,10 @@ int main(void);
 CodeBlock: サンプル コード
 ````
 
-フェンスには言語名だけを記載するため、GitHub などの Web 表示でも図の描画とシンタックス ハイライトが機能します。
+フェンスには言語名だけを記述するため、GitHub などの Web 表示でも図の描画とシンタックス ハイライトが機能します。
 
-`CodeBlock:` 行の末尾に `{#lst:xxx}` または `{#fig:xxx}` の形式でラベルを記載すると、pandoc-crossref による採番と相互参照の対象になります。  
-Mermaid と PlantUML は図なので `fig:`、それ以外のコード ブロックはリストなので `lst:` を使います。
+`CodeBlock:` 行の末尾に `{#lst:xxx}` または `{#fig:xxx}` の形式でラベルを記述すると、pandoc-crossref による採番と相互参照の対象になります。  
+Mermaid と PlantUML は図なので `fig:`、それ以外のコード ブロックはリストなので `lst:` を使用します。
 
 ````text
 ```makefile
@@ -280,7 +280,7 @@ CodeBlock: ビルド手順 {#lst:build-steps}
 
 ## draw.io
 
-draw.io は各プラグインとの親和性を考慮し、以下の通り Markdown に記載します。
+draw.io は各プラグインとの親和性を考慮し、次のとおり Markdown に記述します。
 
 ### 形式
 
@@ -294,7 +294,7 @@ Markdown から引用して表示した場合には代表シートのみ表示�
 
 単一ファイルとしての drawio.svg ファイルは、docx フォーマットや html-self-contained フォーマットの出力結果には含まれません。
 
-### 記載例
+### 記述例
 
 ![draw.io のテスト](images/テスト.drawio.svg)
 
@@ -306,7 +306,7 @@ docx 変換後に `Text is not SVG - cannot display` と表示されるケース
 
 [Why text in exported SVG images may not display correctly](https://www.drawio.com/doc/faq/svg-export-text-problems)
 
-この問題を回避するため、テキスト記入時は以下のようにします。
+この問題を回避するため、テキスト記入時は次のように設定します。
 
 - 「テキスト」の 「ワード ラップ」 のチェックを外す。
 - 「テキスト」の 「フォーマットされたテキスト」 のチェックを外す。
@@ -318,7 +318,7 @@ svg に外部から編集を加えるため、意図せぬ結果になってい�
 
 #### ダーク テーマの Visual Studio Code で画面が見づらい場合
 
-Draw.io Integration のテーマを loght テーマ (例: kennedy - light) に変更します。
+Draw.io Integration のテーマを light テーマ (例: kennedy - light) に変更します。
 
 - [VSCode で Draw.io を編集できるようにするまで](https://zenn.dev/satonopan/articles/4177ed8b88e067)
 - [VScode の拡張機能「Draw.io Integration」で背景色を白色に変更する方法](https://penpen-dev.com/blog/vscode-drawio/)
@@ -329,7 +329,7 @@ Visual Studio Code ステータス エリア (右下) の `Theme:` 部分をク�
 
 OpenAPI ファイルは、widdershins により Markdown に変換した後で Pandoc に渡されます。
 
-### 記載例
+### 記述例
 
 [OpenAPI ファイルへ](books-swagger.yaml)
 
@@ -364,8 +364,8 @@ Debug.WriteLine("日本");
 
 [列幅の指定方法](https://github.com/jgm/pandoc/issues/2486) により、ページ幅に収まらなかった場合の列幅を指定できます。
 
-表に続いて `Table:` を記載して表のキャプションを指定します。  
-キャプションの末尾に `{#tbl:xxx}` を記載すると、pandoc-crossref による採番と相互参照の対象になります。  
+表に続いて `Table:` を記述して表のキャプションを指定します。  
+キャプションの末尾に `{#tbl:xxx}` を記述すると、pandoc-crossref による採番と相互参照の対象になります。  
 キャプションは、Pandoc による静的発行と MkDocs による動的発行のどちらでも表の上に表示されます。
 
 |No.|内容     |
@@ -397,7 +397,7 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 
 Table: セル内での改行を含む表
 
-以下の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、MkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
+次の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、MkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
 [Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
 
 +------------------+-------------+
@@ -429,7 +429,7 @@ Table: Markdown pipe tables による表 2
 
 ## メタデータ
 
-Markdown の先頭に以下のように記載します。
+Markdown の先頭に次のように記述します。
 
 ```text
 ---
@@ -460,7 +460,7 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 著者と日付の仕様は [発行者と発行日時](../publish-info.md) を正本とします。
 
 - 第 1 レベルのタイトルが、文書のタイトルになります (title の指定は無視されます)。
-- 以下のルールで著者が設定されます。
+- 次のルールで著者が設定されます。
     1. メタデータの author が指定されている  
        → メタデータの author
     2. pub_markdown.config に autoSetAuthor: true が指定されている場合
@@ -470,7 +470,7 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
            → 空文字
         3. Git 管理下にあり、コミット履歴あり  
            → コミッター リスト (古い順、重複排除)
-- 以下のルールで日付が設定されます。
+- 次のルールで日付が設定されます。
     1. メタデータの date が指定されている  
        → メタデータの date
     2. pub_markdown.config に autoSetDate: true が指定されている場合
@@ -485,15 +485,15 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 ## Pandoc テンプレート
 
-bin/styles 以下にカスタマイズされた Pandoc テンプレートがあります。
+bin/styles 配下にカスタマイズされた Pandoc テンプレートがあります。
 
 ### html
 
-`pandoc -D 'html'` コマンドで出力されたデフォルト テンプレートに置き換えることで、デフォルトの出力に変更できます。
+`pandoc -D 'html'` コマンドで出力された既定のテンプレートに置き換えることで、既定の出力に変更できます。
 
 ### docx
 
-`pandoc -o custom-reference.docx --print-default-data-file reference.docx` コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、デフォルトの出力に変更できます。
+`pandoc -o custom-reference.docx --print-default-data-file reference.docx` コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、既定の出力に変更できます。
 
 図の幅はページ サイズおよび余白に基づいて Pandoc で調整されます。~~とじしろ (w:gutter) は考慮されないため、とじしろを定義した場合は図の横幅が期待通りとなりません。テンプレート作成時は留意してください。~~  
 → Pandoc 3.1.6 より、ページ設定の余白のとじしろが反映されていないバグが修正されました。[Gutters on margin specs not picked up from custom-reference.docx (HTML to .docx) #8946](https://github.com/jgm/pandoc/issues/8946)
@@ -505,7 +505,7 @@ bin/styles 以下にカスタマイズされた Pandoc テンプレートがあ�
 
 成果物は、言語別、フォーマット別に生成されます。
 
-## 参考にしたサイト
+## 参考情報
 
 - [Markdown を pandoc で HTML 化するときのノウハウ](https://kiririmode.hatenablog.jp/entry/20220227/1645935125)
 - [44 種類のフォーマットに対応した Pandoc で Markdown を HTML 形式に変換する](https://dev.classmethod.jp/articles/pandoc-markdown2html/)

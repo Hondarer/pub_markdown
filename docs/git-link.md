@@ -8,7 +8,7 @@
 
 ## 表示条件
 
-リンクは `gitLinkEnable` が `true` (デフォルト) の場合に表示候補になります。  
+リンクは `gitLinkEnable` が `true` (既定) の場合に表示候補になります。  
 通常は、次のすべてを満たす場合に Git ホスティング上の blob URL を表示します。
 
 - ソース ファイルが Git 管理下にある (追跡済み)
@@ -29,14 +29,14 @@
 解決手順は次のとおりです。実装は `bin/get_file_git_url.sh` にあります。
 
 1. 実体パスから所属リポジトリのルートを取得します。
-2. リポジトリ ルートからの相対パスを求める。
+2. リポジトリ ルートからの相対パスを求めます。
 3. 追跡済みかどうかを確認します。未追跡なら Doxygen HTML へのフォールバック候補にします。
 4. `.gitignore` 対象かどうかを確認します。対象なら Doxygen HTML へのフォールバック候補にします。
 5. `remote.origin.url` を取得します。空なら Doxygen HTML へのフォールバック候補にします。
 6. remote URL を web ベース URL (`scheme://host/owner/repo`) に正規化します。
 7. host から provider 種別を判定します。
-8. ref を決定します。リンク対象ファイルの最終コミット SHA を用いる。
-9. provider に応じた blob URL を組み立てる。
+8. ref を決定します。リンク対象ファイルの最終コミット SHA を用います。
+9. provider に応じた blob URL を組み立てます。
 
 Git blob URL を組み立てられない場合、docsfw は `doxygen-page-url` から出力 HTML への相対 URL を計算し、その URL を Git アイコンに設定します。  
 このフォールバックは、doxyfw 生成 Markdown のように Doxygen HTML への対応がわかるページだけで有効です。  
@@ -72,7 +72,7 @@ GitHub、GitLab、GitBucket 以外の provider、または provider を判定で
 `pub_markdown.config.yaml` で Git リンクの表示を制御します。
 
 ```yaml
-# Git 単一ページ リンクの有効化 (true / false)。デフォルト: true
+# Git 単一ページ リンクの有効化 (true / false)。既定値: true
 gitLinkEnable: true
 ```
 
@@ -126,7 +126,7 @@ doxyfw 側の埋め込みは `templates/inject-source-origin.py` が担当し、
 
 ## 動的発行での対応
 
-MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ blob URL を同じ位置へ出します。  
+MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ blob URL を同じ位置へ出力します。  
 実装は `livedocs/bin/git_link.py` で、本書が定める URL 形式、provider の判定、`git-origin` の差し替えは共通です。
 
 静的発行との違いを次に示します。
@@ -142,7 +142,7 @@ MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ b
 
 ## 補足
 
-- リンク先 URL の到達性 (push 済みかどうか) はネットワーク確認しません。Git blob URL は最終コミット SHA を参照するため、未 push のコミットを参照している場合はリンク先が見つからないことがあります。
+- リンク先 URL の到達性 (push 済みかどうか) はネットワーク経由で検証しません。Git blob URL は最終コミット SHA を参照するため、未 push のコミットを参照している場合はリンク先が見つからないことがあります。
 - Git blob URL は言語版・詳細版のバリアント間で不変 (ソース ファイルにのみ依存) のため、バリアント コピー最適化と両立します。Doxygen HTML へのフォールバック URL は、出力 HTML からの相対 URL として発行時に計算します。docx ダウンロードや詳細切り替えのような実行時の実在確認は行いません。
 - self-contain HTML にはリンクを埋め込みません (docx ダウンロード リンクと同じ扱い)。
 - フロント マターの `git-origin` キーは pandoc がメタデータとして読み取りますが、テンプレートは参照しないため出力には影響しません。

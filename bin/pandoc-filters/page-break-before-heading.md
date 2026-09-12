@@ -1,12 +1,12 @@
 # page-break-before-heading.lua
 
-見出し 1〜N がページ下部に配置される場合、直前に改ページを挿入する Pandoc Lua フィルター。
+見出し 1〜N がページ下部に配置される場合、直前に改ページを挿入する Pandoc Lua フィルターです。
 
-**デフォルトは無効**。メタデータで明示的に有効化した文書にのみ機能します。
+**既定では無効** です。メタデータで明示的に有効化した文書にのみ機能します。
 
 ## 概要
 
-文書のレイアウトにおいて、見出しがページ下部にあり本文が次ページから始まる配置は読みにくい。このフィルターは AST 上の文字数からページ位置を推定し、しきい値を超えた位置に見出しが来る場合に改ページを挿入します。
+文書のレイアウトにおいて、見出しがページ下部にあり本文が次ページから始まる配置は読みにくくなります。このフィルターは AST 上の文字数からページ位置を推定し、しきい値を超えた位置に見出しが来る場合に改ページを挿入します。
 
 ## 使い方
 
@@ -53,7 +53,7 @@ page-break-before-heading:
 
 すべてのオプションは `page-break-before-heading:` 配下のネスト YAML で指定します。
 
-| オプション | デフォルト | 説明 |
+| オプション | 既定値 | 説明 |
 |-----------|-----------|------|
 | `enabled` | false | フィルターの有効フラグ |
 | `threshold` | 75 | 改ページを挿入するしきい値 [%] |
@@ -77,7 +77,7 @@ AST を走査しながら各ブロック要素の「文字数相当」を累積�
 page_position [%] = current_page_chars / chars_per_page × 100
 ```
 
-`current_page_chars` は直前の改ページ以降の累積値であり、複数ページにわたる場合は 100% を超える。剰余演算は行わないため、「複数ページ分の内容の後に来る見出し」も確実に改ページ対象となります。
+`current_page_chars` は直前の改ページ以降の累積値であり、複数ページにわたる場合は 100% を超えます。剰余演算は行わないため、「複数ページ分の内容の後に来る見出し」も確実に改ページ対象となります。
 
 ### 改ページ判定の 2 段階ロジック
 
@@ -95,11 +95,11 @@ page_position >= threshold
 current_page_chars + section_chars > chars_per_page
 ```
 
-`section_chars` は当該見出しから **次の改ページ候補** 直前までのブロック文字数の合計。次の改ページ候補とは、明示的な改ページ (OpenXML `w:type="page"`) または改ページ対象レベルの見出し (effective level 1〜N)。
+`section_chars` は当該見出しから **次の改ページ候補** 直前までのブロック文字数の合計です。次の改ページ候補とは、明示的な改ページ (OpenXML `w:type="page"`) または改ページ対象レベルの見出し (effective level 1〜N) です。
 
 あふれチェックにより、見出しがページ上部にあっても続くセクションが 1 ページを超えるなら先行して改ページします。`section_chars` は実行前の事前スキャンで計算します。
 
-**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しません。この抑制は **親直後の最初の子セクション 1 回限り** で適用される。最初の子セクションが (改ページせずに) 通過した時点で `last_break_effective_level` は `nil` にリセットされるため、2 番目以降の兄弟セクションでは通常通りあふれチェックが機能します。
+**あふれチェックの抑制条件**: あふれチェックが BREAK と判定した場合でも、直前の改ページ要因が自身より 1 レベル上の見出し (`last_break_effective_level == effective_level - 1`) であれば改ページを挿入しません。この抑制は **親直後の最初の子セクション 1 回限り** で適用されます。最初の子セクションが (改ページせずに) 通過した時点で `last_break_effective_level` は `nil` にリセットされるため、2 番目以降の兄弟セクションでは通常通りあふれチェックが機能します。
 
 ```
 あふれチェック BREAK 条件:
@@ -109,26 +109,26 @@ current_page_chars + section_chars > chars_per_page
 最初の兄弟が no-break で通過後: last_break_effective_level ← nil (1 回限り)
 ```
 
-`last_break_effective_level` は以下のタイミングで更新される:
+`last_break_effective_level` は以下のタイミングで更新されます。
 
-- **always-break 対象の見出し** (effective level ≤ `heading-level-always`): 実際に改ページを挿入するかどうかにかかわらず記録します。ページ先頭 (`current_page_chars == 0`) で改ページを挿入しない場合も同様。
+- **always-break 対象の見出し** (effective level ≤ `heading-level-always`): 実際に改ページを挿入するかどうかにかかわらず記録します。ページ先頭 (`current_page_chars == 0`) で改ページを挿入しない場合も同様です。
 - **threshold / overflow による改ページ**: 改ページを挿入した場合のみ記録します。
-- **最初の子セクションの通過**: 親直後の最初の子セクションが改ページせずに通過した時点で `nil` にリセットされる。
-- **外部由来の改ページ** (OpenXML `w:type="page"`): `nil` にリセットされる。ただし、その直後に always-break 対象の見出しが来れば、ページ先頭でも記録されるため抑制条件が再び成立します。
+- **最初の子セクションの通過**: 親直後の最初の子セクションが改ページせずに通過した時点で `nil` にリセットされます。
+- **外部由来の改ページ** (OpenXML `w:type="page"`): `nil` にリセットされます。ただし、その直後に always-break 対象の見出しが来れば、ページ先頭でも記録されるため抑制条件が再び成立します。
 
-親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計とします。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしません。ただし、2 番目以降の兄弟 (例: `### com_csgpno`) ではあふれチェックが通常通り動作します。
+親見出しの直後にあるセクションは同じページに配置する方が読みやすく、むやみに分離しない設計としています。例として、`## 関数` (eff H1、常時改ページ) の直後の `### potrOpenService` (eff H2) がセクション長超過でも改ページしません。ただし、2 番目以降の兄弟 (例: `### com_csgpno`) ではあふれチェックが通常通り動作します。
 
 ### --shift-heading-level-by との関係
 
-Pandoc の `--shift-heading-level-by` は **Lua フィルター実行後** に AST へ適用される。そのため、このフィルターが見る見出しレベルはソース上のレベル (例: `###` = H3) であり、出力上のレベル (H2) とは異なります。
+Pandoc の `--shift-heading-level-by` は **Lua フィルター実行後** に AST へ適用されます。そのため、このフィルターが参照する見出しレベルはソース上のレベル (例: `###` = H3) であり、出力上のレベル (H2) とは異なります。
 
-`shift-heading-level-by` を設定すると、各見出しの **実効レベル** を次式で算出し、出力上のレベルで判定できる:
+`shift-heading-level-by` を設定すると、各見出しの **実効レベル** を次式で算出し、出力上のレベルで判定できます。
 
 ```
 effective_level = raw_level + shift_heading_level_by
 ```
 
-例: `--shift-heading-level-by=-1` の場合、`raw=3` の見出しは `effective=2` として扱われる。
+例: `--shift-heading-level-by=-1` の場合、`raw=3` の見出しは `effective=2` として扱われます。
 
 `effective_level <= 0` になる見出し (ソースの H1 が出力でタイトルに昇格する場合など) は改ページ対象外となります。
 
@@ -138,15 +138,15 @@ effective_level = raw_level + shift_heading_level_by
 
 ### pub_markdown_core.sh との連携
 
-`pub_markdown_core.sh` の docx 変換コマンドでは `--shift-heading-level-by=-1` と組み合わせて `--metadata shift-heading-level-by=-1` を自動付与するため、文書側での `shift-heading-level-by` 指定は不要。
+`pub_markdown_core.sh` の docx 変換コマンドでは `--shift-heading-level-by=-1` と組み合わせて `--metadata shift-heading-level-by=-1` を自動付与するため、文書側での `shift-heading-level-by` 指定は不要です。
 
 ### 他フィルターの改ページとの連携
 
-`toc-pagebreak.lua` など他フィルターが先に挿入した OpenXML 改ページ (`w:type="page"`) を検出した場合、ページ内文字数カウンターと `last_break_effective_level` をリセットします。これにより、目次直後の最初の見出しへの二重改ページを防ぐ。
+`toc-pagebreak.lua` など他フィルターが先に挿入した OpenXML 改ページ (`w:type="page"`) を検出した場合、ページ内文字数カウンターと `last_break_effective_level` をリセットします。これにより、目次直後の最初の見出しへの二重改ページを防ぎます。
 
-その後に always-break 対象の見出し (eff H1 など) がページ先頭に続く場合、改ページは挿入されないが `last_break_effective_level` は記録される。これにより、その子見出し (eff H2 など) に対するあふれチェックの抑制条件が正しく成立します。
+その後に always-break 対象の見出し (eff H1 など) がページ先頭に続く場合、改ページは挿入されませんが、`last_break_effective_level` は記録されます。これにより、その子見出し (eff H2 など) に対するあふれチェックの抑制条件が正しく成立します。
 
-**例**: `toc: true` の文書で `## ファイル` (eff H1) → `### foo` (eff H2) の構造がある場合、目次改ページ後に `## ファイル` はページ先頭に来るため改ページしないが、`last_break_effective_level = 1` は記録される。`### foo` のセクションが 1 ページを超えてもあふれ改ページが抑制される (親直後の最初の子のみ)。2 番目以降の兄弟セクションでは通常通りあふれチェックが機能します。
+**例**: `toc: true` の文書で `## ファイル` (eff H1) → `### foo` (eff H2) の構造がある場合、目次改ページ後に `## ファイル` はページ先頭に来るため改ページしませんが、`last_break_effective_level = 1` は記録されます。`### foo` のセクションが 1 ページを超えてもあふれ改ページが抑制されます (親直後の最初の子のみ)。2 番目以降の兄弟セクションでは通常通りあふれチェックが機能します。
 
 ### 要素ごとの文字数換算
 
@@ -180,7 +180,7 @@ effective_level = raw_level + shift_heading_level_by
 
 ### 対応単位
 
-Markdown 属性や SVG で指定可能な単位は以下の通り。
+Markdown 属性や SVG で指定可能な単位は以下の通りです。
 
 | 単位 | 変換 |
 |------|------|
@@ -193,7 +193,7 @@ Markdown 属性や SVG で指定可能な単位は以下の通り。
 
 ## 制限事項
 
-AST レベルでの文字数推定のため、実際のページ位置とはずれが生じる。以下の要因で誤差が発生する可能性がある。
+AST レベルでの文字数推定のため、実際のページ位置との間でずれが生じます。以下の要因で誤差が発生する可能性があります。
 
 - フォント サイズ・行間・余白の設定
 - 画像の実際の表示サイズ (縮小・拡大)
@@ -226,7 +226,7 @@ page-break-before-heading:
 
 ### 大きめのフォントを使う文書
 
-1 ページあたりの文字数が少ない場合は `chars-per-page` を下げる。
+1 ページあたりの文字数が少ない場合は `chars-per-page` を小さく設定します。
 
 ```yaml
 ---
@@ -242,7 +242,7 @@ page-break-before-heading:
 ---
 page-break-before-heading:
   enabled: true
-  heading-level-always: 1   # H1 は常に改ページ (デフォルト)
+  heading-level-always: 1   # H1 は常に改ページ (既定)
   heading-level-to: 3       # H2, H3 は threshold で判定
   threshold: 50
 ---
@@ -272,7 +272,7 @@ page-break-before-heading:
 ---
 ```
 
-`pub_markdown_core.sh` 経由の場合は `--metadata shift-heading-level-by=-1` が自動付与されるため、文書のフロント マターへの追記は不要。
+`pub_markdown_core.sh` 経由の場合は `--metadata shift-heading-level-by=-1` が自動付与されるため、文書のフロント マターへの追記は不要です。
 
 ### 常に改ページを無効化してしきい値判定のみにする
 
@@ -288,4 +288,4 @@ page-break-before-heading:
 
 ## 出力形式
 
-DOCX 形式専用。改ページは OOXML の RawBlock として挿入されるため、他の出力形式では無視される。
+DOCX 形式専用です。改ページは OOXML の RawBlock として挿入されるため、他の出力形式では無視されます。

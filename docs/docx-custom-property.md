@@ -8,11 +8,11 @@ document-id: DOCSFW-SAMPLE-001
 
 ## 記載方法
 
-Markdown の先頭に YAML front matter として、標準プロパティではないルート階層の文字列メタデータを記載します。
+Markdown の先頭に YAML front matter として、標準プロパティではないルート階層の文字列メタデータを記述します。
 
 ```yaml
 ---
-title: docx カスタムプロパティのサンプル
+title: docx カスタム プロパティのサンプル
 document-id: DOCSFW-SAMPLE-001
 ---
 ```
@@ -64,7 +64,7 @@ Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フ�
 6. プロパティ一覧から `document-id` を選択します。
 7. 「OK」を押します。
 
-フィールド コードで記載すると、以下の形式になります。
+フィールド コードで記述すると、以下の形式になります。
 
 ```text
 { DOCPROPERTY "document-id" }
@@ -102,7 +102,7 @@ Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フ�
 
 ```yaml
 ---
-title: docx カスタムプロパティのサンプル
+title: docx カスタム プロパティのサンプル
 document-id: ""
 ---
 ```
@@ -141,9 +141,9 @@ Word のフィールドだけで回避する場合は、`IF` フィールドで 
 
 ## 組み込みプロパティを使う方法
 
-Word の組み込みプロパティを使う場合、プロパティが存在しないことによる `プロパティ名が不明です` のエラーを避けやすいです。
+Word の組み込みプロパティを使う場合、プロパティが存在しないことによる `プロパティ名が不明です` のエラーを回避しやすくなります。
 
-例えば、文書 ID を `keywords` に流用する場合は、Markdown の YAML front matter に以下のように記載します。
+例えば、文書 ID を `keywords` に流用する場合は、Markdown の YAML front matter に以下のように記述します。
 
 ```yaml
 ---
@@ -158,7 +158,7 @@ Word では、以下のフィールドで表示できます。
 { DOCPROPERTY "Keywords" }
 ```
 
-`keywords` は Pandoc から Word の組み込みプロパティ `Keywords` に対応します。未設定の場合でも組み込みプロパティとして扱われるため、カスタム プロパティ名が存在しない場合のエラーは避けやすいです。
+`keywords` は Pandoc から Word の組み込みプロパティ `Keywords` に対応します。未設定の場合でも組み込みプロパティとして扱われるため、カスタム プロパティ名が存在しない場合のエラーを回避しやすくなります。
 
 ただし、`keywords` は本来検索用キーワードで、文書 ID 専用の意味を持つプロパティではありません。検索用キーワードも同時に使用する文書では、文書 ID とキーワードが混在します。
 
@@ -206,7 +206,7 @@ Microsoft の `WdBuiltInProperty` には、`Format`、`Number of Slides`、`Numb
 { DOCPROPERTY "Subject" }
 ```
 
-Microsoft の `BuiltInDocumentProperties` の説明では、組み込みプロパティであっても Word が値を定義していない場合、VBA で `Value` を読むとエラーになるとされています。`DOCPROPERTY` で未定義プロパティ名エラーを避ける目的では、上記の対応プロパティ名を使用し、値そのものが空になるケースは許容する前提で扱います。
+Microsoft の `BuiltInDocumentProperties` の説明では、組み込みプロパティであっても Word が値を定義していない場合、VBA で `Value` を取得するとエラーになるとされています。`DOCPROPERTY` で未定義プロパティ名エラーを避ける目的では、上記の対応プロパティ名を使用し、値そのものが空になるケースは許容する前提で扱います。
 
 参考:
 

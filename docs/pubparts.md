@@ -84,10 +84,10 @@ order:
 
 ## defaults: フロント マター デフォルト値
 
-マジック ファイルの `defaults:` ブロックに `key: value` を書くと、スコープ内の Markdown がその属性を自前のフロント マターに持たない場合にだけ、指定した値が pandoc のメタデータとして適用されます。  
+マジック ファイルの `defaults:` ブロックに `key: value` を記述すると、スコープ内の Markdown がその属性を自前のフロント マターに持たない場合にだけ、指定した値が pandoc のメタデータとして適用されます。  
 ドキュメント自身がフロント マターで同じキーを指定していれば、そちらが優先されます。
 
-`defaults:` は 3 ファイル (`pubpart.yaml` / `pubchild.yaml` / `publocal.yaml`) のいずれでも使えます。  
+`defaults:` は 3 ファイル (`pubpart.yaml` / `pubchild.yaml` / `publocal.yaml`) のいずれでも使用できます。  
 `order:` とは独立したブロックであり、`publocal.yaml` には両方を併記できます。
 
 ```yaml
@@ -104,7 +104,7 @@ defaults:
 
 ### スコープと適用対象
 
-ファイル F が在るディレクトリを D とすると、各ファイルの作用は次のとおりです。
+ファイル F が存在するディレクトリを D とすると、各ファイルの作用は次のとおりです。
 
 | ファイル | デフォルト値の適用先 | D 直下の F への作用 |
 |---|---|---|
@@ -114,13 +114,13 @@ defaults:
 
 ### 優先順位
 
-複数のスコープが同じキーを与えた場合は、次の規則で 1 つに決まります。
+複数のスコープが同じキーを与えた場合は、次の規則で 1 つに決定します。
 
 - ドキュメント自身のフロント マター > 近いディレクトリ > 遠いディレクトリ。
 - 同一ディレクトリ内では `local` > `part` > `child` (`local` が最優先)。
 - `child` は配下にのみ作用するため、宣言したディレクトリ自身のファイルには効きません。
 
-例えば次の配置では、`docs/api/guide.md` の `category` は `publocal.yaml` の `API ガイド` になり、`author` は親の `pubpart.yaml` の `開発チーム` を継承します。`guide.md` 自身が `category` を書いていれば、その値が最優先で勝ちます。
+例えば次の配置では、`docs/api/guide.md` の `category` は `publocal.yaml` の `API ガイド` になり、`author` は親の `pubpart.yaml` の `開発チーム` を継承します。`guide.md` 自身に `category` が記述されていれば、その値が最優先で採用されます。
 
 ```
 docs/
@@ -134,7 +134,7 @@ docs/
 
 - ナビゲーション ツリーと TOC の見出し (`short-title` 系) は別経路 (`extract_short_title`) で読み込むため、`defaults:` の対象外です。
 - `category` などの値を出力に表示するには、HTML / docx テンプレート側で対応するメタデータ (`$category$` など) を参照している必要があります。本機能は値を pandoc に渡すところまでを担います。
-- `author` / `date` を `defaults:` で与えると pandoc のメタデータに載るため、`autoSetAuthor` / `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
+- `author` / `date` を `defaults:` で与えると pandoc のメタデータに設定されるため、`autoSetAuthor` / `autoSetDate` による環境変数 (`DOCUMENT_AUTHOR` / `DOCUMENT_DATE`) のフォールバックよりも優先されます。値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
 ## 実装上の注意
 

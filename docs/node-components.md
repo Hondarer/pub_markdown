@@ -1,6 +1,6 @@
 # Node コンポーネント
 
-docsfw が実行時に使う npm パッケージと、その解決手順を示します。  
+docsfw が実行時に使用する npm パッケージと、その解決手順を示します。  
 セットアップ操作は [Node.js モジュールの設定](../bin/how_to_setup_node_modules.md) を参照してください。
 
 ## 必須パッケージ
@@ -21,11 +21,11 @@ docsfw が実行時に使う npm パッケージと、その解決手順を示�
 | `@plantuml/core` | Pandoc HTML と動的発行のブラウザー上 PlantUML | モジュール |
 
 `mermaid` は `package.json` の直接依存ではありません。  
-`@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使います。
+`@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使用します。
 
 ## 解決順
 
-`bin/resolve-node-components.js` が次の順で探します。
+`bin/resolve-node-components.js` は次の順序で探索します。
 
 1. `NODE_PATH`
 2. `/usr/local/lib/node_modules`
@@ -41,9 +41,9 @@ docsfw が実行時に使う npm パッケージと、その解決手順を示�
 
 | 状態 | 動作 |
 |---|---|
-| 必須がすべて揃う | npm を実行しません |
-| 一部だけ欠ける | 欠けたトップレベルだけ `npm install --no-save <name>@<lockfile の version>` します |
-| 必須がすべて欠ける | `bin/` で `npm ci` します |
+| 必須パッケージがすべて揃っている | npm を実行しません |
+| 一部だけ欠けている | 欠けたトップレベルだけ `npm install --no-save <name>@<lockfile の version>` します |
+| 必須パッケージがすべて欠けている | `bin/` で `npm ci` します |
 
 `npm ci` と部分インストールのあいだは `PUPPETEER_SKIP_DOWNLOAD=1` です。  
 Chrome 本体の取得は npm とは別段です。
@@ -52,15 +52,15 @@ Chrome 本体の取得は npm とは別段です。
 
 | OS | 動作 |
 |---|---|
-| Windows | Microsoft Edge が必須です。無ければエラーで終了します。Puppeteer 用 Chrome はダウンロードしません |
-| Linux | `PUPPETEER_EXECUTABLE_PATH` が実行可能な Chrome を指すときはそれを使います |
-| Linux | 外部 Chrome が無いときは、puppeteer モジュール解決のあと `npx puppeteer browsers install chrome` と `chrome-headless-shell` を実行します |
+| Windows | Microsoft Edge が必須です。存在しない場合はエラーで終了します。Puppeteer 用 Chrome はダウンロードしません |
+| Linux | `PUPPETEER_EXECUTABLE_PATH` が実行可能な Chrome を指すときはそれを使用します |
+| Linux | 外部 Chrome が存在しないときは、puppeteer モジュール解決のあと `npx puppeteer browsers install chrome` と `chrome-headless-shell` を実行します |
 
-npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が無ければブラウザー導入は走ります。
+npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が無ければブラウザーの導入が実行されます。
 
 ## 呼び出し元
 
-後段は解決済みパスだけを使います。
+後続の処理は解決済みパスのみを使用します。
 
 | 用途 | 環境変数 |
 |---|---|
@@ -71,5 +71,5 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | `@plantuml/core` | `DOCSFW_PLANTUML_CORE` |
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
-グローバル root があるときは `DOCSFW_NODE_GLOBAL_ROOTS` を子プロセスのモジュール探索の先頭へ足します。  
+グローバル root があるときは `DOCSFW_NODE_GLOBAL_ROOTS` を子プロセスのモジュール探索の先頭へ追加します。  
 ローカル `node_modules` が残っていても、採用したグローバルが優先されます。

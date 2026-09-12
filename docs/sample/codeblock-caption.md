@@ -1,6 +1,6 @@
 # コード ブロック キャプションのサンプル
 
-コード ブロックのキャプションは、ブロックの直後に `CodeBlock:` 行を置いて指定します。  
+コード ブロックのキャプションは、ブロックの直後に `CodeBlock:` 行を配置して指定します。  
 Mermaid や PlantUML と同じ記法で、言語を問わず同様に扱われます。
 
 ## キャプションあり
@@ -29,7 +29,7 @@ CodeBlock: Sample.txt
 
 ## ラベル付き (相互参照)
 
-`{#lst:xxx}` を付けると pandoc-crossref が採番し、[@lst:codeblock-caption-label] のように本文から参照できます。
+`{#lst:xxx}` を付与すると pandoc-crossref が採番し、[@lst:codeblock-caption-label] のように本文から参照できます。
 
 ```text
 1         2         3         4         5         6         7         8         9         10        1         2         3         4         5         6         7         8         9         10        

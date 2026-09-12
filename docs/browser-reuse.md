@@ -20,24 +20,24 @@ Puppeteer による Chromium 起動には約 1〜2 秒を要します。ビル�
 ### ファイル構成
 
 ```text
-browser-server.js       # 共有ブラウザサーバー (新規)
-mmdc-reuse.js           # 共有ブラウザ対応 Mermaid レンダラー (新規)
-rsvg-convert.js         # SVG→PNG 変換 (共有ブラウザ対応に改修)
-mmdc-wrapper.sh         # Mermaid CLI ラッパー (共有ブラウザ対応に改修)
-pub_markdown_core.sh    # メインビルドスクリプト (ライフサイクル管理を追加)
+browser-server.js       # 共有ブラウザー サーバー (新規)
+mmdc-reuse.js           # 共有ブラウザー対応 Mermaid レンダラー (新規)
+rsvg-convert.js         # SVG→PNG 変換 (共有ブラウザー対応に改修)
+mmdc-wrapper.sh         # Mermaid CLI ラッパー (共有ブラウザー対応に改修)
+pub_markdown_core.sh    # メイン ビルド スクリプト (ライフサイクル管理を追加)
 ```
 
 ### 処理フロー
 
 ```plantuml
-@startuml 共有ブラウザの処理フロー
-    caption 共有ブラウザの処理フロー
+@startuml 共有ブラウザーの処理フロー
+    caption 共有ブラウザーの処理フロー
     start
         :pub_markdown_core.sh 開始;
 
-        partition "ブラウザサーバー起動" {
+        partition "ブラウザー サーバー起動" {
             :browser-server.js をバックグラウンドで起動;
-            :Chromium ブラウザを起動;
+            :Chromium ブラウザーを起動;
             :WebSocket エンドポイントをファイルに書き出し;
             :PUB_MARKDOWN_BROWSER_WS_FILE 環境変数をエクスポート;
         }
@@ -45,16 +45,16 @@ pub_markdown_core.sh    # メインビルドスクリプト (ライフサイク�
         partition "ビルド処理" {
             :Pandoc による変換処理;
             note right
-                各フィルタが共有ブラウザに接続:
+                各フィルターが共有ブラウザーに接続:
                 ・rsvg-convert.js → puppeteer.connect()
                 ・mmdc-reuse.js → puppeteer.connect()
                 接続失敗時は puppeteer.launch() にフォールバック
             end note
         }
 
-        partition "ブラウザサーバー停止" {
+        partition "ブラウザー サーバー停止" {
             :browser-server.js に SIGTERM 送信;
-            :ブラウザを閉じて WS エンドポイントファイルを削除;
+            :ブラウザーを閉じて WS エンドポイントファイルを削除;
         }
 
         :pub_markdown_core.sh 終了;
@@ -148,7 +148,7 @@ puppeteer.launch(buildLaunchOptions())
 
 - `-i <input.mmd>`: 入力ファイル (Mermaid ダイアグラム コード)
 - `-o <output.svg>`: 出力ファイル (SVG)
-- `-b transparent`: 背景色 (デフォルト: white)
+- `-b transparent`: 背景色 (既定値: white)
 
 Mermaid ライブラリの検出:
 
@@ -171,7 +171,7 @@ Mermaid ライブラリの検出:
 
 ```bash
 if PUB_MARKDOWN_BROWSER_WS_FILE が存在する
-    → mmdc-reuse.js を使用 (共有ブラウザ経由)
+    → mmdc-reuse.js を使用 (共有ブラウザー経由)
 else
     → mmdc を使用 (chrome-wrapper.sh 経由)
 ```
@@ -192,14 +192,14 @@ DOCX 用 Mermaid 資産の競合回避は、[`mermaid.lua`](mermaid.md) の規�
 
 起動判定:
 
-- `PUB_MARKDOWN_BROWSER_REUSE=auto` (デフォルト): `docxOutput=true` かつ対象 Markdown に Mermaid または `.svg` 参照がある場合のみ起動
+- `PUB_MARKDOWN_BROWSER_REUSE=auto` (既定): `docxOutput=true` かつ対象 Markdown に Mermaid または `.svg` 参照がある場合のみ起動
 - `PUB_MARKDOWN_BROWSER_REUSE=always`: 対象ファイルの内容に関係なく起動
 - `PUB_MARKDOWN_BROWSER_REUSE=off`: 共有ブラウザーを起動しません。
 
 起動待機:
 
-- デフォルトは 120 秒
-- `PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC` で秒数を上書き可能
+- 既定値は 120 秒
+- `PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC` で秒数を上書き可能です。
 - エンドポイント ファイルのポーリングは約 1 秒間隔で行います。
 - 起動待機中は 10 秒ごとに `.` を出力します。
 - WebSocket エンドポイントを書き出す前に、DevTools API (`/json/version`) が `webSocketDebuggerUrl` を返すことを確認します。
@@ -221,7 +221,7 @@ Browser executable: /usr/local/bin/chrome
 
 ### 二重ラップの回避
 
-`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります:
+`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります。
 
 1. 呼び出し元が `prepare_puppeteer_env.sh` を source し、`PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を設定します。
 2. `browser-server.js` が同じ準備処理を適用し、`ORG_PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を退避します。

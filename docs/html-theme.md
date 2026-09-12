@@ -59,12 +59,12 @@ PlantUML は線幅が viewBox の外へはみ出さないよう、描画後に v
 ソース表示中のコピーは、利用者が記述した元ソースをテキストとしてコピーします。  
 Mermaid の保存・コピー用 SVG は Canvas で PNG に変換できるよう、HTML ラベルを使用せず描画します。  
 描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は `styles/browser/docsfw-diagrams.css` に置き、Pandoc HTML と MkDocs で共用します。  
-Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文いっぱいにします。
+Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文全体に広げます。
 
 ### PlantUML の描画をメイン スレッドから分離する
 
 `@plantuml/core` のエンジン (`plantuml.js`) は数 MB あり、評価と `renderToString` 呼び出し自体がメイン スレッド上の同期処理になります。  
-文書内の PlantUML 図をすべてメイン スレッドで直接実行すると、描画中に UI が反応しなくなって見え、ブラウザーによっては描画エラーや無応答につながります。  
+文書内の PlantUML 図をすべてメイン スレッドで直接実行すると、描画中に UI の応答が停止したように見え、ブラウザーによっては描画エラーや無応答につながります。  
 これを避けるため、PlantUML の実描画は隠し `<iframe sandbox="allow-scripts">` の中で行います。  
 この `iframe` はページ内で 1 つだけ遅延生成し、`srcdoc` に自己完結した HTML を設定して構築します。外部ファイルや `data-src` によるナビゲーションは行いません。  
 `docsfw-diagrams.js` からは `postMessage` で `{ requestId, lines, dark }` を送り、`iframe` 側は `renderToString` の結果を `{ requestId, svg }` または `{ requestId, error }` として返します。  
@@ -84,7 +84,7 @@ Salt の画像が必要な場合は DOCX を使用してください。
 `bin/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
 PlantUML エンジンを Base64 からバイト列へ復元し、隠し iframe 内で Blob URL のモジュールとして読み込みます。  
 Graphviz と同梱アイコン資産もローダーに含めます。  
-iPhone の Edge で data URL の import が失敗し、Blob URL では描画できたため、この方式を使います。  
+iPhone の Edge で data URL の import が失敗し、Blob URL では描画できたため、この方式を採用しています。  
 比較条件は [PlantUML の切り分け試験](https://github.com/Hondarer/plantuml-core-test) の試験 09 と 13 を参照してください。  
 Blob URL は追加処理と再描画のため、iframe の破棄まで保持します。  
 ローカルの ES モジュールを相対パスで取得しないため、`file://` での直接閲覧と Pandoc の `--embed-resources` に対応します。  
@@ -109,5 +109,5 @@ python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
 ブラウザー テストは一時ディレクトリに HTML と画面画像を生成し、その場所を表示します。  
 既存 CDN への依存を除いた標準・簡易テンプレートで、通常 HTML、単一 HTML、直接閲覧、HTTP 配信を確認します。  
 実際の図の描画、配色切り替え、ソースとの切り替え、ライト テーマの SVG 保存と PNG コピー、描画中の配色変更を検証します。  
-HTML UI のブラウザー テストでは、ヘッダー、ドロワー、階層切替、ページ内目次、全文検索を検証します。  
+HTML UI のブラウザー テストでは、ヘッダー、ドロワー、階層切り替え、ページ内目次、全文検索を検証します。  
 発行処理を含む確認手順は [発行処理の保守と検証](maintenance-verification.md) を参照してください。

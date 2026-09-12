@@ -38,7 +38,7 @@ Doxygen リンクは `doxygen-page` を `target` に指定し、シングルペ�
 `pub_markdown.config.yaml` で次のオプションを指定します。
 
 ```yaml
-# Doxygen 単一ページ リンクの有効化 (true / false)。デフォルト: true
+# Doxygen 単一ページ リンクの有効化 (true / false)。既定値: true
 doxygenLinkEnable: true
 ```
 
@@ -54,5 +54,5 @@ doxyfw 側の埋め込みは `templates/inject-doxygen-url.py` が担当しま�
 
 ## 補足
 
-リンク先 URL の到達性はネットワーク確認しません。  
+リンク先 URL の到達性はネットワーク経由で検証しません。  
 Doxygen HTML と docsfw HTML が同じ workspace の `pages/` 配下に生成される前提で、発行時に相対 URL を計算します。

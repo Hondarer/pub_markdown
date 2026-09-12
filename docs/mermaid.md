@@ -38,9 +38,9 @@ end
 local identifier = el.identifier
 ```
 
-- キャプションはコード ブロックの直後の `CodeBlock:` 行で指定します。記法は [コード ブロックのキャプション](codeblock-caption.md) を参照
-- `codeblock-caption-line.lua` が `caption` 属性と identifier へ正規化するため、本フィルターは属性だけを見る
-- identifier は生成する Figure に設定し、pandoc-crossref の採番に用いる
+- キャプションはコード ブロックの直後の `CodeBlock:` 行で指定します。記法は [コード ブロックのキャプション](codeblock-caption.md) を参照してください。  
+- `codeblock-caption-line.lua` が `caption` 属性と identifier へ正規化するため、本フィルターは属性だけを参照します。  
+- identifier は生成する Figure に設定し、pandoc-crossref の採番に使用します。  
 - キャプションがある場合、HTML 出力でも Figure として出力するため、pandoc-crossref の採番対象になります。
 
 ### クロスプラットフォーム対応
@@ -90,9 +90,9 @@ local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
 
 ### HTML 出力
 
-HTML 出力では `.mmd` / `.svg` / `.png` は生成しません。発行処理が `mermaid.min.js` を HTML 出力ディレクトリへコピーし、Pandoc テンプレートに `mermaid-js` メタデータとして渡す。
+HTML 出力では `.mmd` / `.svg` / `.png` は生成しません。発行処理が `mermaid.min.js` を HTML 出力ディレクトリへコピーし、Pandoc テンプレートに `mermaid-js` メタデータとして渡します。
 
-通常 HTML はコピーした `mermaid.min.js` を相対パスで参照します。self-contained HTML は同じファイルを `--embed-resources --standalone` により HTML 内へ埋め込む。
+通常 HTML はコピーした `mermaid.min.js` を相対パスで参照します。self-contained HTML は同じファイルを `--embed-resources --standalone` により HTML 内へ埋め込みます。
 
 ### Mermaid-CLI 実行
 
@@ -122,7 +122,7 @@ HTML だけを生成する場合は Mermaid をブラウザー側で描画する
 
 ### 問題の背景
 
-Mermaid-CLI で生成される SVG には以下の問題がある:
+Mermaid-CLI で生成される SVG には以下の問題があります。
 
 1. **サイズ指定が不適切**: `width="100%"` で出力される
 2. **スタイル属性の問題**: `max-width` が設定されているが、固定サイズが必要な場面で問題となります。

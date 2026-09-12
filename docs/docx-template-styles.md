@@ -24,13 +24,13 @@ Pandoc が自動生成するため、ここでは docsfw 固有のカスタム �
 
 ## コード スタイルの注意点
 
-Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。
-そのため `VerbatimChar` に背景色を付けると、インライン コードだけでなくコード ブロックにも背景が乗ります。
+Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。  
+そのため `VerbatimChar` に背景色を付けると、インライン コードだけでなくコード ブロックにも背景が適用されます。
 
 この問題に対処するため、docsfw は Lua フィルター `bin/pandoc-filters/inline-code-style.lua` で docx 出力時のみインライン コードを `InlineCode` スタイルへ振り替えます。
 
 ```
-インラインコード `x`  ->  rStyle = InlineCode  (背景色あり)
+インライン コード `x`  ->  rStyle = InlineCode  (背景色あり)
 ハイライトなしブロック ->  rStyle = VerbatimChar (背景色なし)
 ハイライトありブロック ->  rStyle = KeywordTok 等 (背景色なし)
 ```
@@ -92,11 +92,11 @@ XML は 1 行に圧縮されているため、編集には `python3` と正規�
 
 ### Word で開いて編集する方法
 
-1. `.dotx` を Word で開く
-2. スタイル ウィンドウから目的のスタイルを選択して変更
-3. `.dotx` 形式で保存
+1. `.dotx` を Word で開きます。
+2. スタイル ウィンドウから目的のスタイルを選択して変更します。
+3. `.dotx` 形式で保存します。
 
-Word 保存では ZIP の全エントリが再生成され git のバイナリ差分が大きくなります。
+Word による保存では ZIP の全エントリが再生成され、Git のバイナリ差分が大きくなります。
 
 ### 編集後の反映確認
 

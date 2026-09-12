@@ -101,7 +101,7 @@ PlantUML の各図種のサンプルを示します。
     package docsfw {
         [pub_markdown_core.sh] as Pub
         [Pandoc] as Pandoc
-        [PlantUML フィルタ] as Filter
+        [PlantUML フィルター] as Filter
     }
 
     Pub --> Pandoc

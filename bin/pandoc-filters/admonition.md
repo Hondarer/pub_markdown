@@ -80,7 +80,7 @@ HTML は絵文字なし、docx は絵文字付きです。
 
 `custom-style` 属性付き Div に変換します。  
 見出しには記号 (絵文字) 付きのタイトルを出力します。HTML とは異なります。  
-テンプレート (`docx-template.dotx`) に対応するスタイルが定義されていれば適用される。  
+テンプレート (`docx-template.dotx`) に対応するスタイルが定義されていれば適用されます。  
 未定義の場合は Normal スタイルにフォールバックします。
 
 ### 段落スタイル名
@@ -107,21 +107,21 @@ HTML は絵文字なし、docx は絵文字付きです。
 - docx: `pagebreak.lua` → **`admonition.lua`** → `toc-pagebreak.lua`
 
 admonition に変換された BlockQuote は Div になるため、  
-`separate-consecutive-blockquotes.lua` の対象から外れる (意図した動作)。
+`separate-consecutive-blockquotes.lua` の対象から外れます (意図した動作です)。
 
 ## docx 出力の制約事項
 
 ### admonition 内のリスト
 
 docx 出力で admonition 内にリスト (箇条書き・番号付きリスト) を含めると、  
-リスト段落が admonition ブロックの外に描画される。
+リスト段落が admonition ブロックの外側に描画されます。
 
-**原因**: Pandoc の docx ライターは `custom-style` 付き Div 内の段落 (Para) にスタイルを適用するが、  
+**原因**: Pandoc の docx ライターは `custom-style` 付き Div 内の段落 (Para) にスタイルを適用しますが、  
 BulletList / OrderedList は独自のリスト スタイル (List Paragraph 等) で段落を生成するため、  
 Div の `custom-style` が適用されません。
 
-**影響**: リスト項目が admonition の左罫線・背景色の外側に表示される。
+**影響**: リスト項目が admonition の左罫線・背景色の外側に表示されます。
 
 **対応**: Pandoc の構造的な制約のため、現時点では対処しません。  
 admonition 内では段落テキストのみを使用することを推奨します。  
-HTML 出力ではこの制約はなく、リストも正常に admonition 内に表示される。
+HTML 出力ではこの制約はなく、リストも正常に admonition 内に表示されます。

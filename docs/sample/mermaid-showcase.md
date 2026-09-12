@@ -196,7 +196,7 @@ CodeBlock: Mindmap のサンプル
 timeline
     title 発行処理の流れ
     受付 : 対象 Markdown を確認
-    変換 : Pandoc とフィルタを実行
+    変換 : Pandoc とフィルターを実行
     出力 : HTML と docx を生成
 ```
 
@@ -342,7 +342,7 @@ ishikawa
             "図"
         "変換"
             "Pandoc"
-            "フィルタ"
+            "フィルター"
         "出力"
             "HTML"
             "docx"

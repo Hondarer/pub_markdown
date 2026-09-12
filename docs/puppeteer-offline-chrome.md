@@ -84,7 +84,7 @@ export PUPPETEER_CACHE_DIR=/path/to/custom/cache
 npm install puppeteer
 ```
 
-デフォルトのキャッシュ ディレクトリは `os.homedir()/.cache/puppeteer` です。
+既定のキャッシュ ディレクトリは `os.homedir()/.cache/puppeteer` です。
 
 #### その他の環境変数
 
@@ -126,7 +126,7 @@ curl https://googlechromelabs.github.io/chrome-for-testing/latest-patch-versions
 
 #### 直接ダウンロード URL パターン
 
-Chrome for Testing バイナリは以下の URL パターンで直接ダウンロードできます。
+Chrome for Testing バイナリは次の URL パターンで直接ダウンロードできます。
 
 ```text
 https://storage.googleapis.com/chrome-for-testing-public/{VERSION}/{PLATFORM}/{BINARY}-{PLATFORM}.zip
@@ -184,7 +184,7 @@ await browser.close();
 
 ## オフライン インストールの推奨フロー
 
-以下の手順で、オンライン環境で Chrome をダウンロードし、オフライン環境で使用することを推奨します。
+次の手順で、オンライン環境で Chrome をダウンロードし、オフライン環境で使用することを推奨します。
 
 ### オンライン環境での準備
 
@@ -233,7 +233,7 @@ module.exports = {
 
 ## バージョン互換性
 
-各 Puppeteer バージョンは単一の Chrome バージョンに対応しています。互換性を確保するため、Puppeteer がインストールされているプロジェクトで以下のコマンドを実行することを推奨します。
+各 Puppeteer バージョンは単一の Chrome バージョンに対応しています。互換性を確保するため、Puppeteer がインストールされているプロジェクトで次のコマンドを実行することを推奨します。
 
 ```bash
 npx puppeteer browsers install chrome
@@ -249,7 +249,7 @@ npx puppeteer browsers install chrome
 Error: Could not find Chrome
 ```
 
-このエラーが発生した場合、以下を確認してください。
+このエラーが発生した場合、次を確認してください。
 
 - Chrome がキャッシュ ディレクトリにダウンロードされているか
 - `PUPPETEER_CACHE_DIR` 環境変数が正しく設定されているか

@@ -1,7 +1,7 @@
 # Mermaid キャプションのサンプル
 
-Mermaid のキャプションは、コード ブロックの直後に `CodeBlock:` 行を置いて指定します。  
-フェンスには言語名だけを記載するため、GitHub などの Web 表示でも図がそのまま描画されます。
+Mermaid のキャプションは、コード ブロックの直後に `CodeBlock:` 行を配置して指定します。  
+フェンスには言語名だけを記述するため、GitHub などの Web 表示でも図がそのまま描画されます。
 
 ## キャプションあり
 
@@ -15,7 +15,7 @@ CodeBlock: Mermaid のキャプション
 
 ## ラベル付き (相互参照)
 
-`{#fig:xxx}` を付けると pandoc-crossref が採番し、[@fig:mermaid-caption-label] のように本文から参照できます。
+`{#fig:xxx}` を付与すると pandoc-crossref が採番し、[@fig:mermaid-caption-label] のように本文から参照できます。
 
 ```mermaid
 sequenceDiagram

@@ -3,13 +3,13 @@
 ## 背景
 
 `bin/pub_markdown_core.sh` は `bin/resolve-node-components.js` で npm コンポーネントを解決します。  
-グローバルに必須パッケージが揃っていれば `npm ci` は走りません。  
+グローバルに必須パッケージが揃っていれば `npm ci` は実行されません。  
 コンテナー CI でグローバルが無い場合は、ローカル `node_modules` をキャッシュすると再導入を避けられます。
 
-さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。
-コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると postinstall も走らないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
+さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。  
+コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると postinstall も実行されないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
 
-GitHub Actions では `actions/cache` が利用できるが、Jenkins には同等の標準機能がありません。  
+GitHub Actions では `actions/cache` が利用できますが、Jenkins には同等の標準機能がありません。  
 ここでは **固定エージェントおよびコンテナー エージェント** を対象に、  
 ホストのファイル システムを活用した `node_modules` と **Chrome キャッシュ** の永続化方式を説明します。
 
@@ -25,7 +25,7 @@ GitHub Actions では `actions/cache` が利用できるが、Jenkins には同�
 | **ミス時の動作** | `pub_markdown_core.sh` が自動で `npm ci` を実行 → 完了後キャッシュに保存 |
 | **清掃** | 現在のハッシュ以外の古いキャッシュをビルド後に削除 |
 
-`package-lock.json` が変更されるとハッシュが変わり、自動的にキャッシュが無効化される。
+`package-lock.json` が変更されるとハッシュが変わり、自動的にキャッシュが無効化されます。
 
 ### Headless Chrome (Puppeteer) キャッシュ
 
@@ -36,7 +36,7 @@ GitHub Actions では `actions/cache` が利用できるが、Jenkins には同�
 | **無効化トリガー** | `package-lock.json` の変更 (puppeteer バージョン更新 → Chrome バージョンも変わるため) |
 | **node_modules との関係** | node_modules キャッシュ ヒット時は `npm ci` がスキップされるため、Chrome キャッシュが空だと headless レンダリングが失敗します。 |
 
-`node_modules` のキャッシュだけでは不十分なため、**両方を永続化する必要がある**。
+`node_modules` のキャッシュだけでは不十分なため、**両方を永続化する必要があります**。
 
 ## 前提条件
 
@@ -264,7 +264,7 @@ rm -f "${STATE_FILE}"
 
 ## Headless Chrome キャッシュの永続化 (podman / コンテナー エージェント)
 
-### Chrome のデフォルト ダウンロード位置
+### Chrome の既定のダウンロード位置
 
 `puppeteer ^24` は `npm ci` の postinstall で以下のパスに Chrome for Testing をダウンロードします。
 
@@ -275,9 +275,9 @@ $HOME/.cache/puppeteer/chrome-headless-shell/linux-<バージョン>/chrome-head
 
 `bin/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索します。  
 `.puppeteerrc.cjs` は配置していないため、環境変数 `PUPPETEER_CACHE_DIR` を明示しない限り  
-`os.homedir()/.cache/puppeteer` がデフォルトになります。
+`os.homedir()/.cache/puppeteer` が既定値になります。
 
-コンテナー CI でホームが毎回リセットされる場合は、ホスト側の永続ディレクトリをマウントして引き継ぐ。
+コンテナー CI でホームが毎回リセットされる場合は、ホスト側の永続ディレクトリをマウントして引き継ぎます。
 
 ### podman / docker でホスト側にマウントする例
 
@@ -295,8 +295,8 @@ podman run --rm \
     bash framework/docsfw/bin/pub_markdown_core.sh --workspaceFolder=/workspace
 ```
 
-- `:Z` は SELinux 環境向け。Ubuntu 等では不要な場合は外す。
-- コンテナー内ユーザーのホームが `/home/jenkins` 以外の場合は、実際のホーム配下の `.cache/puppeteer` を指す。
+- `:Z` は SELinux 環境向けです。Ubuntu 等で不要な場合は除外してください。
+- コンテナー内ユーザーのホームが `/home/jenkins` 以外の場合は、実際のホーム配下の `.cache/puppeteer` を指定してください。
 - または環境変数で明示する方法も利用できます。
 
 ```bash
@@ -341,7 +341,7 @@ args '-v /var/cache/docsfw-node-modules:/cache/node-modules ' +
 
 ### node_modules キャッシュ ヒット時の整合性
 
-node_modules キャッシュがヒットすると `npm ci` がスキップされる。  
+node_modules キャッシュがヒットすると `npm ci` がスキップされます。  
 このとき Chrome キャッシュが空だと、headless レンダリング (Mermaid 変換等) が失敗します。
 
 以下のコマンドでビルド前に Chrome の存在を確認できます。
@@ -351,13 +351,12 @@ ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \
     || echo "Chrome not cached — puppeteer postinstall or manual download required"
 ```
 
-`package-lock.json` が更新されると node_modules キャッシュが無効化され `npm ci` が再実行される。  
-このとき puppeteer の対応 Chrome バージョンも変わる可能性があるため、ホスト永続ディレクトリを  
-手動または CI 手順でクリアして Chrome を再取得させること。
+`package-lock.json` が更新されると node_modules キャッシュが無効化され `npm ci` が再実行されます。  
+このとき puppeteer の対応 Chrome バージョンも変わる可能性があるため、ホスト永続ディレクトリを手動または CI 手順でクリアし、Chrome を再取得させてください。
 
 ### 初回投入・オフライン環境
 
-オフライン環境で Chrome を事前配置する手順は [puppeteer-offline-chrome.md](puppeteer-offline-chrome.md) を参照。  
+オフライン環境で Chrome を事前配置する手順は [puppeteer-offline-chrome.md](puppeteer-offline-chrome.md) を参照してください。  
 ダウンロード済みの `chrome/` および `chrome-headless-shell/` をホスト永続ディレクトリに配置すれば、  
 コンテナー起動時にそのままマウントされて利用できます。
 
@@ -365,7 +364,7 @@ ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \
 
 ### キャッシュが複数プロジェクトで競合する場合
 
-同一エージェントで複数プロジェクトが `docsfw` を使う場合は、キャッシュ パスにプロジェクト識別子を加える。
+同一エージェントで複数プロジェクトが `docsfw` を使う場合は、キャッシュ パスにプロジェクト識別子を加えます。
 
 ```groovy
 NODE_MODULES_CACHE_BASE = "/var/cache/${JOB_NAME.replaceAll('[^a-zA-Z0-9_-]', '_')}-node-modules"
@@ -383,7 +382,7 @@ sudo mkdir -p /var/cache/docsfw-puppeteer
 sudo chown jenkins:jenkins /var/cache/docsfw-puppeteer
 ```
 
-コンテナー エージェントで UID が `jenkins` と異なる場合は `chown <uid>:<gid>` で合わせる。
+コンテナー エージェントで UID が `jenkins` と異なる場合は `chown <uid>:<gid>` で合わせてください。
 
 ### GitHub Actions との比較
 

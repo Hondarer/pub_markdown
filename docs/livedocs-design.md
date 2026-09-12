@@ -136,7 +136,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 50 | モバイル オフキャンバス ドロワー | 簡略 | Material 標準。板見出しだけ `theme/partials/nav-item.html` を上書きし、"<" は戻る、フォルダー名はインデックス ページがあれば実リンクにする (詳細は後述) |
 | 51 | 展開可能リスト | 維持 | `\toc` と手動 fenced div を `.collapsible-list` へ変換し、本文の開閉・初期展開・履歴復元を適用する。仕様は [展開可能リスト](collapsible-list.md) を参照 |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 維持 | 開閉は静的発行と同じ 5 行閾値。コピーは Material の `content.code.copy` を使い、見た目は SVG ダウンロードと同じホバー チップへそろえる |
-| 53 | 概要版と詳細版の切替リンク | 対象外 | バリアントを 1 つに固定するため |
+| 53 | 概要版と詳細版の切り替えリンク | 対象外 | バリアントを 1 つに固定するため |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
 | 55 | 並列実行と無進捗ウォッチドッグ | 対象外 | ビルドが十分に速いため不要 |
 | 56 | `docs.warn` への警告抽出 | 簡略 | `mkdocs build --strict` で代替 |
@@ -197,7 +197,7 @@ framework/docsfw/
 
 ### 生成物
 
-生成物はワークスペースの `pages/livedocs/` 以下に出します。  
+生成物はワークスペースの `pages/livedocs/` 以下に出力します。  
 `/pages/` はワークスペースの `.gitignore` で除外済みのため、追加の設定は不要です。
 
 ```text
@@ -294,7 +294,7 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 
 ## Doxygen HTML の静的サーブ
 
-`make doxy` は Doxygen HTML と依存関係レポートを `pages/doxygen/` へ出します。  
+`make doxy` は Doxygen HTML と依存関係レポートを `pages/doxygen/` へ出力します。  
 このツリーは約 244 MB、約 1.8 万ファイルです。  
 動的発行はこれを Markdown 変換せず、`make servedocs` (`mkdocs serve`) の `/doxygen/` として配信します。
 
@@ -345,7 +345,7 @@ Markdown リンクと生 HTML の `href` の両方が対象です。
 doxyfw は Doxybook2 の Markdown へ `doxygen-page-url: "pages/doxygen/...html"` を埋め込みます。  
 docsfw の発行ではナビバー右の Doxygen アイコンになります。
 
-動的発行では `pages/doxygen/` を `/doxygen/` へ写し、Git 単一ページ リンクと並べてヘッダーへ出します。  
+動的発行では `pages/doxygen/` を `/doxygen/` へ写し、Git 単一ページ リンクと並べてヘッダーに表示します。  
 `target="doxygen-page"` で、単一ページと依存関係レポートが同じタブを再利用します。  
 `doxygenLinkEnable` は `.vscode/pub_markdown.config.yaml` を読み、未指定なら有効です。  
 リンク先ファイルの存在は確認しません。
@@ -356,13 +356,13 @@ URL は `livedocs_doxygen_hook.py` の `on_page_context` が `doxygen_livedocs_u
 
 ## Git 単一ページ リンク
 
-静的発行は、各ページのナビバー右端に Git ホスティングの blob URL へのアイコン リンクを出します。  
-ツールヒントは「ソースを開く」です。動的発行も同じリンクをヘッダーへ出します。  
+静的発行は、各ページのナビバー右端に Git ホスティングの blob URL へのアイコン リンクを表示します。  
+ツールヒントは「ソースを開く」です。動的発行も同じリンクをヘッダーに表示します。  
 静的発行側の仕様は [Git 単一ページ リンク機能](git-link.md) を参照してください。
 
 ### 解決のタイミング
 
-URL の解決はステージング時に行い、staged Markdown のフロント マターへ `git-url` と `git-provider` を書きます。  
+URL の解決はステージング時に行い、staged Markdown のフロント マターへ `git-url` と `git-provider` を記述します。  
 テンプレートは `page.meta` から読みます。
 
 ステージング先 (`src/<alias>/...`) は仮想パスで、リポジトリ ルートからの相対パスを保持しません。  
@@ -440,7 +440,7 @@ Material の `partials/header.html` を `custom_dir` で上書きします。
 静的発行のヘッダー右上も同じ 20px にします。  
 左端のロゴとメニューは 24px のままです。
 
-モード切替、Doxygen、Git の 20px アイコンの内側余白は 4px にします。  
+モード切り替え、Doxygen、Git の 20px アイコンの内側余白は 4px にします。  
 検索、メニュー、ロゴの操作領域は Material の既定のままとします。  
 アイコン自身には独自の余白を与えません。
 
@@ -458,12 +458,12 @@ Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないた
 
 ## 発行者と発行日時
 
-静的発行は、各ページのナビバー右側に発行者と発行日時を出します。  
+静的発行は、各ページのナビバー右側に発行者と発行日時を表示します。  
 発行日時には最終コミット ID が続き、未コミット差分があると末尾に `+` が付きます。  
-動的発行も同じ値を同じ位置へ出します。  
+動的発行も同じ値を同じ位置に表示します。  
 値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
-要件は「同じページについて、静的発行と動的発行が同一の文字列を出すこと」です。  
+要件は「同じページについて、静的発行と動的発行が同一の文字列を出力すること」です。  
 `tests/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin/get_file_author.sh` と  
 `bin/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
 
@@ -561,7 +561,7 @@ md 自身ではなく元ソースを解決対象にします。
 発行者と発行日時、Git 単一ページ リンクはステージング処理 (`bin/stage_livedocs.py`) がフロント マターへ書き込み、  
 テーマ側は `page.meta` を読むだけでした。  
 概要はこの書き込みが要りません。  
-mkdocs はフロント マターを自前でパースするため、ソース側に `abstract` / `abstract-title` を書くだけで、  
+mkdocs はフロント マターを自前でパースするため、ソース側に `abstract` / `abstract-title` を記述するだけで、  
 そのまま `page.meta` から取得できるためです。
 
 ### 挿入方式と、テーマを上書きしない理由
@@ -639,14 +639,14 @@ CSS の指定は JS が動かない場合の代替値として効きます。
 見出しへのアンカー移動時の上余白 (`--md-scroll-margin` の `3.6rem`) も、  
 ヘッダー 48px と余白 24px の合計として書かれているため、72px に固定します。
 
-ボタンの `padding` については、モード切替、Doxygen、Git の 4px を `docsfw-header-links.css` が  
+ボタンの `padding` については、モード切り替え、Doxygen、Git の 4px を `docsfw-header-links.css` が  
 詳細度で勝って指定しています。ここでの 8px は、メニュー、ロゴ、検索の既定ボタンにだけ効きます。
 
 ### ヘッダー タイトルの固定表示
 
 Material は既定で、ページ上部ではサイト名 (`config.site_name`)、本文をスクロールすると  
-文書タイトル (`page.meta.title` または `page.title`) へ、ヘッダー タイトルをクロス フェード切替します。  
-切替は本文の見出しの可視性を監視する vendor JS が `.md-header__title--active` を付け外しし、  
+文書タイトル (`page.meta.title` または `page.title`) へ、ヘッダー タイトルをクロス フェード切り替えします。  
+切り替えは本文の見出しの可視性を監視する vendor JS が `.md-header__title--active` を付け外しし、  
 `.md-header__topic:first-child` (サイト名) と `.md-header__topic + .md-header__topic` (文書タイトル)  
 の不透明度を入れ替えることで実現しています。
 
@@ -1245,7 +1245,7 @@ Material は既定フォントで約 1220px 未満のとき、`.md-nav--primary`
 これでファイル間の目次に続けてページ内目次が並び、サブメニューのスライド動作とドロワー見出しはそのまま残ります。  
 板の出し入れはチェック ボックスの状態変化で起きるため、`change` を文書で受けて配置をやり直します。  
 戻る操作や別のフォルダーを開く操作でも、ページ内目次は表示中の板へ付いてきます。  
-Pandoc HTML の `docsfw-nav.js` が板の切替ごとに `placePageToc` を呼ぶ動作と同じです。  
+Pandoc HTML の `docsfw-nav.js` が板の切り替えごとに `placePageToc` を呼び出す動作と同じです。  
 入れ先は幅でも変わるため、`matchMedia('(max-width: 76.234375em)')` の変化でも配置をやり直し、器は作り直さずに移します。
 
 約 1220px 未満の行の体裁は、この幅のものをそのまま使います。  
@@ -1418,14 +1418,14 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 先に動いていたこのワークスペースの `mkdocs serve` が消えるまで待ち、消えてからステージングします。  
 バリアントが違うと `pages/livedocs/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、旧バリアントと新バリアントが混ざります。  
 止めきれなければステージングへ進まず失敗します。`stopdocs` と `cleanlivedocs` は、停止しきれなくても失敗しません。  
-停止とステージングはレシピ内で順に実行し、`make -j` でも同時に走らないようにします。  
+停止とステージングはレシピ内で順に実行し、`make -j` でも同時に実行されないようにします。  
 先に起動した側の `make servedocs` は、`mkdocs serve` が止まった時点で終了します。
 
-フル ステージング (`make livedocs-stage` と、これを呼ぶ `servedocs` / `livedocs`) は、完了行 `staged:` の前に進行状況を 1 行ずつ出します。  
-出す内容は、バリアント名、収集件数、リポジトリごとの Git 索引、書き出し開始です。  
+フル ステージング (`make livedocs-stage` と、これを呼び出す `servedocs` / `livedocs`) は、完了行 `staged:` の前に進行状況を 1 行ずつ出力します。  
+出力内容は、バリアント名、収集件数、リポジトリごとの Git 索引、書き出し開始です。  
 収集件数は `pub_markdown.skip` による除外前で、完了行の document 数は除外後です。  
 `make` 経由でも途中の行が見えるよう、各行は即時に flush します。  
-`mkdocs serve` 中の自動再ステージングはこれらの行を出しません。
+`mkdocs serve` 中の自動再ステージングはこれらの行を出力しません。
 
 Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`requirements.txt` で固定します。
 
@@ -1435,7 +1435,7 @@ Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`require
 起動前に確認するのは、このワークスペースの `mkdocs serve` が残っていないかだけです。
 
 同じネットワーク名前空間で別のプロセスが同じポートを待ち受けている場合は、`mkdocs serve` の bind が失敗します。  
-MkDocs はこの `OSError` を捕捉しないため、traceback を出して終了コード 1 で終わります。  
+MkDocs はこの `OSError` を捕捉しないため、traceback を出力して終了コード 1 で終了します。  
 `make servedocs` もこの終了コードで失敗します。
 
 WSL2 の既定のネットワークモード (`wslinfo --networking-mode` が `nat`) では、Windows 側のポート使用は bind の失敗になりません。  
@@ -1454,7 +1454,7 @@ Windows 側の待ち受けは `netstat.exe -ano` の LISTENING 行で確認で�
 
 ### バリアントの指定
 
-`make docs` と同じ 4 値を、起動時に 1 つだけ選びます。同時に 4 系統は出しません。
+`make docs` と同じ 4 値を、起動時に 1 つだけ選択します。同時に 4 系統は出力しません。
 
 | `LIVEDOCS_VARIANT` | 言語 | 詳細ブロック | `make docs` の出力に相当 |
 |---|---|---|---|
@@ -1471,14 +1471,14 @@ make livedocs LIVEDOCS_VARIANT=ja
 
 選んだ値はステージングと `mkdocs.yml` の `extra.livedocs_variant` に書き、serve 中の自動ステージングも同じフィルターを使います。  
 切り替えるときは `make servedocs` を再起動します。後から起動した `make servedocs` が、先に動いていた serve を止めて置き換わります。  
-ページ内の概要 / 詳細切替リンクは出しません。
+ページ内の概要 / 詳細切り替えリンクは出力しません。
 
 ## 静的発行だけが持つ機能
 
 次の機能は動的発行では扱いません。必要な場合は `make docs` を使用します。
 
 - Word (docx) 出力と、docx 専用フィルター、rsvg-convert、共有ブラウザー
-- 4 バリアントの同時出力と、ページ内の概要 / 詳細切替リンク
+- 4 バリアントの同時出力と、ページ内の概要 / 詳細切り替えリンク
 - pandoc-crossref による図表とリストの採番、および相互参照
 - self-contained HTML と `file://` での動作
 - OpenAPI からの Markdown 生成
@@ -1507,20 +1507,20 @@ mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr
 
 #### 緩和策 (実装済み)
 
-`mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) をやめ、`separator` の正規表現に「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加している。
+`mkdocs.yml.in` の `plugins.search` で、`lang: ja` (TinySegmenter) の使用を取りやめ、`separator` の正規表現に「隣接する CJK 文字 (ひらがな/カタカナ/漢字) の間」を境界として追加しています。
 
-lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できる。  
-これにより `同期プリミティブ` のような複合語も検索でヒットするようになる。
+lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できます。  
+これにより `同期プリミティブ` のような複合語も検索でヒットするようになります。
 
 再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の  
-2-gram 実装と同程度のノイズ (無関係な部分一致) が生じる。`lang: en` を明示しているのは、  
+2-gram 実装と同程度のノイズ (無関係な部分一致) が生じます。`lang: en` を明示しているのは、  
 Porter stemmer や英語ストップワード フィルターが ASCII 文字列にしか作用しないため日本語トークンへの  
-副作用がなく、かつ `lang: ja` を指定した場合に自動的に読み込まれる TinySegmenter を確実に外すためである。
+副作用がなく、かつ `lang: ja` を指定した場合に自動的に読み込まれる TinySegmenter を確実に外すためです。
 
 見直しの合図: 上記 Discussion #3916 または関連 issue で TinySegmenter 側の根本修正が upstream で  
 取り込まれた場合、あるいは mkdocs-material 側でクエリ トークン化のカスタム パイプライン  
 (Issue #4980) が実装された場合は、この緩和策 (`separator` への CJK 境界追加と `lang: en` 指定) を  
-見直すこと。
+見直してください。
 
 索引の大きさは 791 ページで約 13 MB です。  
 初回の検索操作から結果が出るまで、ブラウザー上で約 10 秒の索引構築が入ります。  
@@ -1560,7 +1560,7 @@ Markdown の H1 の扱いは、静的発行が `--shift-heading-level-by=-1`、M
 
 | 項目 | 内容 |
 |---|---|
-| Salt | `@plantuml/core` が非対応。HTML では説明と元ソースを表示する。画像が必要なら DOCX |
+| Salt | `@plantuml/core` が非対応。HTML では説明と元ソースを表示。画像が必要なら DOCX |
 | Gantt | ブラウザー側に Start / End / Duration の一覧が付き、面積比 1.80。詳細は次節 |
 
 描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は、`styles/browser/docsfw-diagrams.css` で共用します。  
@@ -1577,7 +1577,7 @@ Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だ�
 |---|---|---|
 | 一致 | Sequence, Use Case, Class, Object, Activity, Component, Deployment, State, Timing, Network, Mindmap, WBS, Work Breakdown, JSON, YAML, EBNF, Regex (17 図) | 面積比 0.77 〜 1.21。text 要素数は Class を除いて一致 |
 | 差あり | Gantt | ブラウザー側に Start / End / Duration の一覧が付き、面積比 1.80。PlantUML のバージョン差と考えられる |
-| 非対応 | Salt | `@startsalt` が「Diagram not supported by this release」となり、エラー図が返る |
+| 非対応 | Salt | `@startsalt` が「Diagram not supported by this release」となり、エラー図が返される |
 
 面積比の 0.8 前後から 1.2 前後の差は、ブラウザーと Java AWT のフォント計測の違いによるものです。  
 図の内容そのものは一致します。
@@ -1702,7 +1702,7 @@ make servedocs
 Windows の Git Bash と Python でも `make livedocs` が通ることを確認します。  
 ステージングは Python で実装するため、シェル スクリプトへの依存を持ちません。  
 シンボリック リンクは Windows で不安定なため使用せず、実ファイルのコピーで構成します。  
-`pages/doxygen/` もコピーせず、`make servedocs` の WSGI が直接読みます。Windows でもジャンクションは使いません。  
+`pages/doxygen/` もコピーせず、`make servedocs` の WSGI が直接読み込みます。Windows でもジャンクションは使いません。  
 `make livedocs` の `site/` には Doxygen ツリーを入れないため、Doxygen HTML の閲覧確認は `make servedocs` で行います。
 
 ### docsfw への非干渉
