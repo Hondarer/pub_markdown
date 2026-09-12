@@ -158,17 +158,15 @@
 
   /* 中幅では実際のスクロール コンテナーを .md-nav__list へ移しているため、
      Material が .md-sidebar__scrollwrap に書く初期位置は効かない。
-     Pandoc HTML と同じく、ドロワーを開くたびに現在ページを中央へ出す。
-     板になる狭幅では、ページ内目次の現在見出しを優先して中央へ出す。
+     Pandoc HTML と同じく、ドロワーを開くたびにページ内目次の現在見出しを
+     優先して中央へ出す。
      現在見出しがない文書上端では、表示中の板に現在ページの行がある場合だけ
      その行を中央へ出す。表示していない板の行へ scrollIntoView すると横方向へ
      スクロールするため、表示中の一覧に含まれる項目だけを対象にする。 */
   function revealDrawerSelection() {
     if (wideLayout.matches || !drawerToggle || !drawerToggle.checked) { return; }
-    var activeLink = panelLayout.matches
-      ? document.querySelector(
-        '.docsfw-combined-toc a.md-nav__link--active[href^="#"]')
-      : null;
+    var activeLink = document.querySelector(
+      '.docsfw-combined-toc a.md-nav__link--active[href^="#"]');
     if (!activeLink) { activeLink = getActivePageLink(); }
     if (!activeLink) { return; }
     var panelList = panelLayout.matches ? getPanelList() : null;

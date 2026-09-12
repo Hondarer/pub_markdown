@@ -75,7 +75,7 @@ class CombinedTocPlacementTest(unittest.TestCase):
 
 
 class DrawerInitialPositionTest(unittest.TestCase):
-    """ドロワーを開いたとき、幅に対応する現在項目を表示すること。"""
+    """ドロワーを開いたとき、現在見出しを優先して表示すること。"""
 
     def test_current_page_lookup_excludes_page_toc(self):
         """現在文書を探すときは、ページ内目次の現在見出しを除くこと。"""
@@ -85,7 +85,12 @@ class DrawerInitialPositionTest(unittest.TestCase):
 
     def test_opening_drawer_centers_the_selected_item(self):
         text = _read(RESPONSIVE_NAV_JS)
-        self.assertIn(".docsfw-combined-toc a.md-nav__link--active", text)
+        self.assertIn(
+            "var activeLink = document.querySelector(\n"
+            "      '.docsfw-combined-toc a.md-nav__link--active",
+            text,
+        )
+        self.assertIn("if (!activeLink) { activeLink = getActivePageLink(); }", text)
         self.assertIn("addEventListener('change', revealDrawerSelection)", text)
         self.assertIn(
             "activeLink.scrollIntoView({ block: 'center', behavior: 'auto' })",

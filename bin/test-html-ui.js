@@ -242,40 +242,46 @@ async function main() {
     const drawerFollowPage = await browser.newPage();
     const currentFile = pathToFileURL(path.join(output, 'current.html'));
     for (const width of [1100, 1300]) {
-      await drawerFollowPage.setViewport({width, height: 900});
-      currentFile.hash = 'section-20';
-      await drawerFollowPage.goto(currentFile.href);
-      await drawerFollowPage.waitForSelector(
-        '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]');
-      const pageScrollY = await drawerFollowPage.evaluate(() => window.scrollY);
-      await drawerFollowPage.$eval('#docsfw-hamburger', node => node.click());
-      await drawerFollowPage.waitForFunction(() =>
-        document.body.classList.contains('docsfw-nav-open'));
-      const selector = width < 1220
-        ? '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]'
-        : '.docsfw-flat-nav .docsfw-current';
-      const opened = await drawerSelectionMetrics(drawerFollowPage, selector);
-      assert.equal(opened.visible, true,
-        width + 'px opened drawer selection ' + JSON.stringify(opened));
-      assert.ok(opened.centerDifference <= 2,
-        width + 'px opened drawer center ' + JSON.stringify(opened));
-      assert.ok(opened.scrollTop > 0,
-        width + 'px opened drawer scroll ' + JSON.stringify(opened));
-      assert.equal(opened.scrollLeft, 0,
-        width + 'px opened drawer horizontal scroll ' + JSON.stringify(opened));
-      assert.equal(opened.pageScrollY, pageScrollY,
-        width + 'px opened drawer page scroll ' + JSON.stringify(opened));
+      for (const reload of [false, true]) {
+        const label = width + 'px ' + (reload ? 'reloaded' : 'initial');
+        await drawerFollowPage.setViewport({width, height: 900});
+        currentFile.hash = 'section-20';
+        await drawerFollowPage.goto(currentFile.href);
+        await drawerFollowPage.waitForSelector(
+          '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]');
+        if (reload) {
+          await drawerFollowPage.reload({waitUntil: 'domcontentloaded'});
+          await drawerFollowPage.waitForSelector(
+            '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]');
+        }
+        const pageScrollY = await drawerFollowPage.evaluate(() => window.scrollY);
+        await drawerFollowPage.$eval('#docsfw-hamburger', node => node.click());
+        await drawerFollowPage.waitForFunction(() =>
+          document.body.classList.contains('docsfw-nav-open'));
+        const selector = '#docsfw-page-toc a.docsfw-toc-active[href="#section-20"]';
+        const opened = await drawerSelectionMetrics(drawerFollowPage, selector);
+        assert.equal(opened.visible, true,
+          label + ' opened drawer selection ' + JSON.stringify(opened));
+        assert.ok(opened.centerDifference <= 2,
+          label + ' opened drawer center ' + JSON.stringify(opened));
+        assert.ok(opened.scrollTop > 0,
+          label + ' opened drawer scroll ' + JSON.stringify(opened));
+        assert.equal(opened.scrollLeft, 0,
+          label + ' opened drawer horizontal scroll ' + JSON.stringify(opened));
+        assert.equal(opened.pageScrollY, pageScrollY,
+          label + ' opened drawer page scroll ' + JSON.stringify(opened));
 
-      await drawerFollowPage.evaluate(() =>
-        document.getElementById('section-25').scrollIntoView());
-      await drawerFollowPage.waitForSelector(
-        '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
-      const followed = await drawerSelectionMetrics(drawerFollowPage,
-        '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
-      assert.equal(followed.visible, true,
-        width + 'px followed toc selection ' + JSON.stringify(followed));
-      assert.equal(followed.scrollLeft, 0,
-        width + 'px followed toc horizontal scroll ' + JSON.stringify(followed));
+        await drawerFollowPage.evaluate(() =>
+          document.getElementById('section-25').scrollIntoView());
+        await drawerFollowPage.waitForSelector(
+          '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
+        const followed = await drawerSelectionMetrics(drawerFollowPage,
+          '#docsfw-page-toc a.docsfw-toc-active[href="#section-25"]');
+        assert.equal(followed.visible, true,
+          label + ' followed toc selection ' + JSON.stringify(followed));
+        assert.equal(followed.scrollLeft, 0,
+          label + ' followed toc horizontal scroll ' + JSON.stringify(followed));
+      }
     }
     await drawerFollowPage.close();
 

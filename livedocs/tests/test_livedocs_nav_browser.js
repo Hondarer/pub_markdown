@@ -1,7 +1,7 @@
 // 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
-// ドロワーを開いたときに、狭幅では現在見出し、中幅では現在文書が表示される
-// ことと、3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px
-// が残ることを検証する。
+// ドロワーを開いたときに、狭幅と中幅の両方で現在見出しが表示されることと、
+// 3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残る
+// ことを検証する。
 // 3 列表示では、左右ナビのスクロール終端に Pandoc と同じ 12px が残ることを
 // 検証する。
 // ドロワー内のページ内目次は、Material の 960px 境界をまたいでも文字の
@@ -533,14 +533,26 @@ extra_javascript:
     await page.setViewport({width: 1300, height: 900});
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
     await openDrawer();
-    assertCurrentPageCentered(await currentPageMetrics(), 'reload 1300');
+    const mediumCurrentHeading = await drawerSelectionMetrics('toc');
+    assert.ok(mediumCurrentHeading.found && mediumCurrentHeading.hasScrollContainer,
+      'reload 1300 current heading ' + JSON.stringify(mediumCurrentHeading));
+    assert.equal(mediumCurrentHeading.visible, true,
+      'reload 1300 current heading visibility ' + JSON.stringify(mediumCurrentHeading));
+    assert.equal(mediumCurrentHeading.pageScrollY, 0,
+      'reload 1300 page scroll ' + JSON.stringify(mediumCurrentHeading));
 
     await page.setViewport({width: 1800, height: 900});
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
     await page.setViewport({width: 1300, height: 900});
     await new Promise(resolve => setTimeout(resolve, 400));
     await openDrawer();
-    assertCurrentPageCentered(await currentPageMetrics(), 'resize 1800 to 1300');
+    const resizedCurrentHeading = await drawerSelectionMetrics('toc');
+    assert.ok(resizedCurrentHeading.found && resizedCurrentHeading.hasScrollContainer,
+      'resize 1800 to 1300 current heading ' + JSON.stringify(resizedCurrentHeading));
+    assert.equal(resizedCurrentHeading.visible, true,
+      'resize 1800 to 1300 current heading visibility ' + JSON.stringify(resizedCurrentHeading));
+    assert.equal(resizedCurrentHeading.pageScrollY, 0,
+      'resize 1800 to 1300 page scroll ' + JSON.stringify(resizedCurrentHeading));
 
     await page.setViewport({width: 1100, height: 900});
     await page.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
@@ -722,40 +734,47 @@ extra_javascript:
     }, '1300px reload hash ' + JSON.stringify(reloadedHash));
     await reloadHashPage.close();
 
-    /* 板になる狭幅ではページ内の現在見出しを表示し、連続一覧になる中幅では
-       現在文書を中央へ表示する。ドロワーを開いたまま本文を移動した場合は、
-       どちらの幅でも Material の toc.follow が現在見出しを表示範囲へ追従させる。 */
+    /* ドロワーの構成にかかわらずページ内の現在見出しを表示する。
+       ドロワーを開いたまま本文を移動した場合も、Material の toc.follow が
+       現在見出しを表示範囲へ追従させる。 */
     for (const width of [1100, 1300]) {
-      await page.setViewport({width, height: 900});
-      await page.goto(url + 'section/#heading-20', {waitUntil: 'domcontentloaded'});
-      await page.waitForSelector(
-        '.docsfw-combined-toc a.md-nav__link--active[href="#heading-20"]');
-      const pageScrollY = await page.evaluate(() => window.scrollY);
-      await openDrawer();
-      const openedType = width < 1220 ? 'toc' : 'page';
-      const opened = await drawerSelectionMetrics(openedType);
-      assert.ok(opened.found && opened.hasScrollContainer,
-        width + 'px opened drawer selection ' + JSON.stringify(opened));
-      assert.equal(opened.visible, true,
-        width + 'px opened drawer visibility ' + JSON.stringify(opened));
-      assert.equal(opened.scrollLeft, 0,
-        width + 'px opened drawer horizontal scroll ' + JSON.stringify(opened));
-      assert.equal(opened.pageScrollY, pageScrollY,
-        width + 'px opened drawer page scroll ' + JSON.stringify(opened));
-      assert.equal(opened.text, width < 1220 ? 'Heading 20' : 'Section',
-        width + 'px opened drawer text ' + JSON.stringify(opened));
+      for (const reload of [false, true]) {
+        const label = width + 'px ' + (reload ? 'reloaded' : 'initial');
+        await page.setViewport({width, height: 900});
+        await page.goto(url + 'section/#heading-20', {waitUntil: 'domcontentloaded'});
+        await page.waitForSelector(
+          '.docsfw-combined-toc a.md-nav__link--active[href="#heading-20"]');
+        if (reload) {
+          await page.reload({waitUntil: 'domcontentloaded'});
+          await page.waitForSelector(
+            '.docsfw-combined-toc a.md-nav__link--active[href="#heading-20"]');
+        }
+        const pageScrollY = await page.evaluate(() => window.scrollY);
+        await openDrawer();
+        const opened = await drawerSelectionMetrics('toc');
+        assert.ok(opened.found && opened.hasScrollContainer,
+          label + ' opened drawer selection ' + JSON.stringify(opened));
+        assert.equal(opened.visible, true,
+          label + ' opened drawer visibility ' + JSON.stringify(opened));
+        assert.equal(opened.scrollLeft, 0,
+          label + ' opened drawer horizontal scroll ' + JSON.stringify(opened));
+        assert.equal(opened.pageScrollY, pageScrollY,
+          label + ' opened drawer page scroll ' + JSON.stringify(opened));
+        assert.equal(opened.text, 'Heading 20',
+          label + ' opened drawer text ' + JSON.stringify(opened));
 
-      await page.evaluate(() => document.getElementById('heading-25').scrollIntoView());
-      await page.waitForSelector(
-        '.docsfw-combined-toc a.md-nav__link--active[href="#heading-25"]');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const followed = await drawerSelectionMetrics('toc');
-      assert.equal(followed.text, 'Heading 25',
-        width + 'px followed toc text ' + JSON.stringify(followed));
-      assert.equal(followed.visible, true,
-        width + 'px followed toc visibility ' + JSON.stringify(followed));
-      assert.equal(followed.scrollLeft, 0,
-        width + 'px followed toc horizontal scroll ' + JSON.stringify(followed));
+        await page.evaluate(() => document.getElementById('heading-25').scrollIntoView());
+        await page.waitForSelector(
+          '.docsfw-combined-toc a.md-nav__link--active[href="#heading-25"]');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        const followed = await drawerSelectionMetrics('toc');
+        assert.equal(followed.text, 'Heading 25',
+          label + ' followed toc text ' + JSON.stringify(followed));
+        assert.equal(followed.visible, true,
+          label + ' followed toc visibility ' + JSON.stringify(followed));
+        assert.equal(followed.scrollLeft, 0,
+          label + ' followed toc horizontal scroll ' + JSON.stringify(followed));
+      }
     }
 
     await page.setViewport({width: 1800, height: 900});
@@ -789,7 +808,7 @@ extra_javascript:
 
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, reveals the current heading in narrow ' +
-      'drawers and the current page in medium drawers, follows heading changes, keeps a ' +
+      'and medium drawers, follows heading changes, keeps a ' +
       '12px content bottom gap in medium drawers and none in panels, keeps symmetric ' +
       '12px medium toc spacing, merges the page ' +
       'toc into every panel, extends drawer scrollbars to the viewport bottom, reopens ' +
