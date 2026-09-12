@@ -183,6 +183,50 @@ extra_javascript:
         label + ' content gap ' + JSON.stringify(data));
     }
 
+    async function drawerPaintMetrics(targetPage) {
+      return targetPage.evaluate(() => {
+        const sidebar = document.querySelector('.md-sidebar--primary');
+        const wrap = sidebar.querySelector('.md-sidebar__scrollwrap');
+        const overlay = document.querySelector('.md-overlay');
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const overlayRect = overlay.getBoundingClientRect();
+        const sidebarStyle = getComputedStyle(sidebar);
+        const extensionStyle = getComputedStyle(sidebar, '::after');
+        return {
+          innerHeight: window.innerHeight,
+          sidebarBottom: sidebarRect.bottom,
+          wrapBottom: wrapRect.bottom,
+          overlayBottom: overlayRect.bottom,
+          overlayOpacity: getComputedStyle(overlay).opacity,
+          sidebarBackground: sidebarStyle.backgroundColor,
+          extensionBackground: extensionStyle.backgroundColor,
+          extensionContent: extensionStyle.content,
+          extensionHeight: parseFloat(extensionStyle.height),
+          extensionTop: parseFloat(extensionStyle.top),
+          extensionPointerEvents: extensionStyle.pointerEvents,
+        };
+      });
+    }
+
+    function assertDrawerPaint(data, label) {
+      assert.ok(Math.abs(data.wrapBottom - data.sidebarBottom) <= 1.5,
+        label + ' scrollbar bottom ' + JSON.stringify(data));
+      assert.ok(data.overlayBottom >= data.innerHeight - 1,
+        label + ' overlay bottom ' + JSON.stringify(data));
+      assert.equal(data.overlayOpacity, '1', label + ' overlay opacity ' + JSON.stringify(data));
+      assert.equal(data.extensionContent, '\"\"',
+        label + ' extension content ' + JSON.stringify(data));
+      assert.equal(data.extensionBackground, data.sidebarBackground,
+        label + ' extension background ' + JSON.stringify(data));
+      assert.ok(data.extensionHeight >= data.innerHeight - 1,
+        label + ' extension height ' + JSON.stringify(data));
+      assert.ok(Math.abs(data.extensionTop - (data.sidebarBottom - 60)) <= 1.5,
+        label + ' extension start ' + JSON.stringify(data));
+      assert.equal(data.extensionPointerEvents, 'none',
+        label + ' extension pointer events ' + JSON.stringify(data));
+    }
+
     async function currentPageMetrics() {
       return page.evaluate(() => {
         const links = Array.from(document.querySelectorAll(
@@ -849,13 +893,32 @@ extra_javascript:
     await openDrawerAndScrollEnd();
     assertDrawerEnd(await drawerEndMetrics(), 'resize 1800 to 1100');
 
+    /* ページを下側へ進めるスクロール中にモバイル ブラウザーの操作領域が
+       収納されて表示領域が下へ広がっても、ドロワーと覆いの背景は追加領域を
+       描画する。スクロール バーの下端はドロワー本体の下端に維持する。 */
+    const paintPage = await browser.newPage();
+    for (const width of [360, 1100, 1300]) {
+      await paintPage.setViewport({width, height: 900});
+      await paintPage.goto(url, {waitUntil: 'domcontentloaded'});
+      await paintPage.click('label.md-header__button[for="__drawer"]');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      assertDrawerPaint(await drawerPaintMetrics(paintPage), width + 'px light paint');
+
+      await paintPage.evaluate(() => {
+        document.documentElement.setAttribute('data-md-color-scheme', 'slate');
+      });
+      assertDrawerPaint(await drawerPaintMetrics(paintPage), width + 'px slate paint');
+    }
+    await paintPage.close();
+
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, reveals the current heading in narrow ' +
       'and medium drawers, follows heading changes, keeps a ' +
       '12px content bottom gap in medium drawers and none in panels, keeps symmetric ' +
       '12px medium toc spacing, merges the page ' +
       'toc into every panel, extends drawer scrollbars to the viewport bottom, reopens ' +
-      'without shifting and marks the anchored heading as current');
+      'without shifting, paints below the fixed mobile scroll area and marks the ' +
+      'anchored heading as current');
   } finally {
     if (browser) await browser.close();
     if (server) await new Promise(resolve => server.close(resolve));

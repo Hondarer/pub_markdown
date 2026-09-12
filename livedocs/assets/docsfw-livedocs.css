@@ -156,6 +156,24 @@
     z-index: 5;
   }
 
+  /* iOS では、ページを下側へ進めるスクロール中にブラウザーの操作領域が
+     収納されると、表示領域が初期表示時より下側へ広がる。ドロワー本体の高さを
+     広げると、その内側にあるスクロール バーも伸びるため、下端から背景だけを
+     追加描画する。
+     lvh はブラウザーの操作領域を収納した最大表示領域を基準にする。
+     see: https://webkit.org/blog/12445/new-webkit-features-in-safari-15-4/ */
+  .md-sidebar--primary::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100lvh;
+    background-color: inherit;
+    pointer-events: none;
+  }
+
   /* 上端と本文に接する縁に境界線を引く。左端と下端は画面の縁に接するため
      引かない。色はヘッダーとフッターの境界線にそろえる。 */
   [dir="ltr"] .md-sidebar--primary {
@@ -163,8 +181,16 @@
     border-right: 1px solid var(--md-primary-fg-color--dark);
   }
 
+  [dir="ltr"] .md-sidebar--primary::after {
+    border-right: 1px solid var(--md-primary-fg-color--dark);
+  }
+
   [dir="rtl"] .md-sidebar--primary {
     right: calc(-1 * var(--docsfw-drawer-width));
+    border-left: 1px solid var(--md-primary-fg-color--dark);
+  }
+
+  [dir="rtl"] .md-sidebar--primary::after {
     border-left: 1px solid var(--md-primary-fg-color--dark);
   }
 
@@ -235,6 +261,7 @@
 
   [data-md-toggle="drawer"]:checked ~ .md-overlay {
     height: 100%;
+    height: 100lvh;
     opacity: 1;
     transition: width 0ms, height 0ms, opacity 0.25s;
     width: 100%;
