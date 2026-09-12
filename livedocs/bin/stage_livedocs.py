@@ -76,6 +76,7 @@ VENDORED_FILES = (
     "assets/docsfw-github-icon.svg",
     "assets/docsfw-gitlab-icon.svg",
     "assets/docsfw-gitbucket-icon.svg",
+    "assets/docsfw-mkdocs-favicon.svg",
 )
 
 # 既定の環境変数。.vscode/settings.json の定義と一致させる。

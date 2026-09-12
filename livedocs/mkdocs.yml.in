@@ -28,6 +28,7 @@ validation:
 theme:
   name: material
   custom_dir: theme
+  favicon: assets/docsfw-mkdocs-favicon.svg
   language: @LIVEDOCS_THEME_LANGUAGE@
   # 本文と等幅のフォントは assets/docsfw-pandoc-style.css が
   # --md-text-font-family と --md-code-font-family で与えるため、

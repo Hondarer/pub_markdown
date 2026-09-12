@@ -1203,6 +1203,7 @@ htmlNavScript="${HOME_DIR}/styles/html/docsfw-nav.js"
 htmlWordIconSvg="${HOME_DIR}/styles/html/docsfw-word-icon.svg"
 htmlPandocIconSvg="${HOME_DIR}/styles/html/docsfw-pandoc-icon.svg"
 htmlPandocIconLightSvg="${HOME_DIR}/styles/html/docsfw-pandoc-icon-light.svg"
+htmlPandocFaviconSvg="${HOME_DIR}/styles/html/docsfw-pandoc-favicon.svg"
 htmlDetailsIconSvg="${HOME_DIR}/styles/html/docsfw-details-icon.svg"
 htmlOverviewIconSvg="${HOME_DIR}/styles/html/docsfw-overview-icon.svg"
 htmlDoxygenIconSvg="${HOME_DIR}/styles/html/docsfw-doxygen-icon.svg"
@@ -2002,6 +2003,8 @@ for langElement in ${lang}; do
         # ヘッダー左上のロゴ アイコン (ライト/ダーク用の 2 種を常時配置する)
         copy_if_different_timestamp "${htmlPandocIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-pandoc-icon.svg"
         copy_if_different_timestamp "${htmlPandocIconLightSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-pandoc-icon-light.svg"
+        # ブラウザー タブ用アイコン (通常 HTML と単一 HTML の両方から参照する)
+        copy_if_different_timestamp "${htmlPandocFaviconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-pandoc-favicon.svg"
         # 概要版/詳細版 切替リンク用アイコン (details の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlDetailsIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-details-icon.svg"
         copy_if_different_timestamp "${htmlOverviewIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-overview-icon.svg"

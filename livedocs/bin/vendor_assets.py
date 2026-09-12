@@ -6,7 +6,7 @@
 - ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
 - ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
 - ``livedocs/assets/`` 配下の自前スクリプトとスタイル
-- Doxygen 単一ページ リンクと Git 単一ページ リンク用の SVG、および theme 上書き
+- Doxygen と Git の単一ページ リンク用 SVG、favicon、および theme 上書き
 - ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
 
 いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
@@ -65,6 +65,10 @@ HEADER_ICONS = (
     "docsfw-github-icon.svg",
     "docsfw-gitlab-icon.svg",
     "docsfw-gitbucket-icon.svg",
+)
+
+FAVICON_ICONS = (
+    "docsfw-mkdocs-favicon.svg",
 )
 
 STYLES_HTML_DIR = os.path.join(DOCSFW_DIR, "styles", "html")
@@ -142,6 +146,19 @@ def vendor_header_icons(assets_dir):
         src = os.path.join(STYLES_HTML_DIR, name)
         if not os.path.isfile(src):
             print("Warning: アイコンが見つかりません: {}".format(src))
+            continue
+        if copy_if_changed(src, os.path.join(assets_dir, name)):
+            copied += 1
+    return copied
+
+
+def vendor_favicon_icons(assets_dir):
+    """動的発行の favicon SVG をプレビュー資産へコピーする。"""
+    copied = 0
+    for name in FAVICON_ICONS:
+        src = os.path.join(STYLES_HTML_DIR, name)
+        if not os.path.isfile(src):
+            print("Warning: favicon が見つかりません: {}".format(src))
             continue
         if copy_if_changed(src, os.path.join(assets_dir, name)):
             copied += 1
@@ -282,6 +299,7 @@ def main(argv=None):
         copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
         copied += vendor_header_icons(assets_dir)
+        copied += vendor_favicon_icons(assets_dir)
         copied += vendor_theme(livedocs_dir)
     except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)

@@ -42,6 +42,41 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertNotIn('class="docsfw-header"', self.simple)
         self.assertNotIn('id="docsfw-hamburger"', self.simple)
 
+    def test_templates_use_the_pandoc_favicon(self):
+        marker = (
+            '<link rel="icon" type="image/svg+xml" '
+            'href="$docsfw-logo-icon-base$docsfw-pandoc-favicon.svg" />'
+        )
+        self.assertIn(marker, self.template)
+        self.assertIn(marker, self.simple)
+
+    def test_favicons_share_the_round_style_and_keep_distinct_symbols(self):
+        mkdocs = (ROOT / "styles/html/docsfw-mkdocs-favicon.svg").read_text(
+            encoding="utf-8"
+        )
+        pandoc = (ROOT / "styles/html/docsfw-pandoc-favicon.svg").read_text(
+            encoding="utf-8"
+        )
+        for name, icon in (("MkDocs", mkdocs), ("Pandoc", pandoc)):
+            self.assertIn('viewBox="0 0 48 48"', icon)
+            self.assertIn('<title>{}</title>'.format(name), icon)
+            self.assertIn('<circle cx="24" cy="24" r="23"', icon)
+            self.assertIn('stop-color="#1c1919"', icon)
+            self.assertIn('stop-color="#5e5e5e"', icon)
+            self.assertIn('fill="#ffffff"', icon)
+            self.assertIn('transform="translate(8 8) scale(1.3333333333)"', icon)
+        self.assertNotEqual(mkdocs, pandoc)
+
+    def test_publisher_copies_the_pandoc_favicon(self):
+        self.assertIn(
+            'htmlPandocFaviconSvg="${HOME_DIR}/styles/html/docsfw-pandoc-favicon.svg"',
+            self.publisher,
+        )
+        self.assertIn(
+            'html/docsfw-pandoc-favicon.svg"',
+            self.publisher,
+        )
+
     def test_header_and_drawer_share_current_dimensions(self):
         self.assertIn("--docsfw-header-body-height: 48px", self.style)
         self.assertIn("--docsfw-header-height: 60px", self.style)
@@ -60,6 +95,18 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("if (!isFinite(anchorLine)) { anchorLine = 88; }", self.nav)
         self.assertIn("getBoundingClientRect().top <= anchorLine", self.nav)
         self.assertNotIn("getBoundingClientRect().top <= 84", self.nav)
+
+    def test_reload_with_hash_restores_the_fragment_position(self):
+        """F5 では Chrome の絶対位置復元より URL のフラグメントを優先すること。"""
+        self.assertIn("entries[0].type === 'reload'", self.nav)
+        self.assertIn("performance.navigation.type === 1", self.nav)
+        self.assertIn(
+            "window.addEventListener('pageshow', restore, { once: true })", self.nav
+        )
+        self.assertIn(
+            "target.scrollIntoView({ block: 'start', behavior: 'auto' })", self.nav
+        )
+        self.assertIn("if (!window.location.hash || !isReloadNavigation())", self.nav)
 
     def test_narrow_page_toc_rows_match_material_dimensions(self):
         """最狭ドロワーのページ内目次は 45px のリンクと 1px の区切りにすること。
@@ -337,6 +384,8 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn('siteName=$(basename "${workspaceFolder%/}")', self.publisher)
         self.assertIn('docsfw-site-name=${siteName}', self.publisher)
         self.assertIn('docsfw-variant=${langElement}${details_suffix}', self.publisher)
+        self.assertIn('docsfw-logo-icon-base=${up_dir}', self.publisher)
+        self.assertIn('docsfw-logo-icon-base=../${up_dir}html/', self.publisher)
         self.assertIn('docsfw-asset-base=../${up_dir}html/', self.publisher)
 
     def test_copied_variant_updates_navigation_title(self):

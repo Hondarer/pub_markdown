@@ -10,12 +10,14 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from vendor_assets import (  # noqa: E402
+    FAVICON_ICONS,
     HEADER_ICONS,
     MKDOCS_DIR,
     STYLES_HTML_DIR,
     generate_mkdocs_yml,
     resolve_hooks_dir,
     resolve_site_name,
+    vendor_favicon_icons,
     vendor_header_icons,
     vendor_theme,
     vendor_own_assets,
@@ -147,6 +149,32 @@ class HeaderIconsTest(unittest.TestCase):
         """``remove_stale`` が消さないように ``VENDORED_FILES`` にあること。"""
         for name in HEADER_ICONS:
             self.assertIn("assets/{}".format(name), VENDORED_FILES)
+
+
+class FaviconIconsTest(unittest.TestCase):
+    """動的発行で使う favicon の配置。"""
+
+    def test_all_favicons_exist_in_docsfw_styles(self):
+        for name in FAVICON_ICONS:
+            self.assertTrue(
+                os.path.isfile(os.path.join(STYLES_HTML_DIR, name)),
+                "{} が styles/html にありません".format(name),
+            )
+
+    def test_copies_registers_and_keeps_every_favicon(self):
+        with tempfile.TemporaryDirectory() as root:
+            assets_dir = os.path.join(root, "assets")
+            self.assertEqual(vendor_favicon_icons(assets_dir), len(FAVICON_ICONS))
+            self.assertEqual(vendor_favicon_icons(assets_dir), 0)
+
+            generate_mkdocs_yml(root, False)
+            with open(os.path.join(root, "mkdocs.yml"), encoding="utf-8") as handle:
+                config = handle.read()
+
+            for name in FAVICON_ICONS:
+                self.assertTrue(os.path.isfile(os.path.join(assets_dir, name)), name)
+                self.assertIn("favicon: assets/{}".format(name), config)
+                self.assertIn("assets/{}".format(name), VENDORED_FILES)
 
 
 class VendorThemeTest(unittest.TestCase):

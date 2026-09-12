@@ -9,6 +9,16 @@ Pandoc HTML は、OS の配色設定に合わせてライト モードまたは�
 ライト モードは従来の配色、ダーク モードは MkDocs Material の `slate` に合わせています。  
 図ソース内で明示された色や独自テーマ、既存画像の色は変更しません。
 
+## Favicon
+
+Pandoc HTML と MkDocs は、発行方式を識別できる異なる favicon を使用します。  
+Pandoc HTML は Pandoc の P、MkDocs は Material の本を前景に使用します。  
+両方とも暗い円形グラデーションの背景と白い前景を使用し、ブラウザーの配色に依存せず判別できるようにします。
+
+SVG の正本は `styles/html/docsfw-{pandoc,mkdocs}-favicon.svg` です。  
+Pandoc の発行処理は各 HTML ルートへ Pandoc 用 SVG を配置し、標準テンプレートと簡易テンプレートから参照します。  
+MkDocs の `vendor_assets.py` は MkDocs 用 SVG を `assets/` へ配置し、生成した `mkdocs.yml` の `theme.favicon` から参照します。
+
 標準 HTML のヘッダーは MkDocs と同じく 48px で、直後に 12px の本文背景帯を置きます。  
 ページ タイトルは 18px、発行者と発行日時は 14px、右上の操作アイコンは 20px、左端のロゴとメニューは 24px です。  
 ライトのロゴは黒、ダークのロゴは MkDocs ヘッダー文字と同じ白系です。  

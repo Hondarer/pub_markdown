@@ -26,12 +26,14 @@ date: 2026-09-06
 ## 子見出し
 
 本文です。
+<div id="docsfw-test-delayed-layout"></div>
 ` + Array.from({length: 35}, (_, i) => '\n## Section ' + i + '\n\n' + '本文のスクロール確認。'.repeat(70) + '\n').join('');
 
 function prepare() {
   const resolved = JSON.parse(execFileSync(process.execPath,
     [path.join(__dirname, 'resolve-node-components.js')], { encoding: 'utf8' }));
-  for (const name of ['html-style.css', 'docsfw-ui.css', 'docsfw-nav.js', 'docsfw-search.js', 'docsfw-theme.js']) {
+  for (const name of ['html-style.css', 'docsfw-ui.css', 'docsfw-nav.js', 'docsfw-search.js',
+    'docsfw-theme.js', 'docsfw-pandoc-favicon.svg']) {
     fs.copyFileSync(path.join(root, 'styles/html', name), path.join(output, name));
   }
   fs.copyFileSync(path.join(__dirname, 'docsfw-tokenize.js'), path.join(output, 'docsfw-tokenize.js'));
@@ -61,6 +63,7 @@ function prepare() {
     '-c', 'html-style.css', '-M', 'docsfw-browser-base=', '-M', 'docsfw-ui-enable=true',
     '-M', 'docsfw-drawer-enable=true', '-M', 'docsfw-nav-enable=true',
     '-M', 'docsfw-search-enable=true', '-M', 'docsfw-asset-base=',
+    '-M', 'docsfw-logo-icon-base=',
     '-M', 'search-current=guide/current.html', '-M', 'homelink=index.html',
     '-M', 'docsfw-site-name=sample-site', '-M', 'docsfw-variant=ja', '-o', 'current.html'],
   { cwd: output, stdio: 'pipe' });
@@ -99,6 +102,8 @@ async function main() {
     await page.setViewport({ width: 1700, height: 900 });
     await page.goto(pathToFileURL(path.join(output, 'current.html')).href);
     await page.waitForSelector('.docsfw-flat-nav');
+    const favicon = await page.$eval('link[rel="icon"]', node => node.href);
+    assert.equal(favicon, pathToFileURL(path.join(output, 'docsfw-pandoc-favicon.svg')).href);
 
     const drawerLogoPage = await browser.newPage();
     await drawerLogoPage.setViewport({ width: 1100, height: 900 });
@@ -166,6 +171,49 @@ async function main() {
       assert(checked > 10, width + 'px checked links: ' + checked);
     }
     await tocClickPage.close();
+
+    const reloadHashPage = await browser.newPage();
+    await reloadHashPage.setViewport({width: 1300, height: 900});
+    await reloadHashPage.evaluateOnNewDocument(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const marker = document.getElementById('docsfw-test-delayed-layout');
+        if (!marker) return;
+        marker.style.height = '0px';
+        setTimeout(() => { marker.style.height = '124px'; }, 50);
+      });
+    });
+    const reloadHashUrl = pathToFileURL(path.join(output, 'current.html'));
+    reloadHashUrl.hash = 'section-20';
+    await reloadHashPage.goto(reloadHashUrl.href, {waitUntil: 'domcontentloaded'});
+    await new Promise(resolve => setTimeout(resolve, 250));
+    await reloadHashPage.reload({waitUntil: 'domcontentloaded'});
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const reloadHashMetric = await reloadHashPage.evaluate(() => {
+      const target = document.getElementById('section-20');
+      const link = document.querySelector('#docsfw-page-toc a[href="#section-20"]');
+      const active = document.querySelector('#docsfw-page-toc a.docsfw-toc-active');
+      return {
+        hash: location.hash,
+        targetTop: target.getBoundingClientRect().top,
+        activeHref: active && active.getAttribute('href'),
+        ariaCurrent: link.getAttribute('aria-current'),
+      };
+    });
+    assert.equal(reloadHashMetric.hash, '#section-20', JSON.stringify(reloadHashMetric));
+    assertNear(reloadHashMetric.targetTop, 84, 1,
+      '1300px reloaded hash target ' + JSON.stringify(reloadHashMetric));
+    assert.equal(reloadHashMetric.activeHref, '#section-20', JSON.stringify(reloadHashMetric));
+    assert.equal(reloadHashMetric.ariaCurrent, 'location', JSON.stringify(reloadHashMetric));
+    await reloadHashPage.close();
+
+    const reloadWithoutHashPage = await browser.newPage();
+    await reloadWithoutHashPage.setViewport({width: 1300, height: 900});
+    await reloadWithoutHashPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
+    await reloadWithoutHashPage.evaluate(() => scrollTo(0, 1234));
+    await reloadWithoutHashPage.reload({waitUntil: 'load'});
+    assertNear(await reloadWithoutHashPage.evaluate(() => scrollY), 1234, 1,
+      '1300px reload without hash');
+    await reloadWithoutHashPage.close();
 
     async function drawerSelectionMetrics(targetPage, selectedSelector) {
       return targetPage.evaluate(selector => {

@@ -454,8 +454,36 @@
     revealCurrent();
   }
 
+  function isReloadNavigation() {
+    try {
+      var entries = performance.getEntriesByType('navigation');
+      if (entries.length) { return entries[0].type === 'reload'; }
+      return !!performance.navigation && performance.navigation.type === 1;
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function restoreHashPositionOnReload() {
+    if (!window.location.hash || !isReloadNavigation()) { return; }
+    /* Chrome は F5 で以前の絶対スクロール位置を復元する。図などが後から
+       高さを持つページではフラグメントとの相対位置も維持されるため、
+       pageshow 後に URL の対象へ着地し直す。 */
+    function restore() {
+      window.requestAnimationFrame(function () {
+        var hash = window.location.hash.slice(1); var id;
+        try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
+        var target = document.getElementById(id);
+        if (target) { target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+      });
+    }
+    if (document.readyState === 'complete') { restore(); }
+    else { window.addEventListener('pageshow', restore, { once: true }); }
+  }
+
   function init() {
     initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); initBackToTop(); placePageToc();
+    restoreHashPositionOnReload();
     loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); revealCurrent(); });
     if (wideLayout.addEventListener) {
       wideLayout.addEventListener('change', onLayoutChange); panelLayout.addEventListener('change', onLayoutChange);
