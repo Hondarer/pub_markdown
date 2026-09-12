@@ -125,13 +125,24 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertRegex(
             self.ui_style,
             re.escape("#docsfw-page-toc.docsfw-combined-toc li")
-            + r"\s*\{[^}]*border-top:\s*1px solid var\(--docsfw-divider\)",
+            + r"\s*\{[^}]*border-top:\s*1px solid var\(--docsfw-scroll-track\)",
         )
         # 「目次」の見出しと先頭の項目の間にも線を残すため、先頭行の
         # 打ち消しは置かない。
         self.assertNotIn(
             "#docsfw-page-toc.docsfw-combined-toc > ul > li:first-child",
             self.ui_style,
+        )
+
+    def test_narrow_panel_first_row_does_not_repeat_body_border(self):
+        """最狭ドロワーの先頭行には本体上枠と重複する上枠を置かないこと。"""
+        self.assertRegex(
+            self.ui_style,
+            re.escape(
+                ".docsfw-panel-nav .docsfw-nav-list > li:first-child "
+                "> .docsfw-nav-row"
+            )
+            + r"\s*\{[^}]*border-top:\s*0",
         )
 
     def test_medium_drawer_scrollbar_and_content_reach_expected_bottoms(self):

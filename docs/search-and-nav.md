@@ -281,6 +281,7 @@ MkDocs Material の `.md-top` に合わせ、`#docsfw-top` をヘッダー直下
   MkDocs 側 (`navigation.indexes`) も `theme/partials/nav-item.html` の上書きで同じ挙動にそろえています。詳細は [動的発行基盤の該当節](livedocs-design.md) を参照してください。
 - 根の板にはロゴと `siteName (variant)` を表示します。ロゴは見出しの `currentColor` を使い、ライトと slate の見出し色に追従します。
 - 見出しは固定し、その下の本体だけをスクロールさせます。垂直スクロール バーは見出しの下から始まります。  
+  階層見出しの背景と本体の上枠は `--docsfw-scroll-track` の色でそろえ、先頭行の上枠を省きます。これにより、スクロール バーを含む境界に別の線が見えないようにします。  
   ドロワー全体をスクロール コンテナーにすると、見出しが `position: sticky` で留まっていても  
   スクロール バーは見出しの高さまで伸びます。  
   1220px から 1399px では `.docsfw-drawer-body`、約 1220px 未満では板の本体 `.docsfw-panel-body` が  

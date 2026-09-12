@@ -840,7 +840,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   #docsfw-page-toc.docsfw-combined-toc {
     margin: 0;
     padding: 12px 12px 0;
-    border-top: 1px solid var(--docsfw-divider);
+    border-top: 1px solid var(--docsfw-scroll-track);
   }
 
   .docsfw-combined-toc .docsfw-toc-title {
@@ -890,6 +890,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   .docsfw-panel-body {
     flex: 1 1 auto;
     min-height: 0;
+    border-top: 1px solid var(--docsfw-scroll-track);
+    box-sizing: border-box;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -902,7 +904,6 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     position: relative;
     height: 112px;
     padding: 60px 16px 12px;
-    border-bottom: 1px solid var(--docsfw-divider);
     background: var(--docsfw-subtle-bg);
     color: var(--docsfw-quote);
     box-sizing: border-box;
@@ -927,6 +928,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
   .docsfw-panel-title {
     padding: 60px 16px 12px;
+    background: var(--docsfw-scroll-track);
     color: var(--docsfw-chrome-muted, rgba(0, 0, 0, 0.54));
   }
 
@@ -975,8 +977,14 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   .docsfw-panel-nav .docsfw-nav-row {
     min-height: 45px;
     padding: 12px 16px;
-    border-top: 1px solid var(--docsfw-divider);
+    border-top: 1px solid var(--docsfw-scroll-track);
     box-sizing: border-box;
+  }
+
+  /* 板の見出しとの境界は .docsfw-panel-body の上枠で描く。先頭行にも
+     上枠を置くと 2 本分になるため、Material と同じく先頭行では消す。 */
+  .docsfw-panel-nav .docsfw-nav-list > li:first-child > .docsfw-nav-row {
+    border-top: 0;
   }
 
   #docsfw-tree .docsfw-panel-nav .docsfw-nav-row > a,
@@ -996,7 +1004,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   /* Material と同じく、45px のリンクの外側に 1px の区切り線を置く。
      先頭行にも線を置き、「目次」の見出しと最初の項目を区切る。 */
   #docsfw-page-toc.docsfw-combined-toc li {
-    border-top: 1px solid var(--docsfw-divider);
+    border-top: 1px solid var(--docsfw-scroll-track);
   }
 
   /* 外枠の 12px と見出し行の 12px を縦方向だけに重ね、MkDocs の

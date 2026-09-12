@@ -206,6 +206,56 @@ async function main() {
     assert.equal(reloadHashMetric.ariaCurrent, 'location', JSON.stringify(reloadHashMetric));
     await reloadHashPage.close();
 
+    // 400% 表示でも、板見出しとの境界とスクロール領域の上端を MkDocs にそろえる。
+    const zoomDrawerPage = await browser.newPage();
+    await zoomDrawerPage.setViewport({width: 416, height: 384, deviceScaleFactor: 4});
+    await zoomDrawerPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
+    await zoomDrawerPage.waitForSelector('.docsfw-nav-panel.docsfw-panel-active');
+    await zoomDrawerPage.click('#docsfw-hamburger');
+    await zoomDrawerPage.waitForFunction(() =>
+      document.body.classList.contains('docsfw-nav-open'));
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const zoomDrawerBoundary = await zoomDrawerPage.$eval(
+      '.docsfw-nav-panel.docsfw-panel-active', panel => {
+        const title = panel.querySelector(':scope > .docsfw-panel-title');
+        const body = panel.querySelector(':scope > .docsfw-panel-body');
+        const firstRow = body.querySelector(':scope > .docsfw-nav-list .docsfw-nav-row');
+        const titleRect = title.getBoundingClientRect();
+        const bodyRect = body.getBoundingClientRect();
+        return {
+          devicePixelRatio,
+          titleTop: titleRect.top,
+          titleBottom: titleRect.bottom,
+          titleBackgroundColor: getComputedStyle(title).backgroundColor,
+          titleBorderBottom: getComputedStyle(title).borderBottomWidth,
+          bodyTop: bodyRect.top,
+          bodyBottom: bodyRect.bottom,
+          bodyBorderTop: getComputedStyle(body).borderTopWidth,
+          bodyBorderColor: getComputedStyle(body).borderTopColor,
+          bodyClientTop: body.clientTop,
+          firstRowBorderTop: getComputedStyle(firstRow).borderTopWidth,
+          scrollTrackColor: getComputedStyle(document.documentElement)
+            .getPropertyValue('--docsfw-scroll-track').trim(),
+        };
+      }
+    );
+    assert.deepEqual(zoomDrawerBoundary, {
+      devicePixelRatio: 4,
+      titleTop: 61,
+      titleBottom: 173,
+      titleBackgroundColor: 'rgba(0, 0, 0, 0.07)',
+      titleBorderBottom: '0px',
+      bodyTop: 173,
+      bodyBottom: 384,
+      bodyBorderTop: '1px',
+      bodyBorderColor: 'rgba(0, 0, 0, 0.07)',
+      bodyClientTop: 1,
+      firstRowBorderTop: '0px',
+      scrollTrackColor: 'rgba(0, 0, 0, 0.07)',
+    });
+    await zoomDrawerPage.screenshot({path: path.join(output, 'drawer-400.png')});
+    await zoomDrawerPage.close();
+
     const reloadWithoutHashPage = await browser.newPage();
     await reloadWithoutHashPage.setViewport({width: 1300, height: 900});
     await reloadWithoutHashPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
@@ -573,7 +623,31 @@ async function main() {
     // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
     assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
     const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';
-    assert.equal(Math.round((await dimensions(page, panelBody)).top), 173);
+    assert.deepEqual(await page.$eval(
+      '.docsfw-nav-panel.docsfw-panel-active', panel => {
+        const title = panel.querySelector(':scope > .docsfw-panel-title');
+        const body = panel.querySelector(':scope > .docsfw-panel-body');
+        const titleRect = title.getBoundingClientRect();
+        const bodyRect = body.getBoundingClientRect();
+        return {
+          titleTop: Math.round(titleRect.top),
+          titleBottom: Math.round(titleRect.bottom),
+          titleBorderBottom: getComputedStyle(title).borderBottomWidth,
+          bodyTop: Math.round(bodyRect.top),
+          bodyBottom: Math.round(bodyRect.bottom),
+          bodyBorderTop: getComputedStyle(body).borderTopWidth,
+          bodyClientTop: body.clientTop,
+        };
+      }
+    ), {
+      titleTop: 61,
+      titleBottom: 173,
+      titleBorderBottom: '0px',
+      bodyTop: 173,
+      bodyBottom: 900,
+      bodyBorderTop: '1px',
+      bodyClientTop: 1,
+    });
     assert(await page.$eval(panelBody, node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
 
