@@ -27,7 +27,8 @@ date: 2026-09-06
 
 本文です。
 <div id="docsfw-test-delayed-layout"></div>
-` + Array.from({length: 35}, (_, i) => '\n## Section ' + i + '\n\n' + '本文のスクロール確認。'.repeat(70) + '\n').join('');
+` + Array.from({length: 35}, (_, i) => '\n## Section ' + i + '\n\n' +
+  (i >= 33 ? '文書末尾の確認。' : '本文のスクロール確認。'.repeat(70)) + '\n').join('');
 
 function prepare() {
   const resolved = JSON.parse(execFileSync(process.execPath,
@@ -144,11 +145,11 @@ async function main() {
         links.map(link => link.getAttribute('href')));
       let checked = 0;
       for (const href of hrefs) {
-        const metric = await tocClickPage.evaluate(async targetHref => {
+        await tocClickPage.$eval('#docsfw-page-toc a[href="' + href + '"]', node => node.click());
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const metric = await tocClickPage.evaluate(targetHref => {
           const link = Array.from(document.querySelectorAll('#docsfw-page-toc a[href^="#"]'))
             .find(node => node.getAttribute('href') === targetHref);
-          link.click();
-          await new Promise(resolve => setTimeout(resolve, 20));
           const id = decodeURIComponent(targetHref.slice(1));
           const target = document.getElementById(id);
           const active = document.querySelector('#docsfw-page-toc a.docsfw-toc-active');
@@ -171,6 +172,71 @@ async function main() {
       assert(checked > 10, width + 'px checked links: ' + checked);
     }
     await tocClickPage.close();
+
+    const endAnchorPage = await browser.newPage();
+    async function endAnchorMetric(targetHref) {
+      return endAnchorPage.evaluate(href => {
+        const target = document.getElementById(decodeURIComponent(href.slice(1)));
+        const active = document.querySelector('#docsfw-page-toc a.docsfw-toc-active');
+        const anchorLine = parseFloat(getComputedStyle(document.documentElement)
+          .getPropertyValue('--docsfw-anchor-line'));
+        return {
+          hash: decodeURIComponent(location.hash),
+          atBottom: window.scrollY + window.innerHeight >=
+            document.documentElement.scrollHeight - 1,
+          targetTop: Math.round(target.getBoundingClientRect().top),
+          anchorLine,
+          activeHref: active && active.getAttribute('href'),
+        };
+      }, targetHref);
+    }
+    for (const width of [1100, 1300, 1500]) {
+      await endAnchorPage.goto('about:blank');
+      await endAnchorPage.setViewport({width, height: 900});
+      const endAnchorUrl = pathToFileURL(path.join(output, 'current.html'));
+      endAnchorUrl.hash = 'section-33';
+      await endAnchorPage.goto(endAnchorUrl.href, {waitUntil: 'load'});
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      let metric = await endAnchorMetric('#section-33');
+      assert.equal(metric.hash, '#section-33', width + 'px end hash ' + JSON.stringify(metric));
+      assert.equal(metric.atBottom, true, width + 'px end position ' + JSON.stringify(metric));
+      assert.ok(metric.targetTop > metric.anchorLine,
+        width + 'px end anchor clamp ' + JSON.stringify(metric));
+      assert.equal(metric.activeHref, '#section-33',
+        width + 'px end active ' + JSON.stringify(metric));
+
+      await endAnchorPage.reload({waitUntil: 'load'});
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      metric = await endAnchorMetric('#section-33');
+      assert.equal(metric.activeHref, '#section-33',
+        width + 'px reloaded end active ' + JSON.stringify(metric));
+
+      await endAnchorPage.evaluate(() => scrollTo(0, 0));
+      await endAnchorPage.waitForFunction(() =>
+        !document.querySelector('#docsfw-page-toc a.docsfw-toc-active[href="#section-33"]'));
+      await endAnchorPage.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await endAnchorPage.waitForSelector(
+        '#docsfw-page-toc a.docsfw-toc-active[href="#section-34"]');
+    }
+
+    await endAnchorPage.setViewport({width: 1500, height: 900});
+    await endAnchorPage.goto(pathToFileURL(path.join(output, 'current.html')).href, {waitUntil: 'load'});
+    await endAnchorPage.$eval('#docsfw-page-toc a[href="#section-33"]', node => node.click());
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    assert.equal((await endAnchorMetric('#section-33')).activeHref, '#section-33',
+      '1500px clicked end active');
+
+    const historyUrl = pathToFileURL(path.join(output, 'current.html'));
+    historyUrl.hash = 'section-32';
+    await endAnchorPage.goto(historyUrl.href, {waitUntil: 'load'});
+    await endAnchorPage.$eval('#docsfw-page-toc a[href="#section-33"]', node => node.click());
+    await endAnchorPage.waitForSelector(
+      '#docsfw-page-toc a.docsfw-toc-active[href="#section-33"]');
+    await endAnchorPage.goBack();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    assert.equal((await endAnchorMetric('#section-32')).activeHref, '#section-32',
+      'history end active');
+    await endAnchorPage.close();
 
     const reloadHashPage = await browser.newPage();
     await reloadHashPage.setViewport({width: 1300, height: 900});

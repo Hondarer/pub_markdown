@@ -14,6 +14,7 @@
   var activePanelKey = 'root';
   var panelSequence = 0;
   var branchSequence = 0;
+  var selectHashTarget = null;
   var isJa = (document.documentElement.lang || 'ja').toLowerCase().indexOf('ja') === 0;
 
   function esc(value) {
@@ -290,6 +291,8 @@
     if (!isFinite(anchorLine)) { anchorLine = 88; }
     var scheduled = false;
     var activeIndex = -1;
+    var hashSelectionTimer = null;
+    var hashSelectionScrollHandler = null;
     function followActiveLink(link) {
       var scrollContainer;
       var visibleTop;
@@ -312,12 +315,9 @@
       var linkCenter = (linkBounds.top + linkBounds.bottom) / 2;
       scrollContainer.scrollTop += linkCenter - targetCenter;
     }
-    function update() {
-      scheduled = false; var selected = -1;
-      for (var i = 0; i < entries.length; i++) {
-        if (entries[i].heading.getBoundingClientRect().top <= anchorLine) { selected = i; } else { break; }
-      }
-      if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1) {
+    function applySelection(selected, preserveSelected) {
+      if (!preserveSelected &&
+          window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 1) {
         selected = entries.length - 1;
       }
       for (var j = 0; j < entries.length; j++) {
@@ -329,10 +329,53 @@
       if (selected >= 0 && selected !== activeIndex) { followActiveLink(entries[selected].link); }
       activeIndex = selected;
     }
+    function update() {
+      scheduled = false; var selected = -1;
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].heading.getBoundingClientRect().top <= anchorLine) { selected = i; } else { break; }
+      }
+      applySelection(selected, false);
+    }
+    function hashIndex() {
+      if (!window.location.hash) { return -1; }
+      var hash = window.location.hash.slice(1); var id;
+      try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].heading.id === id) { return i; }
+      }
+      return -1;
+    }
+    function selectHashTarget() {
+      var selected = hashIndex();
+      if (selected < 0) { return; }
+      if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+      if (hashSelectionScrollHandler) {
+        window.removeEventListener('scroll', hashSelectionScrollHandler);
+      }
+      /* アンカー移動のスクロールが停止したあとで URL の見出しを反映する。
+         次の scroll が発生したときは通常の位置追従へ戻る。 */
+      var settle = function () {
+        if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+        if (hashSelectionScrollHandler) {
+          window.removeEventListener('scroll', hashSelectionScrollHandler);
+          hashSelectionScrollHandler = null;
+        }
+        if (hashIndex() === selected) { applySelection(selected, true); }
+      };
+      hashSelectionScrollHandler = function () {
+        if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+        hashSelectionTimer = window.setTimeout(settle, 120);
+      };
+      window.addEventListener('scroll', hashSelectionScrollHandler, {passive: true});
+      hashSelectionScrollHandler();
+    }
     window.addEventListener('scroll', function () {
       if (!scheduled) { scheduled = true; window.requestAnimationFrame(update); }
     }, { passive: true });
-    window.addEventListener('hashchange', update); update();
+    window.addEventListener('hashchange', selectHashTarget);
+    window.addEventListener('pageshow', selectHashTarget);
+    update(); selectHashTarget();
+    return selectHashTarget;
   }
 
   function initBackToTop() {
@@ -463,7 +506,7 @@
     }
   }
 
-  function restoreHashPositionOnReload() {
+  function restoreHashPositionOnReload(selectHashTarget) {
     if (!window.location.hash || !isReloadNavigation()) { return; }
     /* Chrome は F5 で以前の絶対スクロール位置を復元する。図などが後から
        高さを持つページではフラグメントとの相対位置も維持されるため、
@@ -473,7 +516,10 @@
         var hash = window.location.hash.slice(1); var id;
         try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
         var target = document.getElementById(id);
-        if (target) { target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+        if (target) {
+          target.scrollIntoView({ block: 'start', behavior: 'auto' });
+          if (selectHashTarget) { selectHashTarget(); }
+        }
       });
     }
     if (document.readyState === 'complete') { restore(); }
@@ -481,8 +527,10 @@
   }
 
   function init() {
-    initHeaderLinks(); normalizeTocLinks(); initTocTracking(); initDrawer(); initBackToTop(); placePageToc();
-    restoreHashPositionOnReload();
+    initHeaderLinks(); normalizeTocLinks();
+    selectHashTarget = initTocTracking();
+    initDrawer(); initBackToTop(); placePageToc();
+    restoreHashPositionOnReload(selectHashTarget);
     loadNavigation(function (nav) { if (nav) { renderNavigation(nav); } placePageToc(); revealCurrent(); });
     if (wideLayout.addEventListener) {
       wideLayout.addEventListener('change', onLayoutChange); panelLayout.addEventListener('change', onLayoutChange);

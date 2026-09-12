@@ -674,33 +674,76 @@ extra_javascript:
     /* 見出しのアンカーへ移動したとき、目次の現在項目がその見出しになる。
        Material は見出しの上端が判定線より上にあるかどうかで現在項目を決める。
        判定線が着地位置より上にあると、1 つ前の見出しが現在項目のまま残る。 */
-    async function anchoredTocMetrics() {
-      return page.evaluate(() => {
+    async function anchoredTocMetrics(targetId) {
+      return page.evaluate(id => {
         const toc = document.querySelector('.docsfw-combined-toc') ||
           document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
-        const target = document.getElementById('heading-20');
+        const target = document.getElementById(id);
         const header = document.querySelector('.md-header').getBoundingClientRect();
         return {
+          hash: location.hash,
           active: Array.from(toc.querySelectorAll('a.md-nav__link--active'))
             .map(node => node.textContent.trim()),
+          atBottom: window.scrollY + window.innerHeight >=
+            document.documentElement.scrollHeight - 1,
           targetTop: Math.round(target.getBoundingClientRect().top),
           headerBottom: Math.round(header.bottom),
         };
-      });
+      }, targetId);
     }
 
-    for (const width of [1100, 1500]) {
+    for (const width of [1100, 1300, 1500]) {
       await page.setViewport({width, height: 900});
       await page.goto(url, {waitUntil: 'domcontentloaded'});
       await page.waitForSelector('.md-sidebar--primary');
       await page.goto(url + '#heading-20', {waitUntil: 'domcontentloaded'});
       await new Promise(resolve => setTimeout(resolve, 600));
-      const anchored = await anchoredTocMetrics();
+      const anchored = await anchoredTocMetrics('heading-20');
       assert.deepEqual(anchored.active, ['Heading 20'],
         width + 'px anchor active ' + JSON.stringify(anchored));
       assert.ok(anchored.targetTop > anchored.headerBottom,
         width + 'px anchor landing ' + JSON.stringify(anchored));
+
+      await page.goto(url + '#heading-39', {waitUntil: 'domcontentloaded'});
+      await new Promise(resolve => setTimeout(resolve, 600));
+      let endAnchored = await anchoredTocMetrics('heading-39');
+      assert.equal(endAnchored.hash, '#heading-39',
+        width + 'px end anchor hash ' + JSON.stringify(endAnchored));
+      assert.equal(endAnchored.atBottom, true,
+        width + 'px end anchor position ' + JSON.stringify(endAnchored));
+      assert.ok(endAnchored.targetTop > endAnchored.headerBottom,
+        width + 'px end anchor clamp ' + JSON.stringify(endAnchored));
+      assert.deepEqual(endAnchored.active, ['Heading 39'],
+        width + 'px end anchor active ' + JSON.stringify(endAnchored));
+
+      await page.reload({waitUntil: 'domcontentloaded'});
+      await new Promise(resolve => setTimeout(resolve, 600));
+      endAnchored = await anchoredTocMetrics('heading-39');
+      assert.deepEqual(endAnchored.active, ['Heading 39'],
+        width + 'px reloaded end anchor active ' + JSON.stringify(endAnchored));
+
+      await page.evaluate(() => scrollTo(0, 0));
+      await page.waitForFunction(() => {
+        const toc = document.querySelector('.docsfw-combined-toc') ||
+          document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
+        return !toc.querySelector('a.md-nav__link--active[href="#heading-39"]');
+      });
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForFunction(() => {
+        const toc = document.querySelector('.docsfw-combined-toc') ||
+          document.querySelector('.md-sidebar--secondary nav.md-nav--secondary');
+        return !!toc.querySelector('a.md-nav__link--active[href="#heading-40"]');
+      });
     }
+
+    await page.setViewport({width: 1500, height: 900});
+    await page.goto(url + '#heading-38', {waitUntil: 'domcontentloaded'});
+    await page.$eval('a.md-nav__link[href="#heading-39"]', node => node.click());
+    await page.waitForSelector('a.md-nav__link--active[href="#heading-39"]');
+    await page.goBack();
+    await page.waitForFunction(() =>
+      location.hash === '#heading-38' &&
+      !!document.querySelector('a.md-nav__link--active[href="#heading-38"]'));
 
     /* 実サンプルでは、図の描画による約 124px の高さ変化より前に Chrome が
        F5 前の絶対スクロール位置を復元する。再読み込みの pageshow で同じずれを

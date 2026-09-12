@@ -11,6 +11,8 @@
   var originalNextSibling = null;
   var combinedContainer = null;
   var drawerToggle = null;
+  var hashSelectionTimer = null;
+  var hashSelectionScrollHandler = null;
 
   /* ページ内目次も現在見出しへ .md-nav__link--active を付けるため、
      文書ツリーの現在ページだけを選ぶ。 */
@@ -198,6 +200,50 @@
     }
     placeToc();
     bindDrawerToggle();
+    selectHashTargetAfterNavigation();
+  }
+
+  function selectHashTarget() {
+    resolveElements();
+    if (!toc || !window.location.hash) { return; }
+    var hash = window.location.hash.slice(1); var id;
+    try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
+    var links = toc.querySelectorAll('a[href^="#"]');
+    var selected = -1;
+    for (var i = 0; i < links.length; i++) {
+      var linkHash = links[i].getAttribute('href').slice(1); var linkId;
+      try { linkId = decodeURIComponent(linkHash); } catch (_error2) { linkId = linkHash; }
+      if (linkId === id) { selected = i; break; }
+    }
+    if (selected < 0) { return; }
+    for (var j = 0; j < links.length; j++) {
+      links[j].classList.toggle('md-nav__link--passed', j <= selected);
+      links[j].classList.toggle('md-nav__link--active', j === selected);
+    }
+  }
+
+  function selectHashTargetAfterNavigation() {
+    if (!window.location.hash) { return; }
+    if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+    if (hashSelectionScrollHandler) {
+      window.removeEventListener('scroll', hashSelectionScrollHandler);
+    }
+    /* Material がアンカー移動に伴う scroll を処理したあとで URL の見出しを
+       反映する。次に scroll が発生したときは Material の追従へ戻る。 */
+    var settle = function () {
+      if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+      if (hashSelectionScrollHandler) {
+        window.removeEventListener('scroll', hashSelectionScrollHandler);
+        hashSelectionScrollHandler = null;
+      }
+      selectHashTarget();
+    };
+    hashSelectionScrollHandler = function () {
+      if (hashSelectionTimer !== null) { window.clearTimeout(hashSelectionTimer); }
+      hashSelectionTimer = window.setTimeout(settle, 120);
+    };
+    window.addEventListener('scroll', hashSelectionScrollHandler, {passive: true});
+    hashSelectionScrollHandler();
   }
 
   function isReloadNavigation() {
@@ -221,7 +267,10 @@
         var hash = reloadHash.slice(1); var id;
         try { id = decodeURIComponent(hash); } catch (_error) { id = hash; }
         var target = document.getElementById(id);
-        if (target) { target.scrollIntoView({ block: 'start', behavior: 'auto' }); }
+        if (target) {
+          target.scrollIntoView({ block: 'start', behavior: 'auto' });
+          selectHashTargetAfterNavigation();
+        }
       });
     }
     if (document.readyState === 'complete') { restore(); }
@@ -237,6 +286,8 @@
   });
 
   document.addEventListener('click', closeDrawerFromToc);
+  window.addEventListener('hashchange', selectHashTargetAfterNavigation);
+  window.addEventListener('pageshow', selectHashTargetAfterNavigation);
 
   /* 板の出し入れはチェックボックスの状態変化で起きる。change は文書まで
      上がるため、ここで受けて目次を新しい表示中の板へ移す。
@@ -247,6 +298,7 @@
     if (!target || !target.classList) { return; }
     if (!target.classList.contains('md-nav__toggle') || target.id === '__toc') { return; }
     placeToc();
+    selectHashTargetAfterNavigation();
   });
 
   restoreHashPositionOnReload();
