@@ -523,6 +523,17 @@ async function main() {
     assert(await page.$eval(panelBody, node => node.scrollHeight > node.clientHeight));
     await page.screenshot({ path: path.join(output, 'panel.png'), fullPage: false });
 
+    // 板の末尾では、最後の行が画面下端に接する。MkDocs の板もこの値にそろえる。
+    const panelBottomGap = await page.evaluate(selector => {
+      const body = document.querySelector(selector);
+      body.scrollTop = body.scrollHeight;
+      const links = document.querySelectorAll('#docsfw-page-toc.docsfw-combined-toc a');
+      const last = links[links.length - 1];
+      return window.innerHeight - last.getBoundingClientRect().bottom;
+    }, panelBody);
+    assert(Math.abs(panelBottomGap) <= 1, 'panel bottom gap ' + panelBottomGap);
+    await page.evaluate(selector => { document.querySelector(selector).scrollTop = 0; }, panelBody);
+
     // 見出しのフォルダー名は、インデックス ページ (node.url) があれば実リンクになる。
     const guideTitleLink = await page.$eval('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text',
       node => ({ tag: node.tagName, href: node.getAttribute('href') }));

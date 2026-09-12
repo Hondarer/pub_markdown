@@ -490,6 +490,28 @@ class CombinedTocStyleTest(unittest.TestCase):
             + r"\s*\{[^}]*margin-top:\s*12px",
         )
 
+    def test_panel_toc_has_no_content_bottom_spacing(self):
+        """板では最後の行の下に余白を置かず、Pandoc の板と同じにすること。
+
+        Material は一覧の padding-bottom: 0.4rem を .md-nav の
+        margin-bottom: -0.4rem で打ち消すが、スクロール範囲は負のマージンを
+        含めない。目次は一覧の最後の項目のため、対を外側の階層でそろえて 0 に
+        しないと、最後の行の下に 0.4rem が残る。
+        """
+        block = self._drawer_block()
+        self.assertRegex(
+            block,
+            re.escape(".md-nav--primary .docsfw-combined-toc > .md-nav")
+            + r"\s*\{[^}]*margin-bottom:\s*0",
+        )
+        self.assertRegex(
+            block,
+            re.escape(
+                ".md-nav--primary .docsfw-combined-toc > .md-nav > .md-nav__list"
+            )
+            + r"\s*\{[^}]*padding-bottom:\s*0",
+        )
+
     def test_nested_toc_navigations_are_static(self):
         block = self._drawer_block()
         self.assertRegex(

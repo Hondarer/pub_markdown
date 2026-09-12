@@ -11,7 +11,8 @@
 // 横へずれないことも検証する。
 // 見出しのアンカーへ移動したとき、目次の現在項目がその見出しになることも
 // 検証する。
-// 板では「目次」の見出しと先頭の項目の間にも区切り線が入ることを検証する。
+// 板では「目次」の見出しと先頭の項目の間にも区切り線が入ることと、
+// 最後の行の下に余白が残らないことを検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -169,6 +170,11 @@ extra_javascript:
         label + ' last item ' + JSON.stringify(data));
       assert.equal(data.tocMarginTop, checksContinuousList ? '12px' : '0px',
         label + ' toc margin ' + JSON.stringify(data));
+      if (!checksContinuousList) {
+        // 板では Pandoc と同じく、最後の行の下に余白を置かない。
+        assert.ok(Math.abs(data.contentBottomGap) <= 1,
+          label + ' narrow content gap ' + JSON.stringify(data));
+      }
     }
 
     function assertContinuousListBottomPadding(data, label) {
@@ -752,7 +758,8 @@ extra_javascript:
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, reveals the current heading in narrow ' +
       'drawers and the current page in medium drawers, follows heading changes, keeps a ' +
-      '12px content bottom gap and symmetric 12px medium toc spacing, merges the page ' +
+      '12px content bottom gap in medium drawers and none in panels, keeps symmetric ' +
+      '12px medium toc spacing, merges the page ' +
       'toc into every panel, extends drawer scrollbars to the viewport bottom, reopens ' +
       'without shifting and marks the anchored heading as current');
   } finally {

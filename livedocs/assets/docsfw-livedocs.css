@@ -381,6 +381,20 @@
     border-top: 1px solid var(--md-default-fg-color--lightest);
   }
 
+  /* Material は一覧の padding-bottom: 0.4rem を .md-nav の margin-bottom: -0.4rem
+     で打ち消すが、スクロール範囲は負のマージンを含めない。目次は一覧の最後の
+     項目のため、最後の行の下に 0.4rem が残り、Pandoc の板より下余白が広くなる。
+     対になる 2 つを外側の階層でそろえて 0 にし、最後の行を画面下端へ接して
+     終わらせる。
+     入れ子の階層は Material の対のまま残す。 */
+  .md-nav--primary .docsfw-combined-toc > .md-nav {
+    margin-bottom: 0;
+  }
+
+  .md-nav--primary .docsfw-combined-toc > .md-nav > .md-nav__list {
+    padding-bottom: 0;
+  }
+
   /* 目次の一覧は見出しの後ろに続くただの一覧のため、板向けの独立した
      スクロールと区切り線を外す。 */
   .md-nav--primary .docsfw-combined-toc .md-nav__list {
