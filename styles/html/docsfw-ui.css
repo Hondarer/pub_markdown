@@ -763,6 +763,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   body.docsfw-nav-open #docsfw-nav-backdrop {
     width: 100%;
     height: 100%;
+    /* 操作領域が収納されて下側へ広がった分まで覆いを届かせる。 */
+    height: 100lvh;
     opacity: 1;
     transition: width 0ms, height 0ms, opacity 0.25s;
   }
@@ -781,8 +783,10 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     /* 見出しはドロワーの高さを分け合う固定領域とし、スクロールは本体
        (.docsfw-drawer-body とその内側) だけが持つ。ドロワー全体をスクロール
        コンテナーにすると、見出しが position: sticky で留まっていても垂直
-       スクロール バーは見出しの高さまで伸び、MkDocs Material と揃わない。 */
-    overflow: hidden !important;
+       スクロール バーは見出しの高さまで伸び、MkDocs Material と揃わない。
+       内容の切り取りは > .well が持つ。ここを visible 以外にすると、下端から
+       下へ伸ばす ::after がドロワーの箱で切り取られる。 */
+    overflow: visible !important;
     border-top: 1px solid var(--docsfw-header-border);
     border-right: 1px solid var(--docsfw-header-border);
     background: var(--docsfw-bg);
@@ -794,9 +798,33 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     z-index: 1085;
   }
 
+  /* iOS では、ページを下側へ進めるスクロール中にブラウザーの操作領域が
+     収納されると、表示領域が初期表示時より下側へ広がる。ドロワー本体の高さを
+     広げると、その内側にあるスクロール バーも伸びるため、下端から背景だけを
+     追加描画する。
+     lvh はブラウザーの操作領域を収納した最大表示領域を基準にする。
+     see: https://webkit.org/blog/12445/new-webkit-features-in-safari-15-4/ */
+  #docsfw-primary-sidebar::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100lvh;
+    background-color: inherit;
+    border-right: 1px solid var(--docsfw-header-border);
+    pointer-events: none;
+  }
+
   [dir="rtl"] #docsfw-primary-sidebar {
     right: calc(-1 * var(--docsfw-drawer-width));
     left: auto;
+    border-right: 0;
+    border-left: 1px solid var(--docsfw-header-border);
+  }
+
+  [dir="rtl"] #docsfw-primary-sidebar::after {
     border-right: 0;
     border-left: 1px solid var(--docsfw-header-border);
   }
@@ -817,6 +845,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     min-height: 0;
     margin: 0 !important;
     padding: 12px 0;
+    /* ドロワー本体から移した内容の切り取り。高さが 100% のため境界は同じ。
+       hidden はスクロール バーを出さないため、ドロワー自体はスクロールしない。 */
+    overflow: hidden;
     box-sizing: border-box;
   }
 
@@ -1144,6 +1175,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     background: var(--docsfw-bg);
   }
 
+  /* 一覧はスクロール コンテナーのため、高さは dvh を基準にする。lvh にすると
+     操作領域が表示されている間は末尾の行がその裏へ入る。 */
   #docsfw-search-results {
     position: fixed;
     top: 48px;
@@ -1156,9 +1189,14 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     z-index: 1095;
   }
 
+  /* 覆いは塗りつぶしだけのため、ドロワーの覆いと同じく lvh を基準にする。
+     操作領域が収納されて下側へ広がった分まで届かせる。入力欄の高さ 48px を
+     引いて、下端を表示領域の下端にそろえる。 */
   .docsfw-search-backdrop {
     position: fixed;
-    inset: 48px 0 0;
+    inset: 48px 0 auto;
+    height: calc(100vh - 48px);
+    height: calc(100lvh - 48px);
     background: #0000008a;
     z-index: 1090;
   }

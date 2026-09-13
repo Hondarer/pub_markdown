@@ -174,6 +174,54 @@ class PandocUiContractTest(unittest.TestCase):
             + r"\s*\{[^}]*margin-top:\s*12px",
         )
 
+    def test_mobile_drawer_paints_below_the_initial_viewport(self):
+        """操作領域の収納で広がった下端を、Pandoc と MkDocs が同じ規則で塗ること。"""
+        # ドロワー本体は内容を切り取らず、疑似要素が下端から lvh 分の背景を足す。
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-primary-sidebar {") + r"[^}]*overflow:\s*visible !important",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-primary-sidebar > .well {") + r"[^}]*overflow:\s*hidden;",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-primary-sidebar::after")
+            + r"\s*\{[^}]*top:\s*100%[^}]*height:\s*100lvh[^}]*"
+            r"background-color:\s*inherit[^}]*pointer-events:\s*none",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape("body.docsfw-nav-open #docsfw-nav-backdrop")
+            + r"\s*\{[^}]*height:\s*100lvh",
+        )
+        # MkDocs 側も同じ手法を持ち、両者の規則をそろえる。
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape(".md-sidebar--primary::after")
+            + r"\s*\{[^}]*top:\s*100%[^}]*height:\s*100lvh[^}]*"
+            r"background-color:\s*inherit[^}]*pointer-events:\s*none",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape('[data-md-toggle="drawer"]:checked ~ .md-overlay')
+            + r"\s*\{[^}]*height:\s*100lvh",
+        )
+
+    def test_mobile_search_panel_separates_scroll_area_from_overlay(self):
+        """検索は一覧を dvh、覆いを lvh の基準で持つこと。"""
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-search-results")
+            + r"\s*\{[^}]*max-height:\s*calc\(100dvh - 60px\)",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape(".docsfw-search-backdrop")
+            + r"\s*\{[^}]*inset:\s*48px 0 auto[^}]*height:\s*calc\(100lvh - 48px\)",
+        )
+
     def test_wide_sidebars_have_twelve_pixel_content_bottom_spacing(self):
         """幅広の左右ナビは、中幅ドロワーと同じ 12px の内容下余白を持つこと。"""
         self.assertRegex(

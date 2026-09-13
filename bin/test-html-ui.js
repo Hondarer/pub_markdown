@@ -91,6 +91,56 @@ function assertNear(actual, expected, tolerance, label) {
     label + ': expected ' + expected + ' +/- ' + tolerance + ', actual ' + actual);
 }
 
+/* ドロワーの下端から下へ広がった表示領域を塗りつぶす疑似要素と、覆いの高さを
+   測る。スクロール コンテナーはドロワー本体の下端に保つ。 */
+async function drawerPaintMetrics(targetPage) {
+  return targetPage.evaluate(() => {
+    const sidebar = document.querySelector('#docsfw-primary-sidebar');
+    const wrap = document.querySelector(
+      '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body') ||
+      document.querySelector('.docsfw-drawer-body');
+    const backdrop = document.querySelector('#docsfw-nav-backdrop');
+    const sidebarStyle = getComputedStyle(sidebar);
+    const extensionStyle = getComputedStyle(sidebar, '::after');
+    return {
+      innerHeight: window.innerHeight,
+      sidebarBottom: sidebar.getBoundingClientRect().bottom,
+      sidebarTop: sidebar.getBoundingClientRect().top,
+      sidebarClientHeight: sidebar.clientHeight,
+      wrapBottom: wrap.getBoundingClientRect().bottom,
+      backdropBottom: backdrop.getBoundingClientRect().bottom,
+      backdropOpacity: getComputedStyle(backdrop).opacity,
+      sidebarBackground: sidebarStyle.backgroundColor,
+      sidebarOverflow: sidebarStyle.overflow,
+      extensionBackground: extensionStyle.backgroundColor,
+      extensionContent: extensionStyle.content,
+      extensionHeight: parseFloat(extensionStyle.height),
+      extensionTop: parseFloat(extensionStyle.top),
+      extensionPointerEvents: extensionStyle.pointerEvents,
+    };
+  });
+}
+
+function assertDrawerPaint(data, label) {
+  assert.ok(data.wrapBottom <= data.sidebarBottom + 1.5,
+    label + ' scrollbar bottom ' + JSON.stringify(data));
+  assert.equal(data.sidebarOverflow, 'visible',
+    label + ' sidebar overflow ' + JSON.stringify(data));
+  assert.ok(data.backdropBottom >= data.innerHeight - 1,
+    label + ' backdrop bottom ' + JSON.stringify(data));
+  assert.equal(data.backdropOpacity, '1', label + ' backdrop opacity ' + JSON.stringify(data));
+  assert.equal(data.extensionContent, '""',
+    label + ' extension content ' + JSON.stringify(data));
+  assert.equal(data.extensionBackground, data.sidebarBackground,
+    label + ' extension background ' + JSON.stringify(data));
+  assert.ok(data.extensionHeight >= data.innerHeight - 1,
+    label + ' extension height ' + JSON.stringify(data));
+  assert.ok(Math.abs(data.extensionTop - data.sidebarClientHeight) <= 1.5,
+    label + ' extension start ' + JSON.stringify(data));
+  assert.equal(data.extensionPointerEvents, 'none',
+    label + ' extension pointer events ' + JSON.stringify(data));
+}
+
 async function main() {
   const resolved = prepare();
   process.stdout.write('Artifacts: ' + output + '\n');
@@ -613,7 +663,7 @@ async function main() {
     await page.evaluate(() => scrollTo(0, 0));
 
     // 垂直スクロール バーは見出しの下から始まる。ドロワー自体はスクロールさせない。
-    assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
+    assert(await page.$eval('#docsfw-primary-sidebar > .well', node => node.scrollHeight === node.clientHeight));
     assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).top), 106);
     assert(await page.$eval('.docsfw-drawer-body', node => node.scrollHeight > node.clientHeight));
     assert.equal(Math.round((await dimensions(page, '.docsfw-drawer-body')).bottom), 900);
@@ -687,7 +737,7 @@ async function main() {
         borderTopWidth: '0px', itemBorderTopWidth: '1px'},
     ]);
     // 垂直スクロールバーは見出しの下から始まる。ドロワー自体はスクロールさせない。
-    assert(await page.$eval('#docsfw-primary-sidebar', node => node.scrollHeight === node.clientHeight));
+    assert(await page.$eval('#docsfw-primary-sidebar > .well', node => node.scrollHeight === node.clientHeight));
     const panelBody = '.docsfw-nav-panel.docsfw-panel-active > .docsfw-panel-body';
     assert.deepEqual(await page.$eval(
       '.docsfw-nav-panel.docsfw-panel-active', panel => {
@@ -753,6 +803,25 @@ async function main() {
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 
+    /* ページを下側へ進めるスクロール中にモバイル ブラウザーの操作領域が
+       収納されて表示領域が下へ広がっても、ドロワーと覆いの背景は追加領域を
+       描画する。スクロール コンテナーの下端はドロワー本体の下端に保つ。 */
+    const paintPage = await browser.newPage();
+    for (const width of [360, 1100, 1300]) {
+      await paintPage.setViewport({ width, height: 900 });
+      await paintPage.goto(pathToFileURL(path.join(output, 'current.html')).href);
+      await paintPage.waitForSelector('#docsfw-hamburger');
+      await paintPage.click('#docsfw-hamburger');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      assertDrawerPaint(await drawerPaintMetrics(paintPage), width + 'px light paint');
+
+      await paintPage.evaluate(() => {
+        document.documentElement.setAttribute('data-md-color-scheme', 'slate');
+      });
+      assertDrawerPaint(await drawerPaintMetrics(paintPage), width + 'px slate paint');
+    }
+    await paintPage.close();
+
     await page.setViewport({ width: 900, height: 900 });
     await page.click('.docsfw-search-icon');
     assert(await page.$eval('body', body => body.classList.contains('docsfw-search-open')));
@@ -761,11 +830,26 @@ async function main() {
     await page.keyboard.press('ArrowDown');
     assert(await page.$eval('.docsfw-result-item', node => node.getAttribute('aria-selected') === 'true'));
     await page.screenshot({ path: path.join(output, 'search.png'), fullPage: false });
+    /* 覆いは操作領域の収納後に広がる分まで塗り、一覧は操作領域の裏へ入らない。 */
+    const searchPaint = await page.evaluate(() => {
+      const backdrop = document.querySelector('.docsfw-search-backdrop');
+      const results = document.querySelector('#docsfw-search-results');
+      const backdropRect = backdrop.getBoundingClientRect();
+      return {
+        innerHeight: window.innerHeight,
+        backdropBottom: backdropRect.bottom,
+        resultsBottom: results.getBoundingClientRect().bottom,
+      };
+    });
+    assert.ok(searchPaint.backdropBottom >= searchPaint.innerHeight - 1,
+      'search backdrop bottom ' + JSON.stringify(searchPaint));
+    assert.ok(searchPaint.resultsBottom <= searchPaint.innerHeight + 1,
+      'search results bottom ' + JSON.stringify(searchPaint));
     await page.keyboard.press('Escape');
     assert(!await page.$eval('body', body => body.classList.contains('docsfw-search-open')));
 
     assert.deepEqual(errors, []);
-    process.stdout.write('Pandoc header, drawer, panel navigation, and search: passed\n');
+    process.stdout.write('Pandoc header, drawer, panel navigation, mobile bottom paint, and search: passed\n');
   } finally {
     await browser.close();
   }
