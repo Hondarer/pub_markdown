@@ -1,4 +1,4 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="60px" height="30px" viewBox="-0.5 -0.5 60 30" content="&lt;mxfile&gt;&lt;diagram id=&quot;IRkYhzsfD0A-lNA4u3RQ&quot; name=&quot;ページ1&quot;&gt;jZNLb4MwDIB/DfcCErDjyrrtshOTds6IRyIlBKVugf36meLwUFVpJ+zPj/hFlJZ2ePOiUx9OgomSgxyi9CVKkvhQZPSZyDiTPH+aQeO1ZKcVVPoXQiTTi5Zw3jmicwZ1t4e1a1uocceE967fu/04s3+1Ew3cgaoW5p5+aYlqpkWSr/wddKPCy3HG/VkRnLmTsxLS9RuUnqK09M7hLNmhBDMNL8xljnt9YF0K89DifwKSOeAqzIV7i5LMUOjxm4RmEj5hwDhQyrQYFk+/deWMZxzDtJAoGYXRTUukptLAE7iCR01DfWaD1VJOMUfvLq2EqcIDab3SCFUn6ildTwdFTKE1pMW3Km4NUC4YHg4hXkZLNwnOAvqRXDgg42XwNRas9utqg4fabDVlJviYmiXvOm8SeORBXVd7s21+kPT0Bw==&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="60px" height="30px" viewBox="-0.5 -0.5 60 30" content="&lt;mxfile&gt;&lt;diagram id=&quot;IRkYhzsfD0A-lNA4u3RQ&quot; name=&quot;ページ1&quot;&gt;jZPJasMwEEC/xvfYBic9NmmSUmgpuNCzak0sgRYjT2KnX99RLHkhBHry6M2+OMl3uj861oh3y0El2Yr3Sf6SZFm62hT08eQ6kPX6aQC1kzwYTaCUvxA9Az1LDu3CEK1VKJslrKwxUOGCMedstzQ7WbXM2rAa7kBZMXVPvyVHMdBNtp74K8haxMxpEfrTLBqHTlrBuO1mKN8n+c5Zi4Ok+x0oP7w4l8Hv8EA7FubA4H8cssHhwtQ59JZkhSLX7Q8JtRe+oMc0Uoo0KkZLNzcNEVu8xmkhUVIyJWtDpKLSwBG4gENJQ30OCi059z5bZ8+Gg69wRa9OSISyYZUP19FBEROoFb1SEk/W4IFpqfwtfVi0lLxkpqXP2+etyluDlAv6h0NKx9HTzYLVgO5KJsGhCMsK17oJz25afbQQs63ngbFwbPUYd9oHCWEl8Tmt/qab/UD5/g8=&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <g>
@@ -10,7 +10,7 @@
                     <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
                         <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 58px; height: 1px; padding-top: 15px; margin-left: 1px;">
                             <div style="box-sizing: border-box; font-size: 0; text-align: center; color: #000000; ">
-                                <div style="display: inline-block; font-size: 12px; font-family: &quot;Helvetica&quot;; color: light-dark(#000000, #ffffff); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                <div style="display: inline-block; font-size: 12px; font-family: &quot;Noto Sans JP&quot;; color: light-dark(#000000, #ffffff); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
                                     <b>
                                         Text1
                                     </b>
@@ -20,7 +20,7 @@
                             </div>
                         </div>
                     </foreignObject>
-                    <text x="30" y="19" fill="light-dark(#000000, #ffffff)" font-family="&quot;Helvetica&quot;" font-size="12px" text-anchor="middle">
+                    <text x="30" y="19" fill="light-dark(#000000, #ffffff)" font-family="&quot;Noto Sans JP&quot;" font-size="12px" text-anchor="middle">
                         Text1...
                     </text>
                 </switch>

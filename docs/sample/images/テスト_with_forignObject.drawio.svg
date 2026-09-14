@@ -1,4 +1,4 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;pZTBbqMwEIafxtcKcEDJcZOm3UvVQw579uIBrBgbOU4J+/S1YRygEKnVokiMv/knNvOPTOihvr0a1lRvmoMkScRvhD6TJImzOHMvT7qBbNJ0AKURHEUjOIl/MMCgugoOl5nOai2taOYw10pBbmeMGaPbuazQcr5pw0pYgFPO5JL+EdxWA83SaOS/QZRV2DnOdkOmZkGM0kvFuG4niB4JPRit7RDVtwNI37vQlqHu5UH2fjADyn6ngA4FH0xe8dvIkZKt+2V9kJD9LpAtSTLp/nX/17io9FGfismvCMVe03+W7UKvjL4qDn672BUUQsqDltr0SQoJJEXkuVZ2wqP+cfxijT7DWsZXvLBaSD9CbyBMp5HiuMSbe30wKXpKHWMmR0mvaFguVImrthIWTg75dOuG17HK1hKPv2wvdvwDjIXbBGG7X0HXYE3nJO04KXGwv5pMSYaM4XCW99LRPxeghet2btbtjMk+xWC3R6t2dGGVG8bGh0pb8Daz/Fz29r1frRQKsAmcmfO775rt+p5Gvqlzmx/btmbI96x8NCJfRqqAouDc74S1/jxMilK5hYTCLjz/H1NDlqJ5eJ9RvKgmnm9XLA/32Q8sd8vxduhzkyuWHj8B&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" style="background: transparent; background-color: transparent;" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;pZRRj5swDMc/TV4nIAW1j2vXu+mk203qw54zYiBqSFBIj3affgk4BQaV7jSEhPOzjcF/y4Qe6uuzYU31qjlIkkT8Sug3kiRxutm6hye3gdBkM4DSCI5BIziJPzDAFOFFcGhncVZraUUzh7lWCnI7Y8wY3c3DCi3nRRtWwgKcciaX9JfgthpolkYj/w6irELlONsNnpqFYAxtK8Z1N0H0SOjBaG0Hq74eQPrehbYMeU8PvPcPM6DsRxLokPDO5AX/jRwp2bo7642E7HeBOM0y6d66/22cVXqrd8Xka4TBW9S1tbfQK6MvioMvF7uEQkh50FKb3kkhgaSIPNfKTnjUX4631ugzrHl8xhOrhfQj9ENb7cqemGrd4+Un+nFw4s39TUGu6EvqGDM5hvQRDcuFKvHUVcLCySHv7twYO1bZWuKPLBuNvX8HY+E6Qdj4Z9A1WHNzId04M3EYhGoyLxkyhmNa3lNHJZ2BYq4Lu1kXNib7FI3dHkXb0YVobiwbbyptwQvO8nPZC/l2sVIowCZwZs5vvmv21vc08k2dC/5YwDVBPivqo7H5Z8wKKArOfU3M9V/GpCiVO0go7EL9/5E3eCnKGHYcLq+J+tsV8cOO+4T47jhujN43Wbv0+Bc=&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <g>
@@ -10,7 +10,7 @@
                     <foreignObject style="overflow: visible; text-align: left;" pointer-events="none" width="100%" height="100%" requiredFeatures="http://www.w3.org/TR/SVG11/feature#Extensibility">
                         <div xmlns="http://www.w3.org/1999/xhtml" style="display: flex; align-items: unsafe center; justify-content: unsafe center; width: 114px; height: 1px; padding-top: 30px; margin-left: 3px;">
                             <div style="box-sizing: border-box; font-size: 0; text-align: center; color: #000000; ">
-                                <div style="display: inline-block; font-size: 14px; font-family: &quot;Meiryo&quot;; color: light-dark(#000000, #ededed); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
+                                <div style="display: inline-block; font-size: 14px; font-family: &quot;Noto Sans JP&quot;; color: light-dark(#000000, #ededed); line-height: 1.2; pointer-events: all; white-space: normal; word-wrap: normal; ">
                                     テスト
                                     <br/>
                                     だよ
@@ -18,7 +18,7 @@
                             </div>
                         </div>
                     </foreignObject>
-                    <text x="60" y="34" fill="#000000" font-family="&quot;Meiryo&quot;" font-size="14px" text-anchor="middle">
+                    <text x="60" y="34" fill="#000000" font-family="&quot;Noto Sans JP&quot;" font-size="14px" text-anchor="middle">
                         テスト
 だよ
                     </text>
@@ -31,7 +31,7 @@
             <path d="M 199 35 L 199 46 L 210 46" fill="none" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all" style="stroke: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));"/>
         </g>
         <g>
-            <g fill="#000000" font-family="&quot;Meiryo&quot;" font-size="14px" style="fill: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));">
+            <g fill="#000000" font-family="&quot;Noto Sans JP&quot;" font-size="14px" style="fill: light-dark(rgb(0, 0, 0), rgb(237, 237, 237));">
                 <text x="133.5" y="53">
                     ふせん
                 </text>

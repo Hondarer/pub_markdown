@@ -1,8 +1,8 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZTBbqMwEIafxtcVxoWFY5JNu5eqhx56dvEAVgxGjtOEPn1tGAdoiNSVNgcy/md+bOYbmbBdc3kyvKuftQBF4khcCPtD4vh3nLmnF/pRSGk6CpWRYpToJLzKTxjFBMWTFHBc1FmtlZXdUix020JhFxo3Rp+XZaVWy007XsGN8Fpwdau+SWFr/IgkmvS/IKs67EzTfMw0PBRj6bHmQp9nEtsTtjNa2zFqLjtQvnWhLaPv8U72ejADrf2JgY2GD65O+G1kz0gWk20yBIzkaQgSTG1yVDZbDLJoCCjZ7EnsSDIaEXZNpuGVwZdl36ucM8KqDEfjaPvQbqNPrQB/YuoMpVRqp5U2Q5JBDHHpX1Tq1s70aPg5/WiNPsBaxjseeSOVn8JnkKbXqOLE0YerP3COfiVO46bAkqGi44VsK1zdIkAqH2AsXGYSInkC3YA1vSs5T9NEw4jUs0lKUeM4wNXVOjF2AWJeR/6wjpwG5JTkW2SRsxsWbmA7H7baur/tOy8O1cDn5WSVbAEhCW4OL74tth+aFvmuLTne57LW8Z+xujcD32amhLIUwu+EXn8ermTVuoWC0v5XqCHLEB7eeQwvsxnzbAV5uPP+AblbTjfIkJvdwmz/BQ==&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZTBjpswEIafxtcK44XCMUmzW1Vqt1IOPbt4ACsGI+Nskj59bRgH2BCpK5UDjP+Zsc18oyFs11xeDO/q71qAInEkLoR9IXH8Oc7c2wvXUUhpOgqVkWKU6CQc5B8YxQTFkxTQL+Ks1srKbikWum2hsAuNG6PPy7BSq+WhHa/gTjgUXN2rv6SwNf5EEk36V5BVHU6maT56Gh6CMbSvudDnmcT2hO2M1na0mssOlC9dKMuY9/zAe7uYgdb+SwIbE964OuG/kT0jWUy2yWAwkqfBSNC1yVHZbNHIosGgZLMnsSPJaETYzZmGLUNelr2PcpkRRmXYGr29hnIbfWoF+BtTl1BKpXZaaTM4GcQQl36jUrd2pkfD4/TeGn2ENY/PeOaNVL4Lf2ir3bEH3vbu8+0n+rH36NNtp0A8+pQ4jZsCQ4aIjheyrXB1DwP5vIGxcJlJCOcFdAPWXF3IeeorGpqlnvVUihrHVq5uqRNtZyDwdfhP6/BpgE9JvkUqObuj4lq382arrftsf/PiWA2kXk9WyRYQl+Dm+OrLYq9D0SJftSXRx4TWKv5Rao/64l0flVCWQvgzMdffjCtZtW6hoLT/FW/wMsSIc5DhgJvRz1bghzn4AfhuOU2VwTebzGz/Fw==&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <rect x="0" y="0" width="120" height="60" rx="2.4" ry="2.4" fill="#e2e2f0" stroke="#000000" stroke-width="0.5" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" text-anchor="middle" font-size="14px">
+        <g fill="#000000" font-family="Noto Sans JP" text-anchor="middle" font-size="14px">
             <text x="59.5" y="18.5">
                 サブフォルダの
             </text>
@@ -16,7 +16,7 @@
         <path d="M 130 35 L 199 35 L 210 46 L 210 60 L 130 60 L 130 35 Z" fill="#feffdd" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
         <path d="M 199 35 L 199 46 L 210 46 Z" fill-opacity="0.05" fill="#000000" stroke="none" pointer-events="all"/>
         <path d="M 199 35 L 199 46 L 210 46" fill="none" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" font-size="14px">
+        <g fill="#000000" font-family="Noto Sans JP" font-size="14px">
             <text x="133.5" y="53">
                 ふせん
             </text>

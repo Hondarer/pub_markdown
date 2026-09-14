@@ -1,8 +1,8 @@
-<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZTBjpswEEC/xtcK4wWFY0mz3ctqD3vo2cUDWDE2cpxN6NfXhnGAhki7UqMoMW9mYpg3MWH77vrT8r59NQIUSRNxJewHSdMiy/1nAMMEMpZNoLFSTIjO4F3+AcxDeJYCTqs8Z4xysl/DymgNlVsxbq25rNNqo9ab9ryBO/BecXVPf0nh2onmWTLzF5BNG3emeTFFOh6TMfXUcmEuC8QOhO2tMW5addc9qNC62Jap7vlB9HZjFrT7TAGbCj64OuOzkQMjO//Ox0VKyiKSHUm9NkYTwsqRUfI9wawQHJ/HDbFJ1py1gLAP9QW1VGpvlLFjkEEKaR1+qDbaLXgyvjw/OWuOsBUJFc+8kyrMzitIOxikOCf06VYf7STfMs+4rTBlzOh5JXWDV9gHsA6uD3tJb4b8YIPpwNnBp1zmGaBRbLvwnyPjOHbNrXQ24xcoZ1vU07YoSsoMF0WJLgp258KPWR+W2jj/Vf7m1bEZ/bydnZIaUJLg9vgW2uKGsWlJ6Nra42MvWx3/nKtHM/DPzNRQ10KEnbA23A9XstH+QkHt/qvUWMBQHp5U8aBaON9tKI8n1ReU+8v5fz/GFmcnO/wF&lt;/diagram&gt;&lt;/mxfile&gt;">
+<svg host="65bd71144e" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="211px" height="61px" viewBox="-0.5 -0.5 211 61" content="&lt;mxfile&gt;&lt;diagram id=&quot;G_CylaqK1pxMqfOEcBTR&quot; name=&quot;ページ1&quot;&gt;rZRRj5swDMc/TV4nIAcqj6Pr7XTSdpP6sOeMGIgaEpSma7tPvyQ4BVYq3UmrUHH+tjH4Z5nQbX/5atjQfdMcJMkSfiH0C8myMi/cvxeuo5DTfBRaI/gopZOwF38A41A8CQ7HRZzVWloxLMVaKwW1XWjMGH1ehjVaLosOrIU7YV8zea/+FNx2o1rkyaS/gGi7WDktytHTsxiMoceOcX2eSXRH6NZobUerv2xB+tbFtox5zw+8txczoOx7EuiY8JvJE34b2VGycVcRjIxUZVQ2JHPYaJoQWgUtJZ8TjPLO8D32Gptk9Elx8HVSl9AIKbdaahOcFDLIGv+gRis705Pwc/rRGn2ANY/PeGa9kH52vmurXdk9U0d3e/2BfpyY9On2pMgp+ZQ7jZkaQ0LEwGqhWjxhR8BYuDzsanpj5UYcdA/WXF3IeZqGNCLuZpNQoMZwANtb6sTIGYhpHdnTOrKUVDkaZYVUSnpHxQ3c4E2lrbtVv1h9aAOpt5OVQgHi4swc3nxb7DU0LfFdWxJ9TGit4x+l9mgu/pmjBpqGc18Tc/2bMSla5Q4SGvtf8cYEihhxe8XlNaO/WYEft9cH4LvjtAuCb7ZP6e4v&lt;/diagram&gt;&lt;/mxfile&gt;">
     <defs/>
     <g>
         <rect x="0" y="0" width="120" height="60" rx="2.4" ry="2.4" fill="#e2e2f0" stroke="#000000" stroke-width="0.5" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" text-anchor="middle" font-size="14px">
+        <g fill="#000000" font-family="Noto Sans JP" text-anchor="middle" font-size="14px">
             <text x="59.5" y="27">
                 テスト
             </text>
@@ -13,7 +13,7 @@
         <path d="M 130 35 L 199 35 L 210 46 L 210 60 L 130 60 L 130 35 Z" fill="#feffdd" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
         <path d="M 199 35 L 199 46 L 210 46 Z" fill-opacity="0.05" fill="#000000" stroke="none" pointer-events="all"/>
         <path d="M 199 35 L 199 46 L 210 46" fill="none" stroke="#000000" stroke-width="0.5" stroke-miterlimit="10" pointer-events="all"/>
-        <g fill="#000000" font-family="Meiryo" font-size="14px">
+        <g fill="#000000" font-family="Noto Sans JP" font-size="14px">
             <text x="133.5" y="53">
                 ふせん
             </text>
