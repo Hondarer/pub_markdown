@@ -25,6 +25,7 @@ class PandocUiContractTest(unittest.TestCase):
         ).read_text(encoding="utf-8")
         cls.livedocs_main = (ROOT / "livedocs/theme/main.html").read_text(encoding="utf-8")
         cls.nav = (ROOT / "styles/html/docsfw-nav.js").read_text(encoding="utf-8")
+        cls.search = (ROOT / "styles/html/docsfw-search.js").read_text(encoding="utf-8")
         cls.publisher = (ROOT / "bin/pub_markdown_core.sh").read_text(encoding="utf-8")
 
     def test_standard_template_has_material_style_header(self):
@@ -96,6 +97,33 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("if (!isFinite(anchorLine)) { anchorLine = 88; }", self.nav)
         self.assertIn("getBoundingClientRect().top <= anchorLine", self.nav)
         self.assertNotIn("getBoundingClientRect().top <= 84", self.nav)
+
+    def test_pointer_close_leaves_no_focus_ring_on_the_opener(self):
+        """ポインター操作で閉じたとき、メニュー ボタンと検索アイコンに
+        フォーカス表示を残さないこと。
+
+        狭い画面では覆いがヘッダーの上に重なり、ドロワー表示中はメニュー
+        ボタンを押せない。指で閉じる経路は覆いのタップだけのため、ここで
+        ポインター操作かどうかを見ないと毎回フォーカス枠が残る。
+        iOS の WebKit は、キーボード操作前のプログラム フォーカスを
+        :focus-visible とみなすため、CSS では消せない。
+        キーボードが生成する click は detail === 0 で見分ける。
+        MkDocs はフォーカスを受けない label と display: none のチェック
+        ボックスで開閉するため、同じ規則を実装で持たない。
+        """
+        self.assertIn(
+            "backdrop.addEventListener('click', function (event) "
+            "{ closeDrawer(event.detail === 0); });",
+            self.nav,
+        )
+        self.assertIn("var viaKeyboard = event.detail === 0;", self.nav)
+        self.assertIn("if (!viaKeyboard) { button.blur(); }", self.nav)
+        self.assertNotIn("function () { closeDrawer(true); }", self.nav)
+        self.assertIn("closeSearch(event.detail === 0);", self.search)
+        self.assertNotIn("function () { closeSearch(true); }", self.search)
+        # キーボード操作 (Esc) ではフォーカスを戻す経路を残す。
+        self.assertIn("closeDrawer(true); }", self.nav)
+        self.assertIn("closeSearch(true);", self.search)
 
     def test_reload_with_hash_restores_the_fragment_position(self):
         """F5 では Chrome の絶対位置復元より URL のフラグメントを優先すること。"""

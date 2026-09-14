@@ -182,8 +182,14 @@
     results = document.getElementById('docsfw-search-results');
 
     container.querySelector('.docsfw-search-icon').addEventListener('click', openSearch);
-    container.querySelector('.docsfw-search-back').addEventListener('click', function () { closeSearch(true); });
-    container.querySelector('.docsfw-search-backdrop').addEventListener('click', function () { closeSearch(true); });
+    /* ドロワーと同じく、ポインター操作では検索アイコンにフォーカス表示を残さない。
+       キーボードが生成する click は detail === 0 なのでフォーカスを戻す。 */
+    container.querySelector('.docsfw-search-back').addEventListener('click', function (event) {
+      closeSearch(event.detail === 0);
+    });
+    container.querySelector('.docsfw-search-backdrop').addEventListener('click', function (event) {
+      closeSearch(event.detail === 0);
+    });
     input.addEventListener('focus', function () { if (input.value.trim()) { search(input.value); } });
     input.addEventListener('input', function () {
       clearTimeout(debounceTimer);

@@ -911,13 +911,47 @@ extra_javascript:
     }
     await paintPage.close();
 
+    /* 覆いをタップして閉じたとき、メニュー ボタンにフォーカス表示を残さない。
+       Pandoc は closeDrawer に click の detail を渡してこれを満たす。Material は
+       開閉をフォーカスを受けない label (label.md-header__button[for="__drawer"] と
+       label.md-overlay) と display: none のチェックボックス (#__drawer) で行うため、
+       同じ規則を実装で持たない。上流が変わって差が出たらここで気付く。 */
+    const focusPage = await browser.newPage();
+    await focusPage.setViewport({width: 360, height: 900});
+    await focusPage.goto(url, {waitUntil: 'domcontentloaded'});
+    await focusPage.click('label.md-header__button[for="__drawer"]');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await focusPage.click('label.md-overlay');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const drawerFocus = await focusPage.evaluate(() => {
+      const active = document.activeElement;
+      return {
+        checked: document.getElementById('__drawer').checked,
+        tag: active ? active.tagName : null,
+        isBody: active === document.body,
+        isButton: !!(active && active.closest &&
+          active.closest('label.md-header__button[for="__drawer"]')),
+        isToggle: active === document.getElementById('__drawer'),
+      };
+    });
+    assert.equal(drawerFocus.checked, false,
+      'drawer closed by overlay ' + JSON.stringify(drawerFocus));
+    assert.equal(drawerFocus.isButton, false,
+      'drawer button focus ' + JSON.stringify(drawerFocus));
+    assert.equal(drawerFocus.isToggle, false,
+      'drawer toggle focus ' + JSON.stringify(drawerFocus));
+    assert.equal(drawerFocus.isBody, true,
+      'drawer focus after overlay close ' + JSON.stringify(drawerFocus));
+    await focusPage.close();
+
     console.log('PASS: MkDocs wide sidebars keep a 12px bottom gap; drawer toc keeps ' +
       'Pandoc text positions across breakpoints, reveals the current heading in narrow ' +
       'and medium drawers, follows heading changes, keeps a ' +
       '12px content bottom gap in medium drawers and none in panels, keeps symmetric ' +
       '12px medium toc spacing, merges the page ' +
       'toc into every panel, extends drawer scrollbars to the viewport bottom, reopens ' +
-      'without shifting, paints below the fixed mobile scroll area and marks the ' +
+      'without shifting, paints below the fixed mobile scroll area, leaves no focus ' +
+      'on the drawer button after an overlay tap and marks the ' +
       'anchored heading as current');
   } finally {
     if (browser) await browser.close();

@@ -671,6 +671,9 @@ async function main() {
     await page.screenshot({ path: path.join(output, 'drawer.png'), fullPage: false });
     await page.click('#docsfw-nav-backdrop');
     assert.equal(await page.$eval('#docsfw-hamburger', node => node.getAttribute('aria-expanded')), 'false');
+    /* 覆いのタップで閉じたときは、メニュー ボタンにフォーカス表示を残さない。
+       Esc キーで閉じたときにフォーカスを戻すことは、後段で確認する。 */
+    assert.notEqual(await page.$eval('#docsfw-hamburger', node => document.activeElement === node), true);
     await page.waitForFunction(() => document.querySelector('#docsfw-nav-backdrop').getBoundingClientRect().width === 0);
 
     await page.setViewport({ width: 1100, height: 900 });
@@ -847,6 +850,16 @@ async function main() {
       'search results bottom ' + JSON.stringify(searchPaint));
     await page.keyboard.press('Escape');
     assert(!await page.$eval('body', body => body.classList.contains('docsfw-search-open')));
+    /* 検索パネルもドロワーと同じ規則。覆いのタップではフォーカス表示を残さず、
+       Esc キーでは検索アイコンへ戻す。 */
+    assert.equal(await page.$eval('.docsfw-search-icon', node => document.activeElement === node), true);
+    /* 一覧が出ていると覆いの中心を覆う。入力欄を空にして覆いだけを押す。 */
+    await page.$eval('#docsfw-search-input', node => { node.value = ''; });
+    await page.click('.docsfw-search-icon');
+    assert(await page.$eval('body', body => body.classList.contains('docsfw-search-open')));
+    await page.click('.docsfw-search-backdrop');
+    assert(!await page.$eval('body', body => body.classList.contains('docsfw-search-open')));
+    assert.notEqual(await page.$eval('.docsfw-search-icon', node => document.activeElement === node), true);
 
     assert.deepEqual(errors, []);
     process.stdout.write('Pandoc header, drawer, panel navigation, mobile bottom paint, and search: passed\n');

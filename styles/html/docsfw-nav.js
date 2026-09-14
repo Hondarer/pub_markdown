@@ -459,12 +459,23 @@
     sidebar.setAttribute('aria-label', isJa ? '文書ナビゲーション' : 'Document navigation');
     sidebar.setAttribute('aria-hidden', wideLayout.matches ? 'false' : 'true');
     button.addEventListener('click', function (event) {
-      if (document.body.classList.contains('docsfw-nav-open')) { closeDrawer(true); } else { openDrawer(); }
       /* ポインター操作では MkDocs の label と同じくフォーカス表示を残さない。
-         キーボードが生成する click は detail === 0 なのでフォーカスを維持する。 */
-      if (event.detail > 0) { button.blur(); }
+         キーボードが生成する click は detail === 0 なのでフォーカスを維持する。
+         MkDocs は開閉をフォーカスを受けない label と display: none の
+         チェック ボックスで行うため、同じ規則を持つ実装を必要としない。 */
+      var viaKeyboard = event.detail === 0;
+      if (document.body.classList.contains('docsfw-nav-open')) { closeDrawer(viaKeyboard); }
+      else { openDrawer(); }
+      /* 開く向きでも必要。デスクトップのブラウザーはボタンのクリックで
+         フォーカスを当てる。 */
+      if (!viaKeyboard) { button.blur(); }
     });
-    if (backdrop) { backdrop.addEventListener('click', function () { closeDrawer(true); }); }
+    /* 狭い画面では覆いがヘッダーの上に重なり、ドロワー表示中はメニュー ボタンを
+       押せない。指で閉じる経路はここだけのため、ポインター操作かどうかを見ないと
+       毎回フォーカス枠が残る。 */
+    if (backdrop) {
+      backdrop.addEventListener('click', function (event) { closeDrawer(event.detail === 0); });
+    }
     sidebar.addEventListener('click', function (event) {
       var link = event.target.closest ? event.target.closest('a[href]') : null;
       if (link) { closeDrawer(false); }
