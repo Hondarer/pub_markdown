@@ -133,12 +133,17 @@ html[data-md-color-scheme="slate"] {
   --docsfw-admonition-deprecated: #8b949e;
 }
 
+/* viewport-fit=cover により、表示領域は画面の物理的な端まで広がる。本文が
+   切り欠きやホーム インジケーターの下に入らないよう、左右と下端へ安全領域
+   の分を足す。cover を指定しない環境では env() が 0 になり、従来と同じ値に
+   なる。 */
 body {
   font-family: 'Segoe UI', 'Meiryo UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'sans-serif';
   font-size: 16px;
   line-height: 1.5;
   color: var(--docsfw-fg);
-  padding: 10px 30px 0;
+  padding: 10px calc(30px + env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px)
+    calc(30px + env(safe-area-inset-left, 0px));
   background-color: var(--docsfw-bg);
   overflow-x: hidden; }
 
@@ -176,16 +181,16 @@ body {
    (html-style.css が template.css より後に読まれるため上書きが必要) */
 @media (max-width: 767px) {
   body {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: calc(20px + env(safe-area-inset-left, 0px));
+    padding-right: calc(20px + env(safe-area-inset-right, 0px));
   }
   .navbar .nav.pull-right {
     margin-right: 0; } }
 
 @media (min-width: 1400px) {
   body {
-    padding-left: 15px;
-    padding-right: 15px;
+    padding-left: calc(15px + env(safe-area-inset-left, 0px));
+    padding-right: calc(15px + env(safe-area-inset-right, 0px));
   }
 
   .docsfw-layout {
@@ -1290,6 +1295,10 @@ pre, div.sourceCode { background-color: var(--docsfw-code-bg); color: var(--docs
   --docsfw-header-height: 60px;
   --docsfw-anchor-top: 84px;
   --docsfw-anchor-line: 88px;
+  /* iOS でスクロール中に固定要素の下端が表示領域の下端へ追い付くまでの遅れ。
+     実測で最大 24px 程度あり、その間だけ覆いの下に本文が見える。塗りつぶし
+     だけの覆いにこの分の余裕を足して隠す。はみ出す分は画面の外に落ちる。 */
+  --docsfw-viewport-slack: 48px;
 }
 
 body {
@@ -1326,7 +1335,9 @@ body {
   height: var(--docsfw-header-body-height);
   min-width: 0;
   box-sizing: border-box;
-  padding: 0 4px;
+  /* ヘッダーの背景は画面の端まで敷き、内容だけを安全領域の内側へ入れる。 */
+  padding: 0 calc(4px + env(safe-area-inset-right, 0px)) 0
+    calc(4px + env(safe-area-inset-left, 0px));
 }
 
 .docsfw-header-inner.container {

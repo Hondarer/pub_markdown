@@ -9,6 +9,37 @@
   scrollbar-gutter: stable;
 }
 
+/* ------------------------------------------------------------------------ */
+/* 表示領域と安全領域 (Pandoc HTML の html-style.css と同じ規則)             */
+/* ------------------------------------------------------------------------ */
+
+/* theme/main.html の meta viewport が viewport-fit=cover を指定するため、
+   表示領域は画面の物理的な端まで広がる。内容が切り欠きやホーム インジケーター
+   の下に入らないよう、端に接する箱へ安全領域の分を足す。cover を指定しない
+   環境では env() が 0 になり、従来と同じ値になる。 */
+:root {
+  /* iOS でスクロール中に固定要素の下端が表示領域の下端へ追い付くまでの遅れ。
+     塗りつぶしだけの覆いにこの分の余裕を足して隠す。 */
+  --docsfw-viewport-slack: 48px;
+}
+
+/* 背景は画面の端まで敷き、内容だけを安全領域の内側へ入れる。Material の
+   __inner は .md-grid (max-width と margin: auto) のため、左右の padding は
+   中央寄せの外側に足される。 */
+.md-header__inner,
+.md-tabs__inner,
+.md-main__inner,
+.md-footer__inner,
+.md-footer-meta__inner {
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  box-sizing: border-box;
+}
+
+.md-main {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @media screen and (min-width: 1625px) {
   .md-grid {
     max-width: 1595px;
@@ -261,7 +292,10 @@
 
   [data-md-toggle="drawer"]:checked ~ .md-overlay {
     height: 100%;
-    height: 100lvh;
+    /* スクロール中に固定要素の下端が表示領域の下端へ追い付くまでの遅れ
+       (実測で最大 24px 程度) の分も足して、一瞬でも下端に本文が出ないように
+       する。はみ出す分は画面の外に落ちる。 */
+    height: calc(100lvh + var(--docsfw-viewport-slack));
     opacity: 1;
     transition: width 0ms, height 0ms, opacity 0.25s;
     width: 100%;
@@ -306,6 +340,13 @@
    境界は打ち消す相手と一致させるため、docsfw の 1399px ではなく
    Material と同じ 76.234375em を使う。 */
 @media screen and (max-width: 76.234375em) {
+  /* 板の一覧はこの幅でも Material がスクロール コンテナーにする。内容下余白は
+     0 のままだが、ホーム インジケーターの下へ末尾の行が入らないよう、安全領域
+     の分だけスクロール範囲内に確保する。Pandoc の .docsfw-panel-body と同じ。 */
+  .md-nav--primary .md-nav__list {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   /* ルート板のロゴ、行、進むアイコンを Pandoc の狭幅パネルへそろえる。 */
   [data-md-color-scheme="default"] .md-nav--primary > .md-nav__title {
     background-color: #eaeaea;
@@ -506,8 +547,9 @@
     flex: 1 1 auto;
     min-height: 0;
     /* スクロール バーは画面下端まで伸ばし、従来の内容下端はスクロール範囲内の
-       12px で保つ。 */
-    padding-bottom: 12px;
+       12px で保つ。ホーム インジケーターの下へ末尾の行が入らないよう、
+       安全領域の分を足す。 */
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     overflow-y: auto;
     overscroll-behavior: contain;
   }

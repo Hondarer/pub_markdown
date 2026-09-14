@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{#
+  Material の base.html は site_meta ブロックで
+  width=device-width,initial-scale=1 の meta viewport を出力します。
+  iOS では既定の viewport-fit=auto のとき表示領域が安全領域の分だけ小さくなり、
+  position: fixed のドロワーと覆いが画面の下端まで届きません。
+
+  meta viewport を後ろへ足しても、iOS では先の指定が有効なままでした
+  (env(safe-area-inset-bottom) が 0 のまま)。ブロックの出力を置き換えて、
+  meta viewport 自体を 1 つに保ちます。
+
+  置き換え元の文字列は Material のバージョンに依存します。上流が変わって
+  置き換えが空振りしないよう、tests/test_livedocs_viewport.py で確認します。
+
+  Pandoc HTML 側は html-template.html の meta viewport で同じ指定を持ちます。
+  安全領域の手当ては assets/docsfw-livedocs.css の env(safe-area-inset-*) です。
+#}
+{% block site_meta %}
+  {%- filter replace(
+    '<meta name="viewport" content="width=device-width,initial-scale=1">',
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+  ) -%}
+  {{ super() }}
+  {%- endfilter -%}
+{% endblock %}

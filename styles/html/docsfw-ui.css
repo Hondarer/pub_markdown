@@ -763,8 +763,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   body.docsfw-nav-open #docsfw-nav-backdrop {
     width: 100%;
     height: 100%;
-    /* 操作領域が収納されて下側へ広がった分まで覆いを届かせる。 */
-    height: 100lvh;
+    /* 操作領域が収納されて下側へ広がった分まで覆いを届かせる。スクロール中の
+       追従遅れの分も足して、一瞬でも下端に本文が出ないようにする。 */
+    height: calc(100lvh + var(--docsfw-viewport-slack));
     opacity: 1;
     transition: width 0ms, height 0ms, opacity 0.25s;
   }
@@ -817,9 +818,17 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     pointer-events: none;
   }
 
+  /* ドロワーの背景は画面の端まで敷き、内容だけを安全領域の内側へ入れる。
+     横向きで切り欠きのある端末では、画面側の縁に余白が入る。 */
+  #docsfw-primary-sidebar {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
   [dir="rtl"] #docsfw-primary-sidebar {
     right: calc(-1 * var(--docsfw-drawer-width));
     left: auto;
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-left: 0;
     border-right: 0;
     border-left: 1px solid var(--docsfw-header-border);
   }
@@ -921,6 +930,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   .docsfw-panel-body {
     flex: 1 1 auto;
     min-height: 0;
+    /* 内容下余白は 0 だが、ホーム インジケーターの下へ末尾の行が入らない
+       よう、安全領域の分だけスクロール範囲内に確保する。 */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     border-top: 1px solid var(--docsfw-scroll-track);
     box-sizing: border-box;
     overflow-y: auto;
@@ -1086,8 +1098,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
   .docsfw-drawer-body {
     /* スクロール バーは画面下端まで伸ばし、MkDocs と同じ 12px の
-       内容下余白をスクロール範囲内に確保する。 */
-    padding: 0 8px 12px 12px;
+       内容下余白をスクロール範囲内に確保する。ホーム インジケーターの下へ
+       末尾の行が入らないよう、安全領域の分を足す。 */
+    padding: 0 8px calc(12px + env(safe-area-inset-bottom, 0px)) 12px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
@@ -1154,6 +1167,8 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     right: 0;
     height: 48px;
     margin: 0;
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
     border-radius: 0;
     background: var(--docsfw-header-bg);
     z-index: 1095;
@@ -1184,6 +1199,9 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     right: 0;
     width: 100%;
     max-height: calc(100dvh - 60px);
+    /* 末尾の行がホーム インジケーターの下へ入らないようにする。既定の
+       padding は 4px 0 のため、下だけ安全領域の分を足す。 */
+    padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
     border-width: 1px 0 0;
     border-radius: 0;
     z-index: 1095;
@@ -1196,7 +1214,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
     position: fixed;
     inset: 48px 0 auto;
     height: calc(100vh - 48px);
-    height: calc(100lvh - 48px);
+    height: calc(100lvh - 48px + var(--docsfw-viewport-slack));
     background: #0000008a;
     z-index: 1090;
   }

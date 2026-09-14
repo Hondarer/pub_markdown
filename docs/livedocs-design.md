@@ -1312,8 +1312,21 @@ Pandoc HTML 側の `docsfw-nav.js` (`.docsfw-panel-title`) は戻るボタンと
 
 ページを下側へ進めるスクロール中にモバイル ブラウザーの操作領域が収納されると、表示領域が初期表示時より下側へ広がります。  
 ドロワー本体を広げるとスクロール バーの領域も変わるため、疑似要素でドロワー下端から `100lvh` の背景だけを追加描画します。  
-覆い (`.md-overlay`) の高さも `100lvh` に設定し、操作領域の収納後に表示された本文を覆います。  
+覆い (`.md-overlay`) の高さも `lvh` を基準にし、操作領域の収納後に表示された本文を覆います。  
 スクロール コンテナーの高さと下端は変更しません。
+
+iOS では、meta viewport が既定の `viewport-fit=auto` のとき、表示領域が安全領域の分だけ小さくなり、`lvh` でも画面の下端まで届きません。  
+Material の `base.html` は `site_meta` ブロックで meta viewport を出力します。  
+`extrahead` から `viewport-fit=cover` 付きを後置きしても、iOS では先の指定が有効なままで `env(safe-area-inset-bottom)` は 0 のままでした。  
+`theme/main.html` で `site_meta` を上書きし、`super()` の出力を Jinja の `replace` フィルターに通して meta viewport 自体を差し替えます。  
+meta viewport は 1 つのままで、位置と他の meta も変わりません。  
+置き換え元の文字列は Material のバージョンに依存するため、上流が変わって空振りしないよう `tests/test_livedocs_viewport.py` で確認します。  
+広げた分は内容の領域にもなるため、`docsfw-livedocs.css` で端に接する箱へ `env(safe-area-inset-*)` の余白を足します。  
+対象は `.md-header__inner` などの `__inner` の左右、`.md-main` の下端、ドロワーの一覧の下端です。  
+Pandoc HTML 側も同じ規則です。詳細は [検索とナビゲーションの該当節](search-and-nav.md) を参照してください。
+
+スクロール中は、固定要素の下端が表示領域の下端へ追い付くまでに遅れがあります。  
+覆いには `--docsfw-viewport-slack` の分の余裕を足し、その間も下端に本文が出ないようにします。
 
 ドロワーの上端と本文に接する側面には、ヘッダーおよびフッターの境界線と同じ色で 1px の線を引きます。  
 LTR では上端と右端、RTL では上端と左端を囲み、白地と背面の本文を区切ります。

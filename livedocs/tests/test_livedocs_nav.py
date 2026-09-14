@@ -310,11 +310,16 @@ class FlatDrawerScrollTest(unittest.TestCase):
         )
 
     def test_list_keeps_bottom_padding_inside_the_scroll_area(self):
-        """スクロール バーを下端へ伸ばしても、一覧の内容下余白を保つこと。"""
+        """スクロール バーを下端へ伸ばしても、一覧の内容下余白を保つこと。
+
+        ホーム インジケーターの下へ末尾の行が入らないよう、安全領域の分を
+        足します。viewport-fit=cover でない環境では env() が 0 になります。
+        """
         self.assertRegex(
             self._flat_drawer_block(),
             re.escape(".md-nav--primary > .md-nav__list")
-            + r"\s*\{[^}]*padding-bottom:\s*12px",
+            + r"\s*\{[^}]*padding-bottom:\s*"
+            r"calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\)",
         )
 
     def test_title_is_not_sticky(self):

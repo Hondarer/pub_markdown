@@ -23,6 +23,7 @@ class PandocUiContractTest(unittest.TestCase):
         cls.livedocs_pandoc_style = (
             ROOT / "livedocs/assets/docsfw-pandoc-style.css"
         ).read_text(encoding="utf-8")
+        cls.livedocs_main = (ROOT / "livedocs/theme/main.html").read_text(encoding="utf-8")
         cls.nav = (ROOT / "styles/html/docsfw-nav.js").read_text(encoding="utf-8")
         cls.publisher = (ROOT / "bin/pub_markdown_core.sh").read_text(encoding="utf-8")
 
@@ -166,7 +167,8 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertRegex(
             medium.group(1),
             re.escape(".docsfw-drawer-body")
-            + r"\s*\{[^}]*padding:\s*0 8px 12px 12px",
+            + r"\s*\{[^}]*padding:\s*0 8px "
+            r"calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\) 12px",
         )
         self.assertRegex(
             medium.group(1),
@@ -191,10 +193,15 @@ class PandocUiContractTest(unittest.TestCase):
             + r"\s*\{[^}]*top:\s*100%[^}]*height:\s*100lvh[^}]*"
             r"background-color:\s*inherit[^}]*pointer-events:\s*none",
         )
+        # 覆いは lvh 基準に、スクロール中の追従遅れ分の余裕を足す。
         self.assertRegex(
             self.ui_style,
             re.escape("body.docsfw-nav-open #docsfw-nav-backdrop")
-            + r"\s*\{[^}]*height:\s*100lvh",
+            + r"\s*\{[^}]*height:\s*calc\(100lvh \+ var\(--docsfw-viewport-slack\)\)",
+        )
+        self.assertRegex(
+            self.style,
+            r":root\s*\{[^}]*--docsfw-viewport-slack:\s*\d+px",
         )
         # MkDocs 側も同じ手法を持ち、両者の規則をそろえる。
         self.assertRegex(
@@ -206,7 +213,11 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertRegex(
             self.livedocs_style,
             re.escape('[data-md-toggle="drawer"]:checked ~ .md-overlay')
-            + r"\s*\{[^}]*height:\s*100lvh",
+            + r"\s*\{[^}]*height:\s*calc\(100lvh \+ var\(--docsfw-viewport-slack\)\)",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            r":root\s*\{[^}]*--docsfw-viewport-slack:\s*\d+px",
         )
 
     def test_mobile_search_panel_separates_scroll_area_from_overlay(self):
@@ -219,7 +230,75 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertRegex(
             self.ui_style,
             re.escape(".docsfw-search-backdrop")
-            + r"\s*\{[^}]*inset:\s*48px 0 auto[^}]*height:\s*calc\(100lvh - 48px\)",
+            + r"\s*\{[^}]*inset:\s*48px 0 auto[^}]*"
+            r"height:\s*calc\(100lvh - 48px \+ var\(--docsfw-viewport-slack\)\)",
+        )
+
+    def test_templates_cover_the_display_cutout_and_pad_the_safe_area(self):
+        """表示領域を画面全体へ広げ、内容は安全領域の内側へ入れること。"""
+        for template in (self.template, self.simple):
+            self.assertRegex(
+                template,
+                r'<meta name="viewport" content="[^"]*viewport-fit=cover[^"]*" />',
+            )
+        # 本文とヘッダーは左右と下端で安全領域を避ける。
+        self.assertRegex(
+            self.style,
+            r"body \{\s*font-family:[^}]*padding:[^;]*env\(safe-area-inset-bottom, 0px\)",
+        )
+        self.assertRegex(
+            self.style,
+            re.escape(".docsfw-header-inner {")
+            + r"[^}]*padding:[^;]*env\(safe-area-inset-left, 0px\)",
+        )
+        # ドロワーと検索はスクロール範囲内に安全領域の分を確保する。
+        for selector in (".docsfw-panel-body", "#docsfw-search-results"):
+            self.assertRegex(
+                self.ui_style,
+                re.escape(selector)
+                + r"\s*\{[^}]*padding-bottom:[^;]*env\(safe-area-inset-bottom, 0px\)",
+            )
+        self.assertRegex(
+            self.ui_style,
+            re.escape(".docsfw-drawer-body {")
+            + r"[^}]*padding:[^;]*env\(safe-area-inset-bottom, 0px\)",
+        )
+        self.assertRegex(
+            self.ui_style,
+            re.escape("#docsfw-primary-sidebar {")
+            + r"[^}]*padding-left:\s*env\(safe-area-inset-left, 0px\)",
+        )
+
+    def test_livedocs_covers_the_display_cutout_and_pads_the_safe_area(self):
+        """MkDocs 側も cover を後置きし、Pandoc と同じ安全領域の規則を持つこと。"""
+        # 後置きでは iOS に効かないため、site_meta の出力を置き換える。
+        self.assertIn('{% extends "base.html" %}', self.livedocs_main)
+        self.assertRegex(
+            self.livedocs_main,
+            r"\{% block site_meta %\}[\s\S]*"
+            r'<meta name="viewport" content="[^"]*viewport-fit=cover[^"]*">'
+            r"[\s\S]*\{\{ super\(\) \}\}",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape(".md-header__inner,")
+            + r"[\s\S]*?\{[^}]*padding-left:\s*env\(safe-area-inset-left, 0px\)",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape(".md-main {")
+            + r"[^}]*padding-bottom:\s*env\(safe-area-inset-bottom, 0px\)",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape(".md-nav--primary .md-nav__list")
+            + r"\s*\{[^}]*padding-bottom:\s*env\(safe-area-inset-bottom, 0px\)",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            re.escape(".md-nav--primary > .md-nav__list")
+            + r"\s*\{[^}]*padding-bottom:\s*"
+            r"calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\)",
         )
 
     def test_wide_sidebars_have_twelve_pixel_content_bottom_spacing(self):
