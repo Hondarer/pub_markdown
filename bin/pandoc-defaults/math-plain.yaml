@@ -1,0 +1,8 @@
+# 数式をブラウザーでレンダリングしない場合の Pandoc defaults (HTML のみ)
+#
+# Pandoc 3.11 は数式方法の既定が mathml へ変わり、指定がないと MathML を出力する。
+# Pandoc 3.9 と同じ出力 (数式を span.math のまま残す) を保つため plain を明示する。
+# キー名に html-math-method を使う理由は math-mathjax.yaml と同じ。
+# see: https://github.com/jgm/pandoc/releases/tag/3.11
+html-math-method:
+  method: plain

@@ -1099,11 +1099,14 @@ markExtension="+mark"
 
 # 数式サポート (LaTeX 書式) 関連オプションの組み立て
 # mathExtension: Pandoc 入力拡張。\[...\] \(...\) 書式の LaTeX 数式を認識させる (HTML/docx 共通)
-# math_jax_args: MathJax によるブラウザー レンダリングを指定する Pandoc オプション (HTML のみ)
-math_jax_args=()
+# math_method_args: 数式の出力方法を指定する Pandoc defaults ファイル (HTML のみ)
+#   CLI の --mathjax は Pandoc 3.11 で非推奨警告の対象となり、置き換え先の --math-method は
+#   Pandoc 3.9 が解釈できない。双方が解釈できる defaults ファイルへ指定を委ねる。
+#   数式方法の既定は Pandoc 3.11 で mathml へ変わるため、無効時も plain を明示する。
+math_method_args=(--defaults="${SCRIPT_DIR}/pandoc-defaults/math-plain.yaml")
 if [[ "$mathLatexEnable" == "true" ]]; then
     mathExtension="+tex_math_single_backslash"
-    math_jax_args=(--mathjax)
+    math_method_args=(--defaults="${SCRIPT_DIR}/pandoc-defaults/math-mathjax.yaml")
 fi
 
 # 設定ファイルに autoSetDate が指定されなかった場合の値を true にする
@@ -2238,7 +2241,7 @@ while ((${#_pending_files[@]} > 0)); do
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
-                            "${math_jax_args[@]}" \
+                            "${math_method_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                             2>"$_pm_pandoc_stderr"
@@ -2270,7 +2273,7 @@ while ((${#_pending_files[@]} > 0)); do
                                 "${pandoc_crossref_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
-                                "${math_jax_args[@]}" \
+                                "${math_method_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                                 --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
@@ -2747,7 +2750,7 @@ while ((${#_pending_files[@]} > 0)); do
                         "${pandoc_crossref_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
-                        "${math_jax_args[@]}" \
+                        "${math_method_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
                         --metadata "mermaid-js=${up_dir}mermaid.min.js" \
@@ -2786,7 +2789,7 @@ while ((${#_pending_files[@]} > 0)); do
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
-                            "${math_jax_args[@]}" \
+                            "${math_method_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
                             --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \

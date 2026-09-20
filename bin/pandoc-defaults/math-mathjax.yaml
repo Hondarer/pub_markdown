@@ -1,0 +1,14 @@
+# MathJax によるブラウザー レンダリングを指定する Pandoc defaults (HTML のみ)
+#
+# CLI の --mathjax は Pandoc 3.11 で非推奨となり、変換のたびに
+# "[WARNING] Deprecated: --mathjax." が出力される。
+# 置き換え先の --math-method と defaults キー math-method は Pandoc 3.9 が解釈できないため、
+# 3.9 と 3.11 の双方が解釈できる html-math-method を使う。
+# see: https://github.com/jgm/pandoc/releases/tag/3.11
+#
+# url は明示して MathJax の版を固定する。
+# 省略すると Pandoc 3.9 は MathJax 3、Pandoc 3.11 は MathJax 4 を読み込み、
+# 動的発行 (livedocs/mkdocs.yml.in) の MathJax 3 と版がずれる。
+html-math-method:
+  method: mathjax
+  url: https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js

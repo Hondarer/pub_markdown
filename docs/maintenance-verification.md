@@ -34,3 +34,19 @@ DOCX のオプションは `--docxOutput=` です。
 
 静的発行の規則を変更する場合は、`livedocs/` のステージングにも同じ規則が必要か確認します。  
 検証対象は変更した形式と影響する経路から選択し、すでに得た同じ結果を繰り返し生成しません。
+
+## Pandoc の版を上げる場合
+
+数式の指定は `bin/pandoc-defaults/` の defaults ファイルで行います。  
+CLI の `--mathjax` は Pandoc 3.11 で非推奨となり、変換のたびに警告が出るため使用しません。  
+置き換え先の `--math-method` と defaults キー `math-method` は Pandoc 3.9 が解釈できないため、両方の版が解釈できる `html-math-method` を使います。
+
+MathJax の URL は `bin/pandoc-defaults/math-mathjax.yaml` で MathJax 3 に固定します。  
+URL を省略すると、読み込む MathJax が Pandoc 3.9 では 3、Pandoc 3.11 では 4 になり、動的発行 (`livedocs/mkdocs.yml.in`) と版がずれます。
+
+数式方法の既定は Pandoc 3.11 で `mathml` へ変わります。  
+`mathLatexEnable: false` のときも `bin/pandoc-defaults/math-plain.yaml` で `plain` を明示し、Pandoc 3.9 と同じ出力を保ちます。
+
+pandoc-crossref は Pandoc の版に合わせた実行ファイルが必要です。  
+版が異なると `pandoc-crossref was compiled with pandoc ...` の警告が出ます。  
+Pandoc 3.11 に対しては pandoc-crossref 0.3.25 を使用します。

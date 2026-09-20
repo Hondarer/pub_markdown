@@ -1,6 +1,6 @@
 // MathJax の設定。pymdownx.arithmatex の generic 出力に合わせる。
 //
-// docsfw は pandoc の --mathjax を使用し、\(...\) と \[...\] を数式として扱う。
+// docsfw の静的発行は pandoc の MathJax 出力を使用し、\(...\) と \[...\] を数式として扱う。
 // 同じ書式を mkdocs でも扱えるようにする。
 
 window.MathJax = {
