@@ -109,10 +109,12 @@ def resolve_node_components():
 
 
 def node_child_env(resolved, base_env=None):
-    """子プロセスの ``require`` を、解決済みのグローバル パッケージへ固定する環境を返す。
+    """子プロセスの ``require`` と ``import`` を、解決済みのグローバル パッケージへ固定する環境を返す。
 
     静的発行の ``bin/pub_markdown_core.sh`` と同じ規則です。探索先を root 単位で
     差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。
+    ``import`` の固定も同じ preload が行います。詳細は ``bin/docsfw-prefer-global-modules.js``
+    を参照してください。
     """
     env = dict(os.environ if base_env is None else base_env)
     packages = resolved.get("globalPackages") or {}

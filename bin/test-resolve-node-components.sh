@@ -116,7 +116,28 @@ if (process.platform !== "win32") {
 }
 ' "$RESOLVER"
 
+# 固定の規則 (採用先を含む node_modules の算出と、指定子の一致判定) を確認する。
+node -e '
+const path = require("path");
+const pinned = require(process.argv[1]);
+const root = path.resolve("/docsfw-test/lib/node_modules");
+const entries = pinned.buildEntries({
+  "@docsfw/scoped": path.join(root, "@docsfw", "scoped"),
+  "plain": path.join(root, "plain"),
+});
+if (entries.length !== 2) process.exit(1);
+entries.forEach((entry) => {
+  if (entry.root !== root) process.exit(1);
+  if (entry.parentURL.indexOf("file:") !== 0) process.exit(1);
+});
+if (pinned.findEntry(entries, "@docsfw/scoped/sub").name !== "@docsfw/scoped") process.exit(1);
+if (pinned.findEntry(entries, "plain") === null) process.exit(1);
+if (pinned.findEntry(entries, "plainer") !== null) process.exit(1);
+if (pinned.findEntry(entries, "./plain") !== null) process.exit(1);
+' "${SCRIPT_DIR}/docsfw-pinned-packages.js"
+
 # 採用したパッケージだけを require の解決先へ固定する。
+# 採用先が node_modules 配下にない場合は、ディレクトリへの読み替えで解決する。
 fake_pkg="${tmp_dir}/pinned/minimist"
 mkdir -p "$fake_pkg"
 printf '{"name":"minimist","version":"1.2.8","main":"index.js"}\n' > "${fake_pkg}/package.json"
@@ -137,5 +158,59 @@ try {
 }
 if (!notFound) process.exit(1);
 ' "$fake_pkg"
+
+# 採用先が node_modules 配下にある場合は、package.json の exports 定義に従って解決する。
+# ディレクトリを直接指定すると main が選ばれ、require 用ではないエントリが読み込まれる。
+exports_root="${tmp_dir}/exports/node_modules"
+exports_pkg="${exports_root}/docsfw-pinned-sample"
+mkdir -p "$exports_pkg"
+cat > "${exports_pkg}/package.json" <<'PACKAGE_JSON'
+{
+  "name": "docsfw-pinned-sample",
+  "version": "1.0.0",
+  "main": "main.js",
+  "exports": {
+    ".": {
+      "require": "./required.cjs",
+      "import": "./imported.mjs"
+    }
+  }
+}
+PACKAGE_JSON
+printf 'module.exports = "main";\n' > "${exports_pkg}/main.js"
+printf 'module.exports = "required";\n' > "${exports_pkg}/required.cjs"
+printf 'export default "imported";\n' > "${exports_pkg}/imported.mjs"
+
+export DOCSFW_NODE_GLOBAL_PACKAGES="{\"docsfw-pinned-sample\":\"${exports_pkg}\"}"
+
+node --require "${SCRIPT_DIR}/docsfw-prefer-global-modules.js" -e '
+if (require("docsfw-pinned-sample") !== "required") process.exit(1);
+'
+
+# ES モジュールの import は require のフックを通らないため、同じ固定を解決フックで行う。
+node --require "${SCRIPT_DIR}/docsfw-prefer-global-modules.js" --input-type=module -e '
+const pinnedModule = await import("docsfw-pinned-sample");
+if (pinnedModule.default !== "imported") process.exit(1);
+// 固定していないパッケージは通常の解決に従う。
+let notFound = false;
+try {
+  await import("docsfw-not-installed-package");
+} catch (error) {
+  notFound = error.code === "ERR_MODULE_NOT_FOUND";
+}
+if (!notFound) process.exit(1);
+'
+
+# module.registerHooks を持たない Node.js では module.register 経由で同じ固定を行う。
+cat > "${tmp_dir}/without-register-hooks.js" <<PRELOAD
+require("module").registerHooks = undefined;
+require("${SCRIPT_DIR}/docsfw-prefer-global-modules.js");
+PRELOAD
+node --require "${tmp_dir}/without-register-hooks.js" --input-type=module -e '
+const pinnedModule = await import("docsfw-pinned-sample");
+if (pinnedModule.default !== "imported") process.exit(1);
+'
+
+unset DOCSFW_NODE_GLOBAL_PACKAGES
 
 printf 'resolve-node-components tests passed.\n'

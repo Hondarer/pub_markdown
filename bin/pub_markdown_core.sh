@@ -2968,11 +2968,19 @@ for langElement in ${lang}; do
                     _nav_merge_map+=("${subfolder_alias}=${subfolder_mdroot}")
                 done
             fi
-            python3 "${htmlNavTreeScript}" "${_html_root}" "${PUB_MARKDOWN_MAIN_MDROOT}" "${_nav_merge_map[@]}"
+            if ! python3 "${htmlNavTreeScript}" "${_html_root}" "${PUB_MARKDOWN_MAIN_MDROOT}" "${_nav_merge_map[@]}"; then
+                echo >&2 "Error: Failed to generate nav tree: ${pubRoot}/${langElement}${details_suffix}/html/"
+                exit 1
+            fi
         fi
         if [[ "$htmlSearchEnable" == "true" ]]; then
             echo "Generating search index: ${pubRoot}/${langElement}${details_suffix}/html/"
-            node "${htmlBuildSearchScript}" "${_html_root}"
+            # 生成に失敗すると検索インデックスだけが欠落し、HTML の検索が無反応になる。
+            # 発行の失敗として扱い、後続の言語やバリアントへ進めない。
+            if ! node "${htmlBuildSearchScript}" "${_html_root}"; then
+                echo >&2 "Error: Failed to generate search index: ${pubRoot}/${langElement}${details_suffix}/html/"
+                exit 1
+            fi
         fi
     done
 done

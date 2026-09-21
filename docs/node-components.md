@@ -88,7 +88,25 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
 グローバルから採用したパッケージは、名前とディレクトリの対を `DOCSFW_NODE_GLOBAL_PACKAGES` へ渡します。  
-`bin/docsfw-prefer-global-modules.js` が子プロセスの `require` をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
+`bin/docsfw-prefer-global-modules.js` が子プロセスの解決先をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
+
+固定は `require` と `import` の双方に適用します。  
+ES モジュールの裸の指定子は ES モジュール ローダーだけが解決し、`require` のフック、`NODE_PATH`、グローバルの `node_modules` のいずれも参照しません。  
+`import` を固定しないと、グローバルだけにパッケージがある環境で `.mjs` の読み込みが `ERR_MODULE_NOT_FOUND` になります。
+
+| 解決の経路 | 固定の方法 |
+|---|---|
+| `require` | `Module._resolveFilename` を差し替え、採用先を含む `node_modules` からパッケージ名のまま解決します |
+| `import` | `module.registerHooks()` の解決フックで、解決の起点を採用先の `node_modules` へ変更します |
+
+`module.registerHooks()` を持たない Node.js では、`module.register()` で `bin/docsfw-prefer-global-modules.mjs` を登録します。  
+判定の規則は `bin/docsfw-pinned-packages.js` に集約し、どちらの経路でも同じディレクトリを選びます。
+
+採用先はディレクトリを直接指定せず、パッケージ名のまま解決します。  
+ディレクトリを直接指定すると `package.json` の `exports` 定義を通らず、常に `main` が読み込まれます。  
+`minisearch` のように `require` 用のエントリを別に持つパッケージでは、ブラウザー向けの UMD が選ばれて実行時に失敗します。  
+`NODE_PATH` で `node_modules` 以外のディレクトリを採用した場合に限り、`require` はディレクトリへの読み替えで解決します。  
+`import` はこの読み替えを行わないため、`NODE_PATH` にはパッケージを `node_modules` として配置してください。
 
 固定はパッケージ単位です。  
 探索先を root 単位で差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。  
