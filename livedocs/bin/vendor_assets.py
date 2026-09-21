@@ -87,15 +87,20 @@ def copy_if_changed(src, dst):
 
 
 def resolve_node_components():
-    """必須 npm コンポーネントを解決し、欠けていれば導入する。"""
+    """必須 npm コンポーネントを解決し、不足していれば導入する。
+
+    標準エラー出力は取り込みません。``npm ci`` は数分かかることがあり、静的発行の
+    ``bin/pub_markdown_core.sh`` と同じく、進捗をそのまま端末へ表示するためです。
+    解決結果の JSON は標準出力から受け取ります。
+    """
     result = subprocess.run(
         ["node", RESOLVE_SCRIPT, "--ensure"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
         text=True,
         check=False,
     )
     if result.returncode != 0:
-        message = result.stderr.strip() or result.stdout.strip() or "node component resolve failed"
+        message = result.stdout.strip() or "node コンポーネントの解決に失敗しました"
         raise FileNotFoundError(message)
     try:
         return json.loads(result.stdout)
@@ -103,7 +108,25 @@ def resolve_node_components():
         raise FileNotFoundError("node component resolve の JSON を解釈できません: {}".format(error))
 
 
-def vendor_plantuml(assets_dir, source_dir):
+def node_child_env(resolved, base_env=None):
+    """子プロセスの ``require`` を、解決済みのグローバル パッケージへ固定する環境を返す。
+
+    静的発行の ``bin/pub_markdown_core.sh`` と同じ規則です。探索先を root 単位で
+    差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。
+    """
+    env = dict(os.environ if base_env is None else base_env)
+    packages = resolved.get("globalPackages") or {}
+    preload = os.path.join(DOCSFW_DIR, "bin", "docsfw-prefer-global-modules.js")
+    if not packages or not os.path.isfile(preload):
+        return env
+    env["DOCSFW_NODE_GLOBAL_PACKAGES"] = json.dumps(packages)
+    node_options = env.get("NODE_OPTIONS", "").strip()
+    require_option = "--require {}".format(preload)
+    env["NODE_OPTIONS"] = "{} {}".format(node_options, require_option).strip()
+    return env
+
+
+def vendor_plantuml(assets_dir, source_dir, env=None):
     """``@plantuml/core`` のファイルを配置する。"""
     if not source_dir or not os.path.isdir(source_dir):
         raise FileNotFoundError(
@@ -113,6 +136,7 @@ def vendor_plantuml(assets_dir, source_dir):
     subprocess.run(
         ["node", os.path.join(DOCSFW_DIR, "bin", "build-browser-assets.js"), source_dir, assets_dir],
         check=True,
+        env=env,
     )
     return 1
 
@@ -295,7 +319,9 @@ def main(argv=None):
     try:
         _lang, _details, variant = parse_livedocs_variant(args.variant)
         resolved = resolve_node_components()
-        copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""))
+        node_env = node_child_env(resolved)
+        copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""),
+                                 env=node_env)
         copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
         copied += vendor_own_assets(assets_dir)
         copied += vendor_header_icons(assets_dir)

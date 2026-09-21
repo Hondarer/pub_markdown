@@ -451,11 +451,10 @@ ensure_docsfw_node_components() {
     node_env="$(node "${SCRIPT_DIR}/resolve-node-components.js" --ensure --export-env)" || return 1
     eval "$node_env"
     WIDDERSHINS="${DOCSFW_WIDDERSHINS}"
-    if [[ -n "${DOCSFW_NODE_GLOBAL_ROOTS:-}" ]]; then
-        export NODE_PATH="${DOCSFW_NODE_GLOBAL_ROOTS}${NODE_PATH:+:$NODE_PATH}"
-        if [[ -f "${DOCSFW_PREFER_GLOBAL_MODULES:-}" ]]; then
-            export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--require ${DOCSFW_PREFER_GLOBAL_MODULES}"
-        fi
+    # グローバルから採用したパッケージだけを、解決したディレクトリへ固定する。
+    # NODE_PATH で探索先ごと差し替えると、semver で不採用としたバージョンが再び参照されてしまう。
+    if [[ -n "${DOCSFW_NODE_GLOBAL_PACKAGES:-}" && -f "${DOCSFW_PREFER_GLOBAL_MODULES:-}" ]]; then
+        export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--require ${DOCSFW_PREFER_GLOBAL_MODULES}"
     fi
 }
 

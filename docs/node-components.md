@@ -37,6 +37,18 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 グローバルの版は `package.json` の semver 範囲を満たすときだけ採用します。  
 範囲外のグローバルは欠落とみなし、ローカルへ補完します。
 
+## プラットフォームの境界
+
+実行中のプラットフォーム以外が所有する `node_modules` は、探索順から除外します。  
+WSL からは Windows ドライブのマウント配下、Windows からは `\\wsl$` と `\\wsl.localhost` 配下が対象です。  
+Windows ドライブのマウントは `/proc/mounts` から判定し、`drvfs` と、`aname=drvfs` を持つ 9p や virtiofs を対象とします。
+
+同じ規則を `mmdc` と `widdershins` の探索にも適用します。  
+`PATH` に他プラットフォームのディレクトリが含まれていても、そこにある実行ファイルとその `node_modules` は採用しません。
+
+`sharp` のようにネイティブ バイナリを持つパッケージは、プラットフォームごとに異なる `@img/sharp-<platform>` を必要とします。  
+WSL から Windows 用のツリーを読み込むと、`Could not load the "sharp" module using the linux-x64 runtime` で失敗します。
+
 ## オンデマンド導入
 
 | 状態 | 動作 |
@@ -46,7 +58,11 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 | 必須パッケージがすべて欠けている | `bin/` で `npm ci` します |
 
 `npm ci` と部分インストールのあいだは `PUPPETEER_SKIP_DOWNLOAD=1` です。  
-Chrome 本体の取得は npm とは別段です。
+Chrome 本体の取得は npm の処理とは独立しています。
+
+導入は静的発行と動的発行のどちらの経路でも同じです。  
+`bin/pub_markdown_core.sh` と `livedocs/bin/vendor_assets.py` のいずれも `--ensure` で呼び出し、npm の出力と進捗をそのまま端末へ表示します。  
+Chrome の導入は静的発行だけが行います。動的発行は図をブラウザー上で描画するため、発行処理からブラウザーを起動しません。
 
 ## ブラウザー
 
@@ -56,7 +72,7 @@ Chrome 本体の取得は npm とは別段です。
 | Linux | `PUPPETEER_EXECUTABLE_PATH` が実行可能な Chrome を指すときはそれを使用します |
 | Linux | 外部 Chrome が存在しないときは、puppeteer モジュール解決のあと `npx puppeteer browsers install chrome` と `chrome-headless-shell` を実行します |
 
-npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が無ければブラウザーの導入が実行されます。
+npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が存在しなければブラウザーの導入が実行されます。
 
 ## 呼び出し元
 
@@ -71,5 +87,12 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | `@plantuml/core` | `DOCSFW_PLANTUML_CORE` |
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
-グローバル root があるときは `DOCSFW_NODE_GLOBAL_ROOTS` を子プロセスのモジュール探索の先頭へ追加します。  
-ローカル `node_modules` が残っていても、採用したグローバルが優先されます。
+グローバルから採用したパッケージは、名前とディレクトリの対を `DOCSFW_NODE_GLOBAL_PACKAGES` へ渡します。  
+`bin/docsfw-prefer-global-modules.js` が子プロセスの `require` をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
+
+固定はパッケージ単位です。  
+探索先を root 単位で差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。  
+採用していないパッケージは、通常の Node.js の解決に従います。
+
+静的発行は `bin/pub_markdown_core.sh`、動的発行は `livedocs/bin/vendor_assets.py` が同じ規則で子プロセスの環境を構築します。  
+どちらの経路も解決は `bin/resolve-node-components.js` に一本化しており、プラットフォームの境界も共通です。

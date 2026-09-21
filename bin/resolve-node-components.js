@@ -51,11 +51,93 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
+// A Windows file system seen from WSL holds no native modules for the running
+// platform, so node_modules trees from the other platform are never adopted.
+// Locate where Windows drives are mounted to recognize them.
+const WINDOWS_DRIVE_FS_TYPES = ['drvfs'];
+const PROC_MOUNTS_PATH = '/proc/mounts';
+
+let windowsMountPointsCache = null;
+
+function unescapeMountField(value) {
+  return String(value).replace(/\\([0-7]{3})/g, (match, code) => String.fromCharCode(parseInt(code, 8)));
+}
+
+function isWindowsDriveMount(fsType, options) {
+  if (WINDOWS_DRIVE_FS_TYPES.indexOf(fsType) !== -1) {
+    return true;
+  }
+  // WSL2 exposes drvfs through 9p or virtiofs and keeps aname=drvfs in the options.
+  return /(^|,)aname=drvfs\b/.test(String(options || ''));
+}
+
+function parseWindowsMountPoints(mountsText) {
+  const points = [];
+  String(mountsText).split('\n').forEach((line) => {
+    const fields = line.trim().split(/\s+/);
+    if (fields.length < 4) {
+      return;
+    }
+    if (!isWindowsDriveMount(fields[2], fields[3])) {
+      return;
+    }
+    const mountPoint = unescapeMountField(fields[1]);
+    if (mountPoint && points.indexOf(mountPoint) === -1) {
+      points.push(mountPoint);
+    }
+  });
+  return points;
+}
+
+function windowsMountPoints() {
+  if (windowsMountPointsCache !== null) {
+    return windowsMountPointsCache;
+  }
+  if (process.platform === 'win32') {
+    windowsMountPointsCache = [];
+    return windowsMountPointsCache;
+  }
+  try {
+    windowsMountPointsCache = parseWindowsMountPoints(fs.readFileSync(PROC_MOUNTS_PATH, 'utf8'));
+  } catch (error) {
+    windowsMountPointsCache = [];
+  }
+  return windowsMountPointsCache;
+}
+
+function isUnderDirectory(target, directory) {
+  const base = path.resolve(directory);
+  if (target === base) {
+    return true;
+  }
+  const prefix = base.endsWith(path.sep) ? base : `${base}${path.sep}`;
+  return target.startsWith(prefix);
+}
+
+/**
+ * Tell whether the path belongs to a platform other than the running one:
+ * a Windows drive mount seen from WSL, or a WSL UNC path seen from Windows.
+ */
+function isForeignPlatformPath(target, mountPoints) {
+  if (!target) {
+    return false;
+  }
+  const resolved = path.resolve(target);
+  if (process.platform === 'win32') {
+    return /^\\\\wsl(\$|\.localhost)\\/i.test(resolved);
+  }
+  const points = mountPoints || windowsMountPoints();
+  return points.some((point) => isUnderDirectory(resolved, point));
+}
+
 function uniquePush(list, value) {
   if (!value) {
     return;
   }
   const resolved = path.resolve(value);
+  if (isForeignPlatformPath(resolved)) {
+    return;
+  }
   if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
     return;
   }
@@ -89,7 +171,11 @@ function whichCommand(name) {
     return '';
   }
   const first = result.stdout.toString().split(/\r?\n/).find((line) => line.trim());
-  return first ? first.trim() : '';
+  if (!first) {
+    return '';
+  }
+  const located = first.trim();
+  return isForeignPlatformPath(located) ? '' : located;
 }
 
 function listSearchRoots() {
@@ -314,11 +400,13 @@ function collect(packageJson, lockfile) {
   if (!widdershins) {
     missing.push('widdershins-cli');
   }
-  const globalRoots = [];
+  // 実行時の require をパッケージ単位で固定する。root 単位で探索先を差し替えると、
+  // ここで semver により不採用としたグローバルのバージョンが再び参照される。
+  const globalPackages = {};
   INSTALL_PACKAGES.forEach((name) => {
     const resolved = packages[name];
     if (resolved && resolved.source === 'global') {
-      uniquePush(globalRoots, resolved.root);
+      globalPackages[name] = resolved.dir;
     }
   });
   return {
@@ -333,7 +421,7 @@ function collect(packageJson, lockfile) {
       plantumlCore: packages['@plantuml/core'] ? packages['@plantuml/core'].dir : '',
       puppeteer: packages.puppeteer ? packages.puppeteer.dir : '',
     },
-    globalRoots,
+    globalPackages,
     ranges,
     lockfile,
   };
@@ -409,7 +497,8 @@ function exportEnv(state) {
   assign('DOCSFW_MINISEARCH_JS', state.paths.minisearchJs);
   assign('DOCSFW_PLANTUML_CORE', state.paths.plantumlCore);
   assign('DOCSFW_PUPPETEER_ROOT', state.paths.puppeteer);
-  assign('DOCSFW_NODE_GLOBAL_ROOTS', state.globalRoots.join(path.delimiter));
+  const globalPackageNames = Object.keys(state.globalPackages);
+  assign('DOCSFW_NODE_GLOBAL_PACKAGES', globalPackageNames.length ? JSON.stringify(state.globalPackages) : '');
   assign('DOCSFW_PREFER_GLOBAL_MODULES', path.join(SCRIPT_DIR, 'docsfw-prefer-global-modules.js'));
   return `${lines.join('\n')}\n`;
 }
@@ -427,7 +516,7 @@ function toReport(state, plan) {
     missing: state.missing,
     packages,
     paths: state.paths,
-    globalRoots: state.globalRoots,
+    globalPackages: state.globalPackages,
   };
 }
 
@@ -454,6 +543,8 @@ function main() {
 module.exports = {
   INSTALL_PACKAGES,
   satisfiesRange,
+  parseWindowsMountPoints,
+  isForeignPlatformPath,
   collect,
   installAction,
   missingInstallPackages,

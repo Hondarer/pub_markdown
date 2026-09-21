@@ -1,14 +1,14 @@
 /**
  * browser-server.js
  *
- * 共有ブラウザインスタンスを起動し、WebSocket エンドポイントをファイルに書き出す。
- * pub_markdown_core.sh から起動され、ビルド全体で 1 つのブラウザを使い回す。
+ * 共有ブラウザー インスタンスを起動し、WebSocket エンドポイントをファイルに書き出す。
+ * pub_markdown_core.sh から起動され、ビルド全体で 1 つのブラウザーを再利用する。
  *
  * 使い方:
  *   node browser-server.js <ws-endpoint-file> [browser-executable-file]
  *
  * 停止:
- *   SIGTERM または SIGINT で終了し、ブラウザを閉じてエンドポイントファイルを削除する。
+ *   SIGTERM または SIGINT で終了し、ブラウザーを終了してエンドポイント ファイルを削除する。
  */
 const puppeteer = require('puppeteer');
 const fs        = require('fs');
@@ -42,11 +42,22 @@ function reportBrowserExecutable(executablePath) {
   if (!browserExecutableFile || !executablePath) {
     return;
   }
-  try {
-    fs.writeFileSync(browserExecutableFile, `${executablePath}\n`, 'utf8');
-  } catch (err) {
-    console.error(`browser-server.js: browser executable report failed: ${err.message}`);
-  }
+  // puppeteer 25 の executablePath() は Promise を返す。24 以前の文字列も受け取る。
+  // see: https://pptr.dev/api/puppeteer.puppeteernode.executablepath
+  Promise.resolve(executablePath)
+    .then((resolved) => {
+      if (!resolved) {
+        return;
+      }
+      try {
+        fs.writeFileSync(browserExecutableFile, `${resolved}\n`, 'utf8');
+      } catch (err) {
+        console.error(`browser-server.js: browser executable report failed: ${err.message}`);
+      }
+    })
+    .catch((err) => {
+      console.error(`browser-server.js: browser executable resolution failed: ${err.message}`);
+    });
 }
 
 function canUseChromeWrapper(wrapperPath) {
@@ -75,7 +86,7 @@ function pathsReferToSameFile(left, right) {
 function buildLaunchOptions() {
   // launch フェーズ (WS エンドポイント URL が stdout に現れるまでの待機) にも
   // START_TIMEOUT_MS を適用する。未指定だと puppeteer 既定の 30000 ms が効き、
-  // 低リソース環境で Chrome 起動が 30 秒を超えるとフォールバックに落ちる。
+  // 低リソース環境で Chrome 起動が 30 秒を超えるとフォールバック処理に遷移する。
   const launchOptions = buildBrowserLaunchOptions({
     args: ['--no-sandbox'],
     timeout: START_TIMEOUT_MS,
@@ -181,7 +192,7 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
     shuttingDown = true;
     removeRuntimeFiles();
     try {
-      // browser.close() が Chrome 内部で詰まった場合に備え 5 秒でタイムアウトする
+      // browser.close() が Chrome 内部で応答しなくなった場合に備え 5 秒でタイムアウトする
       await Promise.race([
         browser.close(),
         new Promise(resolve => setTimeout(resolve, 5000))
@@ -193,7 +204,7 @@ async function waitForDevToolsReady(wsEndpoint, deadline) {
   process.on('SIGTERM', cleanup);
   process.on('SIGINT',  cleanup);
 
-  // ブラウザプロセスが予期せず終了した場合
+  // ブラウザー プロセスが予期せず終了した場合
   browser.on('disconnected', () => {
     if (shuttingDown) {
       return;

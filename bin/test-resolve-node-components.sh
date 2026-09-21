@@ -45,6 +45,26 @@ if (!data.packages.minimist || data.packages.minimist.source !== "global") proce
 if (data.packages.minimist.version !== "1.2.8") process.exit(1);
 ' "${tmp_dir}/with-global.json"
 
+# 共有側に適合するバージョンが存在しないパッケージは、ローカルの node_modules を継続して使用する。
+node -e '
+const fs = require("fs");
+const path = require("path");
+const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+const localRoot = path.resolve(process.argv[2]);
+if (data.packages.minimist.source !== "global") process.exit(1);
+Object.keys(data.packages).forEach((name) => {
+  const resolved = data.packages[name];
+  if (!resolved) process.exit(1);
+  const pinned = Object.prototype.hasOwnProperty.call(data.globalPackages, name);
+  if (resolved.source === "global") {
+    if (!pinned || data.globalPackages[name] !== resolved.dir) process.exit(1);
+    return;
+  }
+  if (pinned) process.exit(1);
+  if (path.resolve(resolved.dir).indexOf(localRoot) !== 0) process.exit(1);
+});
+' "${tmp_dir}/with-global.json" "${SCRIPT_DIR}/node_modules"
+
 NODE_PATH="$fake_root" node "$RESOLVER" --dry-run --ensure > "${tmp_dir}/dry-run.json"
 node -e '
 const fs = require("fs");
@@ -68,5 +88,54 @@ if (resolved && resolved.source === "global" && resolved.version === "23.0.0") p
 env_out=$(node "$RESOLVER" --export-env)
 echo "$env_out" | grep -q '^export DOCSFW_MMDC$'
 echo "$env_out" | grep -q '^export DOCSFW_WIDDERSHINS$'
+echo "$env_out" | grep -q '^export DOCSFW_NODE_GLOBAL_PACKAGES$'
+
+# グローバルから採用したパッケージは、root ではなくディレクトリ単位で公開する。
+NODE_PATH="$fake_root" node "$RESOLVER" --export-env > "${tmp_dir}/global-env.sh"
+grep -q "DOCSFW_NODE_GLOBAL_PACKAGES='{\"minimist\":" "${tmp_dir}/global-env.sh"
+
+# 異なるプラットフォームの node_modules を採用しないことを確認する。
+node -e '
+const { parseWindowsMountPoints, isForeignPlatformPath } = require(process.argv[1]);
+const mounts = [
+  "C:\\134 /mnt/c 9p rw,noatime,aname=drvfs;path=C:\\;uid=1000,cache=5 0 0",
+  "D:\\134 /mnt/d drvfs rw,noatime 0 0",
+  "E:\\134 /mnt/my\\040disk drvfs rw,noatime 0 0",
+  "drivers /usr/lib/wsl/drivers 9p ro,nosuid,aname=drivers,cache=5 0 0",
+  "/dev/sdd / ext4 rw,relatime 0 0",
+  "",
+].join("\n");
+const points = parseWindowsMountPoints(mounts);
+const expected = ["/mnt/c", "/mnt/d", "/mnt/my disk"];
+if (points.join("|") !== expected.join("|")) process.exit(1);
+if (process.platform !== "win32") {
+  if (!isForeignPlatformPath("/mnt/c/devbin/bin/node_modules", points)) process.exit(1);
+  if (!isForeignPlatformPath("/mnt/my disk/node_modules", points)) process.exit(1);
+  if (isForeignPlatformPath("/mnt/city/node_modules", points)) process.exit(1);
+  if (isForeignPlatformPath("/home/user/node_modules", points)) process.exit(1);
+}
+' "$RESOLVER"
+
+# 採用したパッケージだけを require の解決先へ固定する。
+fake_pkg="${tmp_dir}/pinned/minimist"
+mkdir -p "$fake_pkg"
+printf '{"name":"minimist","version":"1.2.8","main":"index.js"}\n' > "${fake_pkg}/package.json"
+printf 'module.exports = "pinned";\n' > "${fake_pkg}/index.js"
+DOCSFW_NODE_GLOBAL_PACKAGES="{\"minimist\":\"${fake_pkg}\"}" \
+    node --require "${SCRIPT_DIR}/docsfw-prefer-global-modules.js" -e '
+const path = require("path");
+const expected = path.join(process.argv[1], "index.js");
+if (require.resolve("minimist") !== expected) process.exit(1);
+if (require("minimist") !== "pinned") process.exit(1);
+if (require.resolve("minimist/package.json") !== path.join(process.argv[1], "package.json")) process.exit(1);
+// 固定していないパッケージは通常の解決に従い、探索先を差し替えない。
+let notFound = false;
+try {
+  require.resolve("docsfw-not-installed-package");
+} catch (error) {
+  notFound = error.code === "MODULE_NOT_FOUND";
+}
+if (!notFound) process.exit(1);
+' "$fake_pkg"
 
 printf 'resolve-node-components tests passed.\n'

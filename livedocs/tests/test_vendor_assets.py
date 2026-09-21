@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""mkdocs による動的発行の設定生成に関する単体テスト。"""
+"""MkDocs による動的発行の設定生成に関する単体テスト。"""
 
+import json
 import os
 import sys
 import tempfile
@@ -10,11 +11,13 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from vendor_assets import (  # noqa: E402
+    DOCSFW_DIR,
     FAVICON_ICONS,
     HEADER_ICONS,
     MKDOCS_DIR,
     STYLES_HTML_DIR,
     generate_mkdocs_yml,
+    node_child_env,
     resolve_hooks_dir,
     resolve_site_name,
     vendor_favicon_icons,
@@ -23,6 +26,34 @@ from vendor_assets import (  # noqa: E402
     vendor_own_assets,
 )
 from stage_livedocs import VENDORED_FILES  # noqa: E402
+
+
+class NodeChildEnvTest(unittest.TestCase):
+    """静的発行と同じく、採用したグローバル パッケージだけを固定すること。"""
+
+    PRELOAD = os.path.join(DOCSFW_DIR, "bin", "docsfw-prefer-global-modules.js")
+
+    def test_keeps_env_when_no_global_package(self):
+        env = node_child_env({"globalPackages": {}}, base_env={"NODE_OPTIONS": "--no-warnings"})
+        self.assertNotIn("DOCSFW_NODE_GLOBAL_PACKAGES", env)
+        self.assertEqual(env["NODE_OPTIONS"], "--no-warnings")
+
+    def test_pins_adopted_packages(self):
+        resolved = {"globalPackages": {"sharp": "/opt/devbin/node_modules/sharp"}}
+        env = node_child_env(resolved, base_env={})
+        self.assertEqual(
+            json.loads(env["DOCSFW_NODE_GLOBAL_PACKAGES"]),
+            resolved["globalPackages"],
+        )
+        self.assertEqual(env["NODE_OPTIONS"], "--require {}".format(self.PRELOAD))
+
+    def test_appends_to_existing_node_options(self):
+        resolved = {"globalPackages": {"minimist": "/opt/devbin/node_modules/minimist"}}
+        env = node_child_env(resolved, base_env={"NODE_OPTIONS": "--no-warnings"})
+        self.assertEqual(
+            env["NODE_OPTIONS"],
+            "--no-warnings --require {}".format(self.PRELOAD),
+        )
 
 
 class ResolveSiteNameTest(unittest.TestCase):
