@@ -76,7 +76,7 @@ DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="$browser_report" \
 ORG_PUPPETEER_EXECUTABLE_PATH=/bin/true \
 PUPPETEER_EXECUTABLE_PATH="${SCRIPT_DIR}/chrome-wrapper.sh" \
     "${SCRIPT_DIR}/chrome-wrapper.sh" --version >/dev/null 2>&1
-[[ "$(cat "$browser_report")" == "/bin/true" ]]
+[[ "$(cat "$browser_report")" -ef /bin/true ]]
 
 DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="${tmp_dir}/missing/browser-executable" \
 ORG_PUPPETEER_EXECUTABLE_PATH=/bin/true \
@@ -89,18 +89,24 @@ mkdir -p "$(dirname "$fallback_chrome")"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$fallback_chrome"
 chmod +x "$fallback_chrome"
 (
-    node() {
-        printf '%s\n' "$FAKE_PUPPETEER_EXECUTABLE"
-    }
-    export -f node
+    wrapper_under_test="${tmp_dir}/chrome-wrapper.sh"
+    fake_node_modules="${tmp_dir}/node_modules/puppeteer"
+    cp "${SCRIPT_DIR}/chrome-wrapper.sh" "$wrapper_under_test"
+    mkdir -p "$fake_node_modules"
+    cat > "${fake_node_modules}/index.js" <<'EOF'
+module.exports = {
+  executablePath: async () => process.env.FAKE_PUPPETEER_EXECUTABLE,
+};
+EOF
     export FAKE_PUPPETEER_EXECUTABLE="$missing_chrome"
     export DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE="$browser_report"
     unset ORG_PUPPETEER_EXECUTABLE_PATH PUPPETEER_EXECUTABLE_PATH
-    "${SCRIPT_DIR}/chrome-wrapper.sh" --version >/dev/null 2>&1
+    "$wrapper_under_test" --version >/dev/null 2>&1
 )
-[[ "$(cat "$browser_report")" == "$fallback_chrome" ]]
+reported_fallback_chrome=$(cat "$browser_report")
+[[ "$reported_fallback_chrome" -ef "$fallback_chrome" ]]
 
-[[ "$(print_browser_executable "$browser_report")" == "Browser executable: ${fallback_chrome}" ]]
+[[ "$(print_browser_executable "$browser_report")" == "Browser executable: ${reported_fallback_chrome}" ]]
 rm -f "$browser_report"
 [[ "$(print_browser_executable "$browser_report")" == "Browser executable: (unknown)" ]]
 
