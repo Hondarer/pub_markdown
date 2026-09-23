@@ -8,6 +8,19 @@ RESOLVER="${SCRIPT_DIR}/resolve-node-components.js"
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 
+# node へ渡すパスを、実行中の node が解釈できる形式にする。
+# Git Bash (MSYS) は引数などの POSIX 形式のパスを変換するが、JSON の値やスクリプト本文に埋め込んだパスは変換しない。
+# see: https://www.msys2.org/docs/filesystem-paths/
+native_path() {
+    if command -v cygpath > /dev/null 2>&1; then
+        cygpath -m "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+
+NATIVE_SCRIPT_DIR=$(native_path "$SCRIPT_DIR")
+
 node -e '
 const { satisfiesRange, installAction, INSTALL_PACKAGES } = require(process.argv[1]);
 if (!satisfiesRange("24.43.1", "^24.40.0")) process.exit(1);
@@ -36,6 +49,7 @@ if (!Array.isArray(data.missing)) process.exit(1);
 fake_root="${tmp_dir}/node_modules"
 mkdir -p "${fake_root}/minimist"
 printf '{"name":"minimist","version":"1.2.8"}\n' > "${fake_root}/minimist/package.json"
+fake_root=$(native_path "$fake_root")
 
 NODE_PATH="$fake_root" node "$RESOLVER" > "${tmp_dir}/with-global.json"
 node -e '
@@ -46,6 +60,7 @@ if (data.packages.minimist.version !== "1.2.8") process.exit(1);
 ' "${tmp_dir}/with-global.json"
 
 # 共有側に適合するバージョンが存在しないパッケージは、ローカルの node_modules を継続して使用する。
+# 未導入のパッケージ (WSL から見た Windows 側のローカル ツリーなど) は固定の対象外であることだけを確認する。
 node -e '
 const fs = require("fs");
 const path = require("path");
@@ -54,8 +69,11 @@ const localRoot = path.resolve(process.argv[2]);
 if (data.packages.minimist.source !== "global") process.exit(1);
 Object.keys(data.packages).forEach((name) => {
   const resolved = data.packages[name];
-  if (!resolved) process.exit(1);
   const pinned = Object.prototype.hasOwnProperty.call(data.globalPackages, name);
+  if (!resolved) {
+    if (pinned) process.exit(1);
+    return;
+  }
   if (resolved.source === "global") {
     if (!pinned || data.globalPackages[name] !== resolved.dir) process.exit(1);
     return;
@@ -70,13 +88,15 @@ node -e '
 const fs = require("fs");
 const data = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
 if (data.packages.minimist.source !== "global") process.exit(1);
-if (data.action !== "none") process.exit(1);
-if (data.missing.length !== 0) process.exit(1);
+// グローバルから採用したパッケージは導入対象にしない。ほかの未導入パッケージの有無は実行環境に依存する。
+if (data.missing.indexOf("minimist") !== -1) process.exit(1);
+if (data.missing.length === 0 && data.action !== "none") process.exit(1);
 ' "${tmp_dir}/dry-run.json"
 
 old_range_root="${tmp_dir}/old/node_modules"
 mkdir -p "${old_range_root}/puppeteer"
 printf '{"name":"puppeteer","version":"23.0.0"}\n' > "${old_range_root}/puppeteer/package.json"
+old_range_root=$(native_path "$old_range_root")
 NODE_PATH="$old_range_root" node "$RESOLVER" > "${tmp_dir}/old-range.json"
 node -e '
 const fs = require("fs");
@@ -91,8 +111,18 @@ echo "$env_out" | grep -q '^export DOCSFW_WIDDERSHINS$'
 echo "$env_out" | grep -q '^export DOCSFW_NODE_GLOBAL_PACKAGES$'
 
 # グローバルから採用したパッケージは、root ではなくディレクトリ単位で公開する。
+# 実行環境の共有ツリーから採用したパッケージも並ぶため、キーの順序ではなく minimist の採用先で判定する。
 NODE_PATH="$fake_root" node "$RESOLVER" --export-env > "${tmp_dir}/global-env.sh"
-grep -q "DOCSFW_NODE_GLOBAL_PACKAGES='{\"minimist\":" "${tmp_dir}/global-env.sh"
+(
+    # shellcheck source=/dev/null
+    . "${tmp_dir}/global-env.sh"
+    node -e '
+const path = require("path");
+const packages = JSON.parse(process.env.DOCSFW_NODE_GLOBAL_PACKAGES || "{}");
+if (typeof packages.minimist !== "string") process.exit(1);
+if (path.resolve(packages.minimist) !== path.resolve(process.argv[1], "minimist")) process.exit(1);
+' "$fake_root"
+)
 
 # 異なるプラットフォームの node_modules を採用しないことを確認する。
 node -e '
@@ -138,7 +168,7 @@ if (pinned.findEntry(entries, "./plain") !== null) process.exit(1);
 
 # 採用したパッケージだけを require の解決先へ固定する。
 # 採用先が node_modules 配下にない場合は、ディレクトリへの読み替えで解決する。
-fake_pkg="${tmp_dir}/pinned/minimist"
+fake_pkg=$(native_path "${tmp_dir}/pinned/minimist")
 mkdir -p "$fake_pkg"
 printf '{"name":"minimist","version":"1.2.8","main":"index.js"}\n' > "${fake_pkg}/package.json"
 printf 'module.exports = "pinned";\n' > "${fake_pkg}/index.js"
@@ -161,7 +191,7 @@ if (!notFound) process.exit(1);
 
 # 採用先が node_modules 配下にある場合は、package.json の exports 定義に従って解決する。
 # ディレクトリを直接指定すると main が選ばれ、require 用ではないエントリが読み込まれる。
-exports_root="${tmp_dir}/exports/node_modules"
+exports_root=$(native_path "${tmp_dir}/exports/node_modules")
 exports_pkg="${exports_root}/docsfw-pinned-sample"
 mkdir -p "$exports_pkg"
 cat > "${exports_pkg}/package.json" <<'PACKAGE_JSON'
@@ -204,7 +234,7 @@ if (!notFound) process.exit(1);
 # module.registerHooks を持たない Node.js では module.register 経由で同じ固定を行う。
 cat > "${tmp_dir}/without-register-hooks.js" <<PRELOAD
 require("module").registerHooks = undefined;
-require("${SCRIPT_DIR}/docsfw-prefer-global-modules.js");
+require("${NATIVE_SCRIPT_DIR}/docsfw-prefer-global-modules.js");
 PRELOAD
 node --require "${tmp_dir}/without-register-hooks.js" --input-type=module -e '
 const pinnedModule = await import("docsfw-pinned-sample");
