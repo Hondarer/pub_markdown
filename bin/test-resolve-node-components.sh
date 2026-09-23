@@ -146,6 +146,71 @@ if (process.platform !== "win32") {
 }
 ' "$RESOLVER"
 
+# Linux では PATH を直接走査して実行ファイルを探す。
+# command はシェルの組み込みコマンドで、/usr/bin/command を同梱しないディストリビューションでは spawn できない。
+# Windows は where を使うため対象外とする。
+if [[ "$(node -p process.platform)" != "win32" ]]; then
+    path_dir="${tmp_dir}/path"
+    mkdir -p "${path_dir}/not-exec" "${path_dir}/is-dir/docsfw-tool" "${path_dir}/foreign" "${path_dir}/native" "${path_dir}/cwd"
+    printf '#!/bin/sh\n' > "${path_dir}/not-exec/docsfw-tool"
+    for dir in foreign native cwd; do
+        printf '#!/bin/sh\n' > "${path_dir}/${dir}/docsfw-tool"
+        chmod +x "${path_dir}/${dir}/docsfw-tool"
+    done
+
+    # npm の Unix 配置: <prefix>/bin/<name> は <prefix>/lib/node_modules 配下へのシンボリック リンク。
+    prefix_dir="${tmp_dir}/prefix"
+    cli_dir="${prefix_dir}/lib/node_modules/docsfw-cli"
+    mkdir -p "${prefix_dir}/bin" "${cli_dir}/src"
+    printf '#!/usr/bin/env node\n' > "${cli_dir}/src/cli.js"
+    chmod +x "${cli_dir}/src/cli.js"
+    ln -s ../lib/node_modules/docsfw-cli/src/cli.js "${prefix_dir}/bin/docsfw-cli"
+
+    # nvm などのように、リンク先の node_modules が <prefix>/lib 以外にある配置。
+    other_dir="${tmp_dir}/other"
+    mkdir -p "${other_dir}/bin" "${other_dir}/store/node_modules/docsfw-cli/src"
+    printf '#!/usr/bin/env node\n' > "${other_dir}/store/node_modules/docsfw-cli/src/cli.js"
+    chmod +x "${other_dir}/store/node_modules/docsfw-cli/src/cli.js"
+    ln -s ../store/node_modules/docsfw-cli/src/cli.js "${other_dir}/bin/docsfw-cli"
+    ln -s missing "${other_dir}/bin/docsfw-dangling"
+
+    (
+        cd "${path_dir}/cwd"
+        node -e '
+const path = require("path");
+const { findOnPath, binSearchRoots } = require(process.argv[1]);
+const base = process.argv[2];
+const mounts = [path.join(base, "foreign")];
+const dirs = ["not-exec", "is-dir", "foreign", "native"].map((name) => path.join(base, name));
+const pathValue = dirs.join(path.delimiter);
+// 実行権のないファイル、同名のディレクトリ、他プラットフォームのディレクトリを飛ばし、後続の候補を採用する。
+if (findOnPath("docsfw-tool", pathValue, mounts) !== path.join(base, "native", "docsfw-tool")) process.exit(1);
+if (findOnPath("docsfw-missing", pathValue, mounts) !== "") process.exit(1);
+// PATH の空の要素はカレント ディレクトリを表す。PATH 自体が空または未設定のときは探索しない。
+if (findOnPath("docsfw-tool", [dirs[0], ""].join(path.delimiter), mounts) !== path.join(base, "cwd", "docsfw-tool")) process.exit(1);
+if (findOnPath("docsfw-tool", "", mounts) !== "") process.exit(1);
+if (findOnPath("docsfw-tool", undefined, mounts) !== "") process.exit(1);
+
+const prefix = process.argv[3];
+const prefixRoots = binSearchRoots(path.join(prefix, "bin", "docsfw-cli"));
+if (prefixRoots.indexOf(path.join(prefix, "lib", "node_modules")) === -1) process.exit(1);
+const other = process.argv[4];
+const otherRoots = binSearchRoots(path.join(other, "bin", "docsfw-cli"));
+if (otherRoots.indexOf(path.join(other, "store", "node_modules")) === -1) process.exit(1);
+// リンク切れはリンク先の候補を追加しない。
+if (binSearchRoots(path.join(other, "bin", "docsfw-dangling")).length !== 2) process.exit(1);
+' "$RESOLVER" "$path_dir" "$prefix_dir" "$other_dir"
+    )
+
+    # /usr/bin/command の有無によらず、PATH 上の CLI から採用元の node_modules を探索先へ加える。
+    ln -s ../lib/node_modules/docsfw-cli/src/cli.js "${prefix_dir}/bin/mmdc"
+    PATH="${prefix_dir}/bin:${PATH}" node -e '
+const path = require("path");
+const { listSearchRoots } = require(process.argv[1]);
+if (listSearchRoots().indexOf(path.join(process.argv[2], "lib", "node_modules")) === -1) process.exit(1);
+' "$RESOLVER" "$prefix_dir"
+fi
+
 # 固定の規則 (採用先を含む node_modules の算出と、指定子の一致判定) を確認する。
 node -e '
 const path = require("path");

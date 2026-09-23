@@ -31,8 +31,16 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 2. `/usr/local/lib/node_modules`
 3. `npm root -g`
 4. `node` 実行ファイルと同じ階層の `node_modules`
-5. `mmdc` または `widdershins` と同じ階層の `node_modules`
+5. `PATH` 上の `mmdc` または `widdershins` から推定する `node_modules`
 6. `framework/docsfw/bin/node_modules`
+
+5 の推定では、実行ファイルと同じ階層の `node_modules` を候補にします。  
+Linux ではさらに、`<prefix>/bin/<name>` に対する `<prefix>/lib/node_modules` と、シンボリック リンクのリンク先を含む `node_modules` も候補にします。  
+Linux では `command -v` を起動せず、`PATH` を直接走査します。  
+`command` はシェルの組み込みコマンドであり、`/usr/bin/command` を同梱しないディストリビューションでは起動できないためです。  
+走査では、実行権のある通常ファイルだけを採用します。  
+`PATH` の空の要素はカレント ディレクトリとして扱います。  
+Windows では `where` を使用します。
 
 グローバルの版は `package.json` の semver 範囲を満たすときだけ採用します。  
 範囲外のグローバルは欠落とみなし、ローカルへ補完します。
@@ -44,7 +52,8 @@ WSL からは Windows ドライブのマウント配下、Windows からは `\\w
 Windows ドライブのマウントは `/proc/mounts` から判定し、`drvfs` と、`aname=drvfs` を持つ 9p や virtiofs を対象とします。
 
 同じ規則を `mmdc` と `widdershins` の探索にも適用します。  
-`PATH` に他プラットフォームのディレクトリが含まれていても、そこにある実行ファイルとその `node_modules` は採用しません。
+`PATH` に他プラットフォームのディレクトリが含まれていても、そこにある実行ファイルとその `node_modules` は採用しません。  
+Linux では他プラットフォームのディレクトリを飛ばして走査を続け、`PATH` の後方にあるネイティブの実行ファイルを採用します。
 
 `sharp` のようにネイティブ バイナリを持つパッケージは、プラットフォームごとに異なる `@img/sharp-<platform>` を必要とします。  
 WSL から Windows 用のツリーを読み込むと、`Could not load the "sharp" module using the linux-x64 runtime` で失敗します。

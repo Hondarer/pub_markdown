@@ -189,10 +189,48 @@ function npmRootGlobal() {
   return result.stdout.toString().trim();
 }
 
+function isExecutableFile(filePath) {
+  try {
+    if (!fs.statSync(filePath).isFile()) {
+      return false;
+    }
+    fs.accessSync(filePath, fs.constants.X_OK);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+// `command -v` is a shell builtin, and only some distributions ship a
+// /usr/bin/command wrapper, so PATH is walked here instead of spawning it.
+// A zero-length entry in PATH means the current directory, while an unset or
+// empty PATH searches nothing.
+// Directories owned by another platform are skipped rather than ending the
+// search, so a native entry later in PATH is still found.
+// see: https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html
+function findOnPath(name, pathValue, mountPoints) {
+  if (!pathValue) {
+    return '';
+  }
+  const entries = String(pathValue).split(path.delimiter);
+  for (let i = 0; i < entries.length; i += 1) {
+    const dir = path.resolve(entries[i] || '.');
+    if (isForeignPlatformPath(dir, mountPoints)) {
+      continue;
+    }
+    const candidate = path.join(dir, name);
+    if (isExecutableFile(candidate)) {
+      return candidate;
+    }
+  }
+  return '';
+}
+
 function whichCommand(name) {
-  const command = process.platform === 'win32' ? 'where' : 'command';
-  const args = process.platform === 'win32' ? [name] : ['-v', name];
-  const result = runCommand(command, args);
+  if (process.platform !== 'win32') {
+    return findOnPath(name, process.env.PATH);
+  }
+  const result = runCommand('where', [name]);
   if (result.status !== 0 || !result.stdout) {
     return '';
   }
@@ -202,6 +240,41 @@ function whichCommand(name) {
   }
   const located = first.trim();
   return isForeignPlatformPath(located) ? '' : located;
+}
+
+function enclosingNodeModules(filePath) {
+  let dir = path.dirname(filePath);
+  while (dir !== path.dirname(dir)) {
+    if (path.basename(dir) === 'node_modules') {
+      return dir;
+    }
+    dir = path.dirname(dir);
+  }
+  return '';
+}
+
+/**
+ * List the node_modules candidates implied by an installed CLI.
+ * Windows npm places <name>.cmd beside node_modules in the prefix.
+ * Unix npm places bin/<name> as a symlink into <prefix>/lib/node_modules,
+ * and nvm, Volta, or a project-local .bin may use other layouts, so the
+ * node_modules that holds the symlink target is also listed.
+ */
+function binSearchRoots(located) {
+  const roots = [path.join(path.dirname(located), 'node_modules')];
+  if (process.platform === 'win32') {
+    return roots;
+  }
+  roots.push(path.join(path.dirname(path.dirname(located)), 'lib', 'node_modules'));
+  try {
+    const target = enclosingNodeModules(fs.realpathSync(located));
+    if (target) {
+      roots.push(target);
+    }
+  } catch (error) {
+    // a dangling symlink implies no root
+  }
+  return roots;
 }
 
 function listSearchRoots() {
@@ -217,7 +290,7 @@ function listSearchRoots() {
     if (!located) {
       return;
     }
-    uniquePush(roots, path.join(path.dirname(located), 'node_modules'));
+    binSearchRoots(located).forEach((root) => uniquePush(roots, root));
   });
   uniquePush(roots, LOCAL_NODE_MODULES);
   return roots;
@@ -571,6 +644,9 @@ module.exports = {
   satisfiesRange,
   parseWindowsMountPoints,
   isForeignPlatformPath,
+  findOnPath,
+  binSearchRoots,
+  listSearchRoots,
   collect,
   installAction,
   missingInstallPackages,
