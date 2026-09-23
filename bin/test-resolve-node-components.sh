@@ -209,6 +209,17 @@ const path = require("path");
 const { listSearchRoots } = require(process.argv[1]);
 if (listSearchRoots().indexOf(path.join(process.argv[2], "lib", "node_modules")) === -1) process.exit(1);
 ' "$RESOLVER" "$prefix_dir"
+
+    # Linux では .cmd の名前で PATH を走査しない。
+    cmd_prefix_dir="${tmp_dir}/cmd-prefix"
+    mkdir -p "${cmd_prefix_dir}/bin" "${cmd_prefix_dir}/lib/node_modules"
+    printf '#!/bin/sh\n' > "${cmd_prefix_dir}/bin/mmdc.cmd"
+    chmod +x "${cmd_prefix_dir}/bin/mmdc.cmd"
+    PATH="${cmd_prefix_dir}/bin:${PATH}" node -e '
+const path = require("path");
+const { listSearchRoots } = require(process.argv[1]);
+if (listSearchRoots().indexOf(path.join(process.argv[2], "lib", "node_modules")) !== -1) process.exit(1);
+' "$RESOLVER" "$cmd_prefix_dir"
 fi
 
 # 固定の規則 (採用先を含む node_modules の算出と、指定子の一致判定) を確認する。

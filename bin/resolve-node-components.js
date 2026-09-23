@@ -285,7 +285,16 @@ function listSearchRoots() {
   uniquePush(roots, npmRootGlobal());
   uniquePush(roots, path.join(path.dirname(process.execPath), 'node_modules'));
   uniquePush(roots, path.join(path.dirname(process.execPath), 'lib', 'node_modules'));
-  ['mmdc', 'mmdc.cmd', 'widdershins', 'widdershins.cmd'].forEach((name) => {
+  // PATH の走査は名前ごとに行うため、.cmd は Windows に限って探す。
+  const cliNames = [];
+  Object.keys(CLI_NAMES).forEach((packageName) => {
+    const binName = CLI_NAMES[packageName];
+    cliNames.push(binName);
+    if (process.platform === 'win32') {
+      cliNames.push(cliFileName(binName));
+    }
+  });
+  cliNames.forEach((name) => {
     const located = whichCommand(name);
     if (!located) {
       return;
