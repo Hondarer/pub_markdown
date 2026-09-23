@@ -14,14 +14,16 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 | `mermaid` | HTML と動的発行へ同梱する `mermaid.min.js` | `@mermaid-js/mermaid-cli` の推移依存。直下または mermaid-cli 配下 |
 | `widdershins` | OpenAPI を Markdown へ変換する CLI | 実行ファイル |
 | `puppeteer` | 共有ブラウザー、`rsvg-convert.js`、`mmdc-reuse.js` | `require('puppeteer')` |
-| `puppeteer-core` | `puppeteer` が利用する中核 | モジュール |
 | `minimist` | 自前 Node スクリプトの引数解析 | モジュール |
 | `sharp` | SVG スクリーンショットの再エンコード | モジュール |
 | `minisearch` | HTML 検索インデックスと UMD バンドル | モジュールと `dist/umd` のファイル |
 | `@plantuml/core` | Pandoc HTML と動的発行のブラウザー上 PlantUML | モジュール |
 
 `mermaid` は `package.json` の直接依存ではありません。  
-`@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使用します。
+`@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使用します。  
+`puppeteer-core` も直接依存ではありません。  
+docsfw のスクリプトは `require('puppeteer')` だけを使い、`puppeteer-core` は `puppeteer` の推移依存として解決されます。  
+グローバルの `npm install -g` と同じ配置では `puppeteer-core` が `puppeteer` 配下に置かれるため、直接依存にすると欠落と判定されます。
 
 ## 解決順
 

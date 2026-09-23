@@ -29,7 +29,6 @@ const INSTALL_PACKAGES = [
   'minimist',
   'minisearch',
   'puppeteer',
-  'puppeteer-core',
   'sharp',
   'widdershins',
 ];
