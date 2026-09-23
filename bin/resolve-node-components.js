@@ -147,10 +147,36 @@ function uniquePush(list, value) {
   list.push(resolved);
 }
 
+/**
+ * Quote one argument of a shell command line.
+ * @param {string} value
+ * @returns {string}
+ */
+function shellQuote(value) {
+  const text = String(value);
+  if (process.platform === 'win32') {
+    return /[\s"&|<>^()%!]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  }
+  return `'${text.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Run a command. Windows needs the shell to locate npm.cmd through PATHEXT,
+ * and spawnSync() concatenates the argument array without escaping when the
+ * shell option is on, so build the command line here instead of handing over
+ * an argument array.
+ * see: https://nodejs.org/api/deprecations.html#DEP0190
+ * @param {string} command
+ * @param {Array<string>} args
+ * @param {object} options
+ * @returns {object} Result of spawnSync().
+ */
 function runCommand(command, args, options) {
-  const result = spawnSync(command, args, Object.assign({
+  const useShell = process.platform === 'win32';
+  const commandLine = useShell ? [command].concat(args || []).map(shellQuote).join(' ') : command;
+  const result = spawnSync(commandLine, useShell ? [] : args, Object.assign({
     encoding: 'utf8',
-    shell: process.platform === 'win32',
+    shell: useShell,
   }, options));
   return result;
 }
