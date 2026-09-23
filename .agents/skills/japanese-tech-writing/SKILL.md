@@ -17,4 +17,4 @@ description: 日本語の技術文書を作成・推敲する際に、リポジ�
 Markdown を変更した場合は、変更ファイルへ `text_style_jp.py --dry-run` を実行し、不自然な変換がなければ `--in-place` を実行してください。  
 会話内の回答やレビューだけの場合は、ファイルの作成や整形コマンドの実行を必要としません。
 
-自身が Antigravity CLI ではなく、かつ `agy` (Antigravity CLI) が利用可能な環境である場合は、`review-japanese-doc` の「実行環境とモデルの選定」に従い、Antigravity CLI でこの作業を行ってください。
+自身が Antigravity CLI ではなく、かつ `agy` (Antigravity CLI) が利用可能な環境である場合は、Antigravity CLI を利用して Gemini 系の最新モデルでこの作業を行ってください。
