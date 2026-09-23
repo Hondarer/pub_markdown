@@ -3,6 +3,9 @@ local paths = require 'pandoc.path'
 local mediabags = require 'pandoc.mediabag'
 local root_dir = paths.directory(paths.directory(PANDOC_SCRIPT_FILE))
 
+-- docx 出力用画像の共有キャッシュ (plantuml.lua と共用)
+local cache = dofile(paths.join({ paths.directory(PANDOC_SCRIPT_FILE), "diagram-cache.lua" }))
+
 -- OS 判定関数
 local function is_windows()
     local os_name = os.getenv("OS")
@@ -53,7 +56,7 @@ local function utf8_to_active_cp(text)
         "-Command", ps
     }, text)
     if ok and out and out ~= "" then
-        -- 末尾の改行を削る
+        -- 末尾の改行を除去する
         return (out:gsub("[\r\n]+$", ""))
     end
     return text
@@ -78,7 +81,7 @@ local function active_cp_to_utf8(text)
         "-Command", ps
     }, text)
     if ok and out and out ~= "" then
-        -- 末尾の改行を削る
+        -- 末尾の改行を除去する
         return (out:gsub("[\r\n]+$", ""))
     end
     return text
@@ -279,60 +282,72 @@ return {
                 MMDC_CMD = root_dir .. "/mmdc-wrapper.sh"
             end
 
+            cache.init(utf8_to_active_cp)
+
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
-            local _resource_dir = utf8_to_active_cp(resource_dir)
 
             local image_filename = string.format("mermaid_%s.svg", utils.sha1(el.text))
-            local _image_filename = utf8_to_active_cp(image_filename)
-            local image_file_path = paths.join({resource_dir, image_filename})
-            local _image_file_path = utf8_to_active_cp(image_file_path)
+
+            -- 画像名は図のソースのハッシュだけで決まり、言語や詳細度に依存しない。
+            -- 共有キャッシュが有効な場合は、発行先ではなくキャッシュへ集約する。
+            local cache_dir = cache.dir()
+            local out_dir = cache_dir or resource_dir
+            local image_file_path = paths.join({out_dir, image_filename})
 
             set_job_phase("Mermaid 生成: " .. (caption or "名称なし"))
 
             if not file_exists(image_file_path) then
-                local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
-                local _mmd_filename = utf8_to_active_cp(mmd_filename)
-                local mmd_file_path = paths.join({resource_dir, mmd_filename})
-                local _mmd_file_path = utf8_to_active_cp(mmd_file_path)
+                -- mmdc は -i / -o をクオートできないため、作業用ディレクトリへ cd して実行する。
+                -- 図ごとに専用のディレクトリを使用することで、複数の pandoc プロセスが
+                -- 同じ図を同時に生成しても、入力と出力が混在しない。
+                local work_dir = cache.tempdir(resource_dir)
+                local mmd_filename = "diagram.mmd"
+                local svg_filename = "diagram.svg"
+                local work_svg_path = work_dir .. "/" .. svg_filename
+                local _work_dir = utf8_to_active_cp(work_dir)
+                local _work_svg_path = utf8_to_active_cp(work_svg_path)
 
-                -- el.text を一時ファイルに保存
-                local f = io.open(_mmd_file_path, "w")
+                -- el.text を作業ファイルに書き込む
+                local f = io.open(utf8_to_active_cp(work_dir .. "/" .. mmd_filename), "w")
+                if not f then
+                    io.stderr:write("[mermaid] Error: cannot create working file in " .. work_dir .. "\n")
+                    cache.remove_dir(work_dir)
+                    return el
+                end
                 f:write(el.text)
                 f:close()
 
                 -- root_dir .. "/node_modules/.bin/mmdc" を呼び出して mermaid-cli を実行し、image_file_path に出力する。
                 -- NOTE: mmdc は -i や -o を クオートできないので、cd して実行
                 --
-                -- 以下はフィルタする
+                -- 次の出力行を除外する
                 -- Generating single mermaid chart
                 -- -ms-high-contrast-adjust is in the process of being deprecated. Please see https://blogs.windows.com/msedgedev/2024/04/29/deprecating-ms-high-contrast/ for tips on updating to the new Forced Colors Mode standard.
                 -- [@zenuml/core] Store is a function and is not initiated in 1 second.
-                --io.stderr:write(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"\n", _resource_dir, utf8_to_active_cp(MMDC_CMD), _mmd_filename, _image_filename))
-                os.execute(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", _resource_dir, utf8_to_active_cp(MMDC_CMD), _mmd_filename, _image_filename))
+                --io.stderr:write(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"\n", _work_dir, utf8_to_active_cp(MMDC_CMD), mmd_filename, svg_filename))
+                os.execute(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", _work_dir, utf8_to_active_cp(MMDC_CMD), mmd_filename, svg_filename))
 
-                -- mmd ファイル削除
-                os.remove(_mmd_file_path)
-
-                -- svg にパッチをする
-                -- Mermaid からはサイズ指定が 100% で 出力されるので、svg の viewBox を取得して width / height を上書きする。
+                -- SVG にパッチを適用する
+                -- Mermaid はサイズ指定を 100% で出力するため、SVG の viewBox を取得して width / height を上書きする。
                 -- before sample
                 -- <svg aria-roledescription="sequence" role="graphics-document document" viewBox="-50 -10 485 259" style="max-width: 485px; background-color: white;" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="100%" id="my-svg">
                 -- after sample
                 -- <svg width="485px" height="259px" aria-roledescription="sequence" role="graphics-document document" viewBox="-50 -10 485 259" style="width:535px; height:269px; background-color: white;" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" width="100%" id="my-svg">
 
-                -- svg を読み込む
+                -- SVG を読み込む
                 local svg_content = ""
                 do
-                    local f = io.open(_image_file_path, "r")
+                    local f = io.open(_work_svg_path, "r")
                     if not f then
                         io.stderr:write("[mermaid] Error: SVG file was not generated: " .. image_file_path .. "\n")
+                        cache.remove_dir(work_dir)
                         return el
                     end
                     svg_content = f:read("*a")
                     f:close()
                 end
 
-                -- viewBox から幅と高さを得る
+                -- viewBox から幅と高さを取得する
                 local width, height
                 do
                     local viewBox = svg_content:match('viewBox="([^"]+)"')
@@ -382,24 +397,41 @@ return {
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
                 --patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')
 
-                -- 上書き保存
-                local f = io.open(_image_file_path, "w")
-                if f then
-                    f:write(patched_svg)
-                    f:close()
+                -- 作業用ファイルへ上書きしてから、最終パスへ確定する
+                local fout = io.open(_work_svg_path, "w")
+                if fout then
+                    fout:write(patched_svg)
+                    fout:close()
                 end
+
+                cache.commit(work_svg_path, image_file_path)
+                cache.remove_dir(work_dir)
             end
+
+            if not file_exists(image_file_path) then
+                io.stderr:write("[mermaid] Error: image was not generated: " .. image_file_path .. "\n")
+                return el
+            end
+
+            cache.hit(image_file_path)
 
             -- docx 出力時: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
             -- (Pandoc が SVG を検出して rsvg-convert で二重変換するのを防ぐ)
             local display_width, display_height
             if not is_html_format() then
                 local png_filename = string.format("mermaid_%s.png", utils.sha1(el.text))
-                local png_file_path = paths.join({resource_dir, png_filename})
+                local png_file_path = paths.join({out_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
-                set_job_phase("Mermaid SVG から PNG への変換: " .. (caption or "名称なし"))
-                if convert_svg_to_png(image_file_path, png_file_path) then
+                if not file_exists(png_file_path) then
+                    set_job_phase("Mermaid SVG から PNG への変換: " .. (caption or "名称なし"))
+                    local png_temp_path = cache.tempfile(png_filename, resource_dir)
+                    if convert_svg_to_png(image_file_path, png_temp_path) then
+                        cache.commit(png_temp_path, png_file_path)
+                    end
+                end
+                if file_exists(png_file_path) then
                     image_file_path = png_file_path
+                    cache.hit(png_file_path)
                 end
             end
 
@@ -409,7 +441,11 @@ return {
             local image_src = image_file_path
 
             -- output relative
-            if PANDOC_STATE.output_file ~= nil then
+            --
+            -- キャッシュへ集約した場合は絶対パスのまま渡す。
+            -- Pandoc は絶対パスを --resource-path の探索を経ずに読むため、
+            -- Markdown が参照する画像の解決規則には影響しない。
+            if PANDOC_STATE.output_file ~= nil and cache_dir == nil then
                 if is_html_format() then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
@@ -428,10 +464,10 @@ return {
                 return pandoc.Figure(pandoc.Image("mermaid", image_src, ""))
             end
 
-            -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
+            -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待どおりに改行されない。要調査。
             local caption_elements = caption_to_inlines(caption)
 
-            -- identifier は pandoc-crossref の採番に用いる
+            -- identifier は pandoc-crossref の採番に使用する
             local figure_attr = pandoc.Attr(identifier)
 
             if display_width and display_height then

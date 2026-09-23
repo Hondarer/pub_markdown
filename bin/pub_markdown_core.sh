@@ -312,8 +312,8 @@ cleanup_resources() {
     if [[ -n "${PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR:-}" ]]; then
         rm -rf "$PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR" 2>/dev/null
     fi
-    if [[ -n "${PUB_MARKDOWN_PLANTUML_CACHE_DIR:-}" ]]; then
-        rm -rf "$PUB_MARKDOWN_PLANTUML_CACHE_DIR" 2>/dev/null
+    if [[ -n "${_PM_DIAGRAM_HITS_DIR:-}" ]]; then
+        rm -rf "$_PM_DIAGRAM_HITS_DIR" 2>/dev/null
     fi
 }
 
@@ -493,16 +493,6 @@ BROWSER_SERVER_PID=""
 BROWSER_SERVER_LOG=""
 BROWSER_EXECUTABLE_REPORT_FILE=""
 export PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR="$(mktemp -d)"
-# Windows (MSYS2) では mktemp が POSIX パスを返すが、
-# pandoc.exe (Win32) の Lua が環境変数のパスを解決できないため
-# cygpath -m で Windows ネイティブ形式 (ドライブ レター + 順スラッシュ) に変換する
-_pm_plantuml_cache_tmp="$(mktemp -d)"
-if is_windows_host && command -v cygpath >/dev/null 2>&1; then
-    export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$(cygpath -m "$_pm_plantuml_cache_tmp")"
-else
-    export PUB_MARKDOWN_PLANTUML_CACHE_DIR="$_pm_plantuml_cache_tmp"
-fi
-unset _pm_plantuml_cache_tmp
 
 PUB_MARKDOWN_BROWSER_REUSE="${PUB_MARKDOWN_BROWSER_REUSE:-auto}"
 PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC="${PUB_MARKDOWN_BROWSER_START_TIMEOUT_SEC:-120}"
@@ -1054,6 +1044,43 @@ export PUB_MARKDOWN_MAIN_MDROOT="${workspaceFolder}/${mdRoot}"
 # 設定ファイルに pubRoot が指定されなかった場合の値を "pages" にする
 if [[ "$pubRoot" == "" ]]; then
     pubRoot="pages"
+fi
+
+#-------------------------------------------------------------------
+# 図キャッシュ (インライン PlantUML / Mermaid が docx 用に生成する画像)
+#
+# 画像名は図のソースのハッシュだけで決まり、言語や詳細度に依存しないため、
+# 1 か所へ集約すればバリアントと実行をまたいで再利用できる。
+# 発行対象は pubRoot 配下の <言語><詳細度>/ と doxygen/ だけなので、
+# pubRoot 直下のドット ディレクトリへ配置すれば発行物に含まれない。
+#-------------------------------------------------------------------
+
+_PM_DIAGRAM_CACHE_DIR="${workspaceFolder}/${pubRoot}/.cache/diagrams"
+
+# この実行の参照記録の格納先。実行ごとに分離し、並行する実行との干渉を防ぐ。
+_PM_DIAGRAM_HITS_DIR="${_PM_DIAGRAM_CACHE_DIR}/hits/$$"
+mkdir -p "${_PM_DIAGRAM_HITS_DIR}"
+
+# 一定期間参照されなかった画像を削除する。
+# 参照した画像は実行の最後に mtime を更新するため、継続して使用している図は保持される。
+#
+# 画像はキャッシュ ルート直下のファイルである。tmp と hits はディレクトリのため対象外になる。
+PUB_MARKDOWN_DIAGRAM_CACHE_KEEP_DAYS="${PUB_MARKDOWN_DIAGRAM_CACHE_KEEP_DAYS:-7}"
+find "${_PM_DIAGRAM_CACHE_DIR}" -mindepth 1 -maxdepth 1 -type f \
+    -mtime "+${PUB_MARKDOWN_DIAGRAM_CACHE_KEEP_DAYS}" -delete 2>/dev/null || true
+# 中断した実行が残した作業ファイルを削除する。
+# 実行中のファイルを対象としないよう、1 日以上更新のないものだけを対象とする。
+find "${_PM_DIAGRAM_CACHE_DIR}/tmp" -mindepth 1 -mmin +1440 -delete 2>/dev/null || true
+find "${_PM_DIAGRAM_CACHE_DIR}/hits" -mindepth 1 -maxdepth 1 -type d -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
+
+# Windows (MSYS2) の pandoc.exe (Win32) は Lua から POSIX パスを解決できないため、
+# cygpath -m で Windows ネイティブ形式 (ドライブ レター + 順スラッシュ) に変換する
+if is_windows_host && command -v cygpath >/dev/null 2>&1; then
+    export DOCSFW_DIAGRAM_CACHE_DIR="$(cygpath -m "${_PM_DIAGRAM_CACHE_DIR}")"
+    export DOCSFW_DIAGRAM_CACHE_HITS_DIR="$(cygpath -m "${_PM_DIAGRAM_HITS_DIR}")"
+else
+    export DOCSFW_DIAGRAM_CACHE_DIR="${_PM_DIAGRAM_CACHE_DIR}"
+    export DOCSFW_DIAGRAM_CACHE_HITS_DIR="${_PM_DIAGRAM_HITS_DIR}"
 fi
 
 # ヘッダーとドロワーに表示するサイト名。動的発行と同じ規則を使う。
@@ -2984,6 +3011,25 @@ for langElement in ${lang}; do
         fi
     done
 done
+
+#-------------------------------------------------------------------
+# 図キャッシュの参照記録を反映する
+#
+# フィルターが記録したパスの mtime を更新し、この実行で使用した画像が
+# 次回以降の prune で削除されないようにする。
+#-------------------------------------------------------------------
+
+if [[ -n "${_PM_DIAGRAM_HITS_DIR:-}" ]]; then
+    # 記録はキャッシュ ルートからの相対パス。
+    # ルートへ移動して渡すことで、パスの連結と引用符の扱いを避ける。
+    _pm_hits_list=$(mktemp)
+    cat "${_PM_DIAGRAM_HITS_DIR}"/*.hits 2>/dev/null | sort -u > "$_pm_hits_list"
+    if [[ -s "$_pm_hits_list" ]]; then
+        ( cd "${_PM_DIAGRAM_CACHE_DIR}" && tr '\n' '\0' < "$_pm_hits_list" | xargs -0 -r touch -c ) 2>/dev/null || true
+    fi
+    rm -f "$_pm_hits_list"
+    rm -rf "${_PM_DIAGRAM_HITS_DIR}"
+fi
 
 #-------------------------------------------------------------------
 

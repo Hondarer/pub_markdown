@@ -1,9 +1,9 @@
 # pub_markdown
 
 Markdown からドキュメントを発行するフレームワークの文書入口です。  
-Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行系を持ちます。
+Pandoc による静的発行と、MkDocs による動的発行の 2 つの発行系統を備えています。
 
-## 重要な文書
+## 主要な文書
 
 - [発行処理の構成](pipeline.md)
 - [発行処理の保守と検証](maintenance-verification.md)
@@ -11,7 +11,8 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 - [発行対象の指定](pubparts.md)
 - [検索とナビゲーション](search-and-nav.md)
 - [HTML のテーマと図の描画](html-theme.md)
-- [日本語技術文書の規範](japanese-technical-writing-guideline.md)
+- [図キャッシュ](diagram-cache.md)
+- [日本語技術文書の文章規範](japanese-technical-writing-guideline.md)
 - [日本語翻訳の表記規則](japanese-translation-style.md)
 - [リンク解決の規則](link-resolution.md)
 - [見出し書式](heading-style.md)

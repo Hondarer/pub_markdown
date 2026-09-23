@@ -11,6 +11,9 @@ package.path = table.concat(search_paths, ";")
 
 local libDeflate = require("LibDeflate")
 
+-- docx 出力用画像の共有キャッシュ (mermaid.lua と共用)
+local cache = dofile(paths.join({ paths.directory(PANDOC_SCRIPT_FILE), "diagram-cache.lua" }))
+
 local default_pu_config = {
     protocol = "https",
     host_name = "www.plantuml.com",
@@ -291,28 +294,6 @@ local function active_cp_to_utf8(text)
     return text
 end
 
--- バイナリ ファイルをアトミックにコピーする
--- dst が既存のとき Windows では rename が失敗するため、失敗時は tmp を削除して正常とみなす
-local function copy_file(src, dst)
-    local _src = utf8_to_active_cp(src)
-    local fin = io.open(_src, "rb")
-    if not fin then return false end
-    local data = fin:read("*a")
-    fin:close()
-    local tmp = dst .. ".tmp." .. tostring(math.random(100000000, 999999999))
-    local _tmp = utf8_to_active_cp(tmp)
-    local fout = io.open(_tmp, "wb")
-    if not fout then return false end
-    fout:write(data)
-    fout:close()
-    local _dst = utf8_to_active_cp(dst)
-    if not os.rename(_tmp, _dst) then
-        -- Windows: dst が既存だと rename が失敗する。他プロセスが先に書き込み済み。
-        os.remove(_tmp)
-    end
-    return true
-end
-
 local _root_dir = utf8_to_active_cp(root_dir)
 
 local function file_exists(name)
@@ -514,14 +495,13 @@ local function check_local_plantuml()
 end
 
 -- ローカルの plantuml コマンドを使用して変換
--- 並列実行時の競合を防ぐため、仮ファイル名に出力する
--- 成功時: true, 仮ファイルパス を返す (呼び出し元でアトミックにリネームすること)
+-- output_path には呼び出し元が用意した作業用パスを渡す
+-- (最終パスへの確定は呼び出し元が diagram-cache の commit で行う)
+-- 成功時: true, 出力パス を返す
 -- 失敗時: false, エラーメッセージ を返す
 local function convert_with_local_plantuml(puml_text, output_path, format)
     local temp_puml = create_temp_file()
-    -- 仮ファイル名: 並列プロセス間で衝突しないようランダム値を付与
-    local temp_output = output_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
-    local _temp_output = utf8_to_active_cp(temp_output)
+    local _output_path = utf8_to_active_cp(output_path)
 
     -- PlantUML ソースを一時ファイルに書き出し
     local f = io.open(temp_puml, "w")
@@ -531,14 +511,14 @@ local function convert_with_local_plantuml(puml_text, output_path, format)
     f:write(puml_text)
     f:close()
 
-    -- plantuml コマンドを実行（仮ファイル名に出力）
+    -- plantuml コマンドを実行（作業用パスに出力）
     local cmd
     local os_name = os.getenv("OS")
 
     if os_name and string.match(os_name:lower(), "windows") then
-        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, _temp_output)
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, _output_path)
     else
-        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, temp_output)
+        cmd = string.format('cat "%s" | plantuml -t%s -pipe > "%s"', temp_puml, format, output_path)
     end
 
     local result = os.execute(cmd)
@@ -547,16 +527,16 @@ local function convert_with_local_plantuml(puml_text, output_path, format)
     os.remove(temp_puml)
 
     if result ~= true then
-        os.remove(temp_output)
+        os.remove(_output_path)
         return false, "plantuml command failed"
     end
 
     -- 出力ファイルが生成されたかチェック
-    if not file_exists(temp_output) then
+    if not file_exists(output_path) then
         return false, "Output file not generated"
     end
 
-    return true, temp_output
+    return true, output_path
 end
 
 return {
@@ -691,130 +671,93 @@ return {
 
             local encoded_text = encode(resultString)
 
+            cache.init(utf8_to_active_cp)
+
             local resource_dir = PANDOC_STATE.resource_path[1] or ""
-            local _resource_dir = utf8_to_active_cp(resource_dir)
 
             local filename = string.format("puml_%s.%s", utils.sha1(encoded_text), pu_config.format)
-            local image_file_path = paths.join({resource_dir, filename})
-            local _image_file_path = utf8_to_active_cp(image_file_path)
 
-            -- 共有 SVG キャッシュ: 出力バリアントをまたいだ重複 HTTP 取得を防ぐ
-            local shared_cache_dir = os.getenv("PUB_MARKDOWN_PLANTUML_CACHE_DIR") or ""
-            local shared_cache_path = (shared_cache_dir ~= "") and paths.join({shared_cache_dir, filename}) or ""
-            local _fresh_generated = false
+            -- 画像名は図のソースのハッシュだけで決まり、言語や詳細度に依存しない。
+            -- 共有キャッシュが有効な場合は、発行先ではなくキャッシュへ集約する。
+            local cache_dir = cache.dir()
+            local out_dir = cache_dir or resource_dir
+            local image_file_path = paths.join({out_dir, filename})
 
             if not file_exists(image_file_path) then
-                if shared_cache_path ~= "" and file_exists(shared_cache_path) then
-                    -- 共有キャッシュから resource_dir へコピーして再利用
-                    if not file_exists(resource_dir) then
-                        if package.config:sub(1,1) == '\\' then -- Windows
-                            os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\" >nul 2>&1")
-                        else -- Unix-like systems (Linux, macOS, etc.)
-                            os.execute("mkdir -p " .. resource_dir)
-                        end
+                -- 複数の pandoc プロセスが同じ図を同時に作りうるため、
+                -- 作業用パスへ生成してから最終パスへ確定する。
+                local temp_path = cache.tempfile(filename, resource_dir)
+                local generated = false
+
+                set_job_phase("PlantUML 生成: " .. (caption or "名称なし"))
+
+                -- plantuml コマンドに PATH が通っているかチェック
+                if check_local_plantuml() then
+                    -- ローカルの plantuml コマンドで変換
+                    local ok, detail = convert_with_local_plantuml(resultString, temp_path, pu_config.format)
+                    if ok then
+                        generated = true
+                    else
+                        io.stderr:write("[plantuml] Local conversion failed: " .. (detail or "unknown error") .. "\n")
+                        return el
                     end
-                    copy_file(shared_cache_path, image_file_path)
-                else
-                    local local_success = false
-                    local temp_output = nil
-
-                    set_job_phase("PlantUML 生成: " .. (caption or "名称なし"))
-
-                    -- plantuml コマンドに PATH が通っているかチェック
-                    if check_local_plantuml() then
-                        -- ローカルの plantuml コマンドで変換
-                        --io.stderr:write("[plantuml] Using local plantuml command\n")
-
-                        -- 出力ディレクトリが存在しない場合は作成
-                        -- ※ Windows の場合は、file_exists では既存ディレクトリの不存在チェックができないので、nul にリダイレクト
-                        if not file_exists(resource_dir) then
-                            if package.config:sub(1,1) == '\\' then -- Windows
-                                os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\" >nul 2>&1")
-                            else -- Unix-like systems (Linux, macOS, etc.)
-                                os.execute("mkdir -p " .. resource_dir)
-                            end
-                        end
-
-                        local temp_path
-                        local_success, temp_path = convert_with_local_plantuml(resultString, image_file_path, pu_config.format)
-                        if local_success then
-                            temp_output = temp_path
-                        else
-                            io.stderr:write("[plantuml] Local conversion failed: " .. (temp_path or "unknown error") .. "\n")
-                            return el
-                        end
-                    end
-
-                    if not local_success then
-                        -- サーバーを使用した変換
-                        --io.stderr:write("[plantuml] Using server conversion\n")
-                        local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
-                        local mt, img = mediabags.fetch(url .. encoded_text)
-
-                        if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
-                            io.stderr:write("Error: fetching image from " .. url .. "\n")
-                            return el
-                        end
-
-                        -- 仮ファイルに書き込む（並列実行時の競合を防ぐため）
-                        local temp_path = image_file_path .. ".tmp." .. tostring(math.random(100000000, 999999999))
-                        local _temp_path = utf8_to_active_cp(temp_path)
-                        local fs, errorDisc, errorCode = io.open(_temp_path, "wb")
-
-                        if errorCode == 2 then
-                            -- Use platform-specific commands to create the directory
-                            if package.config:sub(1,1) == '\\' then -- Windows
-                                os.execute("mkdir \"" .. utf8_to_active_cp(string.gsub(resource_dir, "/", "\\")) .. "\"")
-                            else -- Unix-like systems (Linux, macOS, etc.)
-                                os.execute("mkdir -p " .. resource_dir)
-                            end
-                            fs = io.open(_temp_path, "wb")
-                        end
-
-                        fs:write(img)
-                        fs:close()
-                        temp_output = temp_path
-                    end
-
-                    -- pu_config.format が "svg" の場合は、
-                    -- font-family を、Word で日本語フォントとして解釈されやすい "Segoe UI, メイリオ" に置換する。
-                    -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
-                    -- PlantUML v1.2026.0 以降の SVG 先頭処理命令は、Pandoc の docx 画像サイズ解析を妨げるため <svg> 開始タグの直後へ移動する。
-                    -- フォント置換は仮ファイルに対して実施してからアトミックにリネームする
-                    if temp_output and pu_config.format == "svg" then
-                        patch_svg_file(temp_output)
-                    end
-
-                    -- 仮ファイルを最終ファイル名にアトミックにリネーム
-                    -- 複数プロセスが同時に完了しても os.rename は上書きになるだけで内容は同一
-                    if temp_output then
-                        local _temp_output = utf8_to_active_cp(temp_output)
-                        os.rename(_temp_output, _image_file_path)
-                    end
-
-                    _fresh_generated = true
                 end
+
+                if not generated then
+                    -- サーバーを使用した変換
+                    local url = string.format("%s://%s:%s/%s%s/", pu_config.protocol, pu_config.host_name, pu_config.port, pu_config.sub_url, pu_config.format)
+                    local mt, img = mediabags.fetch(url .. encoded_text)
+
+                    if mt == nil or img == nil or (not img:match("^<svg") and not img:match("><svg")) then
+                        io.stderr:write("Error: fetching image from " .. url .. "\n")
+                        return el
+                    end
+
+                    local fs = io.open(utf8_to_active_cp(temp_path), "wb")
+                    if fs == nil then
+                        io.stderr:write("[plantuml] Error: cannot create " .. temp_path .. "\n")
+                        return el
+                    end
+                    fs:write(img)
+                    fs:close()
+                end
+
+                -- pu_config.format が "svg" の場合は、
+                -- font-family を、Word で日本語フォントとして解釈されやすい "Segoe UI, メイリオ" に置換する。
+                -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
+                -- PlantUML v1.2026.0 以降の SVG 先頭処理命令は、Pandoc の docx 画像サイズ解析を妨げるため <svg> 開始タグの直後へ移動する。
+                -- パッチは作業用ファイルへ適用し、完成してから確定する。
+                if pu_config.format == "svg" then
+                    patch_svg_file(temp_path)
+                end
+
+                cache.commit(temp_path, image_file_path)
             end
 
-            if pu_config.format == "svg" then
-                patch_svg_file(image_file_path)
+            if not file_exists(image_file_path) then
+                io.stderr:write("[plantuml] Error: image was not generated: " .. image_file_path .. "\n")
+                return el
             end
 
-            -- SVG パッチ適用後に共有キャッシュへ保存 (初回生成時のみ)
-            if _fresh_generated and shared_cache_path ~= "" then
-                copy_file(image_file_path, shared_cache_path)
-            end
+            cache.hit(image_file_path)
 
             -- docx 出力時かつ SVG フォーマットの場合: パッチ済み SVG を PNG に変換して、PNG パスに切り替える
             -- (Pandoc が SVG を検出して rsvg-convert で二重変換するのを防ぐ)
             local display_width, display_height
             if pu_config.format == "svg" and not string.match(FORMAT, "html") then
                 local png_filename = string.format("puml_%s.png", utils.sha1(encoded_text))
-                local png_file_path = paths.join({resource_dir, png_filename})
+                local png_file_path = paths.join({out_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
-                set_job_phase("PlantUML SVG から PNG への変換: " .. (caption or "名称なし"))
-                if convert_svg_to_png(image_file_path, png_file_path) then
+                if not file_exists(png_file_path) then
+                    set_job_phase("PlantUML SVG から PNG への変換: " .. (caption or "名称なし"))
+                    local png_temp_path = cache.tempfile(png_filename, resource_dir)
+                    if convert_svg_to_png(image_file_path, png_temp_path) then
+                        cache.commit(png_temp_path, png_file_path)
+                    end
+                end
+                if file_exists(png_file_path) then
                     image_file_path = png_file_path
+                    cache.hit(png_file_path)
                 end
             end
 
@@ -824,7 +767,11 @@ return {
             local image_src = image_file_path
 
             -- output relative
-            if PANDOC_STATE.output_file ~= nil then
+            --
+            -- キャッシュへ集約した場合は絶対パスのまま渡す。
+            -- Pandoc は絶対パスを --resource-path の探索を経ずに読むため、
+            -- Markdown が参照する画像の解決規則には影響しない。
+            if PANDOC_STATE.output_file ~= nil and cache_dir == nil then
                 if string.match(FORMAT, "html") then
                     local output_dir = paths.directory(PANDOC_STATE.output_file)
                     image_src = paths.make_relative(image_file_path, output_dir)
