@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Doxygen 静的サーブとリンク変換の純関数テスト。"""
+"""Doxygen 静的サーブとリンク変換のテスト。"""
 
+import logging
 import os
 import sys
 import tempfile
@@ -14,6 +15,7 @@ from livedocs_doxygen_hook import (  # noqa: E402
     doxygen_page_url_to_livedocs,
     find_doxygen_root,
     guess_doxygen_content_type,
+    on_serve,
     is_doxygen_link_enabled,
     is_dependency_data_js_url,
     is_doxygen_url_path,
@@ -302,6 +304,133 @@ class FindDoxygenRootTest(unittest.TestCase):
             os.makedirs(os.path.join(tmp, "pages", "doxygen"))
             found = find_doxygen_root(tmp)
             self.assertEqual(found, os.path.abspath(os.path.join(tmp, "pages", "doxygen")))
+
+
+class _ServeSpy:
+    """``on_serve`` が包む前の WSGI アプリ。"""
+
+    def __init__(self):
+        self.paths = []
+        self.app = None
+
+    def serve_request(self, environ, start_response):
+        self.paths.append(environ.get("PATH_INFO", ""))
+        start_response("200 OK", [("Content-Type", "text/plain")])
+        return [b"inner"]
+
+    def set_app(self, app):
+        self.app = app
+
+
+class OnServeDoxygenMountTest(unittest.TestCase):
+    def _config(self, workspace):
+        livedocs = os.path.join(workspace, "pages", "livedocs")
+        os.makedirs(livedocs)
+        config_path = os.path.join(livedocs, "mkdocs.yml")
+        with open(config_path, "w", encoding="utf-8") as handle:
+            handle.write("site_name: test\n")
+        return {"config_file_path": config_path, "extra": {"livedocs_variant": "ja"}}
+
+    def _request(self, app, path):
+        captured = {}
+
+        def start_response(status, headers):
+            captured["status"] = status
+            captured["headers"] = dict(headers)
+
+        result = app({"PATH_INFO": path}, start_response)
+        try:
+            body = b"".join(result)
+        finally:
+            close = getattr(result, "close", None)
+            if close is not None:
+                close()
+        return captured, body
+
+    def _messages(self, records):
+        return [record.getMessage() for record in records]
+
+    def test_serves_after_directory_is_created(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = self._config(tmp)
+            server = _ServeSpy()
+            with self.assertLogs("mkdocs.livedocs_doxygen", level="INFO") as captured:
+                on_serve(server, config)
+            self.assertIsNotNone(server.app)
+            self.assertIn(
+                "pages/doxygen はまだありません。作成後の /doxygen/ 要求から配信します",
+                self._messages(captured.records),
+            )
+
+            captured_response, body = self._request(server.app, "/doxygen/calc_public/calc_8h.html")
+            self.assertTrue(captured_response["status"].startswith("404"))
+            self.assertEqual(body, b"404 Not Found")
+            self.assertEqual(server.paths, [])
+
+            page = os.path.join(tmp, "pages", "doxygen", "calc_public", "calc_8h.html")
+            os.makedirs(os.path.dirname(page))
+            with open(page, "wb") as handle:
+                handle.write(b"<html>calc</html>")
+
+            with self.assertLogs("mkdocs.livedocs_doxygen", level="INFO") as captured:
+                captured_response, body = self._request(
+                    server.app, "/doxygen/calc_public/calc_8h.html",
+                )
+            self.assertTrue(captured_response["status"].startswith("200"))
+            self.assertEqual(body, b"<html>calc</html>")
+            self.assertIn(
+                "pages/doxygen を http の /doxygen/ としてサーブします",
+                self._messages(captured.records),
+            )
+
+            quiet = []
+
+            class _Capture(logging.Handler):
+                def emit(self, record):
+                    quiet.append(record.getMessage())
+
+            handler = _Capture()
+            logger = logging.getLogger("mkdocs.livedocs_doxygen")
+            logger.addHandler(handler)
+            previous_level = logger.level
+            logger.setLevel(logging.INFO)
+            try:
+                again, again_body = self._request(
+                    server.app, "/doxygen/calc_public/calc_8h.html",
+                )
+            finally:
+                logger.removeHandler(handler)
+                logger.setLevel(previous_level)
+            self.assertEqual(quiet, [])
+            self.assertTrue(again["status"].startswith("200"))
+            self.assertEqual(again_body, b"<html>calc</html>")
+
+    def test_serves_immediately_when_directory_exists(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            page = os.path.join(tmp, "pages", "doxygen", "index.html")
+            os.makedirs(os.path.dirname(page))
+            with open(page, "wb") as handle:
+                handle.write(b"<html>root</html>")
+            server = _ServeSpy()
+            with self.assertLogs("mkdocs.livedocs_doxygen", level="INFO") as captured:
+                on_serve(server, self._config(tmp))
+            messages = self._messages(captured.records)
+            self.assertIn("pages/doxygen を http の /doxygen/ としてサーブします", messages)
+            self.assertFalse(any("まだありません" in message for message in messages))
+
+            captured_response, body = self._request(server.app, "/doxygen/")
+            self.assertTrue(captured_response["status"].startswith("200"))
+            self.assertEqual(body, b"<html>root</html>")
+            self.assertEqual(server.paths, [])
+
+    def test_other_paths_reach_the_inner_app(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            server = _ServeSpy()
+            on_serve(server, self._config(tmp))
+            captured_response, body = self._request(server.app, "/ja/")
+            self.assertTrue(captured_response["status"].startswith("200"))
+            self.assertEqual(body, b"inner")
+            self.assertEqual(server.paths, ["/ja/"])
 
 
 if __name__ == "__main__":

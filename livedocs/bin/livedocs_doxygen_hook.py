@@ -2,7 +2,8 @@
 """mkdocs による動的発行から pages/doxygen を無変換でサーブする。
 
 ``mkdocs serve`` の WSGI に ``/doxygen/`` をマウントし、``pages/doxygen/``
-をそのまま返す。Markdown 変換もコピーもシンボリック リンクも使わない。
+をそのまま返す。起動時にディレクトリが無くてもマウントし、作成後の要求から
+配信する。Markdown 変換もコピーもシンボリック リンクも使わない。
 Windows でも同じ経路で、ジャンクションや MAX_PATH を増やさない。
 
 ``doxygen-page-url`` フロント マターがあるページでは、対応する Doxygen
@@ -254,24 +255,40 @@ def find_doxygen_root(workspace):
 
 
 def on_serve(server, config, builder=None, **kwargs):
-    """``/doxygen/`` を ``pages/doxygen/`` へマウントする。"""
-    workspace, _config_path = _workspace_and_config(config)
-    doxygen_root = find_doxygen_root(workspace)
-    if doxygen_root is None:
-        log.info("pages/doxygen が無いため /doxygen/ はマウントしません")
-        return server
+    """``/doxygen/`` を ``pages/doxygen/`` へマウントする。
 
+    起動時にディレクトリが無くても横取りは入れる。``make doxy`` などで
+    あとから ``pages/doxygen`` ができたら、次の要求から配信する。
+    見つかったパスは要求間で覚え、ファイルの有無は要求のたびに見る。
+    """
+    workspace, _config_path = _workspace_and_config(config)
     extra = config.get("extra") or {}
     landing = extra.get("livedocs_variant") or DEFAULT_LIVEDOCS_VARIANT
     inner = server.serve_request
+    state = {"root": find_doxygen_root(workspace)}
+
+    if state["root"] is None:
+        log.info("pages/doxygen はまだありません。作成後の /doxygen/ 要求から配信します")
+    else:
+        log.info("pages/doxygen を http の /doxygen/ としてサーブします")
 
     def app(environ, start_response):
         raw = environ.get("PATH_INFO", "")
         path = raw.encode("latin-1").decode("utf-8", "ignore")
-        if is_doxygen_url_path(path):
-            return serve_doxygen(doxygen_root, path, environ, start_response, variant=landing)
-        return inner(environ, start_response)
+        if not is_doxygen_url_path(path):
+            return inner(environ, start_response)
+        root = state["root"]
+        if root is None:
+            root = find_doxygen_root(workspace)
+            if root is None:
+                start_response(
+                    "404 Not Found",
+                    [("Content-Type", "text/plain; charset=utf-8")],
+                )
+                return [b"404 Not Found"]
+            state["root"] = root
+            log.info("pages/doxygen を http の /doxygen/ としてサーブします")
+        return serve_doxygen(root, path, environ, start_response, variant=landing)
 
     server.set_app(app)
-    log.info("pages/doxygen を http の /doxygen/ としてサーブします")
     return server

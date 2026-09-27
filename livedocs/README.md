@@ -30,7 +30,7 @@ make servedocs
 `make doxy` 済みで `pages/doxygen/` があるときは、`/doxygen/` で Doxygen HTML と依存関係レポートを開けます。  
 Doxybook2 の各ページからは、見出し横の Doxygen アイコンで対応する単一ページへ遷移できます。  
 依存関係レポートの Page リンクからは、配信中の Doxybook2 ページを開けます。  
-`make servedocs` は `make doxy` に依存しません。`pages/doxygen/` が存在しなくても配信本体は起動します。  
+`make servedocs` は `make doxy` に依存しません。`pages/doxygen/` が無くても配信は起動し、ディレクトリができたあとは再起動せずに `/doxygen/` を開けます。  
 Doxygen HTML の閲覧は `make servedocs` が正本です。`make livedocs` の `site/` には含めません。
 
 アドレスを変える場合は `LIVEDOCS_ADDR` を指定します。

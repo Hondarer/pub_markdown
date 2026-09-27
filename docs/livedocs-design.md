@@ -202,7 +202,7 @@ framework/docsfw/
 |   |   +-- docsfw-livedocs.css       # 追加スタイル
 |   |   +-- docsfw-header-links.css  # ヘッダー内アイコンのスタイル
 |   +-- tests/
-|   |   +-- test_livedocs_doxygen.py  # リンク変換と静的サーブの純関数テスト
+|   |   +-- test_livedocs_doxygen.py  # リンク変換と静的サーブ、起動後の配信開始のテスト
 |   |   +-- test_livedocs_versioned.py  # 再生成中の配信と版切り替えのテスト
 |   |   +-- test_livedocs_git_link.py  # blob URL の解決条件と URL 形式のテスト
 |   |   +-- test_livedocs_header.py   # ヘッダー上書きと上流追随のテスト
@@ -316,7 +316,9 @@ HTML へ挿入する LiveReload の時刻は要求開始時の公開時刻を使
 動的発行はこれを Markdown 変換せず、`make servedocs` (`mkdocs serve`) の `/doxygen/` として配信します。
 
 `make servedocs` は `make doxy` に依存しません。  
-`pages/doxygen/` が無いときはマウントを省略し、配信本体は起動します。
+`pages/doxygen/` が起動時に無くても配信は始まり、`/doxygen/` の横取りは入れておきます。  
+`make doxy` などでディレクトリができてから次に `/doxygen/` を開くと、そのファイルを返します。  
+ディレクトリができる前の `/doxygen/` は 404 です。
 
 ### コピーしない理由
 
@@ -1781,7 +1783,7 @@ make servedocs
 | キャプション | `framework/docsfw/docs/sample/mermaid-caption.md` | `CodeBlock:` 由来のキャプション |
 | `\toc` の展開 | `docs/README.md` | 索引の内容と越境リンクの解決 |
 | Doxybook2 ページ | `app/example/docs/doxybook2_public/` 配下 | ナビゲーション、目次、グラフの描画 |
-| Doxygen HTML | `/doxygen/example_public/index.html` | `make doxy` 済みなら無変換で表示されること |
+| Doxygen HTML | `/doxygen/example_public/index.html` | `make doxy` 済みなら、配信を再起動しなくても無変換で表示されること |
 | 依存関係レポート | `/doxygen/example_internal/dependency/index.html` | Cytoscape の HTML と付随アセットが読み込まれること |
 | 依存関係レポートの Page リンク | `/doxygen/example_internal/dependency/index.html` | 配信中のファイル ページと関数アンカーを開くこと |
 | Doxygen 単一ページ リンク | `doxygen-page-url` を持つ Doxybook2 ページ | 見出し横のアイコンが `/doxygen/...` を `target="doxygen-page"` で開くこと |
