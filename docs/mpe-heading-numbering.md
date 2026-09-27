@@ -123,6 +123,8 @@ h5 {
 | h5 | sub-section | 1.1.1.1 |
 | h6 | sub-sub-section | 1.1.1.1.1 |
 
+Table: 見出し階層と CSS カウンター変数の対応一覧
+
 ### セレクターの重複指定
 
 `.markdown-preview.markdown-preview` のようにセレクターを重複指定することで、CSS の詳細度 (specificity) を高め、Markdown Preview Enhanced の既定のスタイルを確実に上書きします。

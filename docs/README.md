@@ -16,6 +16,7 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 つの発行
 - [日本語翻訳の表記規則](japanese-translation-style.md)
 - [リンク解決の規則](link-resolution.md)
 - [見出し書式](heading-style.md)
+- [表のキャプション](table-caption.md)
 - [日本語スタイル チェッカー](text_style_jp.md)
 
 ## 文書一覧

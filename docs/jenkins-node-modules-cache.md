@@ -25,6 +25,8 @@ GitHub Actions では `actions/cache` が利用できますが、Jenkins には�
 | **ミス時の動作** | `pub_markdown_core.sh` が自動で `npm ci` を実行 → 完了後キャッシュに保存 |
 | **清掃** | 現在のハッシュ以外の古いキャッシュをビルド後に削除 |
 
+Table: node_modules キャッシュの仕様一覧
+
 `package-lock.json` が変更されるとハッシュが変わり、自動的にキャッシュが無効化されます。
 
 ### Headless Chrome (Puppeteer) キャッシュ
@@ -35,6 +37,8 @@ GitHub Actions では `actions/cache` が利用できますが、Jenkins には�
 | **ホスト永続化先 (例)** | `/var/cache/docsfw-puppeteer/` をコンテナーの `$HOME/.cache/puppeteer` にマウント |
 | **無効化トリガー** | `package-lock.json` の変更 (puppeteer バージョン更新 → Chrome バージョンも変わるため) |
 | **node_modules との関係** | node_modules キャッシュ ヒット時は `npm ci` がスキップされるため、Chrome キャッシュが空だと headless レンダリングが失敗します。 |
+
+Table: Headless Chrome キャッシュの仕様一覧
 
 `node_modules` のキャッシュだけでは不十分なため、**両方を永続化する必要があります**。
 
@@ -262,6 +266,8 @@ rm -f "${STATE_FILE}"
 | 3 | シェルの実行 | キャッシュ保存 (ミス時のみ) |
 | — | ビルド後の処置 | 古いキャッシュ削除・状態ファイル削除 |
 
+Table: フリースタイル ジョブのビルド ステップ一覧
+
 ## Headless Chrome キャッシュの永続化 (podman / コンテナー エージェント)
 
 ### Chrome の既定のダウンロード位置
@@ -394,3 +400,5 @@ sudo chown jenkins:jenkins /var/cache/docsfw-puppeteer
 | ステップ間変数渡し | 環境変数 | `env.` で設定 | 一時ファイル経由 |
 | 動的エージェント対応 | 〇 | △ (固定エージェントのみ) | △ (固定エージェントのみ) |
 | **Chrome キャッシュ** | `actions/cache` で `~/.cache/puppeteer` をキャッシュ | ホスト永続ディレクトリをコンテナーにマウント | ホスト永続ディレクトリをコンテナーにマウント |
+
+Table: CI 環境別のキャッシュ機能比較

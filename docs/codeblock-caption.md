@@ -25,6 +25,8 @@ CodeBlock: 接続シーケンス {#fig:seq-open}
 | PlantUML | 図のキャプション | `fig:` |
 | ソース コード全般 (`c`、`makefile`、`text` など、言語指定なしを含む) | コード ブロックのキャプション | `lst:` |
 
+Table: コード ブロック種別に応じたキャプションの扱いとラベル接頭辞
+
 ## 記法
 
 - 対象は直前のコード ブロックだけです。直前がコード ブロックでない `CodeBlock:` 段落は、通常の段落として出力されます。
@@ -77,6 +79,8 @@ pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。
 | `tblPrefix` | 表 | 本文中の表の参照の接頭辞 |
 | `lstPrefix` | リスト | 本文中のリストの参照の接頭辞 |
 
+Table: pandoc-crossref 採番用メタデータと日本語既定値
+
 ## 廃止した記法
 
 次の 2 つの記法は廃止しました。いずれも Pandoc 固有の拡張であり、GitHub などの Web 表示で言語の判定に失敗するためです。
@@ -85,6 +89,8 @@ pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。
 |---|---|
 | ` ```{.mermaid caption="キャプション"} ` | ` ```mermaid ` と `CodeBlock: キャプション` |
 | ` ```text:Sample.txt ` | ` ```text ` と `CodeBlock: Sample.txt` |
+
+Table: 廃止されたコード ブロック記法と代替記法の一覧
 
 廃止した `caption` 属性が残っている場合は、標準エラー出力へ警告を出力したうえで属性を破棄します。キャプションは出力されません。  
 `CodeBlock:` 行を併記している場合は、警告を出力したうえで `CodeBlock:` 行の値を採用します。

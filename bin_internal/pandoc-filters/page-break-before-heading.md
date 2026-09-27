@@ -65,6 +65,8 @@ page-break-before-heading:
 | `table-row-chars` | 80 | 表の 1 行あたりの推定文字数 |
 | `debug` | false | デバッグ情報を stderr に出力します。 |
 
+Table: page-break-before-heading の設定オプション一覧
+
 `heading-level-always` と `heading-level-to` は、`shift-heading-level-by` を設定した場合は **出力上のレベル** で指定します。設定しない場合は Markdown ソース上のレベルで指定します。
 
 ## 動作原理
@@ -160,6 +162,8 @@ effective_level = raw_level + shift_heading_level_by
 | リスト | 各項目の合計 + 20 |
 | 引用 | 内容の合計 + 30 |
 
+Table: 要素ごとのページ高さ文字数換算仕様
+
 ### 画像高さの推定
 
 以下の優先順位で高さを決定し、ページ高さ (945px) に対する比率で文字数に換算します。
@@ -178,6 +182,8 @@ effective_level = raw_level + shift_heading_level_by
 | SVG | `height` 属性 → `viewBox` 属性 |
 | その他 | フォールバック値 |
 
+Table: 対応画像形式と寸法取得方法の一覧
+
 ### 対応単位
 
 Markdown 属性や SVG で指定可能な単位は以下の通りです。
@@ -190,6 +196,8 @@ Markdown 属性や SVG で指定可能な単位は以下の通りです。
 | mm | × 3.78 |
 | in | × 96 |
 | % | ページ高さの割合 |
+
+Table: 画像寸法の対応単位と変換仕様
 
 ## 制限事項
 

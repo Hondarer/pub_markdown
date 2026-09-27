@@ -48,6 +48,8 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 | バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 言語は 1 つ選び、その通常版と詳細版を同時に配信する |
 | 図 | HTML はブラウザー描画、docx はビルド時に画像化 | ブラウザー上でレンダリング |
 
+Table: 静的発行と動的発行の機能比較
+
 動的発行の利用手順は [livedocs/README.md](livedocs/README.md)、設計は [動的発行基盤](docs/livedocs-design.md) を参照してください。
 
 テーマ切り替えと図の対応範囲は [HTML のテーマと図の描画](docs/html-theme.md) を参照してください。

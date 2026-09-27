@@ -198,6 +198,8 @@ Word では、以下のフィールドで表示できます。
 | - | `{ DOCPROPERTY "Number of Notes" }` | ノート数 | Word の組み込み定義 |
 | - | `{ DOCPROPERTY "Number of Characters (with spaces)" }` | 空白を含む文字数 | Word が管理 |
 
+Table: Word 組み込みプロパティと Pandoc メタデータの対応一覧
+
 Microsoft の `WdBuiltInProperty` には、`Format`、`Number of Slides`、`Number of Hidden Slides`、`Number of Multimedia Clips`、`Hyperlink Base` も定義されています。ただし、Word の `WdBuiltInProperty` 一覧では `Not supported` とされているため、未定義エラーの回避を目的にした `DOCPROPERTY` では使用しません。
 
 例として、`subject` を文書内に表示する場合は以下のフィールドを使用します。

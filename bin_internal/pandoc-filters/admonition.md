@@ -19,6 +19,8 @@ docx ではカスタム段落スタイル付き Div に変換します。
 | CAUTION | 危険や破壊的操作への警告 |
 | DEPRECATED | 非推奨の機能や代替案の情報 |
 
+Table: admonition フィルターの対応タイプと用途
+
 ## 技術的背景
 
 Pandoc の `-f markdown+hard_line_breaks` には `alerts` 拡張がない (`-f gfm` 専用)。  
@@ -70,6 +72,8 @@ CSS は `styles/html/html-style.css` に定義します。
 | CAUTION | `danger` | Caution | #da3633 (赤) | #fbebeb |
 | DEPRECATED | `deprecated` | Deprecated | #6a737d (灰) | #f0f1f2 |
 
+Table: admonition タイプ別の HTML スタイル仕様
+
 見出し帯の色は `color-mix()` で基準色から導き、表の値は非対応環境向けのフォールバックです。  
 寸法と、動的発行との一致のさせ方は [動的発行基盤](../../docs/livedocs-design.md) の「admonition の実装」を参照してください。
 
@@ -95,6 +99,8 @@ HTML は絵文字なし、docx は絵文字付きです。
 | WARNING | Block Text Warning | BlockTextWarning | Block Text |
 | CAUTION | Block Text Caution | BlockTextCaution | Block Text |
 | DEPRECATED | Block Text Deprecated | BlockTextDeprecated | Block Text |
+
+Table: admonition タイプ別の docx 段落スタイル仕様
 
 スタイルの定義詳細 (styleId・背景色・左罫線色・styles.xml 追加例・`.dotx` 編集手順) は  
 [docs/docx-template-styles.md](../../docs/docx-template-styles.md) を参照してください。

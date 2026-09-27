@@ -108,6 +108,8 @@ pub_markdown_core.sh    # メイン ビルド スクリプト (ライフサイ�
 |---|---|
 | `PUB_MARKDOWN_BROWSER_WS_FILE` | WebSocket エンドポイントが書かれたファイルのパス |
 
+Table: ブラウザー再利用制御の環境変数一覧
+
 ### WebSocket エンドポイント ファイル
 
 - パス: `/tmp/pub_markdown_browser_ws_<PID>` (PID は pub_markdown_core.sh のプロセス ID)
@@ -242,6 +244,8 @@ Linux または WSL で実行可能な外部ブラウザーが `PUPPETEER_EXECUT
 | Linux | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
 | WSL | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
 | Windows (Git Bash) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) |
+
+Table: プラットフォーム別の使用ブラウザーとフォールバック動作
 
 ## フォールバック機構
 

@@ -19,6 +19,8 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 | `minisearch` | HTML 検索インデックスと UMD バンドル | モジュールと `dist/umd` のファイル |
 | `@plantuml/core` | Pandoc HTML と動的発行のブラウザー上 PlantUML | モジュール |
 
+Table: docsfw の必須 Node.js パッケージ一覧
+
 `mermaid` は `package.json` の直接依存ではありません。  
 `@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使用します。  
 `puppeteer-core` も直接依存ではありません。  
@@ -68,6 +70,8 @@ WSL から Windows 用のツリーを読み込むと、`Could not load the "shar
 | 一部だけ欠けている | 欠けたトップレベルだけ `npm install --no-save <name>@<lockfile の version>` します |
 | 必須パッケージがすべて欠けている | `bin_internal/` で `npm ci` します |
 
+Table: Node コンポーネントの状態に応じたオンデマンド導入動作
+
 `npm ci` と部分インストールのあいだは `PUPPETEER_SKIP_DOWNLOAD=1` です。  
 Chrome 本体の取得は npm の処理とは独立しています。
 
@@ -82,6 +86,8 @@ Chrome の導入は静的発行だけが行います。動的発行は図をブ�
 | Windows | Microsoft Edge が必須です。存在しない場合はエラーで終了します。Puppeteer 用 Chrome はダウンロードしません |
 | Linux | `PUPPETEER_EXECUTABLE_PATH` が実行可能な Chrome を指すときはそれを使用します |
 | Linux | 外部 Chrome が存在しないときは、puppeteer モジュール解決のあと `npx puppeteer browsers install chrome` と `chrome-headless-shell` を実行します |
+
+Table: OS 別の静的発行用ブラウザー要件と動作
 
 npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が存在しなければブラウザーの導入が実行されます。
 
@@ -98,6 +104,8 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | `@plantuml/core` | `DOCSFW_PLANTUML_CORE` |
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
+Table: Node コンポーネントの用途と環境変数の対応
+
 グローバルから採用したパッケージは、名前とディレクトリの対を `DOCSFW_NODE_GLOBAL_PACKAGES` へ渡します。  
 `bin_internal/docsfw-prefer-global-modules.js` が子プロセスの解決先をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
 
@@ -109,6 +117,8 @@ ES モジュールの裸の指定子は ES モジュール ローダーだけが
 |---|---|
 | `require` | `Module._resolveFilename` を差し替え、採用先を含む `node_modules` からパッケージ名のまま解決します |
 | `import` | `module.registerHooks()` の解決フックで、解決の起点を採用先の `node_modules` へ変更します |
+
+Table: モジュール解決経路ごとのパッケージ固定方法
 
 `module.registerHooks()` を持たない Node.js では、`module.register()` で `bin_internal/docsfw-prefer-global-modules.mjs` を登録します。  
 判定の規則は `bin_internal/docsfw-pinned-packages.js` に集約し、どちらの経路でも同じディレクトリを選びます。

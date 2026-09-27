@@ -11,6 +11,8 @@ HTML 出力に外部ネットワーク不要の全文検索と、全ページ常
 | ナビゲーション ツリー | 全ページを階層ツリーで表示。現在ページをハイライトし祖先ディレクトリを展開 |
 | ページ内目次 | 広い画面で右側に表示し、現在の見出しを追従。狭い画面では左ドロワーへ統合 |
 
+Table: 全文検索・ナビゲーション機能の概要
+
 ## 動作の仕組み
 
 ### ビルド時 (pub_markdown_core.sh)
@@ -57,6 +59,8 @@ make docs -> pub_markdown_core.sh
 | `docsfw-nav.js` | ナビゲーション ツリー描画スクリプト |
 | `docsfw-ui.css` | 検索・ナビの CSS |
 
+Table: HTML ルート直下に配置される静的アセット一覧
+
 ### html ルート直下に生成される動的アセット
 
 発行のたびに後処理スクリプトが生成します。
@@ -65,6 +69,8 @@ make docs -> pub_markdown_core.sh
 |---|---|---|
 | `nav-tree.js` | `window.__DOCSFW_NAV__` にツリー構造 JSON を設定 | 〜 70 KB |
 | `search-index.js` | `window.__DOCSFW_INDEX__` に MiniSearch 直列化インデックス、`window.__DOCSFW_DOCS__` にページ一覧を設定 | 〜 3 MB |
+
+Table: HTML ルート直下に生成される動的アセット一覧
 
 ## ファイル構成
 
@@ -167,6 +173,8 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 | `headings` | 3 | `<h1>`〜`<h3>` のテキスト |
 | `text` | 1 | `<main id="docsfw-content">` 内の本文 (上位 30,000 文字) |
 
+Table: MiniSearch インデックス フィールドの定義と重み
+
 ### 日本語対応 (bigram トークナイザー)
 
 `bin_internal/docsfw-tokenize.js` でインデックス構築時とブラウザー検索時の両方に同一トークナイザーを適用します。
@@ -175,6 +183,8 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 |---|---|
 | CJK (ひらがな/カタカナ/漢字等) | 重なり 2-gram。1 文字のみの場合は 1-gram |
 | ASCII/英数 | 非英数字で分割、小文字化 |
+
+Table: 文字種ごとの検索トークン化方式
 
 例: `電卓計算機` → `["電卓", "卓計", "計算", "算機"]`
 
@@ -228,6 +238,8 @@ URL にフラグメントがあるページを再読み込みした場合は、P
 |---|---|---|
 | `docsfw-toc-active` | 現在の見出しのリンク 1 件。`aria-current="location"` も同時に付与されます | `#1A5FAA` |
 | `docsfw-toc-passed` | 現在の見出しと、それより上にある見出しのリンク | `#757575` に淡色化 |
+
+Table: ページ内目次の追従強調クラス仕様
 
 `docsfw-toc-passed` は、読み進めた範囲を示すための表現です。  
 MkDocs Material の `md-nav__link--passed` と同じ意味論で、現在の見出しにも付与されますが、アクティブの色が後勝ちします。  
@@ -347,6 +359,8 @@ VS Code タスクや `pub_markdown_core.sh --relativeFile=...` で特定のフ�
 | `singlefile` | 指定した 1 ファイル | なし |
 | `folder` | 指定フォルダー配下の全ファイル | 指定フォルダーの出力を削除後に再生成 |
 
+Table: 部分発行における HTML 生成モードと処理対象
+
 指定範囲外の既存 HTML は変更されません。
 
 ### 後処理 (nav-tree.js / search-index.js)
@@ -376,6 +390,8 @@ lang (ja en) × details_suffixes ("" "-details") の全組み合わせに対し�
 | 検索ボックス・ナビゲーション ツリーの表示 | される | されない |
 | nav-tree.js の収録 | される | される |
 | search-index.js の索引 | `<main id="docsfw-content">` から高精度抽出 | `<body>` 全体からのフォールバック抽出 |
+
+Table: 部分発行時における再生成ページと未更新旧ページの表示差異
 
 旧ページ自体には UI が表示されませんが、再生成済みページの検索・ナビゲーション ツリーから旧ページへ遷移することは可能です。
 
@@ -413,5 +429,7 @@ lang (ja en) × details_suffixes ("" "-details") の全組み合わせに対し�
 |---|---|
 | `search-index.js` | 約 3 MB |
 | `nav-tree.js` | 約 70 KB |
+
+Table: 検索インデックス関連ファイルのサイズ目安
 
 `htmlSearchEnable: false` にすると `search-index.js` の生成とビルド時間を削減できます。

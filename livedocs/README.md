@@ -115,6 +115,8 @@ make stopdocs
 | `assets/docsfw-header-meta.css` | ヘッダーの発行者と発行日時のスタイル |
 | `requirements.txt` | Python 依存 |
 
+Table: livedocs スクリプトのファイル構成と役割
+
 生成物は `pages/livedocs/` に出力します。
 
 | パス | 内容 |
@@ -122,6 +124,8 @@ make stopdocs
 | `pages/livedocs/mkdocs.yml` | `mkdocs.yml.in` から生成した設定 |
 | `pages/livedocs/src/` | ステージング済みの Markdown (`docs_dir`) |
 | `pages/livedocs/site/` | `mkdocs build` の出力 |
+
+Table: livedocs の生成ファイルと内容
 
 `pages/` はワークスペースの `.gitignore` で除外済みです。  
 `make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に削除されます。

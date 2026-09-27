@@ -22,6 +22,8 @@ Pandoc が自動生成するため、ここでは docsfw 固有のカスタム �
 | `BlockTextCaution` | Block Text Caution | 段落 | admonition CAUTION | `#FFF6F5` | `admonition.lua` |
 | `BlockTextDeprecated` | Block Text Deprecated | 段落 | admonition DEPRECATED | `#F6F8FA` | `admonition.lua` |
 
+Table: docsfw 固有の docx カスタム スタイル一覧
+
 ## コード スタイルの注意点
 
 Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。  
@@ -49,6 +51,8 @@ HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` 
 | WARNING | Block Text Warning | `BlockTextWarning` | Block Text | `#9A6700` | `#FFFCE5` |
 | CAUTION | Block Text Caution | `BlockTextCaution` | Block Text | `#DA3633` | `#FFF6F5` |
 | DEPRECATED | Block Text Deprecated | `BlockTextDeprecated` | Block Text | `#6A737D` | `#F6F8FA` |
+
+Table: docx 用 admonition スタイルの定義詳細一覧
 
 各スタイルは Block Text (`styleId=af3`) を基底 (`basedOn`) とします。  
 `af3` の実際の値はテンプレートによって異なります。`word/styles.xml` を確認してください。

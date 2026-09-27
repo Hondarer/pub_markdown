@@ -29,6 +29,8 @@ HTML のタグ名ではなく Markdown のレベルで定める点が重要で�
 | 本文 | 16px | 400 | 1.5 | `#212121` |
 | 本文のリスト項目 (`ul` / `ol` の `li`) | 16px | 400 | 1.6 | `#212121` |
 
+Table: 見出しレベル別のタイポグラフィ書式仕様
+
 見出しの余白は全レベルで `margin: 20px 0 10px` とします。  
 `letter-spacing` は全レベルで `normal`、`text-transform` は全レベルで `none` とします。
 
@@ -72,6 +74,8 @@ Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H
 | H5 | `h4` |
 | H6 | `h5` |
 
+Table: 静的発行における Markdown 見出しと HTML 要素の対応
+
 ページ見出しと Markdown の H2 は、どちらも `h1` として出力されます。  
 両者は書式が同じであるため、`h1` に対する 1 つの指定で十分です。
 
@@ -89,6 +93,8 @@ MkDocs は H1 をページ見出しとして本文に残すため、Markdown の
 |---|---|
 | 静的発行 | `styles/html/html-style.css` |
 | 動的発行 | `livedocs/assets/docsfw-pandoc-style.css` |
+
+Table: 出力形式別の見出しスタイル定義ファイル一覧
 
 pandoc 側は、本文色を `body` に指定し、見出しは HTML タグを 1 段浅く読み替えて指定します。  
 `line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。  
@@ -136,6 +142,8 @@ MkDocs は Material の `toc.permalink` が `<a class="headerlink">` を生成�
 | 見出しのホバーと `:target` | `opacity: 1` で表示 |
 | 色 | `#ADADAD`。アンカー自体のホバーとフォーカスで `#005580`、下線なし |
 | 印刷 | `display: none` |
+
+Table: 見出しパーマリンク アンカーの表示仕様
 
 `opacity` と色は瞬時に切り替えます。  
 Material は既定で `transition: color .25s, opacity 125ms` を持ちますが、静的発行に対応する指定がないため打ち消します。

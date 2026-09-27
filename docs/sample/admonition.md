@@ -13,6 +13,8 @@ Markdown admonition と Doxygen タグの対応は次のとおりです。
 | CAUTION | `@attention` |
 | DEPRECATED | `@deprecated` |
 
+Table: Markdown admonition と Doxygen タグの対応
+
 > [!NOTE]
 > これは補足情報です。
 > 複数行にわたる内容も記述できます。

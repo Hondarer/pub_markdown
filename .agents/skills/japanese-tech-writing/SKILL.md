@@ -5,7 +5,8 @@ description: 日本語の技術文書を作成・推敲する際に、リポジ�
 
 # 日本語技術文書の作成と推敲
 
-`framework/docsfw/docs/japanese-technical-writing-guideline.md` の対象となる構成と執筆、段落、読みやすさと文構造、表現、推敲と確認の各節を参照してください。
+`framework/docsfw/docs/japanese-technical-writing-guideline.md` の対象となる構成と執筆、段落、読みやすさと文構造、表現、推敲と確認の各節を参照してください。  
+Markdown の表を作成・修正する場合は、`framework/docsfw/docs/table-caption.md` の表題と `Table:` 記法を確認してください。
 
 ## 執筆前の構成設計 (生成時制約)
 

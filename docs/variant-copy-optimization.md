@@ -19,6 +19,8 @@
 | 言語 | `ja`, `en` | `pages/ja/`, `pages/en/` |
 | 詳細レベル | (通常), `-details` | `pages/ja/`, `pages/ja-details/` |
 
+Table: バリアント マトリクスの構成軸と出力ディレクトリ
+
 `lang="ja en"`, `details="both"` の場合、1 ファイルから最大 4 バリアント (`ja`, `en`, `ja-details`, `en-details`) が生成されます。
 
 ## 不変性の検出
@@ -30,6 +32,8 @@
 | `_has_lang_tags` | 言語タグ (`<!--ja:-->` 等) | 言語軸を変化させる |
 | `_has_details_tags` | 詳細タグ (`<!--details:-->` 等) | 詳細軸を変化させる |
 | `_has_toc` | `\toc` コマンド | 言語軸を変化させる |
+
+Table: 不変性検出フラグと判定への影響
 
 これらから 2 軸の不変性を導出します。
 
@@ -50,6 +54,8 @@ _details_invariant = !_has_details_tags
 | true | false | 詳細レベルごとに最初の言語で 1 回生成し、他言語へコピー |
 | false | true | 言語ごとに最初の詳細レベルで 1 回生成し、他詳細レベルへコピー |
 | false | false | 最適化なし。全バリアントを生成 (従来動作) |
+
+Table: 不変性フラグの組み合わせと最適化動作
 
 ## 割り切り事項
 

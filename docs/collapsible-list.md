@@ -87,6 +87,8 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 | `open-level=-1` | すべて展開 |
 | 指定なし | すべて折りたたみ (既定) |
 
+Table: open-level 属性値と初期展開動作の一覧
+
 **level の数え方**: 最上位の `<details>` 要素を level 1 とし、祖先 `<details>` の数 + 1 で深さを判定します。
 
 **手動 fenced div での使用例**:

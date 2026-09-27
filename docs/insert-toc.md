@@ -100,6 +100,8 @@ short-title: "CalcException.cs"
 | `short-title-details` | details=true のビルド時 |
 | `short-title-<lang>-details` | 指定言語 かつ details=true のビルド時 |
 
+Table: short-title フィールド名と適用条件一覧
+
 採用優先順位 (details=true、lang=ja の場合):  
 `short-title-ja-details` > `short-title-ja` > `short-title-details` > `short-title`
 
