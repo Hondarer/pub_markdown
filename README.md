@@ -36,13 +36,13 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
     - pandoc-crossref がなくても動作します。
     - pandoc-crossref がある場合は、ラベルを付けた図、リスト、表が採番と相互参照の対象になります。詳細は [コード ブロックのキャプション](docs/codeblock-caption.md) を参照してください。
 - node.exe へ PATH を設定してください。Linux では nodejs モジュール パッケージに含まれます。
-- Node.js モジュールは発行時に解決します。グローバルにあればそれを使い、無ければオンデマンドで導入します。詳細は [Node.js モジュールの設定](bin/how_to_setup_node_modules.md) と [Node コンポーネント](docs/node-components.md) を参照してください。
+- Node.js モジュールは発行時に解決します。グローバルにあればそれを使い、無ければオンデマンドで導入します。詳細は [Node.js モジュールの設定](bin_internal/how_to_setup_node_modules.md) と [Node コンポーネント](docs/node-components.md) を参照してください。
 
 ### 静的発行と動的発行
 
 | | 静的発行 | 動的発行 |
 |---|---|---|
-| 実装 | `bin/pub_markdown_core.sh` (Pandoc) | `livedocs/` (MkDocs) |
+| 実装 | `bin_internal/pub_markdown_core.sh` (Pandoc) | `livedocs/` (MkDocs) |
 | 成果物 | HTML + docx | HTML |
 | 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
 | バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 1 つを選んで出力 |
@@ -68,7 +68,7 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 共有ブラウザーの起動待機、対象ファイル収集、各出力形式の生成、TOC 生成の各段階が stderr に出力されます。
 
 ```bash
-PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
+PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown.sh --workspaceFolder=/path/to/workspace
 ```
 
 ### 無進捗監視
@@ -82,7 +82,7 @@ PUB_MARKDOWN_PROGRESS_LOG=1 bash bin/pub_markdown_core.sh --workspaceFolder=/pat
 負数、小数、文字列を指定した場合は、Markdown ジョブを開始せずにエラーで終了します。
 
 ```bash
-FILE_PROCESS_TIMEOUT_SEC=300 bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace
+FILE_PROCESS_TIMEOUT_SEC=300 bash bin/pub_markdown.sh --workspaceFolder=/path/to/workspace
 ```
 
 ## ビルド結果公開 Pages

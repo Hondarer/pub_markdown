@@ -26,7 +26,7 @@
 これによりマージ機能とサブモジュール機能の組み合わせが吸収され、リンク先はファイルが実際に存在するリポジトリの remote に解決されます。  
 サブモジュール配下のファイルは、当該サブモジュール自身のリポジトリの単一ページを指します。
 
-解決手順は次のとおりです。実装は `bin/get_file_git_url.sh` にあります。
+解決手順は次のとおりです。実装は `bin_internal/get_file_git_url.sh` にあります。
 
 1. 実体パスから所属リポジトリのルートを取得します。
 2. リポジトリ ルートからの相対パスを求めます。
@@ -133,7 +133,7 @@ MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ b
 
 | | 静的発行 | 動的発行 |
 |---|---|---|
-| 解決の実装 | `bin/get_file_git_url.sh` | `livedocs/bin/git_link.py` |
+| 解決の実装 | `bin_internal/get_file_git_url.sh` | `livedocs/bin/git_link.py` |
 | 解決の単位 | ファイルごとに `git log -1` | リポジトリごとに 1 パスで一括取得 |
 | Doxygen HTML へのフォールバック | あり | なし (Doxygen ボタンを別に持つため) |
 | ラベルの決定 | 読み込み後の JavaScript | テンプレート (言語が 1 つに固定されるため) |

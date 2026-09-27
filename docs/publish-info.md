@@ -75,10 +75,10 @@ Git から取得した値は、他に指定がない場合の既定値です。
 
 | 環境変数 | 取得元 |
 |---|---|
-| `DOCUMENT_AUTHOR` | `bin/get_file_author.sh` |
-| `DOCUMENT_DATE` | `bin/get_file_date.sh` |
+| `DOCUMENT_AUTHOR` | `bin_internal/get_file_author.sh` |
+| `DOCUMENT_DATE` | `bin_internal/get_file_date.sh` |
 
-`bin/pandoc-filters/set-meta.lua` が、文書側にメタデータがない場合に限りこの環境変数を pandoc の `author` と `date` に設定します。  
+`bin_internal/pandoc-filters/set-meta.lua` が、文書側にメタデータがない場合に限りこの環境変数を pandoc の `author` と `date` に設定します。  
 人数による表現の切り替えも同フィルターが行います。docx 出力では、著者を 1 行にまとめずリストのまま渡します。
 
 テンプレート `styles/html/html-template.html` は、ナビバー右側の `.doc-info` に `$author$` と `$date$` を表示します。
@@ -96,8 +96,8 @@ MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ�
 
 | | 静的発行 | 動的発行 |
 |---|---|---|
-| 事実の取得 | `bin/get_file_author.sh`、`bin/get_file_date.sh` | `livedocs/bin/git_link.py` |
-| 文字列への整形 | `bin/pandoc-filters/set-meta.lua` | `livedocs/bin/publish_info.py` |
+| 事実の取得 | `bin_internal/get_file_author.sh`、`bin_internal/get_file_date.sh` | `livedocs/bin/git_link.py` |
+| 文字列への整形 | `bin_internal/pandoc-filters/set-meta.lua` | `livedocs/bin/publish_info.py` |
 | 取得の単位 | ファイルごとに `git log` | リポジトリごとに 1 パスで一括取得 |
 | `defaults:` による指定 | あり | なし |
 | 著者のリスト保持 | docx 出力でのみリストのまま | なし (docx を出力しないため) |

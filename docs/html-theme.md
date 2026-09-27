@@ -36,7 +36,7 @@ HTML の Lua フィルターは、図ソースをエスケープして `div.docs
 図番号、参照 ID、キャプションは Pandoc 側で確定し、ブラウザーでは図の内側だけを置換します。  
 DOCX の画像生成、変換、キャッシュの経路は変更しません。
 
-`bin/pandoc-filters/html-browser.lua` は変換後の図を調べ、テンプレートに必要な資産のメタデータを設定します。  
+`bin_internal/pandoc-filters/html-browser.lua` は変換後の図を調べ、テンプレートに必要な資産のメタデータを設定します。  
 資産の基準位置は既存の `mermaid-js` から求めるため、発行 CLI や設定キーの追加はありません。  
 独自テンプレートを使用する場合は、標準テンプレートの `docsfw-browser-base`、`docsfw-has-mermaid`、`docsfw-has-plantuml` の読み込み部分も反映してください。
 
@@ -81,7 +81,7 @@ Salt の画像が必要な場合は DOCX を使用してください。
 
 ## 直接閲覧と単一 HTML
 
-`bin/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
+`bin_internal/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
 PlantUML エンジンを Base64 からバイト列へ復元し、隠し iframe 内で Blob URL のモジュールとして読み込みます。  
 Graphviz と同梱アイコン資産もローダーに含めます。  
 iPhone の Edge で data URL の import が失敗し、Blob URL では描画できたため、この方式を採用しています。  
@@ -101,8 +101,8 @@ PlantUML のライセンスは、ローダーと同じ場所の `docsfw-plantuml
 docsfw ルートで次を実行します。
 
 ```bash
-node bin/test-html-diagrams.js
-node bin/test-html-ui.js
+node bin_internal/test-html-diagrams.js
+node bin_internal/test-html-ui.js
 python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
 ```
 

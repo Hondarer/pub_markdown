@@ -969,7 +969,7 @@ code span.wa { color: var(--docsfw-syntax-wa); font-style: normal; font-weight: 
    「admonition の実装」を参照。 */
 
 :root {
-  /* 基準色。bin/pandoc-filters/admonition.lua の color と同じ GitHub の 6 色。 */
+  /* 基準色。bin_internal/pandoc-filters/admonition.lua の color と同じ GitHub の 6 色。 */
   --docsfw-admonition-note: #1f6feb;
   --docsfw-admonition-tip: #238636;
   --docsfw-admonition-important: #8957e5;

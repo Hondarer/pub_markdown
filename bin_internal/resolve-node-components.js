@@ -3,7 +3,7 @@
 
 /**
  * Resolve docsfw npm components from a global prefix first, then from
- * framework/docsfw/bin/node_modules. Optionally install only the missing
+ * framework/docsfw/bin_internal/node_modules. Optionally install only the missing
  * top-level packages.
  *
  * Usage:

@@ -509,7 +509,7 @@ body {
   --md-footer-fg-color--light: rgba(0, 0, 0, 0.54);
   --md-footer-fg-color--lighter: rgba(0, 0, 0, 0.32);
 
-  /* admonition は bin/pandoc-filters/admonition.lua の色定義。 */
+  /* admonition は bin_internal/pandoc-filters/admonition.lua の色定義。 */
   --docsfw-admonition-note: #1f6feb;
   --docsfw-admonition-tip: #238636;
   --docsfw-admonition-important: #8957e5;

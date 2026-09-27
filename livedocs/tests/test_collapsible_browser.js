@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin/node_modules/puppeteer'));
+const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-collapsible-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 
@@ -63,7 +63,7 @@ extra_css:
 extra_javascript:
   - assets/docsfw-collapsible-list.js
 ''', encoding='utf-8')
-static_html = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'html5', '-L', str(root / 'bin/pandoc-filters/insert-toc.lua')], input='\n\n'.join(static_blocks), capture_output=True, text=True, check=True).stdout
+static_html = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'html5', '-L', str(root / 'bin_internal/pandoc-filters/insert-toc.lua')], input='\n\n'.join(static_blocks), capture_output=True, text=True, check=True).stdout
 template = (root / 'styles/html/html-template.html').read_text(encoding='utf-8')
 start = template.index('<script>', template.index('展開可能リスト (collapsible-list)'))
 end = template.index('</script>', start) + len('</script>')

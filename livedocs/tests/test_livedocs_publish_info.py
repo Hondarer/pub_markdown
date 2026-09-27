@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """発行者と発行日時の解決と整形に関する単体テスト。
 
-静的発行の ``bin/get_file_author.sh`` / ``bin/get_file_date.sh`` と同じ文字列に
+静的発行の ``bin_internal/get_file_author.sh`` / ``bin_internal/get_file_date.sh`` と同じ文字列に
 なることが要件のため、それらを実際に実行して突き合わせる試験も持ちます。
 """
 

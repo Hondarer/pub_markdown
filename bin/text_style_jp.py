@@ -8,6 +8,8 @@ import sys
 import tempfile
 from typing import List, Optional, Sequence, Tuple
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "bin_internal"))
+
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 

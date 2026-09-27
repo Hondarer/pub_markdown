@@ -10,7 +10,7 @@ docx 出力と 4 バリアントの同時出力は静的発行だけが持ちま
 ## 前提
 
 - Python 3.9 以降
-- Node.js。`@plantuml/core` と `mermaid` は `bin/resolve-node-components.js` が解決します。未配置ならオンデマンドで導入します。詳細は [Node コンポーネント](../docs/node-components.md) を参照してください。
+- Node.js。`@plantuml/core` と `mermaid` は `bin_internal/resolve-node-components.js` が解決します。未配置ならオンデマンドで導入します。詳細は [Node コンポーネント](../docs/node-components.md) を参照してください。
 
 ## 使用方法
 
@@ -90,7 +90,7 @@ make stopdocs
 | パス | 内容 |
 |---|---|
 | `bin/stage_livedocs.py` | 収集、前処理、リンク書き換え、書き出し |
-| `bin/lang_details_filter.py` | `bin/replace-tag.sh` の Python 移植 |
+| `bin/lang_details_filter.py` | `bin_internal/replace-tag.sh` の Python 移植 |
 | `bin/expand_toc.py` | `\toc` の索引展開 |
 | `bin/git_link.py` | Git 由来のページ情報 (blob URL、発行者、発行日時) の解決 |
 | `bin/publish_info.py` | 発行者と発行日時の文字列への整形 |

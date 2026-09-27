@@ -26,7 +26,7 @@ class PandocUiContractTest(unittest.TestCase):
         cls.livedocs_main = (ROOT / "livedocs/theme/main.html").read_text(encoding="utf-8")
         cls.nav = (ROOT / "styles/html/docsfw-nav.js").read_text(encoding="utf-8")
         cls.search = (ROOT / "styles/html/docsfw-search.js").read_text(encoding="utf-8")
-        cls.publisher = (ROOT / "bin/pub_markdown_core.sh").read_text(encoding="utf-8")
+        cls.publisher = (ROOT / "bin_internal/pub_markdown_core.sh").read_text(encoding="utf-8")
 
     def test_standard_template_has_material_style_header(self):
         for marker in (

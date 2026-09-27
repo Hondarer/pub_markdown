@@ -3,9 +3,9 @@
 
 解決する情報は次の 3 つで、いずれも同じリポジトリ走査から導出します。
 
-- 単一ページ (blob ビュー) の URL と provider (``bin/get_file_git_url.sh`` の移植)
-- 発行者となるコミッター名の並び (``bin/get_file_author.sh`` の移植)
-- 発行日時と最終コミット ID の素材 (``bin/get_file_date.sh`` の移植)
+- 単一ページ (blob ビュー) の URL と provider (``bin_internal/get_file_git_url.sh`` の移植)
+- 発行者となるコミッター名の並び (``bin_internal/get_file_author.sh`` の移植)
+- 発行日時と最終コミット ID の素材 (``bin_internal/get_file_date.sh`` の移植)
 
 URL 形式、provider の判定、非表示の条件はシェル版と同じにします。
 発行者と発行日時の文字列への整形は ``publish_info.py`` が持ちます。

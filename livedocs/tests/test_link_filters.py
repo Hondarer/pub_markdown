@@ -10,7 +10,7 @@ import unittest
 MKDOCS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DOCSFW_ROOT = os.path.abspath(os.path.join(MKDOCS_ROOT, ".."))
 WORKSPACE_ROOT = os.path.abspath(os.path.join(DOCSFW_ROOT, "..", ".."))
-FILTER_ROOT = os.path.join(DOCSFW_ROOT, "bin", "pandoc-filters")
+FILTER_ROOT = os.path.join(DOCSFW_ROOT, "bin_internal", "pandoc-filters")
 PANDOC = shutil.which("pandoc")
 
 

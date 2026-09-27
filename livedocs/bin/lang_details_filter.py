@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """多言語タグと詳細タグを解決するフィルター。
 
-``bin/replace-tag.sh`` の awk 実装を Python へ移植したものです。
+``bin_internal/replace-tag.sh`` の awk 実装を Python へ移植したものです。
 766 ファイルごとにシェルを起動する負荷を避けるため、プロセス内で処理します。
 
 タグの書式は次のとおりです。

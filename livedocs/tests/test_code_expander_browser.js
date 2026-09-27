@@ -7,7 +7,7 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin/node_modules/puppeteer'));
+const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-code-expander-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const longLine = `long-line-${'x'.repeat(240)}`;

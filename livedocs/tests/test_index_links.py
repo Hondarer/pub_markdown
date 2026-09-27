@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 
-FILTER_ROOT = Path(__file__).resolve().parents[2] / "bin" / "pandoc-filters"
+FILTER_ROOT = Path(__file__).resolve().parents[2] / "bin_internal" / "pandoc-filters"
 PANDOC = shutil.which("pandoc")
 
 

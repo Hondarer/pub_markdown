@@ -20,8 +20,8 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin/node_modules/puppeteer'));
-const {buildBrowserLaunchOptions} = require(path.join(root, 'bin/browser-launch-options'));
+const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
+const {buildBrowserLaunchOptions} = require(path.join(root, 'bin_internal/browser-launch-options'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-nav-drawer-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 r"""``\toc`` コマンドをディレクトリ横断の索引リストへ展開する。
 
-docsfw の ``bin/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち、
+docsfw の ``bin_internal/pandoc-filters/insert-toc.lua`` と ``insert-toc.sh`` のうち、
 目次のパラメーターを動的発行向けに実装します。
 
 対応するパラメーターを次に示します。

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mkdocs プレビュー用に Markdown を収集し、前処理してステージングする。
 
-docsfw の ``bin/pub_markdown_core.sh`` が発行時に行う入力側の処理のうち、
+docsfw の ``bin_internal/pub_markdown_core.sh`` が発行時に行う入力側の処理のうち、
 プレビューに必要なものだけを再現します。
 
 処理の流れを次に示します。
@@ -339,7 +339,7 @@ def parse_front_matter_fields(front_matter):
 def resolve_short_title(fields, lang, details):
     """``short-title`` 系フィールドを優先順位付きで解決する。
 
-    ``bin/extract-short-title.sh`` と同じ優先順位です。
+    ``bin_internal/extract-short-title.sh`` と同じ優先順位です。
     """
     candidates = []
     if lang and lang != "neutral":

@@ -9,7 +9,7 @@
 - Doxygen と Git の単一ページ リンク用 SVG、favicon、および theme 上書き
 - ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
 
-いずれも ``bin/resolve-node-components.js`` が解決したパスを参照します。
+いずれも ``bin_internal/resolve-node-components.js`` が解決したパスを参照します。
 必須コンポーネントが無ければオンデマンドで導入します。
 
 使用方法:
@@ -39,7 +39,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 MKDOCS_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOCSFW_DIR = os.path.dirname(MKDOCS_DIR)
-RESOLVE_SCRIPT = os.path.join(DOCSFW_DIR, "bin", "resolve-node-components.js")
+RESOLVE_SCRIPT = os.path.join(DOCSFW_DIR, "bin_internal", "resolve-node-components.js")
 
 OWN_ASSETS = (
     "docsfw-diagrams.js",
@@ -90,7 +90,7 @@ def resolve_node_components():
     """必須 npm コンポーネントを解決し、不足していれば導入する。
 
     標準エラー出力は取り込みません。``npm ci`` は数分かかることがあり、静的発行の
-    ``bin/pub_markdown_core.sh`` と同じく、進捗をそのまま端末へ表示するためです。
+    ``bin_internal/pub_markdown_core.sh`` と同じく、進捗をそのまま端末へ表示するためです。
     解決結果の JSON は標準出力から受け取ります。
     """
     result = subprocess.run(
@@ -111,14 +111,14 @@ def resolve_node_components():
 def node_child_env(resolved, base_env=None):
     """子プロセスの ``require`` と ``import`` を、解決済みのグローバル パッケージへ固定する環境を返す。
 
-    静的発行の ``bin/pub_markdown_core.sh`` と同じ規則です。探索先を root 単位で
+    静的発行の ``bin_internal/pub_markdown_core.sh`` と同じ規則です。探索先を root 単位で
     差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。
-    ``import`` の固定も同じ preload が行います。詳細は ``bin/docsfw-prefer-global-modules.js``
+    ``import`` の固定も同じ preload が行います。詳細は ``bin_internal/docsfw-prefer-global-modules.js``
     を参照してください。
     """
     env = dict(os.environ if base_env is None else base_env)
     packages = resolved.get("globalPackages") or {}
-    preload = os.path.join(DOCSFW_DIR, "bin", "docsfw-prefer-global-modules.js")
+    preload = os.path.join(DOCSFW_DIR, "bin_internal", "docsfw-prefer-global-modules.js")
     if not packages or not os.path.isfile(preload):
         return env
     env["DOCSFW_NODE_GLOBAL_PACKAGES"] = json.dumps(packages)
@@ -136,7 +136,7 @@ def vendor_plantuml(assets_dir, source_dir, env=None):
         )
 
     subprocess.run(
-        ["node", os.path.join(DOCSFW_DIR, "bin", "build-browser-assets.js"), source_dir, assets_dir],
+        ["node", os.path.join(DOCSFW_DIR, "bin_internal", "build-browser-assets.js"), source_dir, assets_dir],
         check=True,
         env=env,
     )

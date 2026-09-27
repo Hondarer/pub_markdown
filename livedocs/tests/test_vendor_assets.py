@@ -31,7 +31,7 @@ from stage_livedocs import VENDORED_FILES  # noqa: E402
 class NodeChildEnvTest(unittest.TestCase):
     """静的発行と同じく、採用したグローバル パッケージだけを固定すること。"""
 
-    PRELOAD = os.path.join(DOCSFW_DIR, "bin", "docsfw-prefer-global-modules.js")
+    PRELOAD = os.path.join(DOCSFW_DIR, "bin_internal", "docsfw-prefer-global-modules.js")
 
     def test_keeps_env_when_no_global_package(self):
         env = node_child_env({"globalPackages": {}}, base_env={"NODE_OPTIONS": "--no-warnings"})

@@ -3,7 +3,7 @@
 ## 概要
 
 docsfw は 2 本の発行系を持ちます。  
-`bin/pub_markdown_core.sh` による静的発行と、MkDocs による動的発行です。  
+`bin_internal/pub_markdown_core.sh` による静的発行と、MkDocs による動的発行です。  
 この文書は動的発行の設計を定めます。
 
 静的発行は、図をビルド時に画像化した self-contained な HTML と docx を、4 バリアント同時に出力します。  
@@ -57,23 +57,23 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 1 | `mdRoot` 配下の再帰収集 | `bin/pub_markdown_core.sh:1762-1790` | 維持 | ステージング スクリプトで再現 |
+| 1 | `mdRoot` 配下の再帰収集 | `bin_internal/pub_markdown_core.sh:1762-1790` | 維持 | ステージング スクリプトで再現 |
 | 2 | `mergeSubfolderDocs` による仮想マージ | `:1226-1460` | 維持 | 同じ設定を読み `docs/<alias>/` へ配置 |
 | 3 | `.md` / `.yaml` / `.json` は `.gitignore` を無視 | `:1791-1855` | 維持 | Doxybook2 生成物を含めるため必須 |
-| 4 | `pub_markdown.skip: true` による除外 | `bin/pub-markdown-skip.sh` | 維持 | ステージングで判定 |
+| 4 | `pub_markdown.skip: true` による除外 | `bin_internal/pub-markdown-skip.sh` | 維持 | ステージングで判定 |
 | 5 | `index.md` > `README.md` > `SKILL.md` の索引正規化 | `:2325-2352` | 維持 | ステージングで `index.md` にリネーム |
 | 6 | OpenAPI の widdershins 変換 | `:2091` | 対象外 | 対象 1 件のみ |
 | 7 | `pubpart.yaml` 等の `defaults:` | `:42-89`, `:116-161` | 対象外 | 当該ファイルの実在数 0 |
-| 8 | `publocal.yaml` の `order:` | `bin/generate-nav-tree.py:110`、`livedocs/bin/stage_livedocs.py` の `generate_nav_files` | 維持 | ルート `.nav.yml` の `sort:` と、`order:` があるディレクトリの明示 `nav:` で同じ規則を再現する。本ワークスペースの発行対象に `publocal.yaml` は無い |
+| 8 | `publocal.yaml` の `order:` | `bin_internal/generate-nav-tree.py:110`、`livedocs/bin/stage_livedocs.py` の `generate_nav_files` | 維持 | ルート `.nav.yml` の `sort:` と、`order:` があるディレクトリの明示 `nav:` で同じ規則を再現する。本ワークスペースの発行対象に `publocal.yaml` は無い |
 
 ### 前処理
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 9 | 多言語ブロック `<!--ja:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の言語側を使う |
-| 10 | 詳細ブロック `<!--details:-->` | `bin/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
-| 11 | `\toc` によるディレクトリ横断索引 | `bin/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 維持 | 目次パラメーターと `open-level` を再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
-| 12 | `short-title` 系の解決 | `bin/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
+| 9 | 多言語ブロック `<!--ja:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の言語側を使う |
+| 10 | 詳細ブロック `<!--details:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
+| 11 | `\toc` によるディレクトリ横断索引 | `bin_internal/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 維持 | 目次パラメーターと `open-level` を再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
+| 12 | `short-title` 系の解決 | `bin_internal/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う |
 
 ### 図の生成
@@ -85,11 +85,11 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 16 | `skinparam backgroundColor transparent` の注入 | `plantuml.lua:663-668` | 維持 | クライアント側 JavaScript で実施 |
 | 17 | `caption` 行と `@startuml <名前>` からのキャプション抽出 | `plantuml.lua:579-644` | 維持 | 同じ優先順を実装。`CodeBlock:` 行がある場合はそちらを優先する点も同じ |
 | 18 | SVG の処理命令移動とフォント パッチ | `plantuml.lua:358-400`, `:464-500` | 対象外 | docx 向けの対策 |
-| 19 | SVG から PNG への変換 | `plantuml.lua:781-802`、`bin/rsvg-convert.js` | 対象外 | docx 専用 |
-| 20 | Mermaid のブラウザー描画 | `bin/pandoc-filters/mermaid.lua:150-166` | 維持 | 同じ方式。ローカルの `mermaid.min.js` を使用 |
+| 19 | SVG から PNG への変換 | `plantuml.lua:781-802`、`bin_internal/rsvg-convert.js` | 対象外 | docx 専用 |
+| 20 | Mermaid のブラウザー描画 | `bin_internal/pandoc-filters/mermaid.lua:150-166` | 維持 | 同じ方式。ローカルの `mermaid.min.js` を使用 |
 | 21 | Mermaid の mmdc 変換 | `mermaid.lua:259-330` | 対象外 | docx 専用 |
-| 22 | 共有ブラウザー インスタンス | `bin/browser-server.js` ほか | 対象外 | ビルド時にブラウザーを使わない |
-| 23 | draw.io SVG の `foreignObject` 除去 | `bin/strip-foreignobject.py` | 対象外 | ブラウザーは `foreignObject` を解釈できる |
+| 22 | 共有ブラウザー インスタンス | `bin_internal/browser-server.js` ほか | 対象外 | ビルド時にブラウザーを使わない |
+| 23 | draw.io SVG の `foreignObject` 除去 | `bin_internal/strip-foreignobject.py` | 対象外 | ブラウザーは `foreignObject` を解釈できる |
 | 24 | 画像リソースの事前コピー | `:2473-2492` | 維持 | ステージングで画像も配置 |
 | 58 | 図の操作と SVG のダウンロード | `styles/browser/docsfw-svg-download.js` | 共通 | PlantUML / Mermaid の表示切り替え・コピーと、ライト テーマ SVG の保存を行う |
 
@@ -156,7 +156,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 
 ```text
 framework/docsfw/
-+-- bin/build-browser-assets.js     # 共通資産と PlantUML ローダーの生成
++-- bin_internal/build-browser-assets.js     # 共通資産と PlantUML ローダーの生成
 +-- styles/browser/
 |   +-- docsfw-diagrams.js          # 共通の図描画
 |   +-- docsfw-diagrams.css         # 共通の図スタイル
@@ -464,8 +464,8 @@ Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないた
 値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
 要件は「同じページについて、静的発行と動的発行が同一の文字列を出力すること」です。  
-`tests/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin/get_file_author.sh` と  
-`bin/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
+`tests/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin_internal/get_file_author.sh` と  
+`bin_internal/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
 
 ### 解決のタイミング
 
@@ -678,7 +678,7 @@ docsfw が使用する GPL 版とは一部の図種やスプライトで結果�
 ### 読み込みと描画
 
 Pandoc HTML と共用する `styles/browser/docsfw-diagrams.js` が描画します。  
-`bin/build-browser-assets.js` が PlantUML エンジン、Graphviz、同梱アイコンを含むローダーを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
+`bin_internal/build-browser-assets.js` が PlantUML エンジン、Graphviz、同梱アイコンを含むローダーを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
 実描画は隠し iframe へ分離し、描画待ちと失敗時の見た目も共有 CSS でそろえます。  
 配色変更時の再描画、DOM 構築完了後の直列描画、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
 
@@ -890,7 +890,7 @@ Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (
 | フッター背景 | - | ヘッダーからの流用 | `#F7F7F7` | `#1F2129` |
 | フッター上端 | - | 同上 | `#D4D4D4` | `#14161C` |
 | フッター文字 | - | 同上 | `rgba(0,0,0,.87)` | `rgba(255,255,255,.87)` |
-| NOTE | `#1F6FEB` | `bin/pandoc-filters/admonition.lua` | 同左 | `#58A6FF` |
+| NOTE | `#1F6FEB` | `bin_internal/pandoc-filters/admonition.lua` | 同左 | `#58A6FF` |
 | TIP | `#238636` | 同上 | 同左 | `#3FB950` |
 | IMPORTANT | `#8957E5` | 同上 | 同左 | `#A371F7` |
 | WARNING | `#9A6700` | 同上 | 同左 | `#D29922` |
@@ -968,7 +968,7 @@ Material の既定は `.md-footer` に `rgba(0,0,0,.87)`、その全面を覆う
 
 admonition は、配色だけでなく形状とアイコンも Material を正とし、静的発行をそちらへ合わせます。  
 配色の原則 (pandoc が正) の例外です。  
-枠付きの表現の方が読みやすいという判断によるもので、`styles/html/html-style.css` と `bin/pandoc-filters/admonition.lua` を変更しました。
+枠付きの表現の方が読みやすいという判断によるもので、`styles/html/html-style.css` と `bin_internal/pandoc-filters/admonition.lua` を変更しました。
 
 pandoc 側の変更点は次のとおりです。
 
@@ -1616,7 +1616,7 @@ Salt の画像が必要な場合は DOCX を使用してください。
 ### skinparam の挿入位置
 
 `skinparam backgroundColor transparent` とスタイル設定は、`@start<種別>` の行の直後へ挿入します。  
-この規則は静的発行の `bin/pandoc-filters/plantuml.lua` と、動的発行の `styles/browser/docsfw-diagrams.js` で共通です。
+この規則は静的発行の `bin_internal/pandoc-filters/plantuml.lua` と、動的発行の `styles/browser/docsfw-diagrams.js` で共通です。
 
 もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の  
 4 種類だけから探していました。  
@@ -1735,7 +1735,7 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 ### docsfw への非干渉
 
 `make docs` が従来どおり成功し、`pages/ja/html/` 等の出力が変わらないことを確認します。  
-`bin/package.json` への依存追加が、`bin/resolve-node-components.js` の必須集合と [Node コンポーネント](node-components.md) に反映されることを確認します。
+`bin_internal/package.json` への依存追加が、`bin_internal/resolve-node-components.js` の必須集合と [Node コンポーネント](node-components.md) に反映されることを確認します。
 
 ## 実装状況
 

@@ -491,7 +491,7 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 ## Pandoc テンプレート
 
-bin/styles 配下にカスタマイズされた Pandoc テンプレートがあります。
+`styles/` 配下にカスタマイズされた Pandoc テンプレートがあります。
 
 ### html
 

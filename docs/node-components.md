@@ -1,12 +1,12 @@
 # Node コンポーネント
 
 docsfw が実行時に使用する npm パッケージと、その解決手順を示します。  
-セットアップ操作は [Node.js モジュールの設定](../bin/how_to_setup_node_modules.md) を参照してください。
+セットアップ操作は [Node.js モジュールの設定](../bin_internal/how_to_setup_node_modules.md) を参照してください。
 
 ## 必須パッケージ
 
-管理対象の宣言は `bin/package.json` です。  
-版の固定は `bin/package-lock.json` が担います。
+管理対象の宣言は `bin_internal/package.json` です。  
+版の固定は `bin_internal/package-lock.json` が担います。
 
 | パッケージ | 役割 | 検出 |
 |---|---|---|
@@ -27,14 +27,14 @@ docsfw のスクリプトは `require('puppeteer')` だけを使い、`puppeteer
 
 ## 解決順
 
-`bin/resolve-node-components.js` は次の順序で探索します。
+`bin_internal/resolve-node-components.js` は次の順序で探索します。
 
 1. `NODE_PATH`
 2. `/usr/local/lib/node_modules`
 3. `npm root -g`
 4. `node` 実行ファイルと同じ階層の `node_modules`
 5. `PATH` 上の `mmdc` または `widdershins` から推定する `node_modules`
-6. `framework/docsfw/bin/node_modules`
+6. `framework/docsfw/bin_internal/node_modules`
 
 5 の推定では、実行ファイルと同じ階層の `node_modules` を候補にします。  
 Linux ではさらに、`<prefix>/bin/<name>` に対する `<prefix>/lib/node_modules` と、シンボリック リンクのリンク先を含む `node_modules` も候補にします。  
@@ -66,13 +66,13 @@ WSL から Windows 用のツリーを読み込むと、`Could not load the "shar
 |---|---|
 | 必須パッケージがすべて揃っている | npm を実行しません |
 | 一部だけ欠けている | 欠けたトップレベルだけ `npm install --no-save <name>@<lockfile の version>` します |
-| 必須パッケージがすべて欠けている | `bin/` で `npm ci` します |
+| 必須パッケージがすべて欠けている | `bin_internal/` で `npm ci` します |
 
 `npm ci` と部分インストールのあいだは `PUPPETEER_SKIP_DOWNLOAD=1` です。  
 Chrome 本体の取得は npm の処理とは独立しています。
 
 導入は静的発行と動的発行のどちらの経路でも同じです。  
-`bin/pub_markdown_core.sh` と `livedocs/bin/vendor_assets.py` のいずれも `--ensure` で呼び出し、npm の出力と進捗をそのまま端末へ表示します。  
+`bin_internal/pub_markdown_core.sh` と `livedocs/bin/vendor_assets.py` のいずれも `--ensure` で呼び出し、npm の出力と進捗をそのまま端末へ表示します。  
 Chrome の導入は静的発行だけが行います。動的発行は図をブラウザー上で描画するため、発行処理からブラウザーを起動しません。
 
 ## ブラウザー
@@ -99,7 +99,7 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
 グローバルから採用したパッケージは、名前とディレクトリの対を `DOCSFW_NODE_GLOBAL_PACKAGES` へ渡します。  
-`bin/docsfw-prefer-global-modules.js` が子プロセスの解決先をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
+`bin_internal/docsfw-prefer-global-modules.js` が子プロセスの解決先をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
 
 固定は `require` と `import` の双方に適用します。  
 ES モジュールの裸の指定子は ES モジュール ローダーだけが解決し、`require` のフック、`NODE_PATH`、グローバルの `node_modules` のいずれも参照しません。  
@@ -110,8 +110,8 @@ ES モジュールの裸の指定子は ES モジュール ローダーだけが
 | `require` | `Module._resolveFilename` を差し替え、採用先を含む `node_modules` からパッケージ名のまま解決します |
 | `import` | `module.registerHooks()` の解決フックで、解決の起点を採用先の `node_modules` へ変更します |
 
-`module.registerHooks()` を持たない Node.js では、`module.register()` で `bin/docsfw-prefer-global-modules.mjs` を登録します。  
-判定の規則は `bin/docsfw-pinned-packages.js` に集約し、どちらの経路でも同じディレクトリを選びます。
+`module.registerHooks()` を持たない Node.js では、`module.register()` で `bin_internal/docsfw-prefer-global-modules.mjs` を登録します。  
+判定の規則は `bin_internal/docsfw-pinned-packages.js` に集約し、どちらの経路でも同じディレクトリを選びます。
 
 採用先はディレクトリを直接指定せず、パッケージ名のまま解決します。  
 ディレクトリを直接指定すると `package.json` の `exports` 定義を通らず、常に `main` が読み込まれます。  
@@ -123,5 +123,5 @@ ES モジュールの裸の指定子は ES モジュール ローダーだけが
 探索先を root 単位で差し替えると、semver の範囲外として不採用にしたバージョンが実行時に再び参照されます。  
 採用していないパッケージは、通常の Node.js の解決に従います。
 
-静的発行は `bin/pub_markdown_core.sh`、動的発行は `livedocs/bin/vendor_assets.py` が同じ規則で子プロセスの環境を構築します。  
-どちらの経路も解決は `bin/resolve-node-components.js` に一本化しており、プラットフォームの境界も共通です。
+静的発行は `bin_internal/pub_markdown_core.sh`、動的発行は `livedocs/bin/vendor_assets.py` が同じ規則で子プロセスの環境を構築します。  
+どちらの経路も解決は `bin_internal/resolve-node-components.js` に一本化しており、プラットフォームの境界も共通です。

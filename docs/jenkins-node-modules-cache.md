@@ -2,11 +2,11 @@
 
 ## 背景
 
-`bin/pub_markdown_core.sh` は `bin/resolve-node-components.js` で npm コンポーネントを解決します。  
+`bin_internal/pub_markdown_core.sh` は `bin_internal/resolve-node-components.js` で npm コンポーネントを解決します。  
 グローバルに必須パッケージが揃っていれば `npm ci` は実行されません。  
 コンテナー CI でグローバルが無い場合は、ローカル `node_modules` をキャッシュすると再導入を避けられます。
 
-さらに `bin/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。  
+さらに `bin_internal/package.json` には `puppeteer ^24` が含まれており、`npm ci` の postinstall で **Chrome for Testing (Linux 版約 282MB)** が `$HOME/.cache/puppeteer/` にダウンロードされます。  
 コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると postinstall も実行されないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
 
 GitHub Actions では `actions/cache` が利用できますが、Jenkins には同等の標準機能がありません。  
@@ -21,7 +21,7 @@ GitHub Actions では `actions/cache` が利用できますが、Jenkins には�
 |---|---|
 | **キャッシュ キー** | `package-lock.json` の MD5 ハッシュ |
 | **キャッシュ場所** | `/var/cache/docsfw-node-modules/<hash>/node_modules` (ホスト側) |
-| **ヒット時の動作** | シンボリック リンクで `bin/node_modules` に接続し、`npm ci` をスキップ |
+| **ヒット時の動作** | シンボリック リンクで `bin_internal/node_modules` に接続し、`npm ci` をスキップ |
 | **ミス時の動作** | `pub_markdown_core.sh` が自動で `npm ci` を実行 → 完了後キャッシュに保存 |
 | **清掃** | 現在のハッシュ以外の古いキャッシュをビルド後に削除 |
 
@@ -53,7 +53,7 @@ pipeline {
     agent any
 
     environment {
-        DOCSFW_BIN              = "${WORKSPACE}/framework/docsfw/bin"
+        DOCSFW_BIN              = "${WORKSPACE}/framework/docsfw/bin_internal"
         NODE_MODULES_CACHE_BASE = '/var/cache/docsfw-node-modules'
     }
 
@@ -94,7 +94,7 @@ pipeline {
         stage('Generate docs') {
             steps {
                 sh """
-                    bash '${env.DOCSFW_BIN}/pub_markdown_core.sh' \\
+                    bash '${WORKSPACE}/framework/docsfw/bin/pub_markdown.sh' \\
                         --workspaceFolder='${WORKSPACE}'
                 """
             }
@@ -153,7 +153,7 @@ Jenkinsfile を使わない **フリースタイル プロジェクト** では�
 #!/bin/bash
 set -e
 
-DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin"
+DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin_internal"
 NODE_MODULES_CACHE_BASE='/var/cache/docsfw-node-modules'
 STATE_FILE="${WORKSPACE}/.node_modules_cache_state"
 
@@ -184,10 +184,10 @@ fi
 #!/bin/bash
 set -e
 
-DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin"
+DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin_internal"
 
 # node_modules がなければ pub_markdown_core.sh が自動で npm ci を実行する
-bash "${DOCSFW_BIN}/pub_markdown_core.sh" \
+bash "${WORKSPACE}/framework/docsfw/bin/pub_markdown.sh" \
     --workspaceFolder="${WORKSPACE}"
 ```
 
@@ -199,7 +199,7 @@ bash "${DOCSFW_BIN}/pub_markdown_core.sh" \
 #!/bin/bash
 set -e
 
-DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin"
+DOCSFW_BIN="${WORKSPACE}/framework/docsfw/bin_internal"
 NODE_MODULES_CACHE_BASE='/var/cache/docsfw-node-modules'
 STATE_FILE="${WORKSPACE}/.node_modules_cache_state"
 
@@ -273,7 +273,7 @@ $HOME/.cache/puppeteer/chrome/linux-<バージョン>/chrome-linux64/chrome
 $HOME/.cache/puppeteer/chrome-headless-shell/linux-<バージョン>/chrome-headless-shell-linux64/chrome-headless-shell
 ```
 
-`bin/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索します。  
+`bin_internal/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索します。  
 `.puppeteerrc.cjs` は配置していないため、環境変数 `PUPPETEER_CACHE_DIR` を明示しない限り  
 `os.homedir()/.cache/puppeteer` が既定値になります。
 
@@ -292,7 +292,7 @@ podman run --rm \
     -v /var/cache/docsfw-puppeteer:/home/jenkins/.cache/puppeteer:Z \
     -w /workspace \
     docsfw-agent:latest \
-    bash framework/docsfw/bin/pub_markdown_core.sh --workspaceFolder=/workspace
+    bash framework/docsfw/bin/pub_markdown.sh --workspaceFolder=/workspace
 ```
 
 - `:Z` は SELinux 環境向けです。Ubuntu 等で不要な場合は除外してください。
@@ -306,7 +306,7 @@ podman run --rm \
     -e PUPPETEER_CACHE_DIR=/cache/puppeteer \
     -w /workspace \
     docsfw-agent:latest \
-    bash framework/docsfw/bin/pub_markdown_core.sh --workspaceFolder=/workspace
+    bash framework/docsfw/bin/pub_markdown.sh --workspaceFolder=/workspace
 ```
 
 ### Jenkinsfile コンテナー エージェントでの宣言例
@@ -325,7 +325,7 @@ pipeline {
     stages {
         stage('Generate docs') {
             steps {
-                sh "bash framework/docsfw/bin/pub_markdown_core.sh --workspaceFolder='${WORKSPACE}'"
+                sh "bash framework/docsfw/bin/pub_markdown.sh --workspaceFolder='${WORKSPACE}'"
             }
         }
     }

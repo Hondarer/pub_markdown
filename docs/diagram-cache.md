@@ -4,7 +4,7 @@
 
 インラインの PlantUML と Mermaid が DOCX 出力のために生成する画像を、発行先の外へ集約する仕組みです。
 
-対象は `bin/pandoc-filters/plantuml.lua` と `bin/pandoc-filters/mermaid.lua` が生成する画像だけです。Markdown が `![](images/foo.png)` のように参照する画像は対象外であり、`--resource-path` の解決規則に従います。
+対象は `bin_internal/pandoc-filters/plantuml.lua` と `bin_internal/pandoc-filters/mermaid.lua` が生成する画像だけです。Markdown が `![](images/foo.png)` のように参照する画像は対象外であり、`--resource-path` の解決規則に従います。
 
 ## 画像を生成する条件
 
@@ -112,7 +112,7 @@ DOCX 用の PNG も同一の手順で生成します。SVG から `rsvg-convert`
 局所発行で確認します。
 
 ```bash
-bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace --details=both --docxOutput=true
+bash bin/pub_markdown.sh --workspaceFolder=/path/to/workspace --details=both --docxOutput=true
 ```
 
 確認する内容は次のとおりです。

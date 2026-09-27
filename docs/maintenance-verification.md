@@ -24,7 +24,7 @@ Python の UTF-8 モードは `python -X utf8` で指定できます。
 発行コマンドの作業ディレクトリは docsfw ルート、`--workspaceFolder` は発行するワークスペースの絶対パスです。
 
 ```bash
-bash bin/pub_markdown_core.sh --workspaceFolder=/path/to/workspace --details=both --docxOutput=true
+bash bin/pub_markdown.sh --workspaceFolder=/path/to/workspace --details=both --docxOutput=true
 ```
 
 DOCX のオプションは `--docxOutput=` です。  
@@ -37,15 +37,15 @@ DOCX のオプションは `--docxOutput=` です。
 
 ## Pandoc の版を上げる場合
 
-数式の指定は `bin/pandoc-defaults/` の defaults ファイルで行います。  
+数式の指定は `bin_internal/pandoc-defaults/` の defaults ファイルで行います。  
 CLI の `--mathjax` は Pandoc 3.11 で非推奨となり、変換のたびに警告が出るため使用しません。  
 置き換え先の `--math-method` と defaults キー `math-method` は Pandoc 3.9 が解釈できないため、両方の版が解釈できる `html-math-method` を使います。
 
-MathJax の URL は `bin/pandoc-defaults/math-mathjax.yaml` で MathJax 3 に固定します。  
+MathJax の URL は `bin_internal/pandoc-defaults/math-mathjax.yaml` で MathJax 3 に固定します。  
 URL を省略すると、読み込む MathJax が Pandoc 3.9 では 3、Pandoc 3.11 では 4 になり、動的発行 (`livedocs/mkdocs.yml.in`) と版がずれます。
 
 数式方法の既定は Pandoc 3.11 で `mathml` へ変わります。  
-`mathLatexEnable: false` のときも `bin/pandoc-defaults/math-plain.yaml` で `plain` を明示し、Pandoc 3.9 と同じ出力を保ちます。
+`mathLatexEnable: false` のときも `bin_internal/pandoc-defaults/math-plain.yaml` で `plain` を明示し、Pandoc 3.9 と同じ出力を保ちます。
 
 pandoc-crossref は Pandoc の版に合わせた実行ファイルが必要です。  
 版が異なると `pandoc-crossref was compiled with pandoc ...` の警告が出ます。  

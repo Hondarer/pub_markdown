@@ -70,7 +70,7 @@ make docs -> pub_markdown_core.sh
 
 ```
 framework/docsfw/
-+-- bin/
++-- bin_internal/
 |   +-- docsfw-tokenize.js          # bigram tokenizer (Node / ブラウザ共有)
 |   +-- build-search-index.mjs      # Node: 検索インデックス生成
 |   +-- generate-nav-tree.py        # Python: ナビツリー生成
@@ -169,7 +169,7 @@ Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 3
 
 ### 日本語対応 (bigram トークナイザー)
 
-`bin/docsfw-tokenize.js` でインデックス構築時とブラウザー検索時の両方に同一トークナイザーを適用します。
+`bin_internal/docsfw-tokenize.js` でインデックス構築時とブラウザー検索時の両方に同一トークナイザーを適用します。
 
 | 文字種 | トークン化方式 |
 |---|---|

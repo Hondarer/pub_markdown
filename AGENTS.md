@@ -6,11 +6,11 @@ Pandoc による静的発行と、MkDocs による動的発行を提供します
 
 ## 作業別の入口
 
-- 発行処理は `bin/pub_markdown_core.sh`、フィルターは `bin/pandoc-filters/`、出力書式は `styles/`
-- インライン PlantUML / Mermaid の画像生成を変更する場合は `bin/pandoc-filters/diagram-cache.lua` と [図キャッシュ](docs/diagram-cache.md)
-- Node.js 依存関係を変更する場合は `bin/resolve-node-components.js`、`bin/package.json`、`bin/package-lock.json` と [Node コンポーネント](docs/node-components.md)
+- 発行処理は `bin_internal/pub_markdown_core.sh`、フィルターは `bin_internal/pandoc-filters/`、出力書式は `styles/`
+- インライン PlantUML / Mermaid の画像生成を変更する場合は `bin_internal/pandoc-filters/diagram-cache.lua` と [図キャッシュ](docs/diagram-cache.md)
+- Node.js 依存関係を変更する場合は `bin_internal/resolve-node-components.js`、`bin_internal/package.json`、`bin_internal/package-lock.json` と [Node コンポーネント](docs/node-components.md)
 - 動的発行を変更する場合は `livedocs/` と [動的発行基盤](docs/livedocs-design.md)
-- ブラウザー起動を変更する場合は `bin/pub_markdown_core.sh` と `bin/prepare_puppeteer_env.sh`、`bin/chrome-wrapper.sh`、`bin/mmdc-wrapper.sh` の Linux / Windows 分岐
+- ブラウザー起動を変更する場合は `bin_internal/pub_markdown_core.sh` と `bin_internal/prepare_puppeteer_env.sh`、`bin_internal/chrome-wrapper.sh`、`bin_internal/mmdc-wrapper.sh` の Linux / Windows 分岐
 - 利用方法が必要な場合は [README.md](README.md)、文書を探す場合は [文書一覧](docs/README.md)
 
 ## 変更時の確認

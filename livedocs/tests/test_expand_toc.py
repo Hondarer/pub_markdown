@@ -145,7 +145,7 @@ class CollapsibleTest(unittest.TestCase):
                 file.write_text('# ' + name + '\n', encoding='utf-8')
                 staged = 'tree/' + name.replace('README.md', 'index.md')
                 index.add(staged, file.name, name)
-            script = Path(BIN_DIR).parents[1] / 'bin/pandoc-filters/insert-toc.sh'
+            script = Path(BIN_DIR).parents[1] / 'bin_internal/pandoc-filters/insert-toc.sh'
             combinations = (
                 'depth={} basedir="{}" exclude-basedir={} {}'.format(depth, basedir, exclude_base, exclude)
                 for depth in (-1, 0, 1, 2)

@@ -7,7 +7,7 @@
 
 対象は HTML 出力の 2 系統です。
 
-- 静的発行 (`bin/pub_markdown_core.sh` が生成する HTML)
+- 静的発行 (`bin_internal/pub_markdown_core.sh` が生成する HTML)
 - 動的発行 (MkDocs が生成する HTML)
 
 docx 出力は対象外です。  

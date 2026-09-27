@@ -41,12 +41,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: |
-            bin/node_modules
+            bin_internal/node_modules
             .cache/puppeteer
-          key: docsfw-cache-ol8-${{ hashFiles('bin/package-lock.json') }}
+          key: docsfw-cache-ol8-${{ hashFiles('bin_internal/package-lock.json') }}
 
       - name: Generate documentation
-        run: bin/pub_markdown_core.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docxOutput=true
+        run: bin/pub_markdown.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docxOutput=true
 
       - name: Create artifact archives
         run: |

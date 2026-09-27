@@ -27,7 +27,7 @@ Pandoc が自動生成するため、ここでは docsfw 固有のカスタム �
 Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。  
 そのため `VerbatimChar` に背景色を付けると、インライン コードだけでなくコード ブロックにも背景が適用されます。
 
-この問題に対処するため、docsfw は Lua フィルター `bin/pandoc-filters/inline-code-style.lua` で docx 出力時のみインライン コードを `InlineCode` スタイルへ振り替えます。
+この問題に対処するため、docsfw は Lua フィルター `bin_internal/pandoc-filters/inline-code-style.lua` で docx 出力時のみインライン コードを `InlineCode` スタイルへ振り替えます。
 
 ```
 インライン コード `x`  ->  rStyle = InlineCode  (背景色あり)
@@ -117,9 +117,9 @@ print('shd in VerbatimChar:', 'w:shd' in m.group(0))
 
 ## 関連ファイル
 
-- `bin/pandoc-filters/admonition.lua` - admonition 変換フィルター
-- `bin/pandoc-filters/admonition.md` - admonition フィルターの仕様説明
-- `bin/pandoc-filters/inline-code-style.lua` - インライン コード スタイル変換フィルター
-- `bin/pandoc-filters/codeblock-caption.lua` - コード キャプション変換フィルター
+- `bin_internal/pandoc-filters/admonition.lua` - admonition 変換フィルター
+- `bin_internal/pandoc-filters/admonition.md` - admonition フィルターの仕様説明
+- `bin_internal/pandoc-filters/inline-code-style.lua` - インライン コード スタイル変換フィルター
+- `bin_internal/pandoc-filters/codeblock-caption.lua` - コード キャプション変換フィルター
 - `styles/html/html-style.css` - HTML 出力のコード スタイル (`code, tt` セレクター)
-- `bin/pub_markdown_core.sh` - Pandoc 呼び出し集約 (フィルター列の登録箇所)
+- `bin_internal/pub_markdown_core.sh` - Pandoc 呼び出し集約 (フィルター列の登録箇所)

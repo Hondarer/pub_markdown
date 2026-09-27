@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """発行者と発行日時の文字列を組み立てる。
 
-docsfw の ``bin/get_file_author.sh``、``bin/get_file_date.sh`` と
-``bin/pandoc-filters/set-meta.lua`` が作る文字列を、そのまま再現します。
+docsfw の ``bin_internal/get_file_author.sh``、``bin_internal/get_file_date.sh`` と
+``bin_internal/pandoc-filters/set-meta.lua`` が作る文字列を、そのまま再現します。
 同じページについて、静的発行と動的発行が同一の文字列を出すことが要件です。
 
 git は呼びません。材料は ``git_link.PublishFacts`` として受け取ります。

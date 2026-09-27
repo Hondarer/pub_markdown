@@ -2,7 +2,7 @@
 #set -x
 
 SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
-HOME_DIR=$(cd $SCRIPT_DIR; cd ..; pwd) # bin フォルダーの上位が home
+HOME_DIR=$(cd "$SCRIPT_DIR/.." && pwd) # bin_internal の上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダーを選択させる
 cd $HOME_DIR
 
@@ -1175,7 +1175,7 @@ export GIT_LINK_HOST_PROVIDER="$gitLinkHostProvider"
 
 #-------------------------------------------------------------------
 
-# 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-style.css" にする
+# 設定ファイルに htmlStyleSheet が指定されなかった場合の値を "$HOME_DIR/styles/html/html-style.css" にする
 if [[ "$htmlStyleSheet" == "" ]]; then
     htmlStyleSheet="$HOME_DIR/styles/html/html-style.css"
 else
@@ -1186,7 +1186,7 @@ if [[ ! -e "$htmlStyleSheet" ]]; then
     exit 1
 fi
 
-# 設定ファイルに htmlTemplate が指定されなかった場合の値を "$HOME_DIR/bin/styles/html/html-template.html" にする
+# 設定ファイルに htmlTemplate が指定されなかった場合の値を "$HOME_DIR/styles/html/html-template.html" にする
 if [[ "$htmlTemplate" == "" ]]; then
     htmlTemplate="$HOME_DIR/styles/html/html-template.html"
 else
