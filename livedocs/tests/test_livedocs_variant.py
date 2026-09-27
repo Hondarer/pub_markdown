@@ -9,7 +9,7 @@ BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
 from lang_details_filter import filter_lang_details  # noqa: E402
-from stage_livedocs import parse_livedocs_variant  # noqa: E402
+from stage_livedocs import detail_variants, parse_livedocs_variant  # noqa: E402
 
 
 SAMPLE = """
@@ -34,9 +34,16 @@ class ParseLivedocsVariantTest(unittest.TestCase):
         self.assertEqual(parse_livedocs_variant("en-details"), ("en", True, "en-details"))
 
     def test_default_and_blank(self):
-        self.assertEqual(parse_livedocs_variant(None), ("ja", True, "ja-details"))
-        self.assertEqual(parse_livedocs_variant(""), ("ja", True, "ja-details"))
+        self.assertEqual(parse_livedocs_variant(None), ("ja", False, "ja"))
+        self.assertEqual(parse_livedocs_variant(""), ("ja", False, "ja"))
         self.assertEqual(parse_livedocs_variant("  ja-details  "), ("ja", True, "ja-details"))
+
+    def test_detail_pair_keeps_the_landing_variant_first(self):
+        self.assertEqual(detail_variants("ja-details"), ("ja-details", "ja"))
+        self.assertEqual(detail_variants("ja"), ("ja", "ja-details"))
+        self.assertEqual(detail_variants("en"), ("en", "en-details"))
+        self.assertEqual(detail_variants("en-details"), ("en-details", "en"))
+        self.assertEqual(detail_variants(None), ("ja", "ja-details"))
 
     def test_rejects_unknown(self):
         with self.assertRaises(ValueError):

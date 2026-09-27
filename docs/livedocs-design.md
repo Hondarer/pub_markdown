@@ -7,7 +7,7 @@ docsfw は 2 本の発行系を持ちます。
 この文書は動的発行の設計を定めます。
 
 静的発行は、図をビルド時に画像化した self-contained な HTML と docx を、4 バリアント同時に出力します。  
-動的発行は、図をブラウザー上の JavaScript でレンダリングする HTML を 1 バリアント出力し、Web サーバーからの配信を前提とします。  
+動的発行は、図をブラウザー上の JavaScript でレンダリングする HTML を、選択した言語の通常版と詳細版として配信し、Web サーバーからの配信を前提とします。  
 どちらもサイト内ナビゲーションとページ内目次を持ちます。
 
 ### 背景
@@ -40,7 +40,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 |---|---|---|
 | 成果物 | HTML + docx | HTML |
 | 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
-| バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 同じ 4 値を `LIVEDOCS_VARIANT` で 1 つ選ぶ。既定は `ja-details` |
+| バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 言語は `LIVEDOCS_VARIANT` で 1 つ選ぶ。その言語の通常版と詳細版は同時に配信する。着地の既定は `ja` |
 | PlantUML | HTML はブラウザー描画、docx はビルド時に画像化 | ブラウザー上でレンダリング |
 | 図の描画エンジン | HTML は動的発行と共通、DOCX は従来経路 | Pandoc HTML と共通 |
 | 変更の反映 | 再実行 | `mkdocs serve` 中は保存に追従 |
@@ -71,7 +71,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
 | 9 | 多言語ブロック `<!--ja:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の言語側を使う |
-| 10 | 詳細ブロック `<!--details:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。`LIVEDOCS_VARIANT` の details 側を使う |
+| 10 | 詳細ブロック `<!--details:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。同じ言語の通常版では除き、詳細版では残す |
 | 11 | `\toc` によるディレクトリ横断索引 | `bin_internal/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 維持 | 目次パラメーターと `open-level` を再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin_internal/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う |
@@ -136,7 +136,7 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | 50 | モバイル オフキャンバス ドロワー | 簡略 | Material 標準。板見出しだけ `theme/partials/nav-item.html` を上書きし、"<" は戻る、フォルダー名はインデックス ページがあれば実リンクにする (詳細は後述) |
 | 51 | 展開可能リスト | 維持 | `\toc` と手動 fenced div を `.collapsible-list` へ変換し、本文の開閉・初期展開・履歴復元を適用する。仕様は [展開可能リスト](collapsible-list.md) を参照 |
 | 52 | コード ブロック エキスパンダーとコピー ボタン | 維持 | 開閉は静的発行と同じ 5 行閾値。コピーは Material の `content.code.copy` を使い、見た目は SVG ダウンロードと同じホバー チップへそろえる |
-| 53 | 概要版と詳細版の切り替えリンク | 対象外 | バリアントを 1 つに固定するため |
+| 53 | 概要版と詳細版の切り替えリンク | 維持 | 同じ言語の通常版と詳細版を同時に配信し、ヘッダーから相手のページへ移る |
 | 54 | バリアント コピーとタイムスタンプ スキップ | 簡略 | ステージングの mtime 比較 |
 | 55 | 並列実行と無進捗ウォッチドッグ | 対象外 | ビルドが十分に速いため不要 |
 | 56 | `docs.warn` への警告抽出 | 簡略 | `mkdocs build --strict` で代替 |
@@ -324,12 +324,14 @@ URL は POSIX のまま扱い、ファイルを開くときだけ OS のパス�
 依存関係レポートの通常の Page リンクは、docsfw の発行レイアウトを前提とした `../../../{variant}/html/<alias>/<doxybook>/Files/<file>.html` 形式です。  
 動的発行には言語階層と `html/` 階層がなく、`use_directory_urls: true` によりページ URL の末尾も `.html` ではなく `/` になるため、そのままでは開けません。
 
-`livedocs_doxygen_hook.py` は `dependency/dependency-data.js` の HTTP 応答を JSON として読み、標準の発行用テンプレートから `/<alias>/<doxybook>` を導出して `livedocsPageUrlTemplate` を追加します。  
+`livedocs_doxygen_hook.py` は `dependency/dependency-data.js` の HTTP 応答を JSON として読み、標準の発行用テンプレートから `/<variant>/<alias>/<doxybook>` を導出して `livedocsPageUrlTemplate` を追加します。  
+`<variant>` は起動時の `LIVEDOCS_VARIANT` です。  
 ディスク上の `dependency-data.js` とダウンロード用の `dependency-data.json` は変更しません。  
 JSON が不正な場合や発行用テンプレートを認識できない場合は、元の JavaScript をそのまま返します。
 
-依存関係レポートは `livedocsPageUrlTemplate` がある場合、Page リンクを `/<alias>/<doxybook>/Files/<file>/` 形式にします。  
-動的発行は起動時に選んだ `LIVEDOCS_VARIANT` のみを生成するため、依存関係レポートのページ種別メニューは表示しません。
+依存関係レポートは `livedocsPageUrlTemplate` がある場合、Page リンクを `/<variant>/<alias>/<doxybook>/Files/<file>/` 形式にします。  
+レポートは配信に 1 つなので、Page リンクの詳細度は着地先に固定します。  
+テンプレートを 1 本だけ渡すため、ページ種別メニューは表示しません。
 
 ### 本文リンクの書き換え
 
@@ -416,7 +418,7 @@ Material の `partials/header.html` を `custom_dir` で上書きします。
 配色トグルと検索ボックスの間へ `partials/docsfw-header-links.html` の include を加えます。  
 それ以外は上流のままです。
 
-並びは Doxygen、Git の順で、静的発行のナビバーと同じです。  
+並びは概要版と詳細版の切り替え、Doxygen、Git の順で、静的発行のナビバーと同じです。  
 検索ボックスの右ではなく左へ置くのは、検索ボックスが画面幅に応じて伸縮し、  
 右端に置くとアイコンの位置が幅によって動くためです。
 
@@ -435,7 +437,7 @@ Material の `partials/header.html` を `custom_dir` で上書きします。
 
 ### アイコンの寸法と間隔
 
-右上の操作アイコン (配色トグル、Doxygen、Git、検索) は 20px にそろえます。  
+右上の操作アイコン (配色トグル、概要版と詳細版の切り替え、Doxygen、Git、検索) は 20px にそろえます。  
 配色トグルと検索ボタンの間に並ぶため、これらと大きさが違うと 1 列の中で不ぞろいに見えるためです。  
 静的発行のヘッダー右上も同じ 20px にします。  
 左端のロゴとメニューは 24px のままです。
@@ -1424,7 +1426,7 @@ Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw
 
 | ターゲット | 内容 |
 |---|---|
-| `servedocs` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`LIVEDOCS_VARIANT` で言語と details を選ぶ (既定 `ja-details`) |
+| `servedocs` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`LIVEDOCS_VARIANT` で言語と着地先の詳細度を選ぶ (既定 `ja`)。選んだ言語の通常版と詳細版を同時に配信する |
 | `livedocs` | ステージング後に `mkdocs build` を実行する。`LIVEDOCS_STRICT=1` のときは `--strict` を付ける。バリアントは `servedocs` と同じ |
 | `livedocs-stage` | ステージングとアセット配置だけを実行する。`servedocs` と `livedocs` の前提 |
 | `livedocs-venv` | `livedocs/.venv` を作成し `requirements.txt` の依存を導入する。未作成のときだけ動く |
@@ -1443,13 +1445,13 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 
 `make servedocs` はステージングの前に同じ停止処理を `--require-stopped` 付きで実行します。  
 先に動いていたこのワークスペースの `mkdocs serve` が消えるまで待ち、消えてからステージングします。  
-バリアントが違うと `pages/livedocs/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、旧バリアントと新バリアントが混ざります。  
+言語が違うと `pages/livedocs/src/` の本文が差し替わるため、古い serve が監視したまま書き込むと、別の言語のファイルが混ざります。  
 止めきれなければステージングへ進まず失敗します。`stopdocs` と `cleanlivedocs` は、停止しきれなくても失敗しません。  
 停止とステージングはレシピ内で順に実行し、`make -j` でも同時に実行されないようにします。  
 先に起動した側の `make servedocs` は、`mkdocs serve` が止まった時点で終了します。
 
 フル ステージング (`make livedocs-stage` と、これを呼び出す `servedocs` / `livedocs`) は、完了行 `staged:` の前に進行状況を 1 行ずつ出力します。  
-出力内容は、バリアント名、収集件数、リポジトリごとの Git 索引、書き出し開始です。  
+出力内容は、同時に出すバリアント名 (`staging: variants`)、収集件数、リポジトリごとの Git 索引、バリアントごとの書き出し開始です。  
 収集件数は `pub_markdown.skip` による除外前で、完了行の document 数は除外後です。  
 `make` 経由でも途中の行が見えるよう、各行は即時に flush します。  
 `mkdocs serve` 中の自動再ステージングはこれらの行を出力しません。
@@ -1481,14 +1483,21 @@ Windows 側の待ち受けは `netstat.exe -ano` の LISTENING 行で確認で�
 
 ### バリアントの指定
 
-`make docs` と同じ 4 値を、起動時に 1 つだけ選択します。同時に 4 系統は出力しません。
+`LIVEDOCS_VARIANT` は、言語と、`/` を開いたときの着地先を選びます。  
+値は `make docs` と同じ 4 つで、既定は `ja` です。  
+選んだ言語の通常版と詳細版は、同じ配信の中に同時に出します。  
+通常版の URL は `/ja/`、詳細版は `/ja-details/` です。英語では `/en/` と `/en-details/` です。  
+ヘッダーの切り替えは、開いているページのパスから詳細度の接頭辞だけを入れ替えた相手へ移ります。  
+左のナビゲーションと全文検索は、今開いている詳細度のページだけを対象にします。  
+もう一方の言語へ移るときは、`make servedocs` を再起動します。
 
-| `LIVEDOCS_VARIANT` | 言語 | 詳細ブロック | `make docs` の出力に相当 |
+| `LIVEDOCS_VARIANT` | 言語 | 同時に配信する版 | `/` の着地 |
 |---|---|---|---|
-| `ja` | ja | 除く | `pages/ja/html/` |
-| `ja-details` (既定) | ja | 残す | `pages/ja-details/html/` |
-| `en` | en | 除く | `pages/en/html/` |
-| `en-details` | en | 残す | `pages/en-details/html/` |
+| `ja` (既定) | ja | 通常と詳細 | `/ja/` |
+| `ja-details` | ja | 通常と詳細 | `/ja-details/` |
+| `en` | en | 通常と詳細 | `/en/` |
+| `en-details` | en | 通常と詳細 | `/en-details/` |
+
 
 ```bash
 make servedocs
@@ -1496,16 +1505,16 @@ make servedocs LIVEDOCS_VARIANT=en
 make livedocs LIVEDOCS_VARIANT=ja
 ```
 
-選んだ値はステージングと `mkdocs.yml` の `extra.livedocs_variant` に書き、serve 中の自動ステージングも同じフィルターを使います。  
-切り替えるときは `make servedocs` を再起動します。後から起動した `make servedocs` が、先に動いていた serve を止めて置き換わります。  
-ページ内の概要 / 詳細切り替えリンクは出力しません。
+着地先は `mkdocs.yml` の `extra.livedocs_variant` に書き、言語対は `extra.livedocs_variants` に書きます。  
+serve 中の自動ステージングも、同じ言語の通常版と詳細版を更新します。  
+言語を変えて起動し直すと、後から起動した `make servedocs` が、先に動いていた serve を止めて置き換わります。
 
 ## 静的発行だけが持つ機能
 
 次の機能は動的発行では扱いません。必要な場合は `make docs` を使用します。
 
 - Word (docx) 出力と、docx 専用フィルター、rsvg-convert、共有ブラウザー
-- 4 バリアントの同時出力と、ページ内の概要 / 詳細切り替えリンク
+- 2 言語を一度に出す 4 バリアント (動的発行は、選択した 1 言語の通常版と詳細版だけを同時に出す)
 - pandoc-crossref による図表とリストの採番、および相互参照
 - self-contained HTML と `file://` での動作
 - OpenAPI からの Markdown 生成
@@ -1560,7 +1569,7 @@ Pandoc HTML と MkDocs HTML は、ヘッダー、左右のナビゲーション�
 
 ### 発行の役割
 
-self-contained HTML、4 バリアントの同時出力、pandoc-crossref、MiniSearch による全文検索は、動的発行の対象外です。  
+self-contained HTML、2 言語分を一度に出す 4 バリアント、pandoc-crossref、MiniSearch による全文検索は、動的発行の対象外です。  
 直前の「静的発行だけが持つ機能」を参照してください。
 
 Markdown の H1 の扱いは、静的発行が `--shift-heading-level-by=-1`、MkDocs がページ見出しとして本文に残す点で異なります。  

@@ -83,13 +83,14 @@ class DependencyPageLivedocsUrlTest(unittest.TestCase):
             dependency_page_template_to_livedocs(
                 "../../../{variant}/html/c-platform/doxybook2_internal"
             ),
-            "/c-platform/doxybook2_internal",
+            "/ja/c-platform/doxybook2_internal",
         )
         self.assertEqual(
             dependency_page_template_to_livedocs(
-                "../../../{variant}/html/日本語/app docs/"
+                "../../../{variant}/html/日本語/app docs/",
+                variant="ja-details",
             ),
-            "/日本語/app docs",
+            "/ja-details/日本語/app docs",
         )
 
     def test_rejects_unrecognized_or_unsafe_template(self):
@@ -108,7 +109,7 @@ class DependencyPageLivedocsUrlTest(unittest.TestCase):
             '"../../../{variant}/html/calc/doxybook2", "functions": []};\n'
         ).encode("utf-8")
         rewritten = rewrite_dependency_data_for_livedocs(source).decode("utf-8")
-        self.assertIn('"livedocsPageUrlTemplate": "/calc/doxybook2"', rewritten)
+        self.assertIn('"livedocsPageUrlTemplate": "/ja/calc/doxybook2"', rewritten)
         self.assertIn('"pageUrlTemplate": "../../../{variant}/html/calc/doxybook2"', rewritten)
 
     def test_keeps_malformed_and_unrecognized_data(self):
@@ -266,7 +267,7 @@ class ServeDoxygenTest(unittest.TestCase):
             self.assertEqual(captured["status"], "200 OK")
             self.assertEqual(captured["headers"]["Content-Type"], "application/javascript")
             self.assertEqual(int(captured["headers"]["Content-Length"]), len(body))
-            self.assertIn(b'"livedocsPageUrlTemplate": "/calc/doxybook2_internal"', body)
+            self.assertIn(b'"livedocsPageUrlTemplate": "/ja/calc/doxybook2_internal"', body)
 
     def test_redirects_directory_and_root(self):
         with tempfile.TemporaryDirectory() as tmp:

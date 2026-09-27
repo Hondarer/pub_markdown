@@ -24,3 +24,26 @@
   {{ super() }}
   {%- endfilter -%}
 {% endblock %}
+
+{% from "partials/docsfw-variant.html" import site_label with context %}
+{% block htmltitle %}
+  {% if page.meta and page.meta.title %}
+    <title>{{ page.meta.title }} - {{ site_label() }}</title>
+  {% elif page.title and not page.is_homepage %}
+    <title>{{ page.title | striptags }} - {{ site_label() }}</title>
+  {% else %}
+    <title>{{ site_label() }}</title>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    window.__DOCSFW_VARIANTS__ = {{ config.extra.livedocs_variants | default([], true) | tojson }};
+    window.__DOCSFW_SEARCH_RESULT__ = {
+      none: {{ lang.t("search.result.none") | tojson }},
+      one: {{ lang.t("search.result.one") | tojson }},
+      other: {{ lang.t("search.result.other") | tojson }}
+    };
+  </script>
+  {{ super() }}
+{% endblock %}

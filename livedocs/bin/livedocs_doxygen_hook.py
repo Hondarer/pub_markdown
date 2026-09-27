@@ -24,7 +24,7 @@ import wsgiref.util
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stage_livedocs import parse_config  # noqa: E402
+from stage_livedocs import DEFAULT_LIVEDOCS_VARIANT, parse_config  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -132,8 +132,13 @@ def guess_doxygen_content_type(path):
     return "application/octet-stream"
 
 
-def dependency_page_template_to_livedocs(value):
-    """発行用 Page URL テンプレートを動的発行の基底 URL へ変換する。"""
+def dependency_page_template_to_livedocs(value, variant=None):
+    """発行用 Page URL テンプレートを動的発行の基底 URL へ変換する。
+
+    ページは ``/<variant>/`` の下にある。``variant`` を省略したときは着地先の
+    既定 ``ja`` を付ける。依存関係レポートは配信に 1 つなので、
+    Page リンクの詳細度は起動時の着地先に固定する。
+    """
     if not value:
         return None
     match = PUBLISHED_PAGE_TEMPLATE_RE.fullmatch(str(value).strip().replace("\\", "/"))
@@ -143,10 +148,11 @@ def dependency_page_template_to_livedocs(value):
     parts = relative.split("/")
     if not parts or any(part in ("", ".", "..") for part in parts):
         return None
-    return "/" + "/".join(parts)
+    landing = (variant or DEFAULT_LIVEDOCS_VARIANT).strip("/")
+    return "/{}/{}".format(landing, "/".join(parts))
 
 
-def rewrite_dependency_data_for_livedocs(content):
+def rewrite_dependency_data_for_livedocs(content, variant=None):
     """dependency-data.js へ動的発行の Page URL をメモリー上で追加する。"""
     try:
         text = content.decode("utf-8")
@@ -162,7 +168,9 @@ def rewrite_dependency_data_for_livedocs(content):
         return content
     if not isinstance(data, dict):
         return content
-    livedocs_template = dependency_page_template_to_livedocs(data.get("pageUrlTemplate"))
+    livedocs_template = dependency_page_template_to_livedocs(
+        data.get("pageUrlTemplate"), variant=variant,
+    )
     if livedocs_template is None:
         return content
     data["livedocsPageUrlTemplate"] = livedocs_template
@@ -176,7 +184,7 @@ def is_dependency_data_js_url(url_path):
     return parts is not None and len(parts) >= 2 and parts[-2:] == ("dependency", DEPENDENCY_DATA_JS)
 
 
-def serve_doxygen(root, url_path, environ, start_response):
+def serve_doxygen(root, url_path, environ, start_response, variant=None):
     """``pages/doxygen`` からファイルを返す WSGI アプリ断片。"""
     if url_path == DOXYGEN_URL_PREFIX:
         start_response("302 Found", [("Location", DOXYGEN_URL_PREFIX + "/")])
@@ -195,7 +203,7 @@ def serve_doxygen(root, url_path, environ, start_response):
     content_type = guess_doxygen_content_type(fs_path)
     if is_dependency_data_js_url(url_path):
         with open(fs_path, "rb") as handle:
-            content = rewrite_dependency_data_for_livedocs(handle.read())
+            content = rewrite_dependency_data_for_livedocs(handle.read(), variant=variant)
         start_response(
             "200 OK",
             [("Content-Type", content_type), ("Content-Length", str(len(content)))],
@@ -253,13 +261,15 @@ def on_serve(server, config, builder=None, **kwargs):
         log.info("pages/doxygen が無いため /doxygen/ はマウントしません")
         return server
 
+    extra = config.get("extra") or {}
+    landing = extra.get("livedocs_variant") or DEFAULT_LIVEDOCS_VARIANT
     inner = server.serve_request
 
     def app(environ, start_response):
         raw = environ.get("PATH_INFO", "")
         path = raw.encode("latin-1").decode("utf-8", "ignore")
         if is_doxygen_url_path(path):
-            return serve_doxygen(doxygen_root, path, environ, start_response)
+            return serve_doxygen(doxygen_root, path, environ, start_response, variant=landing)
         return inner(environ, start_response)
 
     server.set_app(app)

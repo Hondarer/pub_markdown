@@ -734,14 +734,14 @@ class ConvertImplicitFiguresTest(unittest.TestCase):
 class StageProgressTest(unittest.TestCase):
     """フル ステージングの進捗行。``quiet`` では出さない。"""
 
-    def _workspace(self):
+    def _workspace(self, page="# Page\n"):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         workspace = tmp.name
         docs = os.path.join(workspace, "docs")
         os.makedirs(docs)
         with open(os.path.join(docs, "page.md"), "w", encoding="utf-8") as handle:
-            handle.write("# Page\n")
+            handle.write(page)
         with open(os.path.join(docs, "skip.md"), "w", encoding="utf-8") as handle:
             handle.write("---\npub_markdown.skip: true\n---\n# Skip\n")
         vscode = os.path.join(workspace, ".vscode")
@@ -772,13 +772,49 @@ class StageProgressTest(unittest.TestCase):
             stage(workspace, out_dir, config_path, quiet=False)
         lines = [line for line in captured.getvalue().splitlines()
                  if not line.startswith("Warning:")]
-        self.assertEqual(lines[0], "staging: variant ja-details")
+        self.assertEqual(lines[0], "staging: variants ja, ja-details")
         self.assertEqual(lines[1], "staging: collected 2 documents, 0 assets")
         self.assertEqual(lines[2], "staging: writing")
         self.assertTrue(
-            lines[3].startswith("staged: variant ja-details, 1 documents, 0 assets,")
+            lines[3].startswith("staged: variant ja, 1 documents, 0 assets,")
         )
-        self.assertEqual(len(lines), 4)
+        self.assertEqual(lines[4], "staging: writing")
+        self.assertTrue(
+            lines[5].startswith("staged: variant ja-details, 1 documents, 0 assets,")
+        )
+        self.assertEqual(len(lines), 6)
+
+    def test_writes_both_detail_levels_and_drops_other_languages(self):
+        workspace, out_dir, config_path = self._workspace(
+            "# Page\n\n共通\n\n<!--details:-->\n詳細だけ\n<!--:details-->\n"
+        )
+        os.makedirs(os.path.join(out_dir, "en"))
+        with open(os.path.join(out_dir, "en", "old.md"), "w", encoding="utf-8") as handle:
+            handle.write("old\n")
+        with open(os.path.join(out_dir, "stray.md"), "w", encoding="utf-8") as handle:
+            handle.write("stray\n")
+        assets = os.path.join(out_dir, "assets")
+        os.makedirs(assets)
+        with open(os.path.join(assets, "keep.txt"), "w", encoding="utf-8") as handle:
+            handle.write("keep\n")
+
+        stage(workspace, out_dir, config_path, quiet=True)
+
+        details = os.path.join(out_dir, "ja-details", "page.md")
+        overview = os.path.join(out_dir, "ja", "page.md")
+        with open(details, encoding="utf-8") as handle:
+            details_text = handle.read()
+        with open(overview, encoding="utf-8") as handle:
+            overview_text = handle.read()
+        self.assertIn("共通", details_text)
+        self.assertIn("詳細だけ", details_text)
+        self.assertIn("共通", overview_text)
+        self.assertNotIn("詳細だけ", overview_text)
+        self.assertFalse(os.path.exists(os.path.join(out_dir, "en")))
+        self.assertFalse(os.path.exists(os.path.join(out_dir, "stray.md")))
+        self.assertTrue(os.path.isfile(os.path.join(assets, "keep.txt")))
+        with open(os.path.join(out_dir, ".nav.yml"), encoding="utf-8") as handle:
+            self.assertEqual(handle.read(), "nav:\n  - ja\n  - ja-details\n")
 
     def test_repo_progress_label_uses_workspace_relative_path(self):
         workspace = os.path.join("repo", "root")

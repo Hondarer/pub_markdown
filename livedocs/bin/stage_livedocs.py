@@ -42,7 +42,7 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
 
-DEFAULT_LIVEDOCS_VARIANT = "ja-details"
+DEFAULT_LIVEDOCS_VARIANT = "ja"
 LIVEDOCS_VARIANTS = ("ja", "ja-details", "en", "en-details")
 
 MARKDOWN_EXTENSIONS = (".md", ".markdown")
@@ -71,11 +71,14 @@ VENDORED_FILES = (
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-header-links.css",
     "assets/docsfw-header-meta.css",
+    "assets/docsfw-variant-search.js",
     "assets/docsfw-doxygen-icon.svg",
     "assets/docsfw-git-icon.svg",
     "assets/docsfw-github-icon.svg",
     "assets/docsfw-gitlab-icon.svg",
     "assets/docsfw-gitbucket-icon.svg",
+    "assets/docsfw-details-icon.svg",
+    "assets/docsfw-overview-icon.svg",
     "assets/docsfw-mkdocs-favicon.svg",
     # <link rel="icon"> が無いページ向け。docs_dir 直下なので URL は /favicon.ico。
     "favicon.ico",
@@ -133,6 +136,25 @@ def parse_livedocs_variant(variant):
     if name.endswith("-details"):
         return name[: -len("-details")], True, name
     return name, False, name
+
+
+def detail_variants(variant):
+    """同じ言語の通常版と詳細版を、着地先を先頭にして返す。
+
+    ``ja-details`` は ``(ja-details, ja)``、``en`` は ``(en, en-details)`` です。
+    動的発行は、この 2 つを同時に書き出します。
+    """
+    lang, _details, name = parse_livedocs_variant(variant)
+    overview = lang
+    detailed = "{}-details".format(lang)
+    if name == detailed:
+        return (detailed, overview)
+    return (overview, detailed)
+
+
+# ``build_stage_index`` へ git resolver を渡さなかったことを表す。
+# ``None`` は「不要と判定済み」であり、未指定とは区別する。
+_GIT_UNSET = object()
 
 
 # ----------------------------------------------------------------------------
@@ -1229,34 +1251,42 @@ class StageIndex:
 
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
-                      variant=DEFAULT_LIVEDOCS_VARIANT, quiet=True):
+                      variant=DEFAULT_LIVEDOCS_VARIANT, quiet=True,
+                      git_resolver=_GIT_UNSET, announce=None):
     """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。
 
-    ``quiet`` の既定は True です。CLI のフル ステージングだけが False を渡し、
-    ``mkdocs serve`` 中の自動再ステージングは進捗行を出しません。
+    ``quiet`` の既定は True です。進捗を出すのは ``announce`` が真のときだけです。
+    ``announce`` を省略したときは ``quiet`` の逆です。
+    ``git_resolver`` を渡すと、リポジトリの ``git log`` を再実行しません。
+    通常版と詳細版は本文だけが違うため、2 回目以降は同じ resolver を渡します。
     """
-    _progress(quiet, "staging: variant {}".format(variant))
+    if announce is None:
+        announce = not quiet
     config = parse_config(config_path)
     md_root_name = config.get("mdRoot") or "docs"
     main_mdroot = os.path.normpath(os.path.join(workspace, md_root_name))
     subfolders = parse_merge_subfolder_docs(config.get("mergeSubfolderDocs"), workspace)
     mapper = PathMapper(main_mdroot, subfolders)
 
-    def on_repo_collect(root):
-        _progress(quiet, "staging: git index {}".format(
-            _repo_progress_label(workspace, root)))
+    if git_resolver is _GIT_UNSET:
+        on_repo_collect = None
+        if announce:
+            def on_repo_collect(root):
+                _progress(False, "staging: git index {}".format(
+                    _repo_progress_label(workspace, root)))
 
-    git_resolver = create_git_resolver(
-        config, config_path,
-        on_repo_collect=None if quiet else on_repo_collect,
-    )
+        git_resolver = create_git_resolver(
+            config, config_path,
+            on_repo_collect=on_repo_collect,
+        )
     git_link_enabled = is_git_link_enabled(config)
     auto_set_author = is_auto_set_author_enabled(config)
     auto_set_date = is_auto_set_date_enabled(config)
 
     documents, assets = collect_sources(workspace, main_mdroot, subfolders)
-    _progress(quiet, "staging: collected {} documents, {} assets".format(
-        len(documents), len(assets)))
+    if announce:
+        _progress(False, "staging: collected {} documents, {} assets".format(
+            len(documents), len(assets)))
 
     kept = []
     for document in documents:
@@ -1482,18 +1512,90 @@ def stage_index(container, out_dir, quiet=False):
     )
 
 
+def build_detail_containers(workspace, config_path, variant, announce=False):
+    """同じ言語の通常版と詳細版の索引を作る。
+
+    Git の走査は先頭のバリアントだけで行い、もう一方はその結果を使う。
+    ``announce`` が真のとき、先頭のバリアントだけ収集件数と Git 索引の行を出す。
+    """
+    containers = []
+    git_resolver = _GIT_UNSET
+    for index, name in enumerate(detail_variants(variant)):
+        lang, details, parsed = parse_livedocs_variant(name)
+        container = build_stage_index(
+            workspace,
+            config_path,
+            lang=lang,
+            details=details,
+            variant=parsed,
+            quiet=True,
+            git_resolver=git_resolver,
+            announce=announce and index == 0,
+        )
+        git_resolver = container.git_resolver
+        containers.append(container)
+    return containers
+
+
+def write_root_variant_nav(out_dir, variants):
+    """docs 直下の ``.nav.yml`` に、言語対のディレクトリだけを書く。"""
+    lines = ["nav:"]
+    for name in variants:
+        lines.append("  - {}".format(name))
+    return write_if_changed(os.path.join(out_dir, ".nav.yml"), "\n".join(lines) + "\n")
+
+
+def prune_other_outputs(out_dir, keep_variants):
+    """選択中の言語対以外を docs 直下から消す。
+
+    以前のフラットな配置や、別言語のディレクトリが残るとナビゲーションに混ざる。
+    ``assets/`` と、``vendor_assets.py`` が置いたファイルは残す。
+    """
+    if not os.path.isdir(out_dir):
+        return 0
+    keep_dirs = set(keep_variants)
+    removed = 0
+    for name in list(os.listdir(out_dir)):
+        if name in keep_dirs or name in ("assets", ".nav.yml"):
+            continue
+        if is_vendored(name):
+            continue
+        path = os.path.join(out_dir, name)
+        if os.path.isdir(path) and not os.path.islink(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+        removed += 1
+    return removed
+
+
 def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
           variant=DEFAULT_LIVEDOCS_VARIANT):
-    """収集から書き出しまでを実行する (フル ステージング)。
+    """同じ言語の通常版と詳細版を ``out_dir/<variant>/`` へ書き出す。
 
-    :return: ``(ドキュメント数, 更新数, 生成した .nav.yml 数)``。
+    ``variant`` は着地先です。``ja-details`` なら ``ja-details`` と ``ja``、
+    ``en`` なら ``en`` と ``en-details`` を書きます。
+    ``lang`` と ``details`` は呼び出し互換のために残し、出力には使いません。
+
+    :return: ``(着地先のドキュメント数, 両版の更新数, 両版の .nav.yml 数)``。
     """
-    container = build_stage_index(
-        workspace, config_path, lang=lang, details=details, variant=variant,
-        quiet=quiet,
+    del lang, details
+    names = detail_variants(variant)
+    _progress(quiet, "staging: variants {}".format(", ".join(names)))
+    containers = build_detail_containers(
+        workspace, config_path, variant, announce=not quiet,
     )
-    result = stage_index(container, out_dir, quiet=quiet)
-    return result.document_count, result.updated, result.nav_count
+    updated = 0
+    nav_count = 0
+    for container in containers:
+        variant_dir = os.path.join(out_dir, container.variant)
+        os.makedirs(variant_dir, exist_ok=True)
+        result = stage_index(container, variant_dir, quiet=quiet)
+        updated += result.updated
+        nav_count += result.nav_count
+    prune_other_outputs(out_dir, names)
+    write_root_variant_nav(out_dir, names)
+    return len(containers[0].kept), updated, nav_count
 
 
 def main(argv=None):
@@ -1507,7 +1609,8 @@ def main(argv=None):
     parser.add_argument(
         "--variant",
         default=DEFAULT_LIVEDOCS_VARIANT,
-        help="ja / ja-details / en / en-details (default: ja-details)",
+        help="言語と着地先 (ja / ja-details / en / en-details)。"
+             "同じ言語の通常版と詳細版を両方書き出します (default: ja)",
     )
     args = parser.parse_args(argv)
 

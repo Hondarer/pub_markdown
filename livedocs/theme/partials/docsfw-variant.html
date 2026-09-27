@@ -1,0 +1,20 @@
+{#-
+  今開いているページのバリアント名と、ヘッダーとドロワーに出すサイト名。
+
+  通常版は ja / en、詳細版は ja-details / en-details。
+  page.url の先頭が配信中のバリアントならそれを使い、そうでなければ着地先
+  (extra.livedocs_variant) を使う。
+-#}
+{% macro current_variant() -%}
+{%- set raw = ((page.url or '') if page else '').split('/')[0] -%}
+{%- set known = config.extra.livedocs_variants | default([], true) -%}
+{%- if raw in known -%}
+{{- raw -}}
+{%- else -%}
+{{- config.extra.livedocs_variant | default('ja', true) -}}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro site_label() -%}
+{{- config.extra.livedocs_site_name | default(config.site_name, true) }} ({{ current_variant() }})
+{%- endmacro %}

@@ -1,4 +1,4 @@
-/* ヘッダーの単一ページ リンク (Doxygen / Git) のスタイル。
+/* ヘッダーの概要版／詳細版の切り替えと、単一ページ リンク (Doxygen / Git)。
    寸法と間隔はヘッダー右上の配色トグル、検索とそろえる。
    右上アイコンを 20px にする理由は
    docs/livedocs-design.md の「アイコンの寸法と間隔」を参照。 */
@@ -35,6 +35,16 @@
   height: 20px;
   object-fit: contain;
   width: 20px;
+}
+
+/* 概要版／詳細版の切り替えは、静的発行と同じくライトで黒、ダークで白にする。
+   SVG は img なので currentColor ではなく filter で色をそろえる。 */
+.docsfw-header-links img.docsfw-details-icon {
+  filter: brightness(0);
+}
+
+[data-md-color-scheme="slate"] .docsfw-header-links img.docsfw-details-icon {
+  filter: brightness(0) invert(1);
 }
 
 /* 検索ボックス自身は左マージンを持たないため、直前のアイコンとの間隔が、

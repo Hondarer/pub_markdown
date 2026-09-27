@@ -1,0 +1,67 @@
+{#-
+  mkdocs-material 9.7.7 の partials/nav.html を上書きし、開いている詳細度の
+  木だけを左ナビゲーションに出す。
+
+  通常版と詳細版は docs 直下の兄弟ディレクトリ (ja と ja-details など) として
+  同時に置かれる。awesome-nav はその 2 つを最上位の節にする。ここで相手の節を
+  外し、今の節の子を最上位として描く。節自身を描くと、サイト全体が 1 段深くなる。
+
+  ロゴとドロワー見出しは、開いているバリアントの名前と索引を指す。
+  上記以外は上流のままとする。
+  mkdocs-material を更新した場合は、上流の partials/nav.html との差分を
+  取り直すこと。tests/test_livedocs_details_switch.py が上流の内容変化を検出する。
+-#}
+{% import "partials/nav-item.html" as item with context %}
+{% from "partials/docsfw-variant.html" import site_label, current_variant with context %}
+{% set class = "md-nav md-nav--primary" %}
+{% if "navigation.tabs" in features %}
+  {% set class = class ~ " md-nav--lifted" %}
+{% endif %}
+{% if "toc.integrate" in features %}
+  {% set class = class ~ " md-nav--integrated" %}
+{% endif %}
+{% set current = current_variant() %}
+{% set variant_nav = namespace(section=none) %}
+{% for nav_item in nav.items %}
+  {% set probe = namespace(url=nav_item.url or '') %}
+  {% if not probe.url and nav_item.children %}
+    {% set first = nav_item.children | first %}
+    {% if first and first.url %}
+      {% set probe.url = first.url %}
+    {% elif first and first.children %}
+      {% set nested = first.children | first %}
+      {% if nested and nested.url %}
+        {% set probe.url = nested.url %}
+      {% endif %}
+    {% endif %}
+  {% endif %}
+  {% if probe.url.split('/')[0] == current %}
+    {% set variant_nav.section = nav_item %}
+  {% endif %}
+{% endfor %}
+<nav class="{{ class }}" aria-label="{{ lang.t('nav') }}" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="{{ (current ~ '/') | url }}" title="{{ site_label() | e }}" class="md-nav__button md-logo" aria-label="{{ site_label() }}" data-md-component="logo">
+      {% include "partials/logo.html" %}
+    </a>
+    {{ site_label() }}
+  </label>
+  {% if config.repo_url %}
+    <div class="md-nav__source">
+      {% include "partials/source.html" %}
+    </div>
+  {% endif %}
+  <ul class="md-nav__list" data-md-scrollfix>
+    {% if variant_nav.section and variant_nav.section.children %}
+      {% for nav_item in variant_nav.section.children %}
+        {% set path = "__nav_" ~ loop.index %}
+        {{ item.render(nav_item, path, 1) }}
+      {% endfor %}
+    {% else %}
+      {% for nav_item in nav.items %}
+        {% set path = "__nav_" ~ loop.index %}
+        {{ item.render(nav_item, path, 1) }}
+      {% endfor %}
+    {% endif %}
+  </ul>
+</nav>

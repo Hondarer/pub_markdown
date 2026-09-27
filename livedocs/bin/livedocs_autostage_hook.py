@@ -5,12 +5,13 @@ import logging
 import os
 import sys
 import threading
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from stage_livedocs import (  # noqa: E402
     DEFAULT_LIVEDOCS_VARIANT,
-    build_stage_index,
+    build_detail_containers,
     parse_config,
     parse_merge_subfolder_docs,
     parse_livedocs_variant,
@@ -64,16 +65,16 @@ class _AutoStager:
         self._workspace = workspace
         self._config_path = config_path
         self._out_dir = out_dir
-        self._lang = lang
-        self._details = details
         self._variant = variant
         self._timer_factory = timer_factory
         self._restage_delay = restage_delay
 
         self._state_lock = threading.RLock()
         self._stage_lock = threading.Lock()
-        self._container = build_stage_index(
-            workspace, config_path, lang=lang, details=details, variant=variant
+        # lang と details は呼び出し互換のために残す。言語対は variant から決める。
+        del lang, details
+        self._containers = build_detail_containers(
+            workspace, config_path, variant, announce=False,
         )
 
         self._detected_generation = 0
@@ -167,17 +168,28 @@ class _AutoStager:
     def handle_modified(self, real_path, generation):
         """既知ファイルを単一ファイル単位で再ステージングする。"""
         epoch = self._begin_batch()
-        result = None
+        updated = False
+        found = True
+        saw = False
         try:
             with self._stage_lock:
-                result = stage_single(self._container, self._out_dir, real_path)
+                for container in self._containers:
+                    result = stage_single(
+                        container,
+                        os.path.join(self._out_dir, container.variant),
+                        real_path,
+                    )
+                    saw = True
+                    updated = updated or bool(result.updated)
+                    found = found and bool(result.found)
         except Exception:
             log.exception("単一ファイルの再ステージングに失敗しました: %s", real_path)
+            saw = False
         finally:
-            self._finish_batch(epoch, bool(result and result.updated))
+            self._finish_batch(epoch, updated)
 
         request_rebuild = False
-        if result is not None:
+        if saw:
             with self._state_lock:
                 self._staged_generation = max(self._staged_generation, generation)
                 request_rebuild = self._evaluate_wait_locked()
@@ -185,7 +197,7 @@ class _AutoStager:
         if request_rebuild:
             self._request_site_rebuild()
 
-        if result is not None and not result.found:
+        if saw and not found:
             with self._state_lock:
                 self._cancel_timer_locked()
             self._full_restage(generation, "索引にないファイルの検出")
@@ -199,15 +211,22 @@ class _AutoStager:
         result = None
         try:
             with self._stage_lock:
-                new_container = build_stage_index(
+                containers = build_detail_containers(
                     self._workspace,
                     self._config_path,
-                    lang=self._lang,
-                    details=self._details,
-                    variant=self._variant,
+                    self._variant,
+                    announce=False,
                 )
-                result = stage_index(new_container, self._out_dir, quiet=True)
-                self._container = new_container
+                changed = False
+                for container in containers:
+                    one = stage_index(
+                        container,
+                        os.path.join(self._out_dir, container.variant),
+                        quiet=True,
+                    )
+                    changed = changed or bool(one and one.changed)
+                self._containers = containers
+                result = SimpleNamespace(changed=changed)
         except Exception:
             log.exception("%sに失敗しました。", reason)
         finally:

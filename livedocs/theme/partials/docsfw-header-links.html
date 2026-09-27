@@ -1,18 +1,46 @@
 {#-
-  ヘッダー右端の単一ページ リンク。
+  ヘッダー右端の操作。
+
+  並びは静的発行のナビバーと同じで、概要版と詳細版の切り替え、Doxygen、Git
+  の順です。切り替え先は、今のページ URL の先頭のバリアント名だけを
+  入れ替えます。通常版と詳細版は同じページ集合を持つため、相手の実在確認は
+  しません。
+
   Doxygen の URL は bin/livedocs_doxygen_hook.py が doxygen_livedocs_url として渡す。
   Git の URL は bin/stage_livedocs.py が staged md のフロント マターへ書いた
   git-url / git-provider を page.meta から読む。
 
-  静的発行は読み込み後の JavaScript で <html lang> を見てラベルを差し替えるが、
-  動的発行は LIVEDOCS_VARIANT で言語が 1 つに固定されるため、ここで決める。
+  ラベルは config.theme.language で決める。動的発行は 1 つの言語だけを
+  配信するため、テンプレートの時点で言語が決まっています。
 -#}
 {% set is_ja = config.theme.language | string | lower == "ja" %}
+{% set tree = (page.url or "").split("/")[0] %}
+{% set known = config.extra.livedocs_variants | default([], true) %}
+{% set switch = namespace(show=false, target="", label="", icon="") %}
+{% set rest = (page.url or "").split("/")[1:] | join("/") %}
+{% if tree in known %}
+  {% set switch.show = true %}
+  {% if tree.endswith("-details") %}
+    {% set switch.target = tree[:-8] ~ "/" ~ rest %}
+    {% set switch.label = "概要版を表示" if is_ja else "Show overview version" %}
+    {% set switch.icon = "assets/docsfw-overview-icon.svg" %}
+  {% else %}
+    {% set switch.target = tree ~ "-details/" ~ rest %}
+    {% set switch.label = "詳細版を表示" if is_ja else "Show detailed version" %}
+    {% set switch.icon = "assets/docsfw-details-icon.svg" %}
+  {% endif %}
+{% endif %}
 {% set git_url = page.meta["git-url"] if page and page.meta else none %}
-{% if doxygen_livedocs_url or git_url %}
+{% if switch.show or doxygen_livedocs_url or git_url %}
   {% set doxygen_label = "Doxygen で開く" if is_ja else "Open in Doxygen" %}
   {% set git_label = "ソースを開く" if is_ja else "View source" %}
   <div class="docsfw-header-links">
+    {% if switch.show %}
+      <a href="{{ switch.target | url }}" class="md-header__button"
+         title="{{ switch.label }}" aria-label="{{ switch.label }}">
+        <img src="{{ switch.icon | url }}" alt="" class="docsfw-details-icon" />
+      </a>
+    {% endif %}
     {% if doxygen_livedocs_url %}
       <a href="{{ doxygen_livedocs_url }}" class="md-header__button" target="doxygen-page"
          title="{{ doxygen_label }}" aria-label="{{ doxygen_label }}">

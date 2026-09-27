@@ -10,6 +10,7 @@ mkdocs 1.6.1 の LiveReloadServer は、再生成中の通常 HTTP 要求を待�
 設計は docs/livedocs-design.md を参照。
 """
 
+import html
 import logging
 import os
 import shutil
@@ -218,6 +219,57 @@ def _make_versioned_builder(server, store, config, builder):
 
 
 _stores = []
+
+
+def landing_index_html(variant, lang, title):
+    """``/`` を着地先バリアントへ移す HTML を返す。"""
+    safe_variant = html.escape(variant, quote=True)
+    safe_lang = html.escape(lang or "ja", quote=True)
+    safe_title = html.escape(title, quote=True)
+    target = safe_variant + "/"
+    return (
+        "<!DOCTYPE html>\n"
+        '<html lang="{lang}">\n'
+        "<head>\n"
+        '<meta charset="utf-8">\n'
+        '<meta http-equiv="refresh" content="0; url={target}">\n'
+        '<link rel="canonical" href="{target}">\n'
+        "<title>{title}</title>\n"
+        '<script>location.replace("{target}");</script>\n'
+        "</head>\n"
+        "<body></body>\n"
+        "</html>\n"
+    ).format(lang=safe_lang, target=target, title=safe_title)
+
+
+def write_landing_index(site_dir, variant, lang, title):
+    """サイト直下に着地先への転送ページを書く。
+
+    MkDocs が索引を既に書いた場合は上書きしない。通常版と詳細版は
+    ``/<variant>/`` にあり、docs 直下に索引ページは無い。
+    """
+    index = os.path.join(site_dir, "index.html")
+    if os.path.exists(index):
+        return False
+    os.makedirs(site_dir, exist_ok=True)
+    with open(index, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write(landing_index_html(variant, lang, title))
+    return True
+
+
+def on_post_build(config, **kwargs):
+    """ビルドのたびに、``/`` から着地先バリアントへの転送を置く。"""
+    extra = config.get("extra") or {}
+    variant = (extra.get("livedocs_variant") or "ja").strip()
+    site_name = extra.get("livedocs_site_name") or config.get("site_name") or "Documents"
+    theme = config.get("theme") or {}
+    lang = theme.get("language") if hasattr(theme, "get") else "ja"
+    write_landing_index(
+        config["site_dir"],
+        variant,
+        lang or "ja",
+        "{} ({})".format(site_name, variant),
+    )
 
 
 def on_serve(server, config, builder=None, **kwargs):

@@ -29,6 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stage_livedocs import (  # noqa: E402
     DEFAULT_LIVEDOCS_VARIANT,
     parse_config,
+    detail_variants,
     parse_livedocs_variant,
     write_if_changed,
 )
@@ -55,16 +56,20 @@ OWN_ASSETS = (
     "docsfw-pandoc-style.css",
     "docsfw-header-links.css",
     "docsfw-header-meta.css",
+    "docsfw-variant-search.js",
 )
 
-# ヘッダーの単一ページ リンクで使うアイコン。静的発行と同じく、provider 設定を
-# 切り替えても参照が切れないように 4 種すべてを常時配置する。
+# ヘッダーの単一ページ リンクと、概要版／詳細版の切り替えで使うアイコン。
+# 静的発行と同じく、provider 設定を切り替えても参照が切れないように
+# Git 系 4 種を常時配置する。
 HEADER_ICONS = (
     "docsfw-doxygen-icon.svg",
     "docsfw-git-icon.svg",
     "docsfw-github-icon.svg",
     "docsfw-gitlab-icon.svg",
     "docsfw-gitbucket-icon.svg",
+    "docsfw-details-icon.svg",
+    "docsfw-overview-icon.svg",
 )
 
 FAVICON_ICONS = (
@@ -311,7 +316,8 @@ def resolve_hooks_dir(livedocs_dir):
 def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VARIANT,
                         site_name=""):
     """``mkdocs.yml.in`` から ``pages/livedocs/mkdocs.yml`` を生成する。"""
-    lang, _details, variant_name = parse_livedocs_variant(variant)
+    _lang, _details, variant_name = parse_livedocs_variant(variant)
+    pair = ", ".join(detail_variants(variant_name))
     template_path = os.path.join(MKDOCS_DIR, "mkdocs.yml.in")
     with open(template_path, "r", encoding="utf-8") as handle:
         template = handle.read()
@@ -334,7 +340,8 @@ def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VA
     text = text.replace("@LIVEDOCS_HOOKS_DIR@", resolve_hooks_dir(livedocs_dir))
     text = text.replace("@LIVEDOCS_SITE_NAME@", site_name)
     text = text.replace("@LIVEDOCS_VARIANT@", variant_name)
-    text = text.replace("@LIVEDOCS_THEME_LANGUAGE@", lang)
+    text = text.replace("@LIVEDOCS_VARIANT_PAIR@", pair)
+    text = text.replace("@LIVEDOCS_THEME_LANGUAGE@", _lang)
     return write_if_changed(os.path.join(livedocs_dir, "mkdocs.yml"), text)
 
 
@@ -349,7 +356,7 @@ def main(argv=None):
     parser.add_argument(
         "--variant",
         default=DEFAULT_LIVEDOCS_VARIANT,
-        help="ja / ja-details / en / en-details (default: ja-details)",
+        help="ja / ja-details / en / en-details (default: ja)",
     )
     args = parser.parse_args(argv)
 

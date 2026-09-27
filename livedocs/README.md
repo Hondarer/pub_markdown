@@ -4,7 +4,8 @@ docsfw の発行対象を MkDocs で発行する、2 本目の発行系です。
 静的発行 (`make docs`) と並ぶ位置付けで、HTML をローカル配信または一括生成します。  
 PlantUML と Mermaid はブラウザー上でレンダリングするため、ビルド時に図を生成しません。
 
-docx 出力と 4 バリアントの同時出力は静的発行だけが持ちます。  
+docx 出力と、2 言語を一度に出す 4 バリアントは静的発行だけが持ちます。  
+同じ言語の通常版と詳細版は、動的発行でも同時に配信します。  
 設計と、静的発行の各機能に対する対応方針は [動的発行基盤](../docs/livedocs-design.md) を参照してください。
 
 ## 前提
@@ -43,15 +44,18 @@ WSL2 の既定のネットワークモード (`nat`) では、Windows 側が同�
 別の内容が表示される場合は `netstat.exe -ano` の LISTENING 行を確認し、`LIVEDOCS_ADDR` で別のポートを指定してください。  
 詳細は [動的発行基盤](../docs/livedocs-design.md) のポートの競合を参照してください。
 
-言語と詳細ブロックは `LIVEDOCS_VARIANT` で選択します。既定は `ja-details` です。  
-値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。1 回の起動では 1 つだけ出力します。
+`LIVEDOCS_VARIANT` は、言語と、ブラウザーで `/` を開いたときの着地先を選びます。既定は `ja` です。  
+値は `make docs` と同じ `ja` / `ja-details` / `en` / `en-details` です。  
+選んだ言語の通常版と詳細版は同時に配信します。通常版は `/ja/`、詳細版は `/ja-details/` です。英語では `/en/` と `/en-details/` です。  
+ヘッダーの切り替えで、開いているページのまま、もう一方の詳細度へ移ります。
 
 ```bash
+make servedocs
 make servedocs LIVEDOCS_VARIANT=en
 make livedocs LIVEDOCS_VARIANT=ja
 ```
 
-切り替えるときは `make servedocs` を再起動してください。  
+言語を変えるときは `make servedocs` を再起動してください。  
 2 つ目の `make servedocs` を起動すると、先に動いていたこのワークスペースの serve が終了するまで待機してからステージングします。  
 止めきれなければ起動しません。後から起動した側が残ります。
 
@@ -123,8 +127,9 @@ make stopdocs
 `make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に削除されます。
 
 サイト名は、ワークスペースの `.vscode/pub_markdown.config.yaml` の `siteName` を読み、  
-`mkdocs.yml` の `site_name` へバリアント名とともに展開します。  
-未指定の場合はワークスペース フォルダー名を使用します。
+`mkdocs.yml` の `site_name` へ展開します。  
+未指定の場合はワークスペース フォルダー名を使用します。  
+画面上の見出しには、開いているページのバリアント名を足します。
 
 `mkdocs.yml` の `hooks:` に記述するパスは、`vendor_assets.py` が docsfw の実際の配置と  
 生成先から求めます。docsfw をワークスペース内の既定位置以外へ置いた場合や、  
@@ -169,7 +174,8 @@ python3 framework/docsfw/livedocs/bin/stage_livedocs.py --workspaceFolder="$PWD"
 python3 framework/docsfw/livedocs/bin/vendor_assets.py --workspaceFolder="$PWD"
 ```
 
-バリアントを変えるときは、両方に `--variant` を付けます。
+言語や着地先を変えるときは、両方に `--variant` を付けます。  
+1 つの `--variant` で、その言語の通常版と詳細版を書き出します。
 
 ```bash
 python3 framework/docsfw/livedocs/bin/stage_livedocs.py --workspaceFolder="$PWD" --variant=en
@@ -185,7 +191,7 @@ python3 framework/docsfw/livedocs/bin/vendor_assets.py --workspaceFolder="$PWD" 
 
 ## 静的発行だけが持つ機能
 
-Word (docx) 出力、4 バリアントの同時出力、pandoc-crossref の採番、  
-概要版と詳細版の切り替えリンク、`file://` での動作は動的発行では扱いません。  
+Word (docx) 出力、2 言語を一度に出す 4 バリアント、pandoc-crossref の採番、  
+`file://` での動作は動的発行では扱いません。  
 これらが必要な場合は `make docs` を使用してください。  
 詳細は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。

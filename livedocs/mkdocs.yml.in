@@ -11,7 +11,7 @@
 #
 # 設計は framework/docsfw/docs/livedocs-design.md を参照してください。
 
-site_name: @LIVEDOCS_SITE_NAME@ (@LIVEDOCS_VARIANT@)
+site_name: @LIVEDOCS_SITE_NAME@
 site_description: docsfw の発行対象を mkdocs で動的発行します
 docs_dir: src
 site_dir: site
@@ -103,7 +103,11 @@ plugins:
 @AWESOME_NAV@
 
 extra:
+  # ヘッダーに出す名前。開いているページのバリアントはテンプレートが足す。
+  livedocs_site_name: "@LIVEDOCS_SITE_NAME@"
+  # ブラウザーで / を開いたときの着地先。言語対のもう一方も同時に配信する。
   livedocs_variant: "@LIVEDOCS_VARIANT@"
+  livedocs_variants: [@LIVEDOCS_VARIANT_PAIR@]
 
 extra_css:
   - assets/docsfw-diagrams.css
@@ -123,6 +127,7 @@ extra_javascript:
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
   - assets/docsfw-svg-download.js
+  - assets/docsfw-variant-search.js
   # MathJax は静的発行 (bin_internal/pandoc-defaults/math-mathjax.yaml) と同じく CDN から読み込む。
   # 静的発行は版を MathJax 3 に固定しているため、こちらも同じ版を指定する。
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js

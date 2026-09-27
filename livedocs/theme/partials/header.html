@@ -13,7 +13,11 @@
   以外は上流のままとする。
   mkdocs-material を更新した場合は、上流の partials/header.html との差分を
   取り直すこと。tests/test_livedocs_header.py が上流の内容変化を検出する。
+
+  サイト名には、開いているページのバリアント (ja / ja-details など) を付ける。
+  ロゴは、そのバリアントの索引へ戻す。
 -#}
+{% from "partials/docsfw-variant.html" import site_label, current_variant with context %}
 {% set class = "md-header" %}
 {% if "navigation.tabs.sticky" in features %}
   {% set class = class ~ " md-header--shadow md-header--lifted" %}
@@ -22,7 +26,7 @@
 {% endif %}
 <header class="{{ class }}" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="{{ lang.t('header') }}">
-    <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-header__button md-logo" aria-label="{{ config.site_name }}" data-md-component="logo">
+    <a href="{{ (current_variant() ~ '/') | url }}" title="{{ site_label() | e }}" class="md-header__button md-logo" aria-label="{{ site_label() }}" data-md-component="logo">
       {% include "partials/logo.html" %}
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -33,7 +37,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            {{ config.site_name }}
+            {{ site_label() }}
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">

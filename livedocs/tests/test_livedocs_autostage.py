@@ -40,9 +40,13 @@ class FakeTimer:
 class AutoStagerTest(unittest.TestCase):
     def setUp(self):
         FakeTimer.created = []
-        self.container = object()
-        self.build_index = mock.patch.object(
-            autostage, "build_stage_index", return_value=self.container
+        self.build_containers = mock.patch.object(
+            autostage,
+            "build_detail_containers",
+            return_value=[
+                SimpleNamespace(variant="ja-details", git_resolver=None),
+                SimpleNamespace(variant="ja", git_resolver=None),
+            ],
         )
         self.stage_index = mock.patch.object(
             autostage,
@@ -54,10 +58,10 @@ class AutoStagerTest(unittest.TestCase):
             "stage_single",
             return_value=SimpleNamespace(found=True, updated=True),
         )
-        self.build_index_mock = self.build_index.start()
+        self.build_containers_mock = self.build_containers.start()
         self.stage_index_mock = self.stage_index.start()
         self.stage_single_mock = self.stage_single.start()
-        self.addCleanup(self.build_index.stop)
+        self.addCleanup(self.build_containers.stop)
         self.addCleanup(self.stage_index.stop)
         self.addCleanup(self.stage_single.stop)
 
