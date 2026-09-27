@@ -39,9 +39,9 @@ sample = (root / 'docs/sample/README.md').read_text(encoding='utf-8')
 assert '\n\\toc depth=-1\n' in sample
 for level in ('', '0', '1', '2', '-1'):
     command = r'\toc depth=-1' + (' open-level=' + level if level else '')
-    blocks.append(expand_toc_commands(command, index, 'c-platform/index.md'))
+    blocks.append(expand_toc_commands(command, index, 'cplat/index.md'))
     attrs = ' open-level=' + level if level else ''
-    static_blocks.append('::: {.collapsible-list' + attrs + '}\n' + render_toc(index, 'c-platform/index.md', parse_toc_params(command)) + '\n:::')
+    static_blocks.append('::: {.collapsible-list' + attrs + '}\n' + render_toc(index, 'cplat/index.md', parse_toc_params(command)) + '\n:::')
 blocks.append(convert_collapsible_list_fences('::: {.collapsible-list open-level=1}\n- parent\n    - child\n        - grandchild\n:::'))
 static_blocks.append('::: {.collapsible-list open-level=1}\n- parent\n    - child\n        - grandchild\n:::')
 blocks.append('- ordinary\n    - child\n\n[Other](other.md)')

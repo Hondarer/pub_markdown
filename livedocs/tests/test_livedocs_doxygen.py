@@ -81,9 +81,9 @@ class DependencyPageLivedocsUrlTest(unittest.TestCase):
     def test_converts_published_template(self):
         self.assertEqual(
             dependency_page_template_to_livedocs(
-                "../../../{variant}/html/c-platform/doxybook2_internal"
+                "../../../{variant}/html/cplat/doxybook2_internal"
             ),
-            "/ja/c-platform/doxybook2_internal",
+            "/ja/cplat/doxybook2_internal",
         )
         self.assertEqual(
             dependency_page_template_to_livedocs(
@@ -146,7 +146,7 @@ class ResolveDoxygenFileTest(unittest.TestCase):
         self.assertTrue(is_doxygen_url_path("/doxygen"))
         self.assertTrue(is_doxygen_url_path("/doxygen/"))
         self.assertTrue(is_doxygen_url_path("/doxygen/a.html"))
-        self.assertFalse(is_doxygen_url_path("/c-platform/"))
+        self.assertFalse(is_doxygen_url_path("/cplat/"))
         self.assertFalse(is_doxygen_url_path("/doxygen-sample/"))
         self.assertFalse(is_doxygen_url_path("/doxygen/../site/index.html"))
 

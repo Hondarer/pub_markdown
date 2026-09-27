@@ -377,7 +377,7 @@ class StageIndexMergeRootsTest(unittest.TestCase):
     def test_merge_roots_matches_subfolder_aliases(self):
         subfolders = [
             ("general", "/workspace/app/general/docs"),
-            ("c-platform", "/workspace/app/c-platform/docs"),
+            ("cplat", "/workspace/app/cplat/docs"),
         ]
         container = StageIndex(
             workspace="/workspace",
@@ -394,7 +394,7 @@ class StageIndexMergeRootsTest(unittest.TestCase):
             details=True,
             variant="ja",
         )
-        self.assertEqual(container.merge_roots, frozenset({"general", "c-platform"}))
+        self.assertEqual(container.merge_roots, frozenset({"general", "cplat"}))
 
     def test_merge_roots_is_empty_without_subfolders(self):
         container = StageIndex(

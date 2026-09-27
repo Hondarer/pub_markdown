@@ -30,17 +30,17 @@ from stage_livedocs import convert_collapsible_list_fences  # noqa: E402
 
 def _nested_index():
     index = DocIndex()
-    index.add("c-platform/index.md", "README.md", "cplat")
-    index.add("c-platform/api-cheatsheet.md", "api-cheatsheet.md", "API チート シート")
-    index.add("c-platform/functional-spec/index.md", "README.md", "cplat 機能仕様")
+    index.add("cplat/index.md", "README.md", "cplat")
+    index.add("cplat/api-cheatsheet.md", "api-cheatsheet.md", "API チート シート")
+    index.add("cplat/functional-spec/index.md", "README.md", "cplat 機能仕様")
     index.add(
-        "c-platform/functional-spec/argparser.md",
+        "cplat/functional-spec/argparser.md",
         "argparser.md",
         "argparser 機能仕様",
     )
-    index.add("c-platform/functional-spec/nested/index.md", "README.md", "入れ子")
-    index.add("c-platform/functional-spec/nested/deep.md", "deep.md", "深い文書")
-    index.add("c-platform/sibling.md", "sibling.md", "兄弟")
+    index.add("cplat/functional-spec/nested/index.md", "README.md", "入れ子")
+    index.add("cplat/functional-spec/nested/deep.md", "deep.md", "深い文書")
+    index.add("cplat/sibling.md", "sibling.md", "兄弟")
     return index
 
 
@@ -57,7 +57,7 @@ class CollapsibleTest(unittest.TestCase):
     def test_open_levels_and_multiple_commands(self):
         for value in (None, "0", "1", "2", "-1", "invalid"):
             command = r"\toc depth=-1" + (" open-level=" + value if value else "")
-            result = expand_toc_commands(command + "\n\n" + command, _nested_index(), "c-platform/index.md")
+            result = expand_toc_commands(command + "\n\n" + command, _nested_index(), "cplat/index.md")
             self.assertEqual(result.count('class="collapsible-list"'), 2)
             self.assertEqual(result.count('data-open-level='), 2 if value else 0)
             if value:
@@ -65,7 +65,7 @@ class CollapsibleTest(unittest.TestCase):
 
     def test_code_examples_are_unchanged(self):
         text = '````markdown\n```\n\\toc depth=-1\n::: {.collapsible-list}\n- item\n:::\n```\n````'
-        self.assertEqual(expand_toc_commands(text, _nested_index(), "c-platform/index.md"), text)
+        self.assertEqual(expand_toc_commands(text, _nested_index(), "cplat/index.md"), text)
         self.assertEqual(convert_collapsible_list_fences(text), text)
 
     def test_manual_nested_containers_and_code(self):
@@ -80,16 +80,16 @@ class CollapsibleTest(unittest.TestCase):
     def test_empty_and_excluded_index(self):
         index = _nested_index()
         params = parse_toc_params('depth=-1 exclude="README.md"')
-        result = render_toc(index, "c-platform/index.md", params)
-        self.assertIn('- 📁 c-platform\n', result)
+        result = render_toc(index, "cplat/index.md", params)
+        self.assertIn('- 📁 cplat\n', result)
         self.assertNotIn('](index.md)', result)
         self.assertEqual(render_toc(DocIndex(), 'index.md', parse_toc_params('')), '')
 
     def test_basedir_depth_and_multiple_exclusions(self):
         params = parse_toc_params('basedir="functional-spec" depth=0 exclude-basedir=true exclude="argparser.md" exclude="nested/*"')
-        self.assertEqual(render_toc(_nested_index(), "c-platform/index.md", params), '')
+        self.assertEqual(render_toc(_nested_index(), "cplat/index.md", params), '')
         params = parse_toc_params('basedir="functional-spec" depth=0 exclude-basedir=true')
-        result = render_toc(_nested_index(), "c-platform/index.md", params)
+        result = render_toc(_nested_index(), "cplat/index.md", params)
         self.assertIn('(functional-spec/argparser.md)', result)
         self.assertNotIn('(functional-spec/nested/index.md)', result)
         self.assertNotIn('deep.md', result)
@@ -102,13 +102,13 @@ class CollapsibleTest(unittest.TestCase):
             "index.md",
             parse_toc_params("depth=0 exclude-basedir=true"),
         )
-        self.assertNotIn("c-platform", result)
+        self.assertNotIn("cplat", result)
         self.assertIn("- 📄 [overview.md](overview.md)", result)
         self.assertNotIn("api-cheatsheet.md", result)
         self.assertNotIn("functional-spec", result)
 
     def test_merge_subfolder_root_is_visible_at_depth_zero(self):
-        # mergeSubfolderDocs のエイリアス (ここでは "c-platform") は、insert-toc.sh が
+        # mergeSubfolderDocs のエイリアス (ここでは "cplat") は、insert-toc.sh が
         # エイリアス自身のルートを起点に独立した depth+1 のスキャンを行うため、直下の
         # index.md は外側の depth=0 に関係なく常に見つかる。merge_roots に含めない限りは
         # 直前のテストと同じく除外されたままであることも合わせて確認する。
@@ -117,10 +117,10 @@ class CollapsibleTest(unittest.TestCase):
         params = parse_toc_params("depth=0 exclude-basedir=true")
 
         without_merge_roots = render_toc(index, "index.md", params)
-        self.assertNotIn("c-platform", without_merge_roots)
+        self.assertNotIn("cplat", without_merge_roots)
 
-        with_merge_roots = render_toc(index, "index.md", params, frozenset({"c-platform"}))
-        self.assertIn("- 📁 [c-platform](c-platform/index.md)", with_merge_roots)
+        with_merge_roots = render_toc(index, "index.md", params, frozenset({"cplat"}))
+        self.assertIn("- 📁 [cplat](cplat/index.md)", with_merge_roots)
         # マージ ルート自身の直下は見えるが、その配下 (通常のネスト ディレクトリ) は
         # depth=0 の制限どおり展開されない。
         self.assertNotIn("functional-spec", with_merge_roots)
@@ -128,7 +128,7 @@ class CollapsibleTest(unittest.TestCase):
 
     @unittest.skipUnless(markdown is not None, "Python-Markdown が必要です")
     def test_wrapper_preserves_markdown_links_and_nesting(self):
-        result = expand_toc_commands(r'\toc depth=-1 open-level=1', _nested_index(), "c-platform/index.md")
+        result = expand_toc_commands(r'\toc depth=-1 open-level=1', _nested_index(), "cplat/index.md")
         html = markdown.markdown(result, extensions=['md_in_html', 'nl2br'])
         self.assertIn('<div class="collapsible-list" data-open-level="1">', html)
         self.assertIn('<a href="functional-spec/nested/deep.md">', html)
@@ -174,7 +174,7 @@ class RenderTocIndentTest(unittest.TestCase):
         self.index = _nested_index()
         self.rendered = render_toc(
             self.index,
-            "c-platform/index.md",
+            "cplat/index.md",
             _unlimited_exclude_basedir(),
         )
         self.lines = self.rendered.split("\n")
@@ -201,7 +201,7 @@ class RenderTocIndentTest(unittest.TestCase):
 
     def test_expand_toc_commands_replaces_toc_line(self):
         text = "## 文書一覧\n\n\\toc depth=-1 exclude-basedir=true\n"
-        result = expand_toc_commands(text, self.index, "c-platform/index.md")
+        result = expand_toc_commands(text, self.index, "cplat/index.md")
         self.assertNotIn("\\toc", result)
         self.assertIn("    - 📄 [argparser.md](functional-spec/argparser.md)", result)
         self.assertIn(
@@ -215,7 +215,7 @@ class RenderTocMarkdownNestingTest(unittest.TestCase):
     def test_python_markdown_nests_children_and_keeps_siblings(self):
         rendered = render_toc(
             _nested_index(),
-            "c-platform/index.md",
+            "cplat/index.md",
             _unlimited_exclude_basedir(),
         )
         html = markdown.markdown(rendered, extensions=["nl2br", "md_in_html"])
