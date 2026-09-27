@@ -1487,6 +1487,9 @@ Windows では SIGTERM がネイティブの python や watchdog に届かず、
 停止とステージングはレシピ内で順に実行し、`make -j` でも同時に実行されないようにします。  
 先に起動した側の `make servedocs` は、`mkdocs serve` が止まった時点で終了します。
 
+待ち受けのログを出す前に、元の Markdown の索引とディレクトリ監視を作ります。件数が多いと数十秒かかります。開始時に「元の Markdown を索引してから配信を始めます」と出します。  
+Windows では Ctrl+C を Python が受け取り、Git Bash には SIGINT が届きません。レシピの `trap` は動かないため、配信プロセス自身が Ctrl+C を終了コード 0 で終えます。
+
 フル ステージング (`make livedocs-stage` と、これを呼び出す `servedocs` / `livedocs`) は、完了行 `staged:` の前に進行状況を 1 行ずつ出力します。  
 出力内容は、同時に出すバリアント名 (`staging: variants`)、収集件数、リポジトリごとの Git 索引、バリアントごとの書き出し開始です。  
 収集件数は `pub_markdown.skip` による除外前で、完了行の document 数は除外後です。  

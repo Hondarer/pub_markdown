@@ -2,6 +2,7 @@
 """mkdocs による動的発行の自動再同期に関する単体テスト。"""
 
 import os
+import signal
 import sys
 import unittest
 from types import SimpleNamespace
@@ -220,6 +221,27 @@ class AutoStagerTest(unittest.TestCase):
         self.stager.handle_structural_change(generation)
         self.assertTrue(self.stager.state()["waiting_for_publish"])
         self.assertIsNone(self.stager.state()["timer_kind"])
+
+
+class ServeSigintTest(unittest.TestCase):
+    def tearDown(self):
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+
+    def test_build_keeps_default_sigint(self):
+        autostage.on_startup(command="build", dirty=False)
+        self.assertIs(signal.getsignal(signal.SIGINT), signal.default_int_handler)
+
+    def test_windows_serve_turns_ctrl_c_into_exit_zero(self):
+        if os.name != "nt":
+            autostage.on_startup(command="serve", dirty=False)
+            self.assertIs(signal.getsignal(signal.SIGINT), signal.default_int_handler)
+            return
+
+        autostage.on_startup(command="serve", dirty=False)
+        handler = signal.getsignal(signal.SIGINT)
+        with self.assertRaises(SystemExit) as caught:
+            handler(signal.SIGINT, None)
+        self.assertEqual(caught.exception.code, 0)
 
 
 if __name__ == "__main__":

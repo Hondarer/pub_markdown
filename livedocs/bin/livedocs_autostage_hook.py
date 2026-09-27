@@ -3,6 +3,7 @@
 
 import logging
 import os
+import signal
 import sys
 import threading
 from types import SimpleNamespace
@@ -412,6 +413,28 @@ def _request_server_rebuild(server):
         server._rebuild_cond.notify_all()
 
 
+def _stop_serve_on_sigint(signum, frame):
+    """Windows の Ctrl+C を終了コード 0 で終える。
+
+    待ち受け開始前の索引作成中は、Click が KeyboardInterrupt を終了コード 1
+    にする。ネイティブの Python が CTRL_C_EVENT を処理すると Git Bash には
+    SIGINT が届かず、makefile の ``trap`` は動かない。
+    see: https://learn.microsoft.com/windows/console/ctrl-c-and-ctrl-break-signals
+    see: https://cygwin.com/cygwin-ug-net/proc.html
+    """
+    del signum, frame
+    log.info("Shutting down...")
+    raise SystemExit(0)
+
+
+def on_startup(*, command, dirty, **kwargs):
+    """Windows の配信では、Ctrl+C を make の失敗にしない。"""
+    del dirty, kwargs
+    if command != "serve" or os.name != "nt":
+        return
+    signal.signal(signal.SIGINT, _stop_serve_on_sigint)
+
+
 _observer = None
 _handler = None
 _stager = None
@@ -424,6 +447,8 @@ def on_serve(server, config, builder=None, **kwargs):
     out_dir = config["docs_dir"]
     lang, details, variant = _livedocs_lang_details(config)
 
+    # 索引とディレクトリ走査が終わるまで、mkdocs は "Serving on" を出さない。
+    log.info("元の Markdown を索引してから配信を始めます")
     stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant)
     stager.set_rebuild_request(lambda: _request_server_rebuild(server))
     handler = _make_handler(stager)
