@@ -1,11 +1,11 @@
 # node_modules
-/bin_internal/node_modules
+/bin_internal/node_modules/
 
 ## Python cache
 __pycache__/
 
 # output
-/pages
+/pages/
 
 # mkdocs による動的発行の Python 仮想環境
-/livedocs/.venv
+/livedocs/.venv/
