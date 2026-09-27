@@ -56,7 +56,6 @@ OWN_ASSETS = (
     "docsfw-pandoc-style.css",
     "docsfw-header-links.css",
     "docsfw-header-meta.css",
-    "docsfw-variant-search.js",
 )
 
 # ヘッダーの単一ページ リンクと、概要版／詳細版の切り替えで使うアイコン。

@@ -127,7 +127,6 @@ extra_javascript:
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
   - assets/docsfw-svg-download.js
-  - assets/docsfw-variant-search.js
   # MathJax は静的発行 (bin_internal/pandoc-defaults/math-mathjax.yaml) と同じく CDN から読み込む。
   # 静的発行は版を MathJax 3 に固定しているため、こちらも同じ版を指定する。
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
@@ -142,3 +141,5 @@ hooks:
   - @LIVEDOCS_HOOKS_DIR@/livedocs_versioned_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_autostage_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_abstract_hook.py
+  # search プラグインの後に動き、索引を通常版と詳細版へ分ける。
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_search_hook.py

@@ -36,14 +36,27 @@
   {% endif %}
 {% endblock %}
 
-{% block scripts %}
-  <script>
-    window.__DOCSFW_VARIANTS__ = {{ config.extra.livedocs_variants | default([], true) | tojson }};
-    window.__DOCSFW_SEARCH_RESULT__ = {
-      none: {{ lang.t("search.result.none") | tojson }},
-      one: {{ lang.t("search.result.one") | tojson }},
-      other: {{ lang.t("search.result.other") | tojson }}
-    };
-  </script>
-  {{ super() }}
+{#
+  全文検索の索引は、通常版と詳細版で分けて置きます
+  (bin/livedocs_search_hook.py が <variant>/search/search_index.json へ書き出す)。
+  Material は __config.base を起点に search/search_index.json を読み込み、
+  検索結果の location も base から解決します。版に属するページでは base を
+  版のルートへ向け、その版の索引だけを読み込ませます。
+
+  base を使うのは、ほかに versions.json と navigation.instant ですが、
+  どちらも使用していません。置き換え元の文字列は Material のバージョンに
+  依存するため、tests/test_livedocs_search.py で空振りしないことを確認します。
+#}
+{% block config %}
+  {%- set raw = ((page.url or '') if page else '').split('/')[0] -%}
+  {%- if raw and raw in (config.extra.livedocs_variants | default([], true)) -%}
+    {%- filter replace(
+      '"base": ' ~ (base_url | tojson) ~ ',',
+      '"base": ' ~ ((base_url ~ '/' ~ raw ~ '/') | tojson) ~ ','
+    ) -%}
+    {{ super() }}
+    {%- endfilter -%}
+  {%- else -%}
+    {{ super() }}
+  {%- endif -%}
 {% endblock %}

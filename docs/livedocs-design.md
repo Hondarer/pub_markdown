@@ -187,6 +187,7 @@ framework/docsfw/
 |   |   +-- livedocs_autostage_hook.py  # mkdocs serve 中の自動ステージング (on_serve hook)
 |   |   +-- livedocs_doxygen_hook.py  # /doxygen/ の静的サーブと単一ページ リンク
 |   |   +-- livedocs_versioned_hook.py  # 完成済み版を維持する無停止再生成
+|   |   +-- livedocs_search_hook.py  # 全文検索の索引を通常版と詳細版に分ける
 |   |   +-- stop_livedocs_serve.sh    # このワークスペースの mkdocs serve を停止する
 |   +-- mkdocs.yml.in                # 設定テンプレート
 |   +-- theme/
@@ -1524,6 +1525,17 @@ Windows 側の待ち受けは `netstat.exe -ano` の LISTENING 行で確認で�
 ヘッダーの切り替えは、開いているページのパスから詳細度の接頭辞だけを入れ替えた相手へ移ります。  
 左のナビゲーションと全文検索は、今開いている詳細度のページだけを対象にします。  
 もう一方の言語へ移るときは、`make servedocs` を再起動します。
+
+全文検索の索引は、版ごとに分けて置きます。  
+search プラグインが出力した `search/search_index.json` を、`bin/livedocs_search_hook.py` が `<variant>/search/search_index.json` へ分けます。  
+索引内の `location` は版のルートからの相対パスに書き換え、どの版にも属さないページだけをルートの索引に残します。  
+`theme/main.html` は、版に属するページの `__config.base` を版のルート (`<base_url>/<variant>/`) へ向けます。  
+Material は `base` を起点に索引を読み込み、検索結果の URL も `base` から解決するため、今開いている版の索引だけを読み込みます。  
+`base` を使う機能は、ほかに `versions.json` と `navigation.instant` ですが、どちらも使用していません。
+
+1 つの索引に両方の版を入れると、索引の容量が約 2 倍になります。  
+検索 Worker は索引の構築で数百 MB を使い、ページと同じレンダラー プロセスで動きます。  
+そのページから `target` 付きで開いた別ウインドウ (依存関係レポートなど) も同じプロセスに入るため、メモリ不足でクラッシュすることがありました。
 
 | `LIVEDOCS_VARIANT` | 言語 | 同時に配信する版 | `/` の着地 |
 |---|---|---|---|

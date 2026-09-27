@@ -71,7 +71,6 @@ VENDORED_FILES = (
     "assets/docsfw-pandoc-style.css",
     "assets/docsfw-header-links.css",
     "assets/docsfw-header-meta.css",
-    "assets/docsfw-variant-search.js",
     "assets/docsfw-doxygen-icon.svg",
     "assets/docsfw-git-icon.svg",
     "assets/docsfw-github-icon.svg",
