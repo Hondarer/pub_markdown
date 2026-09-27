@@ -3,9 +3,11 @@
 
 import json
 import os
+import struct
 import sys
 import tempfile
 import unittest
+import zlib
 
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
@@ -20,8 +22,10 @@ from vendor_assets import (  # noqa: E402
     node_child_env,
     resolve_hooks_dir,
     resolve_site_name,
+    ROOT_FAVICON_NAME,
     vendor_favicon_icons,
     vendor_header_icons,
+    vendor_root_favicon,
     vendor_theme,
     vendor_own_assets,
 )
@@ -206,6 +210,124 @@ class FaviconIconsTest(unittest.TestCase):
                 self.assertTrue(os.path.isfile(os.path.join(assets_dir, name)), name)
                 self.assertIn("favicon: assets/{}".format(name), config)
                 self.assertIn("assets/{}".format(name), VENDORED_FILES)
+
+    def test_builds_root_favicon_from_the_mkdocs_svg(self):
+        """``/favicon.ico`` が SVG と同じ絵になり、再実行では書き換えない。"""
+        with tempfile.TemporaryDirectory() as root:
+            src_dir = os.path.join(root, "src")
+            self.assertEqual(vendor_root_favicon(src_dir), 1)
+            self.assertEqual(vendor_root_favicon(src_dir), 0)
+            ico_path = os.path.join(src_dir, ROOT_FAVICON_NAME)
+            self.assertTrue(os.path.isfile(ico_path))
+            with open(ico_path, "rb") as handle:
+                images = _ico_pngs(handle.read())
+            self.assertEqual([size for size, _png in images], [16, 32, 48])
+            width, height, rows = _png_rgba(images[-1][1])
+            self.assertEqual((width, height), (48, 48))
+            self.assertEqual(_pixel(rows, 0, 0)[3], 0)
+            top = _pixel(rows, 24, 1)
+            bottom = _pixel(rows, 24, 46)
+            self.assertGreater(top[3], 200)
+            self.assertLess(max(top[:3]), 80)
+            self.assertGreater(bottom[3], 200)
+            self.assertGreater(min(bottom[:3]), 70)
+            self.assertGreater(sum(bottom[:3]), sum(top[:3]))
+            white = 0
+            for row in rows:
+                for index in range(0, len(row), 4):
+                    red, green, blue, alpha = row[index:index + 4]
+                    if red > 240 and green > 240 and blue > 240 and alpha > 200:
+                        white += 1
+            self.assertGreater(white, 50)
+
+    def test_root_favicon_is_kept_by_the_staging_cleanup(self):
+        self.assertIn(ROOT_FAVICON_NAME, VENDORED_FILES)
+
+
+def _paeth(left, up, upper_left):
+    estimate = left + up - upper_left
+    if abs(estimate - left) <= abs(estimate - up) and abs(estimate - left) <= abs(estimate - upper_left):
+        return left
+    if abs(estimate - up) <= abs(estimate - upper_left):
+        return up
+    return upper_left
+
+
+def _ico_pngs(data):
+    """ICO に入っている PNG を ``(一辺, png_bytes)`` で返す。"""
+    reserved, kind, count = struct.unpack_from("<HHH", data, 0)
+    if reserved != 0 or kind != 1 or count < 1:
+        raise AssertionError("ICO のヘッダーが不正です")
+    images = []
+    for index in range(count):
+        width, _height, _colors, _reserved, _planes, _bits, size, offset = struct.unpack_from(
+            "<BBBBHHII", data, 6 + 16 * index
+        )
+        side = 256 if width == 0 else width
+        png = data[offset:offset + size]
+        if not png.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise AssertionError("{} px の画像が PNG ではありません".format(side))
+        images.append((side, png))
+    return images
+
+
+def _png_rgba(data):
+    """8 bit RGBA の PNG を ``(width, height, rows)`` にする。"""
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise AssertionError("PNG ではありません")
+    position = 8
+    width = height = color_type = None
+    idat = []
+    while position + 8 <= len(data):
+        length = struct.unpack(">I", data[position:position + 4])[0]
+        chunk_type = data[position + 4:position + 8]
+        chunk = data[position + 8:position + 8 + length]
+        position += 12 + length
+        if chunk_type == b"IHDR":
+            width, height, bit_depth, color_type = struct.unpack(">IIBB", chunk[:10])
+            if bit_depth != 8 or color_type != 6:
+                raise AssertionError("RGBA 8 bit 以外の PNG です")
+        elif chunk_type == b"IDAT":
+            idat.append(chunk)
+        elif chunk_type == b"IEND":
+            break
+    raw = zlib.decompress(b"".join(idat))
+    channels = 4
+    stride = width * channels
+    rows = []
+    cursor = 0
+    previous = bytearray(stride)
+    for _y in range(height):
+        filter_type = raw[cursor]
+        cursor += 1
+        row = bytearray(raw[cursor:cursor + stride])
+        cursor += stride
+        for index in range(stride):
+            left = row[index - channels] if index >= channels else 0
+            up = previous[index]
+            upper_left = previous[index - channels] if index >= channels else 0
+            if filter_type == 0:
+                predictor = 0
+            elif filter_type == 1:
+                predictor = left
+            elif filter_type == 2:
+                predictor = up
+            elif filter_type == 3:
+                predictor = (left + up) // 2
+            elif filter_type == 4:
+                predictor = _paeth(left, up, upper_left)
+            else:
+                raise AssertionError("未対応の PNG フィルタです: {}".format(filter_type))
+            row[index] = (row[index] + predictor) & 255
+        previous = row
+        rows.append(bytes(row))
+    return width, height, rows
+
+
+def _pixel(rows, x, y):
+    row = rows[y]
+    index = x * 4
+    return tuple(row[index:index + 4])
 
 
 class VendorThemeTest(unittest.TestCase):

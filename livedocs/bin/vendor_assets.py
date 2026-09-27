@@ -6,7 +6,7 @@
 - ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
 - ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
 - ``livedocs/assets/`` 配下の自前スクリプトとスタイル
-- Doxygen と Git の単一ページ リンク用 SVG、favicon、および theme 上書き
+- Doxygen と Git の単一ページ リンク用 SVG、favicon SVG、サイト直下の favicon.ico、および theme 上書き
 - ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
 
 いずれも ``bin_internal/resolve-node-components.js`` が解決したパスを参照します。
@@ -71,7 +71,26 @@ FAVICON_ICONS = (
     "docsfw-mkdocs-favicon.svg",
 )
 
+# ``<link rel="icon">`` が無いページが要求する URL。docs_dir 直下なのでパスは /favicon.ico。
+ROOT_FAVICON_NAME = "favicon.ico"
+BUILD_FAVICON_ICO = os.path.join(DOCSFW_DIR, "bin_internal", "build-favicon-ico.js")
+
 STYLES_HTML_DIR = os.path.join(DOCSFW_DIR, "styles", "html")
+
+
+def write_bytes_if_changed(path, content):
+    """バイト列が変わったときだけ書き出す。
+
+    mkdocs の監視が同じ favicon.ico で再ビルドしないよう、内容が同じなら更新時刻を保ちます。
+    """
+    if os.path.isfile(path):
+        with open(path, "rb") as handle:
+            if handle.read() == content:
+                return False
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "wb") as handle:
+        handle.write(content)
+    return True
 
 
 def copy_if_changed(src, dst):
@@ -189,6 +208,27 @@ def vendor_favicon_icons(assets_dir):
         if copy_if_changed(src, os.path.join(assets_dir, name)):
             copied += 1
     return copied
+
+
+def vendor_root_favicon(src_dir, env=None):
+    """MkDocs 用 SVG と同じ絵の ICO を docs_dir 直下の ``favicon.ico`` へ置く。"""
+    svg = os.path.join(STYLES_HTML_DIR, "docsfw-mkdocs-favicon.svg")
+    if not os.path.isfile(svg):
+        raise FileNotFoundError("favicon が見つかりません: {}".format(svg))
+    if not os.path.isfile(BUILD_FAVICON_ICO):
+        raise FileNotFoundError("favicon.ico の生成スクリプトが見つかりません: {}".format(BUILD_FAVICON_ICO))
+    result = subprocess.run(
+        ["node", BUILD_FAVICON_ICO, svg],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        check=False,
+    )
+    if result.returncode != 0 or not result.stdout:
+        message = result.stderr.decode("utf-8", "replace").strip() or "favicon.ico の生成に失敗しました"
+        raise FileNotFoundError(message)
+    destination = os.path.join(src_dir, ROOT_FAVICON_NAME)
+    return 1 if write_bytes_if_changed(destination, result.stdout) else 0
 
 
 def vendor_theme(livedocs_dir):
@@ -328,6 +368,7 @@ def main(argv=None):
         copied += vendor_own_assets(assets_dir)
         copied += vendor_header_icons(assets_dir)
         copied += vendor_favicon_icons(assets_dir)
+        copied += vendor_root_favicon(os.path.dirname(assets_dir), env=node_env)
         copied += vendor_theme(livedocs_dir)
     except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)

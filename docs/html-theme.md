@@ -17,7 +17,9 @@ Pandoc HTML は Pandoc の P、MkDocs は Material の本を前景に使用し�
 
 SVG の正本は `styles/html/docsfw-{pandoc,mkdocs}-favicon.svg` です。  
 Pandoc の発行処理は各 HTML ルートへ Pandoc 用 SVG を配置し、標準テンプレートと簡易テンプレートから参照します。  
-MkDocs の `vendor_assets.py` は MkDocs 用 SVG を `assets/` へ配置し、生成した `mkdocs.yml` の `theme.favicon` から参照します。
+MkDocs の `vendor_assets.py` は MkDocs 用 SVG を `assets/` へ配置し、生成した `mkdocs.yml` の `theme.favicon` から参照します。  
+同じ SVG を 16 px、32 px、48 px に描画した ICO を、サイト直下の `favicon.ico` としても配置します。  
+アイコンを指定していないページが `/favicon.ico` を要求したとき、この ICO が SVG と同じ絵を返します。
 
 標準 HTML のヘッダーは MkDocs と同じく 48px で、直後に 12px の本文背景帯を置きます。  
 ページ タイトルは 18px、発行者と発行日時は 14px、右上の操作アイコンは 20px、左端のロゴとメニューは 24px です。  

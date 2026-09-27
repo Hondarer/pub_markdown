@@ -77,6 +77,8 @@ VENDORED_FILES = (
     "assets/docsfw-gitlab-icon.svg",
     "assets/docsfw-gitbucket-icon.svg",
     "assets/docsfw-mkdocs-favicon.svg",
+    # <link rel="icon"> が無いページ向け。docs_dir 直下なので URL は /favicon.ico。
+    "favicon.ico",
 )
 
 # 既定の環境変数。.vscode/settings.json の定義と一致させる。
