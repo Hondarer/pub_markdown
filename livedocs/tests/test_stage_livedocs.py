@@ -66,12 +66,25 @@ class BuildFrontMatterTest(unittest.TestCase):
         document = self._document(body="本文だけです。\n")
         self.assertEqual(build_front_matter(document, "ja", True), "")
 
-    def test_non_index_does_not_add_heading_as_title(self):
+    def test_non_index_uses_first_heading_as_title(self):
         document = self._document(staged_rel="guide/usage.md")
-        self.assertEqual(build_front_matter(document, "ja", True), "")
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\ntitle: "ガイド"\n---',
+        )
+
+    def test_heading_after_html_comment_is_used_as_title(self):
+        document = self._document(
+            staged_rel="guide/usage.md",
+            body="<!-- 自動生成\n# 対象外 -->\n\n# 公開 API\n\n## 概要\n",
+        )
+        self.assertEqual(
+            build_front_matter(document, "ja", True),
+            '---\ntitle: "公開 API"\n---',
+        )
 
     def test_publish_info_is_added(self):
-        document = self._document(staged_rel="guide/usage.md")
+        document = self._document(staged_rel="guide/usage.md", body="本文\n")
         document.publish_author = "first, second et al."
         document.publish_date = "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"
         self.assertEqual(
@@ -82,7 +95,7 @@ class BuildFrontMatterTest(unittest.TestCase):
 
     def test_publish_info_does_not_overwrite_the_source_front_matter(self):
         # set-meta.lua が文書側のメタデータを上書きしないことにそろえる。
-        document = self._document(staged_rel="guide/usage.md")
+        document = self._document(staged_rel="guide/usage.md", body="本文\n")
         document.front_matter = '---\nauthor: "明示著者"\n---'
         document.fields = {"author": "明示著者"}
         document.publish_author = "first"
@@ -94,7 +107,7 @@ class BuildFrontMatterTest(unittest.TestCase):
         )
 
     def test_empty_publish_info_adds_nothing(self):
-        document = self._document(staged_rel="guide/usage.md")
+        document = self._document(staged_rel="guide/usage.md", body="本文\n")
         self.assertEqual(build_front_matter(document, "ja", True), "")
 
     def test_short_title_still_takes_priority(self):

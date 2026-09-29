@@ -80,7 +80,7 @@ Table: 入力と発行対象決定に関するファンクション ポイント
 | 10 | 詳細ブロック `<!--details:-->` | `bin_internal/replace-tag.sh` | 維持 | Python へ移植。同じ言語の通常版では除き、詳細版では残す |
 | 11 | `\toc` によるディレクトリ横断索引 | `bin_internal/pandoc-filters/insert-toc.lua`、`insert-toc.sh` | 維持 | 目次パラメーターと `open-level` を再実装。ネスト字下げは 4 スペース (Python-Markdown と list-indent に合わせる) |
 | 12 | `short-title` 系の解決 | `bin_internal/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
-| 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う |
+| 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う。MkDocs は先頭要素の H1 だけをタイトルにするため、静的発行と同じく HTML コメントを除いた最初の H1 を `title:` へ写す |
 
 Table: 前処理に関するファンクション ポイント一覧
 

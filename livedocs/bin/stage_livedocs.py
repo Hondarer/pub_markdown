@@ -95,6 +95,7 @@ DEFAULT_FRAMEWORK_HOMES = {
 _ENV_VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
 _FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$")
+_HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _PAGEBREAK_RE = re.compile(r"^[ \t]*\\(?:newpage|pagebreak)[ \t]*$")
 # リンクの丸括弧の内側。Pandoc と同じく、<> で囲んだリンク先、空白を含む
 # リンク先、引用符で囲んだタイトルを受け付ける。後続の語が引用符で始まる
@@ -398,9 +399,12 @@ def is_skipped(fields):
 
 
 def first_heading(body):
-    """本文から最初のレベル 1 見出しを取り出す。コード フェンス内は無視する。"""
+    """本文から最初のレベル 1 見出しを取り出す。コード フェンス内は無視する。
+
+    静的発行の ``pub_markdown_core.sh`` と同じく、HTML コメントを除いてから探します。
+    """
     fence = None
-    for raw_line in body.split("\n"):
+    for raw_line in _HTML_COMMENT_RE.sub("", body).split("\n"):
         line = raw_line.rstrip("\r")
         fence_match = _FENCE_RE.match(line)
         if fence_match:
@@ -1045,7 +1049,9 @@ def build_front_matter(document, lang, details):
 
     mkdocs はナビゲーションとページ タイトルに ``title`` を使用します。
     docsfw の ``short-title`` は索引とナビゲーションだけに効くため、完全には一致しません。
-    索引ページでは、フォルダーの表示名に使えるように最初の H1 も補完対象にします。
+    ``short-title`` が無い場合は、静的発行と同じく最初の H1 を補います。
+    mkdocs 自身は本文の先頭要素が H1 の場合しか H1 をタイトルにしないため、
+    H1 の前に HTML コメントなどがあるとファイル名がタイトルになります。
 
     ``git-url`` と ``git-provider`` は、テーマの ``partials/header.html`` が
     ``page.meta`` から読んで「ソースを開く」リンクにします。
@@ -1057,7 +1063,7 @@ def build_front_matter(document, lang, details):
     added = []
 
     title = resolve_short_title(document.fields, lang, details)
-    if not title and posixpath.basename(document.staged_rel).lower() == "index.md":
+    if not title:
         title = first_heading(document.body)
     if title and not document.fields.get("title"):
         added.append(_front_matter_line("title", title))
