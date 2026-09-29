@@ -939,8 +939,8 @@ code span.wa { color: var(--docsfw-syntax-wa); font-style: normal; font-weight: 
   height: 6px;
   margin-left: -1.25em;
   margin-right: 0.75em;
-  border-right: 1px solid #000;
-  border-bottom: 1px solid #000;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
   transform: rotate(-45deg);
   position: relative;
   top: -1px;
