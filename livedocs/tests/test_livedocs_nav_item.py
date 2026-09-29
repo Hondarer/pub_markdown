@@ -61,8 +61,8 @@ class OverrideNavItemTest(unittest.TestCase):
         with open(OVERRIDE_NAV_ITEM, "r", encoding="utf-8") as handle:
             return handle.read()
 
-    def test_override_only_replaces_the_panel_title_block(self):
-        """板自身の見出しブロックだけを差し替えていること。"""
+    def test_override_preserves_material_structure_and_lazy_rendering(self):
+        """板見出しと遅延生成を変更し、Material の行構造を保つこと。"""
         text = self._read()
         # 上流の単一 <label class="md-nav__title" ...> 見出しは無くなっている。
         self.assertNotIn('<label class="md-nav__title" for="{{ path }}">', text)
@@ -81,7 +81,7 @@ class OverrideNavItemTest(unittest.TestCase):
             "{% macro render_title(nav_item) %}",
             "{% macro render_content(nav_item, ref) %}",
             "{% macro render_pruned(nav_item, ref) %}",
-            "{% macro render(nav_item, path, level, parent) %}",
+            "{% macro render(nav_item, path, level, parent, shallow=false) %}",
             "{% set _ = namespace(index = none) %}",
             "if item.is_index and _.index is none",
             '<input class="md-nav__toggle md-toggle {{ indeterminate }}" type="checkbox" id="{{ path }}" {{ checked }}>',

@@ -14,6 +14,11 @@
   var activePanelKey = 'root';
   var panelSequence = 0;
   var branchSequence = 0;
+  var navigation = null;
+  var nodeKeys = new WeakMap();
+  var currentNodes = new WeakSet();
+  var expandedNodes = new WeakSet();
+  var branchNodes = {};
   var selectHashTarget = null;
   var isJa = (document.documentElement.lang || 'ja').toLowerCase().indexOf('ja') === 0;
 
@@ -50,9 +55,10 @@
 
   function renderFlatNode(node) {
     var children = node.children || [];
-    var expanded = containsCurrent(node);
-    var ancestor = expanded && !(node.url && node.url === current);
+    var expanded = expandedNodes.has(node);
+    var ancestor = containsCurrent(node) && !(node.url && node.url === current);
     var branchId = 'docsfw-branch-' + (++branchSequence);
+    if (children.length) { branchNodes[branchId] = node; }
     var html = '<li class="docsfw-nav-item' + (ancestor ? ' docsfw-nav-ancestor' : '') +
       '"><div class="docsfw-nav-row">' + rowContent(node, true);
     if (children.length) {
@@ -63,15 +69,23 @@
     html += '</div>';
     if (children.length) {
       html += '<ul id="' + branchId + '" class="docsfw-nav-list"' + (expanded ? '' : ' hidden') + '>';
-      for (var i = 0; i < children.length; i++) { html += renderFlatNode(children[i]); }
+      if (expanded) {
+        for (var i = 0; i < children.length; i++) { html += renderFlatNode(children[i]); }
+      }
       html += '</ul>';
     }
     return html + '</li>';
   }
 
-  function containsCurrent(node) {
-    if (node.url && node.url === current) { return true; }
-    return (node.children || []).some(containsCurrent);
+  function containsCurrent(node) { return currentNodes.has(node); }
+
+  function indexCurrent(node) {
+    var found = !!node.url && node.url === current;
+    (node.children || []).forEach(function (child) {
+      if (indexCurrent(child)) { found = true; }
+    });
+    if (found) { currentNodes.add(node); expandedNodes.add(node); }
+    return found;
   }
 
   function revealCurrent() {
@@ -89,6 +103,7 @@
   function allocatePanel(node, parentKey) {
     var key = 'panel-' + (++panelSequence);
     panels[key] = { key: key, node: node, parent: parentKey };
+    nodeKeys.set(node, key);
     if (isAncestorOrEqual(node)) { currentPanelKey = key; }
     return key;
   }
@@ -103,14 +118,7 @@
     }
   }
 
-  function childPanelKey(node, parentKey) {
-    var keys = Object.keys(panels);
-    for (var i = 0; i < keys.length; i++) {
-      var panel = panels[keys[i]];
-      if (panel.node === node && panel.parent === parentKey) { return panel.key; }
-    }
-    return '';
-  }
+  function childPanelKey(node) { return nodeKeys.get(node) || ''; }
 
   function renderPanelRows(nodes, parentKey) {
     var html = '<ul class="docsfw-nav-list">';
@@ -163,25 +171,37 @@
         homeClass + '>' + esc(nav.title || 'Home') + '</a></div>';
     }
 
-    var children = nav.children || [];
-    branchSequence = 0;
-    var flat = '<div class="docsfw-flat-nav"><ul class="docsfw-nav-list">';
-    for (var i = 0; i < children.length; i++) { flat += renderFlatNode(children[i]); }
-    flat += '</ul></div>';
-
+    navigation = nav;
+    currentNodes = new WeakSet(); expandedNodes = new WeakSet();
+    nodeKeys = new WeakMap();
+    indexCurrent(nav);
     panels = { root: { key: 'root', node: nav, parent: '' } };
-    panelSequence = 0;
-    currentPanelKey = 'root';
-    registerPanels(children, 'root');
+    panelSequence = 0; currentPanelKey = 'root';
+    registerPanels(nav.children || [], 'root');
     activePanelKey = currentPanelKey;
-    var panelHtml = '<div class="docsfw-panel-nav">';
-    var keys = Object.keys(panels);
-    for (var j = 0; j < keys.length; j++) { panelHtml += renderPanel(panels[keys[j]]); }
-    panelHtml += '</div>';
-    container.innerHTML = flat + panelHtml;
+    renderVisibleNavigation();
     wirePanelButtons(container);
     var sidebar = document.getElementById('docsfw-primary-sidebar');
     if (sidebar) { sidebar.classList.toggle('docsfw-child-panel-active', activePanelKey !== 'root'); }
+  }
+
+  function renderVisibleNavigation(direction) {
+    var container = document.getElementById('docsfw-tree');
+    if (!container || !navigation) { return; }
+    // ページ内目次を、置き換える DOM の外へ退避する。
+    var toc = document.getElementById('docsfw-page-toc');
+    if (toc && container.contains(toc)) { container.parentNode.appendChild(toc); }
+    branchSequence = 0; branchNodes = {};
+    if (panelLayout.matches) {
+      container.innerHTML = '<div class="docsfw-panel-nav">' + renderPanel(panels[activePanelKey]) + '</div>';
+      var panel = container.querySelector('.docsfw-nav-panel');
+      if (direction && panel) { panel.classList.add('docsfw-panel-enter-' + direction); }
+    } else {
+      var html = '<div class="docsfw-flat-nav"><ul class="docsfw-nav-list">';
+      (navigation.children || []).forEach(function (node) { html += renderFlatNode(node); });
+      container.innerHTML = html + '</ul></div>';
+    }
+    placePageToc();
   }
 
   function setActivePanel(key, direction, viaKeyboard) {
@@ -189,27 +209,30 @@
     activePanelKey = key;
     var sidebar = document.getElementById('docsfw-primary-sidebar');
     if (sidebar) { sidebar.classList.toggle('docsfw-child-panel-active', key !== 'root'); }
-    var nodes = document.querySelectorAll('.docsfw-nav-panel');
-    for (var i = 0; i < nodes.length; i++) {
-      var active = nodes[i].getAttribute('data-panel-key') === key;
-      nodes[i].classList.toggle('docsfw-panel-active', active);
-      nodes[i].hidden = !active;
-      nodes[i].classList.remove('docsfw-panel-enter-forward', 'docsfw-panel-enter-back');
-      if (active && direction) { nodes[i].classList.add('docsfw-panel-enter-' + direction); }
-    }
+    if (panelLayout.matches) { renderVisibleNavigation(direction); }
     placePageToc();
-    /* ポインター操作では、切替後の見出しにフォーカス枠を残さない。
-       キーボード操作 (click の detail === 0) のときだけ見出しへフォーカスし、
-       スクリーン リーダーと目視の双方に遷移先の階層を伝える。 */
     var heading = document.querySelector('.docsfw-nav-panel.docsfw-panel-active .docsfw-panel-title-text');
     if (heading && direction && viaKeyboard) { heading.setAttribute('tabindex', '-1'); heading.focus(); }
   }
 
   function wirePanelButtons(container) {
+    if (container.__docsfwWired) { return; }
+    container.__docsfwWired = true;
     container.addEventListener('click', function (event) {
       var toggle = event.target.closest ? event.target.closest('.docsfw-nav-toggle') : null;
       if (toggle) {
         var branch = document.getElementById(toggle.getAttribute('aria-controls'));
+        var node = branchNodes[branch.id];
+        if (branch.hidden) {
+          expandedNodes.add(node);
+          var html = '';
+          (node.children || []).forEach(function (child) { html += renderFlatNode(child); });
+          branch.innerHTML = html;
+        } else {
+          expandedNodes.delete(node);
+          branch.querySelectorAll('ul[id]').forEach(function (list) { delete branchNodes[list.id]; });
+          branch.replaceChildren();
+        }
         branch.hidden = !branch.hidden;
         toggle.setAttribute('aria-expanded', String(!branch.hidden));
         return;
@@ -503,6 +526,7 @@
   function onLayoutChange() {
     closeDrawer(false);
     if (panelLayout.matches) { setActivePanel(currentPanelKey); }
+    else { renderVisibleNavigation(); }
     placePageToc();
     revealCurrent();
   }

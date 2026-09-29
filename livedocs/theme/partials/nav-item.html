@@ -25,7 +25,7 @@
   (styles/html 側の Pandoc HTML 実装 (docsfw-nav.js の .docsfw-panel-title)
   と同じ挙動へ揃えるための変更)。
 
-  上記の板見出しのブロック以外は上流のままとする。
+  閉じた枝の子項目は JSON に保持し、展開時に DOM へ挿入する。
   mkdocs-material を更新した場合は、上流の partials/nav-item.html との
   差分を取り直すこと。tests/test_livedocs_nav_item.py が上流の内容変化を
   検出する。
@@ -81,7 +81,7 @@
     </a>
   {% endif %}
 {% endmacro %}
-{% macro render(nav_item, path, level, parent) %}
+{% macro render(nav_item, path, level, parent, shallow=false) %}
   {% set class = "md-nav__item" %}
   {% if nav_item.active %}
     {% set class = class ~ " md-nav__item--active" %}
@@ -161,11 +161,13 @@
             {% endif %}
           </div>
           <ul class="md-nav__list" data-md-scrollfix>
+            {% if nav_item.active and not shallow %}
             {% for item in nav_item.children %}
               {% if not index or item != index %}
                 {{ render(item, path ~ "_" ~ loop.index, level + 1, nav_item) }}
               {% endif %}
             {% endfor %}
+            {% endif %}
           </ul>
         </nav>
       {% else %}
@@ -201,3 +203,22 @@
     </li>
   {% endif %}
 {% endmacro %}
+
+{# 行の HTML は浅い出力とし、子孫の HTML を含めない。tojson で script 終端もエスケープする。 #}
+{% macro data(nav_item, path, level, parent) -%}
+  {"id": {{ path | tojson }}, "html": {{ render(nav_item, path, level, parent, true) | tojson }},
+   "expanded": {{ nav_item.active | tojson }}, "children": [
+    {% set index = namespace(item=none) %}
+    {% if "navigation.indexes" in features %}
+      {% for child in nav_item.children or [] %}
+        {% if child.is_index and index.item is none %}{% set index.item = child %}{% endif %}
+      {% endfor %}
+    {% endif %}
+    {% set comma = joiner(",") %}
+    {% for child in nav_item.children or [] %}
+      {% if child != index.item %}
+        {{ comma() }}{{ data(child, path ~ "_" ~ loop.index, level + 1, nav_item) }}
+      {% endif %}
+    {% endfor %}
+   ]}
+{%- endmacro %}

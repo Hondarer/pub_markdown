@@ -1321,6 +1321,9 @@ Material は一覧の `padding-bottom: 0.4rem` を `.md-nav` の `margin-bottom:
 ページ内目次は一覧の最後の項目のため、この対を外側の階層でそろえて 0 にしないと、最後の行の下に 0.4rem が残ります。  
 入れ子の階層は Material の対のまま残します。
 
+ファイル目次の初期 HTML は現在ページへの経路だけを展開し、全項目の行と階層は JSON として保持します。  
+開閉操作に応じて子 DOM を生成または破棄する詳細は、[ファイル目次の遅延 DOM 生成](lazy-file-navigation.md) を参照してください。
+
 板見出しの上流実装は `partials/nav-item.html` の `<label class="md-nav__title" for="{{ path }}">` 1 個で、見出し全体がチェック ボックスのトグルを兼ねます。  
 戻る矢印だろうとフォルダー名だろうと押した瞬間に上位フォルダーへ戻るだけで、フォルダーにインデックス ページ (`navigation.indexes` で解決される節の索引) があっても、そこへ遷移する手段がありません。  
 Pandoc HTML 側の `docsfw-nav.js` (`.docsfw-panel-title`) は戻るボタンとフォルダー名をもともと別要素にしているため、`theme/partials/nav-item.html` を上書きして同じ形に揃えます。  

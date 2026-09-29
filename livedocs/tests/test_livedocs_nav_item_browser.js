@@ -7,9 +7,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const {spawnSync} = require('node:child_process');
+const {spawnSync, execFileSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
+const components = JSON.parse(execFileSync(process.execPath,
+  [path.join(root, 'bin_internal/resolve-node-components.js')], {encoding: 'utf8'}));
+const puppeteer = require(components.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require(path.join(root, 'bin_internal/browser-launch-options'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-nav-item-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
@@ -108,9 +110,11 @@ function clickPanelTitle(page, title, target) {
   let server;
   try {
     run(python, ['-', root, temporary], {input: String.raw`
-import pathlib, sys
+import pathlib, shutil, sys
 root, target = map(pathlib.Path, sys.argv[1:])
 docs = target / 'docs'
+(docs / 'assets').mkdir(parents=True)
+shutil.copyfile(root / 'livedocs/assets/docsfw-responsive-nav.js', docs / 'assets/docsfw-responsive-nav.js')
 (docs / 'guide').mkdir(parents=True)
 (docs / 'other').mkdir(parents=True)
 (docs / 'index.md').write_text('# Home\n', encoding='utf-8')
@@ -127,6 +131,8 @@ theme:
   font: false
   features:
     - navigation.indexes
+extra_javascript:
+  - assets/docsfw-responsive-nav.js
 `);
     run(python, ['-m', 'mkdocs', 'build', '--strict', '-f', path.join(temporary, 'mkdocs.yml')]);
     server = http.createServer((request, response) => {

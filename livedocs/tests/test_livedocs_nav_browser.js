@@ -18,9 +18,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const {spawnSync} = require('node:child_process');
+const {spawnSync, execFileSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
+const components = JSON.parse(execFileSync(process.execPath,
+  [path.join(root, 'bin_internal/resolve-node-components.js')], {encoding: 'utf8'}));
+const puppeteer = require(components.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require(path.join(root, 'bin_internal/browser-launch-options'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-nav-drawer-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
@@ -469,6 +471,8 @@ extra_javascript:
 
       await widePage.goto(url + 'section/page-25/', {waitUntil: 'domcontentloaded'});
       await widePage.waitForSelector('.md-sidebar--primary .md-sidebar__scrollwrap');
+      // Material による現在ページへの初期スクロールを待ってから終端を測る。
+      await new Promise(resolve => setTimeout(resolve, 200));
       assertWideSidebarEnd(
         await wideSidebarEndMetrics(widePage, '.md-sidebar--primary', 'Page 49'),
         width + 'px left sidebar'
@@ -688,7 +692,7 @@ extra_javascript:
     assertTocFollowsPanel(sectionPanelToc, 'index panel');
     await goBackOnePanel();
     const rootPanelToc = await panelTocPlacement();
-    assert.equal(rootPanelToc.panelTitle, 'Test', 'root panel ' + JSON.stringify(rootPanelToc));
+    assert.equal(rootPanelToc.panelTitle, 'Test (ja)', 'root panel ' + JSON.stringify(rootPanelToc));
     assertTocFollowsPanel(rootPanelToc, 'root panel');
 
     /* 上位の板へ戻してからドロワーを閉じ、開き直しても中身が横へずれない。

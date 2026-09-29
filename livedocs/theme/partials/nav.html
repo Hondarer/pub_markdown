@@ -65,3 +65,10 @@
     {% endif %}
   </ul>
 </nav>
+
+<script type="application/json" id="docsfw-nav-data">[
+  {% set roots = variant_nav.section.children if variant_nav.section and variant_nav.section.children else nav.items %}
+  {% for nav_item in roots %}
+    {{ "," if not loop.first }}{{ item.data(nav_item, "__nav_" ~ loop.index, 1, none) }}
+  {% endfor %}
+]</script>

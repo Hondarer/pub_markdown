@@ -13,6 +13,85 @@
   var drawerToggle = null;
   var hashSelectionTimer = null;
   var hashSelectionScrollHandler = null;
+  var navigationData = null;
+  var branches = Object.create(null);
+
+  function initLazyNavigation() {
+    var data = document.getElementById('docsfw-nav-data');
+    if (!data || data === navigationData) { return; }
+    // 全体を文字列データとして保持し、DOM のキャッシュは作らない。
+    var roots;
+    try { roots = JSON.parse(data.textContent); } catch (_error) { return; }
+    navigationData = data;
+    branches = Object.create(null);
+    function index(node) {
+      branches[node.id] = node;
+      node.children.forEach(index);
+    }
+    roots.forEach(index);
+  }
+
+  function branchList(toggle) {
+    var nav = toggle.parentNode.querySelector(':scope > nav.md-nav');
+    return nav ? nav.querySelector(':scope > .md-nav__list') : null;
+  }
+
+  function populateBranch(toggle) {
+    var node = branches[toggle.id];
+    var list = branchList(toggle);
+    if (!node || !list) { return; }
+    if (!list.querySelector(':scope > .md-nav__item')) {
+      var fragment = document.createDocumentFragment();
+      node.children.forEach(function (child) {
+        var shell = document.createElement('template');
+        shell.innerHTML = child.html;
+        fragment.appendChild(shell.content);
+      });
+      list.appendChild(fragment);
+    }
+    Array.prototype.forEach.call(list.children, function (item) {
+      var childToggle = item.querySelector(':scope > input.md-nav__toggle');
+      var child = childToggle && branches[childToggle.id];
+      if (!child) { return; }
+      childToggle.checked = child.expanded;
+      var nav = item.querySelector(':scope > nav.md-nav');
+      if (nav) { nav.setAttribute('aria-expanded', String(child.expanded)); }
+      if (child.expanded) { populateBranch(childToggle); }
+    });
+  }
+
+  // Material の初期化後に作った label もキーボードで開閉できるようにする。
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter' && event.key !== ' ') { return; }
+    var label = event.target.closest && event.target.closest('.md-sidebar--primary label[for]');
+    var toggle = label && document.getElementById(label.getAttribute('for'));
+    if (!toggle || !branches[toggle.id]) { return; }
+    event.preventDefault(); event.stopImmediatePropagation();
+    toggle.checked = !toggle.checked;
+    toggle.dispatchEvent(new Event('change', { bubbles: true }));
+  }, true);
+
+  document.addEventListener('change', function (event) {
+    var toggle = event.target;
+    var node = branches[toggle.id];
+    if (!node) { return; }
+    node.expanded = toggle.checked;
+    var nav = toggle.parentNode.querySelector(':scope > nav.md-nav');
+    if (nav) { nav.setAttribute('aria-expanded', String(toggle.checked)); }
+    if (toggle.checked) { populateBranch(toggle); }
+    else {
+      // 統合目次を親の一覧へ移してから、閉じた枝の DOM を除去する。
+      placeToc();
+      var list = branchList(toggle);
+      if (list) {
+        if (list.contains(document.activeElement)) {
+          var label = document.getElementById(toggle.id + '_label');
+          if (label) { label.focus({ preventScroll: true }); }
+        }
+        list.replaceChildren();
+      }
+    }
+  }, true);
 
   /* ページ内目次も現在見出しへ .md-nav__link--active を付けるため、
      文書ツリーの現在ページだけを選ぶ。 */
@@ -192,6 +271,7 @@
   }
 
   function init() {
+    initLazyNavigation();
     if (!toc || !toc.isConnected) {
       toc = null;
       originalParent = null;

@@ -169,7 +169,7 @@ class BuiltSiteSwitchTest(unittest.TestCase):
                     "  livedocs_variant: ja-details\n"
                     "  livedocs_variants: [ja-details, ja]\n"
                     "hooks:\n"
-                    "  - \"{hook}\"\n".format(theme=THEME_DIR, hook=hook)
+                    "  - \"{hook}\"\n".format(theme=THEME_DIR.replace(os.sep, "/"), hook=hook.replace(os.sep, "/"))
                 )
             completed = subprocess.run(
                 [sys.executable, "-m", "mkdocs", "build", "--strict"],
