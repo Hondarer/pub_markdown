@@ -30,6 +30,7 @@ import posixpath
 import re
 import shutil
 import sys
+import urllib.parse
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -95,7 +96,18 @@ _ENV_VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9
 _FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
 _H1_RE = re.compile(r"^#\s+(.+?)\s*$")
 _PAGEBREAK_RE = re.compile(r"^[ \t]*\\(?:newpage|pagebreak)[ \t]*$")
-_LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)\)")
+# リンクの丸括弧の内側。Pandoc と同じく、<> で囲んだリンク先、空白を含む
+# リンク先、引用符で囲んだタイトルを受け付ける。後続の語が引用符で始まる
+# 場合はタイトルとして扱う。内側の解釈は _parse_link_target() が行う。
+_LINK_DEST_WORD = r"(?:[^()\s\"'<]|\([^()]*\))(?:[^()\s]|\([^()]*\))*"
+_LINK_TARGET = (
+    r"[ \t]*(?:<[^<>\n]*>|(?:" + _LINK_DEST_WORD + r"(?:[ \t]+" + _LINK_DEST_WORD + r")*)?)"
+    r"(?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'))?[ \t]*"
+)
+_LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\((" + _LINK_TARGET + r")\)")
+_LINK_TARGET_PARTS_RE = re.compile(
+    r"^[ \t]*(?:<([^<>\n]*)>|(.*?))((?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'))?)[ \t]*$"
+)
 _CAPTION_RE = re.compile(r"^(Table|CodeBlock):[ \t]*(.*)$")
 _TABLE_SEPARATOR_RE = re.compile(
     r"^(?=[^\n]*\|)[ \t]*\|?[ \t]*:?-+:?[ \t]*"
@@ -107,7 +119,7 @@ _DIAGRAM_FENCE_RE = re.compile(r"^(?:```+|~~~+)[ \t]*(plantuml|mermaid)\b")
 # 段落が画像 1 個だけで構成される行。Pandoc の implicit_figures と同じ条件。
 _IMAGE_ONLY_RE = re.compile(
     r"^!\[((?:[^\[\]]|\[[^\]]*\])*)\]"
-    r"\(([^()\s]*(?:\([^()]*\)[^()\s]*)*)\)"
+    r"\((" + _LINK_TARGET + r")\)"
     r"[ \t]*(\{[^}]*\})?[ \t]*$"
 )
 _ATTR_TAIL_RE = re.compile(r"\s*\{#([A-Za-z0-9_:.-]+)\}\s*$")
@@ -557,6 +569,9 @@ def rewrite_links(text, document, mapper, real_to_staged):
         if not path or path.startswith("/") or re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", path):
             return None
 
+        # 実パスは無エンコードのため、docsfw の link-common.lua と同じく
+        # %20 などを元の文字へ戻してから照合する。
+        path = urllib.parse.unquote(path)
         candidates = [os.path.join(source_dir_real, path)]
         virtual_target = posixpath.normpath(posixpath.join(source_dir_virtual, path))
         candidates.append(mapper.virtual_to_real(virtual_target))
@@ -569,10 +584,13 @@ def rewrite_links(text, document, mapper, real_to_staged):
         return None
 
     def replace(match):
-        bang, label, target = match.group(1), match.group(2), match.group(3)
+        bang, label = match.group(1), match.group(2)
+        target, title = _parse_link_target(match.group(3))
         rewritten = resolve(target)
         if rewritten is not None:
-            return "{}[{}]({})".format(bang, label, rewritten)
+            if re.search(r"\s", rewritten):
+                rewritten = "<{}>".format(rewritten)
+            return "{}[{}]({}{})".format(bang, label, rewritten, title)
 
         path, _, _ = _split_link_suffix(target)
         if (
@@ -581,7 +599,7 @@ def rewrite_links(text, document, mapper, real_to_staged):
             or _DOXYGEN_REL_RE.match(path)
         ):
             return match.group(0)
-        return "{} (`{}`)".format(label, target)
+        return "{} (`{}`)".format(label, _escape_uri(target))
 
     return _apply_outside_fences(text, lambda line: _LINK_RE.sub(replace, line))
 
@@ -603,6 +621,29 @@ def _split_link_suffix(target):
     """リンク先を ``(パス, 区切り, アンカーやクエリ)`` に分割する。"""
     match = re.match(r"^([^#?]*)(.*)$", target)
     return match.group(1), "", match.group(2)
+
+
+def _parse_link_target(raw):
+    """リンクの丸括弧の内側を ``(リンク先, 先頭の空白を含むタイトル)`` に分ける。
+
+    ``<>`` で囲んだリンク先は、囲みを外して返します。
+    """
+    match = _LINK_TARGET_PARTS_RE.match(raw)
+    if match.group(1) is not None:
+        return match.group(1), match.group(3)
+    return match.group(2), match.group(3)
+
+
+def _escape_uri(target):
+    """Pandoc の markdown リーダーと同じ文字をパーセント エンコードする。
+
+    リンクにできない参照の表示を、docsfw の Pandoc 発行と一致させるために使います。
+    see: https://github.com/jgm/pandoc/blob/main/src/Text/Pandoc/Shared.hs (escapeURI)
+    """
+    return "".join(
+        urllib.parse.quote(char) if char.isspace() or char in "<>|\"{}[]^`" else char
+        for char in target
+    )
 
 
 def _is_relative_link_path(path):

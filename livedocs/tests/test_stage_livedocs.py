@@ -436,6 +436,40 @@ class RewriteLinksTest(unittest.TestCase):
             "[入口](../index.md)\n",
         )
 
+    def test_rewrites_angle_bracket_and_space_links_like_pandoc(self):
+        document = self._document(
+            "[山括弧](<../README.md>)\n"
+            "[空白](../out side.md)\n"
+            "[山括弧と空白](<../out side.md> \"タイトル\")\n"
+            "[エンコード](../out%20side.md#section)\n"
+        )
+        mapper = PathMapper("/workspace/docs", [])
+        real_to_staged = {
+            os.path.normcase(os.path.normpath("/workspace/docs/README.md")): "index.md",
+            os.path.normcase(os.path.normpath("/workspace/docs/out side.md")): "other/out side.md",
+        }
+
+        self.assertEqual(
+            rewrite_links(document.body, document, mapper, real_to_staged),
+            "[山括弧](../index.md)\n"
+            "[空白](<../other/out side.md>)\n"
+            "[山括弧と空白](<../other/out side.md> \"タイトル\")\n"
+            "[エンコード](<../other/out side.md#section>)\n",
+        )
+
+    def test_renders_unresolved_space_reference_with_pandoc_encoding(self):
+        document = self._document(
+            "[空白](missing file.md)\n"
+            "[山括弧](<missing file.md>)\n"
+        )
+        mapper = PathMapper("/workspace/docs", [])
+
+        self.assertEqual(
+            rewrite_links(document.body, document, mapper, {}),
+            "空白 (`missing%20file.md`)\n"
+            "山括弧 (`missing%20file.md`)\n",
+        )
+
     def test_renders_unresolved_relative_reference_without_link(self):
         document = self._document(
             "[README](../../../README.md)\n"
