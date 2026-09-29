@@ -490,24 +490,12 @@ body {
   /* ヘッダーは html-style.css の .navbar-inner (単色 #F7F7F7、下端 #D4D4D4、
      濃い文字)。Bootstrap 既定のグラデーションと影は同ファイルで外している。
      --light と --dark は Material のパレット規約で必要な派生値であり、
-     --dark は .md-header と .md-footer の境界線にも使う。 */
+     --dark は .md-header の境界線にも使う。 */
   --md-primary-fg-color: #f7f7f7;
   --md-primary-fg-color--light: #ffffff;
   --md-primary-fg-color--dark: #d4d4d4;
   --md-primary-bg-color: rgba(0, 0, 0, 0.87);
   --md-primary-bg-color--light: rgba(0, 0, 0, 0.54);
-
-  /* フッターはヘッダーと同じ淡色にそろえる。pandoc 発行版に <footer> は
-     無いため、対応する正が存在しない。
-     Material の既定は .md-footer に rgba(0,0,0,.87)、その全面を覆う
-     .md-footer-meta に rgba(0,0,0,.32) を重ねるため、白地のページでは
-     黒帯になる。背景の 2 変数を同じ値にしないと帯が 2 色に分かれる。
-     文字は --md-primary-bg-color と同じ不透明度の系列にそろえる。 */
-  --md-footer-bg-color: #f7f7f7;
-  --md-footer-bg-color--dark: #f7f7f7;
-  --md-footer-fg-color: rgba(0, 0, 0, 0.87);
-  --md-footer-fg-color--light: rgba(0, 0, 0, 0.54);
-  --md-footer-fg-color--lighter: rgba(0, 0, 0, 0.32);
 
   /* admonition は bin_internal/pandoc-filters/admonition.lua の色定義。 */
   --docsfw-admonition-note: #1f6feb;
@@ -557,12 +545,6 @@ body {
   --md-primary-fg-color--dark: rgba(255, 255, 255, 0.32);
   --md-primary-bg-color: rgba(255, 255, 255, 0.87);
   --md-primary-bg-color--light: rgba(255, 255, 255, 0.54);
-
-  --md-footer-bg-color: #1f2129;
-  --md-footer-bg-color--dark: #1f2129;
-  --md-footer-fg-color: rgba(255, 255, 255, 0.87);
-  --md-footer-fg-color--light: rgba(255, 255, 255, 0.54);
-  --md-footer-fg-color--lighter: rgba(255, 255, 255, 0.32);
 
   --docsfw-admonition-note: #58a6ff;
   --docsfw-admonition-tip: #3fb950;
@@ -623,17 +605,6 @@ body {
   [data-md-color-scheme="slate"] .md-search__form:hover {
     background-color: color-mix(in srgb, var(--md-primary-bg-color) 14%, transparent);
   }
-}
-
-/* ------------------------------------------------------------------------ */
-/* フッター                                                                  */
-/* ------------------------------------------------------------------------ */
-
-/* ヘッダー下端の境界線と対になる。淡色の帯だけでは本文との境目が分からない。
-   背景と同じく --md-primary-fg-color--dark を使うため、ページの上端と下端が
-   同じ色の罫線でそろう。 */
-.md-footer {
-  border-top: 1px solid var(--md-primary-fg-color--dark);
 }
 
 /* ------------------------------------------------------------------------ */

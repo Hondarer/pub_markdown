@@ -28,9 +28,7 @@
    中央寄せの外側に足される。 */
 .md-header__inner,
 .md-tabs__inner,
-.md-main__inner,
-.md-footer__inner,
-.md-footer-meta__inner {
+.md-main__inner {
   padding-right: env(safe-area-inset-right, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   box-sizing: border-box;

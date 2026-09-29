@@ -951,8 +951,7 @@ Material の既定は indigo の単色バーであり、本文リンクを `#418
 線を置く要素は、ヘッダー本体の直後という位置と、ページ幅いっぱいという長さの両方を満たす必要があります。  
 `.md-header` 自身へ付けると、下端の帯 (`.md-header::after`) のさらに下まで線が下がります。  
 内側の `.md-header__inner` は位置は合いますが、`md-grid` の `max-width` で 3 ペインの幅までに制限されるため、線がページ幅に届きません。  
-そのため、幅の制限を受けない帯 `.md-header::after` の上端へ線を置きます。  
-フッターの `.md-footer` と同じくページ幅いっぱいの要素になり、ページの上端と下端で線の長さがそろいます。
+そのため、幅の制限を受けない帯 `.md-header::after` の上端へ線を置きます。
 
 Material はスクロール時に JavaScript で `.md-header--shadow` を付け、ヘッダーの下へ影を落とします。  
 静的発行と表現をそろえるため、`.md-header--shadow` の `box-shadow` を `none` で打ち消します。  
@@ -961,23 +960,10 @@ Material はスクロール時に JavaScript で `.md-header--shadow` を付け�
 Material が濃色ヘッダーを前提に指定している検索フォームの背景 (`#00000042`) は、docsfw のヘッダーでは濃すぎます。  
 ライトは黒 7%、ダークはヘッダー文字色 (`--md-primary-bg-color`) の 7% ティントへ変え、Pandoc HTML に合わせます。
 
-フッターも同じ淡色にそろえます。  
-Material の既定は `.md-footer` に `rgba(0,0,0,.87)`、その全面を覆う `.md-footer-meta` に `rgba(0,0,0,.32)` を重ねるため、白地のページの下に黒帯が出ます。
-
+フッターは出力しません。  
 静的発行の HTML に `<footer>` は無く、フッターには正とする対応先が存在しません。  
-そのため、ヘッダーと同じ値を流用します。  
-`--md-footer-bg-color` 系を上書きし、`.md-footer` へ上端の境界線を足すと、ページの上端と下端が同じ色でそろいます。
-
-背景の 2 変数には同じ値を指定してください。  
-`.md-footer-meta` は `.md-footer` の全面を覆うため、値が違うと帯が 2 色に分かれて見えます。
-
-フッターの文字は 3 段階です。  
-`--md-footer-fg-color` (ホバー時のリンク)、`--md-footer-fg-color--light` (リンク)、`--md-footer-fg-color--lighter` (「Made with」の地の文) の順に淡くなります。  
-不透明度は `--md-primary-bg-color` 系と同じ 0.87 と 0.54 にそろえ、いちばん淡い段は 0.32 とします。
-
-前後ページのリンク (`.md-footer__inner`) は出しません。  
-`mkdocs.yml.in` の `features` に `navigation.footer` を入れていないためです。  
-フッターに出るのは「Made with Material for MkDocs」だけです。
+`theme/main.html` で `footer` ブロックを空にし、`<footer>` 要素ごと出力を止めます。  
+`mkdocs.yml.in` の `features` に `navigation.footer` を入れておらず、前後ページのリンクは元から出していないため、失われるのは「Made with Material for MkDocs」の表示だけです。
 
 ### admonition の実装
 

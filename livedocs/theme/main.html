@@ -60,3 +60,10 @@
     {{ super() }}
   {%- endif -%}
 {% endblock %}
+
+{#
+  静的発行の HTML に <footer> は無いため、Material のフッターを出力しません。
+  navigation.footer を使っていないため、フッターに出るのは
+  「Made with Material for MkDocs」だけでした。
+#}
+{% block footer %}{% endblock %}
