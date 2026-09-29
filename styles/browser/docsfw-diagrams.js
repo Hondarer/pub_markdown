@@ -118,7 +118,12 @@
           { dark: selectedTheme === "dark" });
       });
     }
-    if (!window.mermaid) { throw new Error("Mermaid の描画エンジンを読み込めません。"); }
+    if ((!window.mermaid || typeof window.mermaid.render !== "function") && window.docsfwLoadMermaid) {
+      await window.docsfwLoadMermaid();
+    }
+    if (!window.mermaid || typeof window.mermaid.render !== "function") {
+      throw new Error("Mermaid の描画エンジンを読み込めません。");
+    }
     window.mermaid.initialize({
       startOnLoad: false,
       theme: selectedTheme,

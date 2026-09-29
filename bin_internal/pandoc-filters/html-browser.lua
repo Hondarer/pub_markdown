@@ -1,7 +1,10 @@
 -- 図の変換後に、標準テンプレートが必要とするブラウザー資産を選ぶ。
 function Pandoc(doc)
     if not FORMAT:match("html") then return doc end
-    doc:walk({ RawBlock = function(block)
+    doc.meta["docsfw-has-math"] = false
+    doc:walk({ Math = function()
+        doc.meta["docsfw-has-math"] = true
+    end, RawBlock = function(block)
         if block.format == "html" then
             if block.text:find('class="docsfw%-mermaid"') then
                 doc.meta["docsfw-has-mermaid"] = true

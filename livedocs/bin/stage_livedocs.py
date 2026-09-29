@@ -61,6 +61,7 @@ VENDORED_FILES = (
     "assets/docsfw-plantuml-loader.js",
     "assets/docsfw-plantuml-LICENSE.txt",
     "assets/docsfw-theme.js",
+    "assets/docsfw-libraries.js",
     "assets/docsfw-mathjax.js",
     "assets/docsfw-responsive-nav.js",
     "assets/docsfw-svg-download.js",

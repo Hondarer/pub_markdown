@@ -7,7 +7,10 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
+const resolved = JSON.parse(spawnSync(process.execPath,
+  [path.join(root, 'bin_internal/resolve-node-components.js')], {encoding: 'utf8'}).stdout);
+const puppeteer = require(resolved.paths.puppeteer);
+const {buildBrowserLaunchOptions} = require('../../bin_internal/browser-launch-options');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-code-expander-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const longLine = `long-line-${'x'.repeat(240)}`;
@@ -22,11 +25,11 @@ function run(command, args, options = {}) {
   let browser;
   let server;
   try {
-    run(python, ['-', root, temporary], {input: String.raw`
-import pathlib, sys
-root, target = map(pathlib.Path, sys.argv[1:])
+    run(python, ['-', root, temporary, JSON.stringify(resolved)], {input: String.raw`
+import json, pathlib, sys
+root, target = map(pathlib.Path, sys.argv[1:3])
 sys.path.insert(0, str(root / 'livedocs/bin'))
-from vendor_assets import (resolve_node_components, vendor_mermaid,
+from vendor_assets import (vendor_mermaid,
                            vendor_own_assets, vendor_plantuml)
 docs = target / 'docs'
 docs.mkdir()
@@ -43,7 +46,7 @@ md = '\n\n'.join([
 ])
 (docs / 'index.md').write_text(md, encoding='utf-8')
 vendor_own_assets(str(docs / 'assets'))
-resolved = resolve_node_components()['paths']
+resolved = json.loads(sys.argv[3])['paths']
 vendor_plantuml(str(docs / 'assets'), resolved['plantumlCore'])
 vendor_mermaid(str(docs / 'assets'), resolved['mermaidJs'])
 (docs / 'assets' / 'diagram-test-delay.js').write_text("""
@@ -55,10 +58,10 @@ window.docsfwLoadPlantuml = async function () {
   await window.docsfwDiagramTest.plantuml;
   return originalPlantuml();
 };
-const originalMermaidRender = window.mermaid.render.bind(window.mermaid);
-window.mermaid.render = async function (...args) {
+const originalMermaidLoad = window.docsfwLoadMermaid;
+window.docsfwLoadMermaid = async function () {
   await window.docsfwDiagramTest.mermaid;
-  return originalMermaidRender(...args);
+  return originalMermaidLoad();
 };
 """, encoding='utf-8')
 (target / 'mkdocs.yml').write_text("""site_name: Test
@@ -88,8 +91,7 @@ extra_css:
   - assets/docsfw-code-expander.css
 extra_javascript:
   - assets/docsfw-code-expander.js
-  - assets/docsfw-plantuml-loader.js
-  - assets/mermaid/mermaid.min.js
+  - assets/docsfw-libraries.js
   - assets/diagram-test-delay.js
   - assets/docsfw-diagrams.js
   - assets/docsfw-svg-download.js
@@ -107,11 +109,11 @@ extra_javascript:
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${server.address().port}/`;
-    browser = await puppeteer.launch({
+    browser = await puppeteer.launch(buildBrowserLaunchOptions({
       headless: true,
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/local/bin/chrome',
       args: ['--no-sandbox', '--disable-crash-reporter'],
-    });
+    }));
     const noScriptPage = await browser.newPage();
     await noScriptPage.setJavaScriptEnabled(false);
     await noScriptPage.goto(url, {waitUntil: 'networkidle0'});

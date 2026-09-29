@@ -304,13 +304,34 @@
     root.querySelectorAll(DIAGRAM_SELECTOR).forEach(attachToDiagram);
   }
 
+  function scanAddedNodes(records, root) {
+    var added = new Set();
+    records.forEach(function (record) {
+      record.addedNodes.forEach(function (node) {
+        if (node.nodeType === 1 && root.contains(node)) { added.add(node); }
+      });
+    });
+    added.forEach(function (node) {
+      // 図の内部と操作ボタンの更新には、新しい画像・図は含まれない。
+      if (node.namespaceURI === SVG_NAMESPACE ||
+          node.parentElement.closest(DIAGRAM_SELECTOR + ", .docsfw-diagram-toolbar")) { return; }
+      for (var parent = node.parentElement; parent && parent !== root; parent = parent.parentElement) {
+        if (added.has(parent)) { return; }
+      }
+      if (node.matches("img")) { attachToImage(node); }
+      else if (node.matches(DIAGRAM_SELECTOR)) { attachToDiagram(node); }
+      else { scan(node); }
+    });
+  }
+
   function initialize() {
     var root = contentRoot();
     if (!root || root.dataset.docsfwSvgObserved) { return; }
     root.dataset.docsfwSvgObserved = "true";
     scan(root);
     if (typeof MutationObserver !== "function") { return; }
-    new MutationObserver(function () { scan(root); }).observe(root, { childList: true, subtree: true });
+    new MutationObserver(function (records) { scanAddedNodes(records, root); })
+      .observe(root, { childList: true, subtree: true });
   }
 
   if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", initialize); }

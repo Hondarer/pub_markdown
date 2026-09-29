@@ -4,6 +4,7 @@
 import json
 import os
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -216,8 +217,13 @@ class FaviconIconsTest(unittest.TestCase):
         """``/favicon.ico`` が SVG と同じ絵になり、再実行では書き換えない。"""
         with tempfile.TemporaryDirectory() as root:
             src_dir = os.path.join(root, "src")
-            self.assertEqual(vendor_root_favicon(src_dir), 1)
-            self.assertEqual(vendor_root_favicon(src_dir), 0)
+            resolved = json.loads(subprocess.check_output(
+                ["node", os.path.join(DOCSFW_DIR, "bin_internal", "resolve-node-components.js")],
+                encoding="utf-8",
+            ))
+            env = node_child_env(resolved)
+            self.assertEqual(vendor_root_favicon(src_dir, env=env), 1)
+            self.assertEqual(vendor_root_favicon(src_dir, env=env), 0)
             ico_path = os.path.join(src_dir, ROOT_FAVICON_NAME)
             self.assertTrue(os.path.isfile(ico_path))
             with open(ico_path, "rb") as handle:
@@ -409,7 +415,12 @@ class VendorThemeTest(unittest.TestCase):
                     self.assertEqual(source.read(), copied.read())
                 self.assertIn('assets/' + name, config)
                 self.assertIn('assets/' + name, VENDORED_FILES)
-            self.assertIn('assets/docsfw-plantuml-loader.js', config)
+            self.assertIn('assets/docsfw-libraries.js', config)
+            self.assertIn('assets/docsfw-libraries.js', VENDORED_FILES)
+            self.assertTrue(os.path.isfile(os.path.join(assets, 'docsfw-libraries.js')))
+            self.assertNotIn('  - assets/docsfw-plantuml-loader.js', config)
+            self.assertNotIn('  - assets/mermaid/mermaid.min.js', config)
+            self.assertNotIn('  - https://cdn.jsdelivr.net/npm/mathjax', config)
             self.assertIn('assets/docsfw-plantuml-loader.js', VENDORED_FILES)
 
 

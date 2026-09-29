@@ -7,7 +7,10 @@ const path = require('node:path');
 const http = require('node:http');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
-const puppeteer = require(path.join(root, 'bin_internal/node_modules/puppeteer'));
+const resolved = JSON.parse(spawnSync(process.execPath,
+  [path.join(root, 'bin_internal/resolve-node-components.js')], {encoding: 'utf8'}).stdout);
+const puppeteer = require(resolved.paths.puppeteer);
+const {buildBrowserLaunchOptions} = require('../../bin_internal/browser-launch-options');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-collapsible-'));
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 
@@ -63,7 +66,7 @@ extra_css:
 extra_javascript:
   - assets/docsfw-collapsible-list.js
 ''', encoding='utf-8')
-static_html = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'html5', '-L', str(root / 'bin_internal/pandoc-filters/insert-toc.lua')], input='\n\n'.join(static_blocks), capture_output=True, text=True, check=True).stdout
+static_html = subprocess.run(['pandoc', '-f', 'markdown', '-t', 'html5', '-L', str(root / 'bin_internal/pandoc-filters/insert-toc.lua')], input='\n\n'.join(static_blocks), capture_output=True, encoding='utf-8', check=True).stdout
 template = (root / 'styles/html/html-template.html').read_text(encoding='utf-8')
 start = template.index('<script>', template.index('展開可能リスト (collapsible-list)'))
 end = template.index('</script>', start) + len('</script>')
@@ -82,7 +85,9 @@ end = template.index('</script>', start) + len('</script>')
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const url = `http://127.0.0.1:${server.address().port}/`;
-    browser = await puppeteer.launch({headless: true, args: ['--no-sandbox', '--disable-crash-reporter']});
+    browser = await puppeteer.launch(buildBrowserLaunchOptions({headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      args: ['--no-sandbox', '--disable-crash-reporter']}));
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -101,13 +106,22 @@ end = template.index('</script>', start) + len('</script>')
     await page.focus(first);
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => document.querySelector('.collapsible-list details').open);
-    await page.waitForFunction(() => JSON.parse(sessionStorage.getItem('collapsible-state:/'))['0'] === true);
+    await page.waitForFunction(() => JSON.parse(sessionStorage.getItem('collapsible-state:/'))?.['0'] === true)
+      .catch(async error => {
+        console.error(await page.evaluate(() => ({url: location.href, storage: {...sessionStorage},
+          states: Array.from(document.querySelectorAll('.collapsible-list details')).map(d => d.open)})), errors);
+        throw error;
+      });
     // リンクは開閉操作と独立して遷移する。
     await Promise.all([page.waitForNavigation(), page.click('.collapsible-list a[href="api-cheatsheet/"]')]);
     assert.ok(page.url().endsWith('/api-cheatsheet/'));
     await page.goBack();
     assert.equal((await states())[0][0], true);
     await page.reload();
+    assert.deepEqual(await states(), initial);
+    // リロード前の保存内容を、未操作で離れたあとの履歴へ持ち越さない。
+    await page.goto(url + 'other/');
+    await page.goBack();
     assert.deepEqual(await states(), initial);
     // 空の保存オブジェクトも全閉状態として復元する。
     await page.evaluate(() => document.querySelectorAll('.collapsible-list details').forEach(d => { d.open = false; }));

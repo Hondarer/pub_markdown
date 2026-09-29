@@ -23,6 +23,7 @@
     });
 
     var all = Array.from(document.querySelectorAll('.collapsible-list details'));
+    if (!all.length || all.every(function (details) { return details.dataset.docsfwCollapsibleInitialized; })) return;
     var key = 'collapsible-state:' + window.location.pathname;
     var state = null;
     try {
@@ -43,14 +44,36 @@
         if (parent.tagName === 'DETAILS') level++;
       }
       details.open = state ? state[index] === true : limit < 0 || level <= limit;
+    });
+
+    var current = {};
+    all.forEach(function (details, index) { if (details.open) current[index] = true; });
+    var lastSaved = JSON.stringify(current);
+    try {
+      var stored = sessionStorage.getItem(key);
+      if (stored !== null) lastSaved = stored;
+    } catch (error) { /* 保存不可でも開閉できる。 */ }
+    var saveTimer = null;
+    function saveState() {
+      if (saveTimer !== null) { clearTimeout(saveTimer); saveTimer = null; }
+      // 遷移直前の、toggle イベントがまだ届いていない変更も保存する。
+      current = {};
+      all.forEach(function (details, index) { if (details.open) current[index] = true; });
+      var serialized = JSON.stringify(current);
+      if (serialized === lastSaved) return;
+      try { sessionStorage.setItem(key, serialized); lastSaved = serialized; }
+      catch (error) { /* 保存不可でも開閉できる。 */ }
+    }
+    all.forEach(function (details, index) {
       details.addEventListener('toggle', function () {
-        var saved = {};
-        all.forEach(function (item, position) {
-          if (item.open) saved[position] = true;
-        });
-        try { sessionStorage.setItem(key, JSON.stringify(saved)); } catch (error) { /* 保存不可でも開閉できる。 */ }
+        // 初期展開による toggle では保存せず、変更を同じタイマーにまとめる。
+        if ((current[index] === true) === details.open) return;
+        if (details.open) current[index] = true;
+        else delete current[index];
+        if (saveTimer === null) saveTimer = setTimeout(saveState, 0);
       });
     });
+    window.addEventListener('pagehide', saveState);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize);

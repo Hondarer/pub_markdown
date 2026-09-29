@@ -48,7 +48,7 @@ $endif$
 $for(css)$
   <link rel="stylesheet" href="$css$" $if(html5)$$else$type="text/css" $endif$/>
 $endfor$
-$if(math)$
+$if(docsfw-has-math)$
   $math$
 $endif$
 $if(docsfw-browser-base)$
@@ -744,23 +744,39 @@ $body$
       }
 
       // 状態変更時に sessionStorage へ保存
+      var current = {};
+      allDetails.forEach(function(details, index) { if (details.open) current[index] = true; });
+      var lastSaved = JSON.stringify(current);
+      try {
+        var stored = sessionStorage.getItem(storageKey);
+        if (stored !== null) lastSaved = stored;
+      } catch (e) { /* 保存不可でも開閉できる。 */ }
+      var saveTimer = null;
       function saveState() {
+        if (saveTimer !== null) { clearTimeout(saveTimer); saveTimer = null; }
+        // 遷移直前の、toggle イベントがまだ届いていない変更も保存する。
+        current = {};
+        allDetails.forEach(function(details, index) { if (details.open) current[index] = true; });
+        var serialized = JSON.stringify(current);
+        if (serialized === lastSaved) return;
         try {
-          var state = {};
-          allDetails.forEach(function(details, index) {
-            if (details.open) {
-              state[index] = true;
-            }
-          });
-          sessionStorage.setItem(storageKey, JSON.stringify(state));
+          sessionStorage.setItem(storageKey, serialized);
+          lastSaved = serialized;
         } catch (e) {
           // sessionStorage の書き込みエラーは無視
         }
       }
 
-      allDetails.forEach(function(details) {
-        details.addEventListener('toggle', saveState);
+      allDetails.forEach(function(details, index) {
+        details.addEventListener('toggle', function() {
+          // 初期展開による toggle では保存せず、変更を同じタイマーにまとめる。
+          if ((current[index] === true) === details.open) return;
+          if (details.open) current[index] = true;
+          else delete current[index];
+          if (saveTimer === null) saveTimer = setTimeout(saveState, 0);
+        });
       });
+      window.addEventListener('pagehide', saveState);
     });
   })();
   </script>

@@ -40,9 +40,26 @@ HTML の Lua フィルターは、図ソースをエスケープして `div.docs
 図番号、参照 ID、キャプションは Pandoc 側で確定し、ブラウザーでは図の内側だけを置換します。  
 DOCX の画像生成、変換、キャッシュの経路は変更しません。
 
-`bin_internal/pandoc-filters/html-browser.lua` は変換後の図を調べ、テンプレートに必要な資産のメタデータを設定します。  
+`bin_internal/pandoc-filters/html-browser.lua` は変換後の図と数式を調べ、テンプレートに必要な資産のメタデータを設定します。  
 資産の基準位置は既存の `mermaid-js` から求めるため、発行 CLI や設定キーの追加はありません。  
-独自テンプレートを使用する場合は、標準テンプレートの `docsfw-browser-base`、`docsfw-has-mermaid`、`docsfw-has-plantuml` の読み込み部分も反映してください。
+独自テンプレートを使用する場合は、標準テンプレートの `docsfw-browser-base`、`docsfw-has-mermaid`、`docsfw-has-plantuml`、`docsfw-has-math` の読み込み部分も反映してください。
+
+### 図と数式に必要なライブラリだけを読み込む
+
+Pandoc の標準・簡易テンプレートは、図種に応じたライブラリと、数式がある場合の MathJax だけを読み込みます。  
+MkDocs は `livedocs/assets/docsfw-libraries.js` を常時配置し、PlantUML ローダーと Mermaid を描画時に必要になった段階で取得します。  
+同じ URL の読み込みは Promise を共有するため、図が複数ある場合や配色を変更した場合も、同じライブラリを重複して取得しません。  
+図の描画は共通キューで文書内の先頭から一つずつ処理し、ライブラリの読み込み完了もこのキュー内で待ちます。
+
+MkDocs の `docsfw-mathjax.js` は、本文に `.arithmatex` がある場合だけ MathJax 3 を取得し、起動完了後に本文を組版します。  
+Material の `document$` によるページ差し替え後も必要時に読み込み、組版は前の処理の完了を待って実行します。  
+読み込みに失敗した場合も、本文と元ソースは表示します。
+
+### SVG 操作ボタンは追加された範囲だけを検索する
+
+`styles/browser/docsfw-svg-download.js` は、本文を初回に検索して画像と図へ操作ボタンを付けます。  
+以後は `MutationObserver` の `addedNodes` で追加された範囲だけを調べます。  
+図の内部と操作ボタンの DOM 更新では本文全体を再検索せず、後から追加された図や SVG 画像には同じ操作ボタンを付けます。
 
 ## 共通の描画処理
 
@@ -107,6 +124,8 @@ docsfw ルートで次を実行します。
 ```bash
 node bin_internal/test-html-diagrams.js
 node bin_internal/test-html-ui.js
+node tests/test_page_performance_browser.js
+node tests/test_page_libraries_browser.js
 python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
 ```
 
@@ -114,4 +133,7 @@ python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
 既存 CDN への依存を除いた標準・簡易テンプレートで、通常 HTML、単一 HTML、直接閲覧、HTTP 配信を確認します。  
 実際の図の描画、配色切り替え、ソースとの切り替え、ライト テーマの SVG 保存と PNG コピー、描画中の配色変更を検証します。  
 HTML UI のブラウザー テストでは、ヘッダー、ドロワー、階層切り替え、ページ内目次、全文検索を検証します。  
+`test_page_performance_browser.js` は図の更新時の検索回数、折り畳み状態の保存回数、開閉後の外観を確認します。  
+`test_page_libraries_browser.js` は局所 MkDocs サイトでライブラリの取得条件と実描画を確認し、Pandoc の標準・簡易テンプレートの数式読み込み条件も検証します。  
+取得済みの MathJax 3 `tex-mml-chtml.js` のパスを `DOCSFW_TEST_MATHJAX_SCRIPT` へ設定すると、実エンジンによる数式描画も確認します。  
 発行処理を含む確認手順は [発行処理の保守と検証](maintenance-verification.md) を参照してください。

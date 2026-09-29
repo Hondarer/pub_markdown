@@ -121,15 +121,12 @@ extra_css:
 extra_javascript:
   - assets/docsfw-collapsible-list.js
   - assets/docsfw-code-expander.js
-  - assets/docsfw-plantuml-loader.js
-  - assets/mermaid/mermaid.min.js
+  - assets/docsfw-libraries.js
   - assets/docsfw-diagrams.js
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
   - assets/docsfw-svg-download.js
-  # MathJax は静的発行 (bin_internal/pandoc-defaults/math-mathjax.yaml) と同じく CDN から読み込む。
-  # 静的発行は版を MathJax 3 に固定しているため、こちらも同じ版を指定する。
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  # 図のエンジンと MathJax は、本文に必要なときだけ上記スクリプトから読み込む。
 
 # Doxygen HTML の静的サーブと単一ページ リンクを先に登録する。
 # 元の Markdown の変更を検知し、1 ファイル単位の軽量なステージングを

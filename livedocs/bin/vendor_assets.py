@@ -45,6 +45,7 @@ RESOLVE_SCRIPT = os.path.join(DOCSFW_DIR, "bin_internal", "resolve-node-componen
 OWN_ASSETS = (
     "docsfw-diagrams.js",
     "docsfw-diagrams.css",
+    "docsfw-libraries.js",
     "docsfw-mathjax.js",
     "docsfw-responsive-nav.js",
     "docsfw-svg-download.js",
