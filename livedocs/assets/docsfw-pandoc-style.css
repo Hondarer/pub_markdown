@@ -519,6 +519,15 @@ body {
    GitHub のライト色に対応する GitHub のダーク色をそのまま当てる。
    コード背景と ==mark== は、暗背景では成立しないので Material の既定に任せる。 */
 [data-md-color-scheme="slate"] {
+  /* 文字色は Material slate の青みを帯びた hsla(var(--md-hue), 15%, 90%, ...)
+     ではなく、html-style.css の --docsfw-fg / --docsfw-muted /
+     --docsfw-border / --docsfw-divider と同じ白の半透明にする。 */
+  --md-default-fg-color: rgba(255, 255, 255, 0.87);
+  --md-default-fg-color--light: rgba(255, 255, 255, 0.54);
+  --md-default-fg-color--lighter: rgba(255, 255, 255, 0.32);
+  --md-default-fg-color--lightest: rgba(255, 255, 255, 0.12);
+  --md-typeset-color: var(--md-default-fg-color);
+
   --md-typeset-a-color: #6ea9dd;
   --md-accent-fg-color: #9cc7ea;
   --md-accent-fg-color--transparent: rgba(156, 199, 234, 0.1);

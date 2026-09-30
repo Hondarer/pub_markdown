@@ -1320,7 +1320,10 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
   #TOC.docsfw-secondary-sidebar {
     /* The legacy CDN template targets #TOC; a class alone cannot override it. */
     top: var(--docsfw-header-height);
-    margin: -10px var(--docsfw-nav-gutter) 0;
+    /* body の padding-top (ヘッダー + 8px) を打ち消し、スクロール前の位置を
+       sticky の top と同じヘッダー下端にする。ずれると、初期表示だけ上端が
+       MkDocs より上がり、スクロールすると位置が変わる。 */
+    margin: -8px var(--docsfw-nav-gutter) 0;
     padding: 0;
     overflow-y: auto;
     scrollbar-gutter: auto;

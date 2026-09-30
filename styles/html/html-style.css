@@ -1395,7 +1395,8 @@ body {
   min-width: 0;
   overflow: hidden;
   margin: 0 8px 0 20px;
-  padding: 2px 0;
+  /* MkDocs の .md-header__topic の margin-top 2.5px と同じ位置に文書タイトルを置く。 */
+  padding: 2.5px 0 2px;
   box-sizing: border-box;
 }
 
@@ -1415,7 +1416,7 @@ body {
 
 .docsfw-header-meta {
   position: absolute;
-  top: 26px;
+  top: 26.5px;
   left: 0;
   right: 0;
   display: flex;
