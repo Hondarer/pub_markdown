@@ -50,15 +50,24 @@ class NodeChildEnvTest(unittest.TestCase):
             json.loads(env["DOCSFW_NODE_GLOBAL_PACKAGES"]),
             resolved["globalPackages"],
         )
-        self.assertEqual(env["NODE_OPTIONS"], "--require {}".format(self.PRELOAD))
+        self.assertEqual(env["NODE_OPTIONS"], '--require "{}"'.format(self.PRELOAD.replace("\\", "/")))
 
     def test_appends_to_existing_node_options(self):
         resolved = {"globalPackages": {"minimist": "/opt/devbin/node_modules/minimist"}}
         env = node_child_env(resolved, base_env={"NODE_OPTIONS": "--no-warnings"})
         self.assertEqual(
             env["NODE_OPTIONS"],
-            "--no-warnings --require {}".format(self.PRELOAD),
+            '--no-warnings --require "{}"'.format(self.PRELOAD.replace("\\", "/")),
         )
+
+    def test_node_loads_preload_from_path_with_spaces(self):
+        env = node_child_env({"globalPackages": {"unused": "/unused"}}, base_env=os.environ)
+        result = subprocess.run(
+            ["node", "-e", 'process.stdout.write("preload loaded")'], env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertEqual(result.stdout, "preload loaded")
 
 
 class ResolveSiteNameTest(unittest.TestCase):

@@ -51,13 +51,13 @@ if [ ! -x "$CHROME" ]; then
     if [ -d "$PUPPETEER_CACHE_DIR" ]; then
       # 各バージョン ディレクトリ内の chrome 実行ファイルを検索し、バージョン順にソートします。
       # 元のパスと同一のサブパス構造を持つものを優先します。
-      LATEST_CHROME=$(find "$PUPPETEER_CACHE_DIR" -type f -path "*/linux-*/$CHROME_SUBPATH" -executable 2>/dev/null | while read chrome_path; do
+      LATEST_CHROME=$(find "$PUPPETEER_CACHE_DIR" -type f -path "*/linux-*/$CHROME_SUBPATH" -executable 2>/dev/null | while IFS= read -r chrome_path; do
         # パスからバージョン番号を抽出 (例: linux-142.0.7444.175 から 142.0.7444.175)
         version=$(echo "$chrome_path" | grep -oP 'linux-\K[0-9.]+' | head -1)
         if [ ! -z "$version" ]; then
-          echo "$version $chrome_path"
+          printf '%s\t%s\n' "$version" "$chrome_path"
         fi
-      done | sort -V -r | head -1 | awk '{print $2}')
+      done | sort -V -r | head -1 | cut -f2-)
 
       if [ ! -z "$LATEST_CHROME" ] && [ -x "$LATEST_CHROME" ]; then
         CHROME="$LATEST_CHROME"

@@ -325,7 +325,10 @@ return {
                 -- -ms-high-contrast-adjust is in the process of being deprecated. Please see https://blogs.windows.com/msedgedev/2024/04/29/deprecating-ms-high-contrast/ for tips on updating to the new Forced Colors Mode standard.
                 -- [@zenuml/core] Store is a function and is not initiated in 1 second.
                 --io.stderr:write(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"\n", _work_dir, utf8_to_active_cp(MMDC_CMD), mmd_filename, svg_filename))
-                os.execute(string.format("cd \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", _work_dir, utf8_to_active_cp(MMDC_CMD), mmd_filename, svg_filename))
+                -- Windows では作業先が別ドライブにあると、cd だけではカレント ドライブが変わらない。
+                -- see: https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cd
+                local cd_command = package.config:sub(1, 1) == '\\' and "cd /d" or "cd"
+                os.execute(string.format("%s \"%s\" && \"%s\" -i %s -o %s -b transparent | grep -v -E \"Generating|deprecated|Store is a function\"", cd_command, _work_dir, utf8_to_active_cp(MMDC_CMD), mmd_filename, svg_filename))
 
                 -- SVG にパッチを適用する
                 -- Mermaid はサイズ指定を 100% で出力するため、SVG の viewBox を取得して width / height を上書きする。

@@ -1,10 +1,10 @@
 #!/bin/bash
 #set -x
 
-SCRIPT_DIR=$(cd $(dirname "$0"); pwd)
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 HOME_DIR=$(cd "$SCRIPT_DIR/.." && pwd) # bin_internal の上位が home
 PATH=$SCRIPT_DIR:$PATH # 優先的に bin フォルダーを選択させる
-cd $HOME_DIR
+cd -- "$HOME_DIR" || exit 1
 
 source "${SCRIPT_DIR}/pub-markdown-skip.sh"
 
@@ -391,8 +391,10 @@ if [ $LINUX -eq 1 ]; then
     fi
 else
     # レジストリから Microsoft Edge のパスを取得
+    # /v が MSYS のパス変換対象にならないよう、ネイティブ コマンドの引数変換を止める。
+    # see: https://www.msys2.org/docs/filesystem-paths/#automatic-unix-windows-path-conversion
     EDGE_REG_PATH=$(
-        reg query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" /v Path 2>/dev/null \
+        MSYS2_ARG_CONV_EXCL='*' reg.exe query "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\msedge.exe" /v Path 2>/dev/null \
             | tr -d '\r' \
             | sed -n 's/^[[:space:]]*Path[[:space:]]\+REG_SZ[[:space:]]\+//p'
     )
@@ -400,7 +402,7 @@ else
         EDGE_PATH="${EDGE_REG_PATH}/msedge.exe"
     else
         # フォールバック: 環境変数から取得を試みる
-        EDGE_PATH="${ProgramW6432} (x86)/Microsoft/Edge/Application/msedge.exe"
+        EDGE_PATH="${ProgramW6432:-${PROGRAMW6432:-}} (x86)/Microsoft/Edge/Application/msedge.exe"
     fi
     if [ -f "$EDGE_PATH" ]; then
         export PUPPETEER_EXECUTABLE_PATH="$EDGE_PATH"
@@ -448,13 +450,17 @@ fi
 # npm を省略しても、managed ブラウザーが必要なら npx puppeteer browsers install は実行する。
 ensure_docsfw_node_components() {
     local node_env
+    local require_path
     node_env="$(node "${SCRIPT_DIR}/resolve-node-components.js" --ensure --export-env)" || return 1
     eval "$node_env"
     WIDDERSHINS="${DOCSFW_WIDDERSHINS}"
     # グローバルから採用したパッケージだけを、解決したディレクトリへ固定する。
     # NODE_PATH で探索先ごと差し替えると、semver で不採用としたバージョンが再び参照されてしまう。
     if [[ -n "${DOCSFW_NODE_GLOBAL_PACKAGES:-}" && -f "${DOCSFW_PREFER_GLOBAL_MODULES:-}" ]]; then
-        export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--require ${DOCSFW_PREFER_GLOBAL_MODULES}"
+        # NODE_OPTIONS 自体をシェルで引用するだけでは、Node の引数分割を防げない。
+        # see: https://nodejs.org/api/cli.html#node_optionsoptions
+        require_path="${DOCSFW_PREFER_GLOBAL_MODULES//\\//}"
+        export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--require \"${require_path}\""
     fi
 }
 
@@ -2211,14 +2217,14 @@ while ((${#_pending_files[@]} > 0)); do
 
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
-            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+            export DOCUMENT_DATE=$(sh "${SCRIPT_DIR}/get_file_date.sh" "$file")
         else
             export -n DOCUMENT_DATE
         fi
 
         if [[ "$autoSetAuthor" == "true" ]]; then
             # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定
-            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+            export DOCUMENT_AUTHOR=$(sh "${SCRIPT_DIR}/get_file_author.sh" "$file")
         else
             export -n DOCUMENT_AUTHOR
         fi
@@ -2620,7 +2626,7 @@ while ((${#_pending_files[@]} > 0)); do
         if [[ "$autoSetDate" == "true" ]]; then
             # get_file_date.sh "$file" を実行し、結果を DOCUMENT_DATE に設定
             progress_log "文書日付の取得を開始しました file=${file#${workspaceFolder}/}"
-            export DOCUMENT_DATE=$(sh ${SCRIPT_DIR}/get_file_date.sh "$file")
+            export DOCUMENT_DATE=$(sh "${SCRIPT_DIR}/get_file_date.sh" "$file")
             progress_log "文書日付の取得を終了しました file=${file#${workspaceFolder}/}"
         else
             export -n DOCUMENT_DATE
@@ -2629,7 +2635,7 @@ while ((${#_pending_files[@]} > 0)); do
         if [[ "$autoSetAuthor" == "true" ]]; then
             # get_file_author.sh "$file" を実行し、結果を DOCUMENT_AUTHOR に設定
             progress_log "文書著者の取得を開始しました file=${file#${workspaceFolder}/}"
-            export DOCUMENT_AUTHOR=$(sh ${SCRIPT_DIR}/get_file_author.sh "$file")
+            export DOCUMENT_AUTHOR=$(sh "${SCRIPT_DIR}/get_file_author.sh" "$file")
             progress_log "文書著者の取得を終了しました file=${file#${workspaceFolder}/}"
         else
             export -n DOCUMENT_AUTHOR

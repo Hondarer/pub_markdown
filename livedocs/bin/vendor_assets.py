@@ -148,7 +148,9 @@ def node_child_env(resolved, base_env=None):
         return env
     env["DOCSFW_NODE_GLOBAL_PACKAGES"] = json.dumps(packages)
     node_options = env.get("NODE_OPTIONS", "").strip()
-    require_option = "--require {}".format(preload)
+    # NODE_OPTIONS は Node が再度分割する。Windows の逆斜線も解釈させない。
+    # see: https://nodejs.org/api/cli.html#node_optionsoptions
+    require_option = '--require "{}"'.format(preload.replace("\\", "/"))
     env["NODE_OPTIONS"] = "{} {}".format(node_options, require_option).strip()
     return env
 
