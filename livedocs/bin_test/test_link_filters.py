@@ -14,6 +14,11 @@ FILTER_ROOT = os.path.join(DOCSFW_ROOT, "bin_internal", "pandoc-filters")
 PANDOC = shutil.which("pandoc")
 
 
+def _slash_path(path):
+    """発行処理 (bash) と同じく、フィルターへは / 区切りのパスを渡す。"""
+    return path.replace(os.sep, "/")
+
+
 @unittest.skipUnless(PANDOC, "pandoc is required")
 class LinkFilterTest(unittest.TestCase):
     def setUp(self):
@@ -22,14 +27,14 @@ class LinkFilterTest(unittest.TestCase):
         self.environment = os.environ.copy()
         self.environment.update(
             {
-                "PUB_MARKDOWN_MAIN_MDROOT": os.path.join(WORKSPACE_ROOT, "docs"),
+                "PUB_MARKDOWN_MAIN_MDROOT": _slash_path(os.path.join(WORKSPACE_ROOT, "docs")),
                 "SUBFOLDER_DOCS_PATHS": "\n".join(
                     [
                         "sample-workspace|app/sample-workspace/docs|{}".format(
-                            os.path.join(WORKSPACE_ROOT, "app", "sample-workspace", "docs")
+                            _slash_path(os.path.join(WORKSPACE_ROOT, "app", "sample-workspace", "docs"))
                         ),
                         "general|app/general/docs|{}".format(
-                            os.path.join(WORKSPACE_ROOT, "app", "general", "docs")
+                            _slash_path(os.path.join(WORKSPACE_ROOT, "app", "general", "docs"))
                         ),
                     ]
                 ),
@@ -38,7 +43,7 @@ class LinkFilterTest(unittest.TestCase):
 
     def _run(self, filter_name, source_file, body, output_format):
         environment = self.environment.copy()
-        environment["SOURCE_FILE"] = source_file
+        environment["SOURCE_FILE"] = _slash_path(source_file)
         result = subprocess.run(
             [
                 PANDOC,
@@ -50,6 +55,7 @@ class LinkFilterTest(unittest.TestCase):
             ],
             input=body,
             text=True,
+            encoding="utf-8",
             capture_output=True,
             check=True,
             env=environment,

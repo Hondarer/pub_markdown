@@ -158,8 +158,17 @@ local function find_same_dir_file(path, filename)
   return nil
 end
 
+-- Windows のファイル システムは大文字と小文字を区別しないため、存在確認は
+-- 参照側の表記のまま成功する。発行先の名前は実ファイル名から決まるので、
+-- 一覧から実際の表記を取り直す。区別する Linux では存在確認の結果をそのまま使う。
+-- see: https://learn.microsoft.com/en-us/windows/wsl/case-sensitivity
+local is_case_insensitive_fs = package.config:sub(1, 1) == "\\"
+
 local function resolve_document_file(path)
   if file_exists(path) then
+    if is_case_insensitive_fs then
+      return find_same_dir_file(path, basename(path):lower()) or path
+    end
     return path
   end
   -- TOC は README.md / SKILL.md の発行先を index.md として参照する。

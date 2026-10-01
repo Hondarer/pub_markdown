@@ -127,12 +127,12 @@ class OverrideHeaderTest(unittest.TestCase):
         self.assertRegex(
             text,
             re.escape(".docsfw-header-meta")
-            + r"\s*\{[^}]*margin-top:\s*2px[^}]*position:\s*absolute[^}]*top:\s*24px",
+            + r"\s*\{[^}]*margin-top:\s*2\.5px[^}]*position:\s*absolute[^}]*top:\s*24px",
         )
         self.assertRegex(
             text,
             re.escape(".md-header__topic")
-            + r"\s*\{[^}]*height:\s*24px[^}]*line-height:\s*24px[^}]*margin-top:\s*2px",
+            + r"\s*\{[^}]*height:\s*24px[^}]*line-height:\s*24px[^}]*margin-top:\s*2\.5px",
         )
         self.assertNotIn("max-width: 76.1875em", text)
 

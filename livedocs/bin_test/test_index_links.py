@@ -24,14 +24,15 @@ class IndexLinkTest(unittest.TestCase):
         self.source = self.write("docs/README.md")
         self.write("extra/README.md")
         self.environment = os.environ.copy()
+        # 発行処理 (bash) と同じく、フィルターへは / 区切りのパスを渡す。
         self.environment.update({
-            "PUB_MARKDOWN_MAIN_MDROOT": str(self.docs),
-            "SOURCE_FILE": str(self.source),
-            "SUBFOLDER_DOCS_PATHS": "extra|extra|{}".format(self.root / "extra"),
+            "PUB_MARKDOWN_MAIN_MDROOT": self.docs.as_posix(),
+            "SOURCE_FILE": self.source.as_posix(),
+            "SUBFOLDER_DOCS_PATHS": "extra|extra|{}".format((self.root / "extra").as_posix()),
             "MERGE_SUBFOLDER_DOCS": "extra=extra",
             "DOCUMENT_LANG": "ja",
             "DOCUMENT_DETAILS": "false",
-            "PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR": str(self.root / "cache"),
+            "PUB_MARKDOWN_TOC_OUTPUT_CACHE_DIR": (self.root / "cache").as_posix(),
         })
         (self.root / "cache").mkdir()
 
@@ -90,7 +91,7 @@ class IndexLinkTest(unittest.TestCase):
 
     def test_merged_root_and_suffix(self):
         self.assert_link("extra/index.md?from=guide.md#part.md", "extra/index.{ext}?from=guide.md#part.md")
-        self.environment["SOURCE_FILE"] = str(self.root / "extra" / "README.md")
+        self.environment["SOURCE_FILE"] = (self.root / "extra" / "README.md").as_posix()
         self.assert_link("index.md", "index.{ext}")
         self.assert_link("../index.md", "../index.{ext}")
 

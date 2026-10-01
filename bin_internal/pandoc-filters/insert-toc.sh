@@ -95,6 +95,25 @@ to_unix_path() {
     printf '%s\n' "${path//\\//}"
 }
 
+# 比較に使うディレクトリを、現在のファイルのディレクトリと同じ形式へそろえる。
+# 呼び出し元は D:/... 形式で渡すことがあり、そのままでは /d/... 形式の
+# 現在のディレクトリと一致せず、追加 docs の結合や仮想パスの対応付けが働かない。
+normalize_dir_path() {
+    local path
+    path=$(to_unix_path "$1")
+    readlink -f "$path" 2>/dev/null || realpath "$path" 2>/dev/null || printf '%s\n' "$path"
+}
+
+# 変換は起動時に 1 回だけ行い、以降の比較ではプロセスを起動しない。
+if [[ -n "${PUB_MARKDOWN_MAIN_MDROOT:-}" ]]; then
+    PUB_MARKDOWN_MAIN_MDROOT=$(normalize_dir_path "$PUB_MARKDOWN_MAIN_MDROOT")
+fi
+for _entry_index in "${!subfolder_entries[@]}"; do
+    parse_subfolder_entry "${subfolder_entries[$_entry_index]}"
+    subfolder_entries[$_entry_index]="${subfolder_alias}|${subfolder_path}|$(normalize_dir_path "$subfolder_docs_src")"
+done
+unset _entry_index
+
 resolve_current_context() {
     local source_dir
     local relative_to_subfolder

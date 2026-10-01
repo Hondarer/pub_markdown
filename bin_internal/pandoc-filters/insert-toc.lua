@@ -242,31 +242,32 @@ end
 local function find_bash_path()
     if is_windows() then
         -- git.exe のパスを取得
-        local git_path = nil
         local ok, output = pcall(pandoc.pipe, "where", {"git"}, "")
-        if ok and output and output ~= "" then
-            output = active_cp_to_utf8(output)
-            git_path = output:gsub("[\r\n]+$", ""):match("([^\r\n]+)")
+        if not ok or not output or output == "" then
+            return nil -- bash が見つからない
         end
-        --debug_print("git_path:", git_path)
+        output = active_cp_to_utf8(output)
 
-        if git_path then
-            -- git.exe のパスから bash.exe のパスを生成
-            local bash_path
-
-            if git_path:match("\\mingw64\\bin\\git%.exe$") then
-                -- /mingw64/bin/git.exe → /usr/bin/bash.exe
-                bash_path = git_path:gsub("\\mingw64\\bin\\git%.exe$", "\\bin\\bash.exe")
-            elseif git_path:match("\\cmd\\git%.exe$") then
-                -- /cmd/git.exe → /bin/bash.exe
-                bash_path = git_path:gsub("\\cmd\\git%.exe$", "\\bin\\bash.exe")
-            elseif git_path:match("\\bin\\git%.exe$") then
-                -- /bin/git.exe → /bin/bash.exe
-                bash_path = git_path:gsub("\\bin\\git%.exe$", "\\bin\\bash.exe")
-            end
-
-            if bash_path then
-                return bash_path
+        -- Git for Windows は git.exe を <root>\cmd、<root>\bin、<root>\<環境名>\bin に置く。
+        -- 環境名は mingw64 のほか ucrt64 などがあるため列挙せず、候補のルートから
+        -- 実在する bash.exe を選ぶ。誤ったルートの候補は実在の確認で除外される。
+        -- see: https://github.com/git-for-windows/git/wiki/FAQ
+        for git_path in output:gmatch("[^\r\n]+") do
+            --debug_print("git_path:", git_path)
+            local roots = {
+                git_path:match("^(.*)\\cmd\\git%.exe$"),
+                git_path:match("^(.*)\\bin\\git%.exe$"),
+                git_path:match("^(.*)\\[^\\]+\\bin\\git%.exe$"),
+            }
+            for _, root in pairs(roots) do
+                for _, relative in ipairs({"\\bin\\bash.exe", "\\usr\\bin\\bash.exe"}) do
+                    local bash_path = root .. relative
+                    local file = io.open(utf8_to_active_cp(bash_path), "rb")
+                    if file then
+                        file:close()
+                        return bash_path
+                    end
+                end
             end
         end
 
