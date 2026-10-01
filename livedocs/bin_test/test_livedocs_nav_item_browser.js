@@ -1,4 +1,4 @@
-// 実行: node livedocs/tests/test_livedocs_nav_item_browser.js (docsfw ルートから)
+// 実行: node livedocs/bin_test/test_livedocs_nav_item_browser.js (docsfw ルートから)
 // 約 1220px 未満のドロワー板見出しで、"<" アイコンは常に上位フォルダーへ戻り、
 // フォルダー名はインデックス ページ (navigation.indexes) があるときだけ実リンクに
 // なることを、theme/partials/nav-item.html の上書きに対して検証する。

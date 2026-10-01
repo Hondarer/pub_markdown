@@ -124,9 +124,9 @@ docsfw ルートで次を実行します。
 ```bash
 node bin_internal/test-html-diagrams.js
 node bin_internal/test-html-ui.js
-node tests/test_page_performance_browser.js
-node tests/test_page_libraries_browser.js
-python -m unittest discover -s livedocs/tests -p test_vendor_assets.py
+node bin_test/test_page_performance_browser.js
+node bin_test/test_page_libraries_browser.js
+python -m unittest discover -s livedocs/bin_test -p test_vendor_assets.py
 ```
 
 ブラウザー テストは一時ディレクトリに HTML と画面画像を生成し、その場所を表示します。  

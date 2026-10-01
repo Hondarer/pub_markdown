@@ -1,6 +1,6 @@
 'use strict';
 
-// 実行: node tests/test_page_libraries_browser.js (docsfw ルートから)。
+// 実行: node bin_test/test_page_libraries_browser.js (docsfw ルートから)。
 // 局所 MkDocs サイトと Pandoc HTML で、必要時読み込みと実描画を検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

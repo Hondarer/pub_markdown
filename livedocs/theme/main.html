@@ -11,7 +11,7 @@
   meta viewport 自体を 1 つに保ちます。
 
   置き換え元の文字列は Material のバージョンに依存します。上流が変わって
-  置き換えが空振りしないよう、tests/test_livedocs_viewport.py で確認します。
+  置き換えが空振りしないよう、bin_test/test_livedocs_viewport.py で確認します。
 
   Pandoc HTML 側は html-template.html の meta viewport で同じ指定を持ちます。
   安全領域の手当ては assets/docsfw-livedocs.css の env(safe-area-inset-*) です。
@@ -45,7 +45,7 @@
 
   base を使うのは、ほかに versions.json と navigation.instant ですが、
   どちらも使用していません。置き換え元の文字列は Material のバージョンに
-  依存するため、tests/test_livedocs_search.py で空振りしないことを確認します。
+  依存するため、bin_test/test_livedocs_search.py で空振りしないことを確認します。
 #}
 {% block config %}
   {%- set raw = ((page.url or '') if page else '').split('/')[0] -%}

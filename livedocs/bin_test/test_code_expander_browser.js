@@ -1,4 +1,4 @@
-// 実行: node livedocs/tests/test_code_expander_browser.js (docsfw ルートから)
+// 実行: node livedocs/bin_test/test_code_expander_browser.js (docsfw ルートから)
 // 一時サイトだけを生成し、MkDocs 上のコード ブロック開閉を検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

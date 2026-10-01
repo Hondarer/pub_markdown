@@ -233,7 +233,7 @@ JavaScript は以下の条件を満たす要素を変換します。
 局所ブラウザー テストは docsfw ルートで次のように実行します。
 
 ```bash
-node livedocs/tests/test_collapsible_browser.js
+node livedocs/bin_test/test_collapsible_browser.js
 ```
 
 このテストは livedocs の Python 仮想環境と既存の Puppeteer を使用し、一時ディレクトリに小規模な MkDocs サイトを生成します。

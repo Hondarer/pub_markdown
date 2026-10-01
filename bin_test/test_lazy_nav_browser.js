@@ -1,6 +1,6 @@
 'use strict';
 
-// 実行: node tests/test_lazy_nav_browser.js (docsfw ルートから)。
+// 実行: node bin_test/test_lazy_nav_browser.js (docsfw ルートから)。
 // 両発行方式の局所 fixture で、遅延生成と DOM 破棄を実ブラウザーで確認する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

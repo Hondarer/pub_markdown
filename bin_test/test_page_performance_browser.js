@@ -1,6 +1,6 @@
 'use strict';
 
-// 実行: node tests/test_page_performance_browser.js (docsfw ルートから)。
+// 実行: node bin_test/test_page_performance_browser.js (docsfw ルートから)。
 // 両方式の本文で、図の再描画と新しい要素の追加を区別する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

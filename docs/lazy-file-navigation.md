@@ -102,7 +102,7 @@ HTML 文字列の JSON エスケープと、初期表示部分の重複により
 
 ## 局所 fixture で DOM の増減と操作を検証する
 
-`tests/test_lazy_nav_browser.js` は、Pandoc の千項目規模のデータと、MkDocs の複数階層・両詳細度を含む局所サイトを使用します。  
+`bin_test/test_lazy_nav_browser.js` は、Pandoc の千項目規模のデータと、MkDocs の複数階層・両詳細度を含む局所サイトを使用します。  
 MkDocs の局所サイトは `mkdocs build --strict` で生成します。  
 実ブラウザーでは、初期 DOM 数、現在ページの経路、動的な子と孫の展開、折りたたみによる DOM 除去、再展開時の状態復元を確認します。  
 画面幅の変更、パネル数、ページ内目次の維持、Enter と Space による動的ラベルの操作も検証対象です。
@@ -110,7 +110,7 @@ MkDocs の局所サイトは `mkdocs build --strict` で生成します。
 実行ディレクトリは docsfw ルートです。
 
 ```bash
-node tests/test_lazy_nav_browser.js
+node bin_test/test_lazy_nav_browser.js
 ```
 
 Puppeteer は既存の Node コンポーネント探索処理で解決します。  

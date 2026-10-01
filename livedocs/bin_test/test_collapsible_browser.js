@@ -1,4 +1,4 @@
-// 実行: node livedocs/tests/test_collapsible_browser.js (docsfw ルートから)
+// 実行: node livedocs/bin_test/test_collapsible_browser.js (docsfw ルートから)
 // 一時サイトだけを生成し、MkDocs Material 上の開閉と履歴を検証する。
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -28,7 +28,7 @@ function run(command, args, options = {}) {
 import sys, pathlib, subprocess
 root, target = map(pathlib.Path, sys.argv[1:])
 sys.path.insert(0, str(root / 'livedocs/bin'))
-sys.path.insert(0, str(root / 'livedocs/tests'))
+sys.path.insert(0, str(root / 'livedocs/bin_test'))
 from test_expand_toc import _nested_index
 from expand_toc import expand_toc_commands, render_toc, parse_toc_params
 from stage_livedocs import convert_collapsible_list_fences

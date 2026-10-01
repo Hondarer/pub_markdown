@@ -201,7 +201,7 @@ framework/docsfw/
 |   |   +-- docsfw-code-expander.css # コード ブロック開閉の見た目
 |   |   +-- docsfw-livedocs.css       # 追加スタイル
 |   |   +-- docsfw-header-links.css  # ヘッダー内アイコンのスタイル
-|   +-- tests/
+|   +-- bin_test/
 |   |   +-- test_livedocs_doxygen.py  # リンク変換と静的サーブ、起動後の配信開始のテスト
 |   |   +-- test_livedocs_versioned.py  # 再生成中の配信と版切り替えのテスト
 |   |   +-- test_livedocs_git_link.py  # blob URL の解決条件と URL 形式のテスト
@@ -442,7 +442,7 @@ Material の `partials/header.html` を `custom_dir` で上書きします。
 右端に置くとアイコンの位置が幅によって動くためです。
 
 上流の複製であるため、mkdocs-material を更新したときは差分の取り直しが要ります。  
-`requirements.txt` はバージョンを固定しており、`tests/test_livedocs_header.py` が上流 `header.html` の  
+`requirements.txt` はバージョンを固定しており、`bin_test/test_livedocs_header.py` が上流 `header.html` の  
 内容ハッシュと `requirements.txt` の固定版を突き合わせて、更新に気付けるようにしています。
 
 ラベルは `config.theme.language` で「ソースを開く」と「View source」を出し分けます。  
@@ -485,7 +485,7 @@ Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないた
 値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
 要件は「同じページについて、静的発行と動的発行が同一の文字列を出力すること」です。  
-`tests/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin_internal/get_file_author.sh` と  
+`bin_test/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin_internal/get_file_author.sh` と  
 `bin_internal/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
 
 ### 解決のタイミング
@@ -1329,7 +1329,7 @@ Material は一覧の `padding-bottom: 0.4rem` を `.md-nav` の `margin-bottom:
 Pandoc HTML 側の `docsfw-nav.js` (`.docsfw-panel-title`) は戻るボタンとフォルダー名をもともと別要素にしているため、`theme/partials/nav-item.html` を上書きして同じ形に揃えます。  
 上流がすぐ上のブロック (`index` が真のときの一覧行) ですでに使っている「実リンクの `<a>` とトグル用 `<label>` を兄弟として並べる」形をそのまま板見出しにも適用し、戻る矢印はトグル用 `<label class="md-nav__icon md-icon" for="{{ path }}">` のまま残し、フォルダー名は `index` があれば `<a href="{{ index.url | url }}">` の実リンクに、無ければ従来どおりのテキストにします。  
 コンパイル済み CSS の `.md-nav__title` 系セレクターはクラス指定でタグ名に依存しないため、外枠を `<label>` から `<div>`、アイコンを `<span>` から `<label>` に変えても見た目は変わりません。  
-上書きの保守条件 (取り込み元バージョンとハッシュ固定) は `tests/test_livedocs_nav_item.py`、実際のクリック挙動は `tests/test_livedocs_nav_item_browser.js` で検証します。
+上書きの保守条件 (取り込み元バージョンとハッシュ固定) は `bin_test/test_livedocs_nav_item.py`、実際のクリック挙動は `bin_test/test_livedocs_nav_item_browser.js` で検証します。
 
 ドロワーの高さは `calc(100% - var(--docsfw-header-height))` です。  
 上端は Material の JS が測ったヘッダーの高さを `style` 属性へ書き込むため、CSS の `top` は効きません。  
@@ -1346,7 +1346,7 @@ Material の `base.html` は `site_meta` ブロックで meta viewport を出力
 `extrahead` から `viewport-fit=cover` 付きを後置きしても、iOS では先の指定が有効なままで `env(safe-area-inset-bottom)` は 0 のままでした。  
 `theme/main.html` で `site_meta` を上書きし、`super()` の出力を Jinja の `replace` フィルターに通して meta viewport 自体を差し替えます。  
 meta viewport は 1 つのままで、位置と他の meta も変わりません。  
-置き換え元の文字列は Material のバージョンに依存するため、上流が変わって空振りしないよう `tests/test_livedocs_viewport.py` で確認します。  
+置き換え元の文字列は Material のバージョンに依存するため、上流が変わって空振りしないよう `bin_test/test_livedocs_viewport.py` で確認します。  
 広げた分は内容の領域にもなるため、`docsfw-livedocs.css` で端に接する箱へ `env(safe-area-inset-*)` の余白を足します。  
 対象は `.md-header__inner` などの `__inner` の左右、`.md-main` の下端、ドロワーの一覧の下端です。  
 Pandoc HTML 側も同じ規則です。詳細は [検索とナビゲーションの該当節](search-and-nav.md) を参照してください。
@@ -1360,7 +1360,7 @@ Material は開閉を `<label class="md-header__button md-icon" for="__drawer">`
 `<label>` はフォーカスを受けず、チェック ボックスは `display: none` でフォーカスを受けられないため、この規則を実装で持つ必要がありません。  
 Pandoc HTML 側は `position: fixed` の要素を JS で開閉するため、閉じたときに戻すフォーカスをポインター操作かどうかで出し分けます。  
 規則は同じで、実装の有無だけが違います。差が出たら気付けるよう、覆いをタップして閉じたあとのフォーカス位置を  
-`tests/test_livedocs_nav_browser.js` で確認します。  
+`bin_test/test_livedocs_nav_browser.js` で確認します。  
 詳細は [検索とナビゲーションの該当節](search-and-nav.md) を参照してください。
 
 ドロワーの上端と本文に接する側面には、ヘッダーおよびフッターの境界線と同じ色で 1px の線を引きます。  

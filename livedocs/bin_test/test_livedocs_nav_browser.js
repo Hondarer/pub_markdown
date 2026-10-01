@@ -1,4 +1,4 @@
-// 実行: node livedocs/tests/test_livedocs_nav_browser.js (docsfw ルートから)
+// 実行: node livedocs/bin_test/test_livedocs_nav_browser.js (docsfw ルートから)
 // ドロワーを開いたときに、狭幅と中幅の両方で現在見出しが表示されることと、
 // 3 ペインから連続一覧ドロワーの幅 (1300px) へ縮めたあとも下端 12px が残る
 // ことを検証する。
