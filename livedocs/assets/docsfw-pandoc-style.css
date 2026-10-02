@@ -474,16 +474,16 @@ body {
 
 /* ライト。pandoc 発行版はライト固定のため、こちらが基準となる。 */
 [data-md-color-scheme="default"] {
-  /* 本文リンクは html-style.css の a { color: #4183C4 }。
-     ホバーは html-style.css に指定が無く、Bootstrap (template.css) の
-     a:hover { color: #005580 } が効いている。 */
-  --md-typeset-a-color: #4183c4;
-  --md-accent-fg-color: #005580;
-  --md-accent-fg-color--transparent: rgba(0, 85, 128, 0.1);
+  /* 本文の文字色は html-style.css の --docsfw-fg (#333333)。
+     Material 既定の rgba(0, 0, 0, 0.87) (白地で #212121) より淡くする。 */
+  --md-default-fg-color: rgba(0, 0, 0, 0.80);
 
-  /* 左ナビと目次は docsfw-ui.css の #1A5FAA (ホバーと現在ページ)。
-     本文リンクのホバーとは別の色なので、専用の変数に分ける。 */
-  --docsfw-nav-accent: #1a5faa;
+  /* リンクは html-style.css の --docsfw-link / --docsfw-link-hover。
+     本文、左ナビ、目次で共通に使う。ホバーはリンク色の明度だけを 8% 下げる。 */
+  --md-typeset-a-color: #4183c4;
+  --md-accent-fg-color: #346fa8;
+  --md-accent-fg-color--transparent: rgba(52, 111, 168, 0.1);
+
   --docsfw-table-border-outer: #969696;
   --docsfw-table-border-inner: #b5b5b5;
 
@@ -514,6 +514,15 @@ body {
   --md-typeset-mark-color: #ffff00;
 }
 
+/* ダークの本文リンク。Material は palette.css で
+   [data-md-color-scheme=slate][data-md-color-primary=indigo] (属性セレクター
+   2 個) に --md-typeset-a-color: #5488e8 を当てる。primary を指定しない場合も
+   既定の indigo が body に付くため、下の slate ブロック (属性 1 個) では負ける。
+   同じ詳細度にして、読み込み順でこちらを勝たせる。 */
+[data-md-color-scheme="slate"][data-md-color-primary] {
+  --md-typeset-a-color: #6ea9dd;
+}
+
 /* ダーク。Pandoc HTML のダーク配色も同じ値を使用する。ライトの各色と同じ色相の
    まま明度を上げた値を使う。admonition の 6 色は、pandoc が採用している
    GitHub のライト色に対応する GitHub のダーク色をそのまま当てる。
@@ -522,26 +531,26 @@ body {
   /* 文字色は Material slate の青みを帯びた hsla(var(--md-hue), 15%, 90%, ...)
      ではなく、html-style.css の --docsfw-fg / --docsfw-muted /
      --docsfw-border / --docsfw-divider と同じ白の半透明にする。 */
-  --md-default-fg-color: rgba(255, 255, 255, 0.87);
+  --md-default-fg-color: rgba(255, 255, 255, 0.80);
   --md-default-fg-color--light: rgba(255, 255, 255, 0.54);
   --md-default-fg-color--lighter: rgba(255, 255, 255, 0.32);
   --md-default-fg-color--lightest: rgba(255, 255, 255, 0.12);
   --md-typeset-color: var(--md-default-fg-color);
 
-  --md-typeset-a-color: #6ea9dd;
-  --md-accent-fg-color: #9cc7ea;
-  --md-accent-fg-color--transparent: rgba(156, 199, 234, 0.1);
+  /* リンクのホバーは、リンク色 (#6ea9dd) の明度だけを 8% 上げる。
+     リンク色は上の [data-md-color-primary] 付きのブロックで指定する。 */
+  --md-accent-fg-color: #8fbde5;
+  --md-accent-fg-color--transparent: rgba(143, 189, 229, 0.1);
 
   /* --md-accent-bg-color は --md-accent-fg-color を背景に敷く部品 (.md-top と
      .md-button のホバー、.md-tag のホバー) の文字色。
      Material では accent パレット由来で配色方式によらず #FFFFFF 固定であり、
      ダークの --md-accent-fg-color を明色にしたことで白文字が読めなくなる
-     (#FFFFFF 対 #9CC7EA でコントラスト比 1.8:1)。
-     ヘッダー背景と同じ暗色へ差し替える (8.8:1)。 */
+     (#FFFFFF 対 #8FBDE5 でコントラスト比 2.0:1)。
+     ヘッダー背景と同じ暗色へ差し替える (8.1:1)。 */
   --md-accent-bg-color: #1f2129;
   --md-accent-bg-color--light: rgba(31, 33, 41, 0.7);
 
-  --docsfw-nav-accent: #9cc7ea;
   --docsfw-table-border-outer: #858890;
   --docsfw-table-border-inner: #70747e;
 
@@ -620,31 +629,10 @@ body {
 /* ナビゲーションと目次の色                                                  */
 /* ------------------------------------------------------------------------ */
 
-/* Material は本文リンクと同じ --md-accent-fg-color を使うが、pandoc 発行版は
-   本文リンクのホバー (#005580) とナビの色 (#1A5FAA) を分けている。
-
-   セレクターは Material 側と同じ形にそろえる。単独の .md-nav__link--active
-   (0,1,0) では Material の .md-nav__item .md-nav__link--active (0,2,0) と
-   .md-nav--primary .md-nav__item--active > .md-nav__link (0,3,0) に負け、
-   目次のアクティブと左ナビの現在ページが本文リンク色 (#4183C4) になる。
-   ホバーも同様で、.md-nav__link:hover (0,2,0) では左ナビの現在ページに効く
-   .md-nav--primary .md-nav__item--active > .md-nav__link:hover (0,4,0) に
-   負けて #005580 が出る。extra_css は main.css より後に読まれるため、
-   同じ詳細度まで上げれば後勝ちする。 */
-.md-nav__item .md-nav__link--active,
-.md-nav__item .md-nav__link--active code,
-.md-nav--primary .md-nav__item--active > .md-nav__link {
-  color: var(--docsfw-nav-accent);
-}
-
-.md-nav__link[for]:hover,
-.md-nav__link[for]:focus,
-.md-nav__link[href]:hover,
-.md-nav__link[href]:focus,
-.md-nav--primary .md-nav__item--active > .md-nav__link:hover,
-.md-nav--primary .md-nav__item--active > .md-nav__link:focus {
-  color: var(--docsfw-nav-accent);
-}
+/* ナビゲーションと目次は、本文リンクと同じ色を使う。Material の既定が、
+   現在位置に --md-typeset-a-color、ホバーとフォーカスに --md-accent-fg-color
+   を当てるため、色は上の配色ブロックの変数だけで pandoc 発行版の
+   docsfw-ui.css とそろう。セレクター側では色を指定しない。 */
 
 /* pandoc 発行版のナビゲーションと目次は色が瞬時に切り替わる。Material の
    transition: color 125ms によるフェードを止めて、同じ切り替わり方にする。

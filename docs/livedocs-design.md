@@ -904,9 +904,10 @@ Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (
 | 用途 | pandoc (正) | 出典 | 動的発行 `default` | 動的発行 `slate` |
 |---|---|---|---|---|
 | 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
-| 本文リンク ホバー | `#005580` | Bootstrap `template.css` の `a:hover` | `#005580` | `#9CC7EA` |
-| ナビ ホバーと現在ページ | `#1A5FAA` | `styles/html/docsfw-ui.css` | `#1A5FAA` | `#9CC7EA` |
-| ページ内目次 通常 | `#212121` | Material `--md-typeset-color` (Material が正) | 同左 | Material 既定 |
+| 本文リンク ホバー | `#346FA8` | `styles/html/html-style.css` の `--docsfw-link-hover` | `#346FA8` | `#8FBDE5` |
+| ナビと目次の現在位置 | `#4183C4` | 本文リンクと同じ | `#4183C4` | `#6EA9DD` |
+| ナビと目次のホバー | `#346FA8` | 本文リンク ホバーと同じ | `#346FA8` | `#8FBDE5` |
+| ページ内目次 通常 | `#333333` | Material `--md-typeset-color` (Material が正) | 同左 | `rgba(255,255,255,.80)` |
 | ページ内目次 通過済み | `#757575` | Material `--md-default-fg-color--light` (Material が正) | 同左 | Material 既定 |
 | accent 背景に載る文字 | 対応なし | Material `--md-accent-bg-color` | `#FFFFFF` (Material 既定) | `#1F2129` |
 | ヘッダー背景 | `#F7F7F7` | `styles/html/html-style.css` の `.docsfw-header` | `#F7F7F7` | `#1F2129` |
@@ -923,11 +924,11 @@ Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (
 | DEPRECATED | `#6A737D` | 同上 | 同左 | `#8B949E` |
 | コード背景 | `#F8F8F8` | `html-style.css` の `code, tt` | 同左 | Material 既定 |
 | コード文字 | `black` | 同上 | 同左 | Material 既定 |
-| 開閉ボタンの文字 | `#212121` | Material `--md-default-fg-color` (Material が正) | `rgba(0,0,0,.87)` | Material 既定 |
+| 開閉ボタンの文字 | `#333333` | Material `--md-default-fg-color` (Material が正) | `rgba(0,0,0,.80)` | `rgba(255,255,255,.80)` |
 | 開閉の矢印とヒント | `#757575` | Material `--md-default-fg-color--light` (Material が正) | `rgba(0,0,0,.54)` | Material 既定 |
 | 開閉バーの区切り線 | `#DDDDDD` | `html-style.css` の `--docsfw-soft-border` | 同左 | `rgba(255,255,255,.12)` |
 | `==mark==` | `#FFFF00` | `html-style.css` の `mark` | 同左 | Material 既定 |
-| 本文 | `#212121` | [見出し書式](heading-style.md) | 同左 | Material 既定 |
+| 本文 | `#333333` | [見出し書式](heading-style.md) | 同左 | `rgba(255,255,255,.80)` |
 | 見出し | `#757575` | 同上 | 同左 | `--md-default-fg-color--light` |
 
 Table: 静的発行と動的発行のテーマ カラー対応一覧
@@ -1100,17 +1101,17 @@ Material 側の指定は `@media (min-width: 60em)` の中にもありますが�
 この節では、`make servedocs` 側で必要になる調整だけを述べます。
 
 濃さは 2 段です。  
-本文の `#212121` がいちばん濃く、見出しは `#757575` で本文より淡くなります。
+本文の `#333333` がいちばん濃く、見出しは `#757575` で本文より淡くなります。
 
 | 対象 | 動的発行の指定 | 白地での値 |
 |---|---|---|
 | 見出し (Markdown の H1 - H6) | `--md-default-fg-color--light` | `#757575` |
-| 本文 | Material 既定の `--md-typeset-color` | `#212121` |
+| 本文 | `--md-typeset-color` (`--md-default-fg-color` を上書き) | `#333333` |
 
 Table: 動的発行における見出しと本文の文字色仕様
 
-本文の色は Material の既定がすでに仕様どおりであるため、`assets/docsfw-pandoc-style.css` では指定しません。  
-pandoc 側は `body` に `color` の指定がなく Bootstrap の `#333333` が効いていたため、`styles/html/html-style.css` の `body` へ `#212121` を追加しました。
+本文の色は、`assets/docsfw-pandoc-style.css` で `--md-default-fg-color` を `rgba(0, 0, 0, 0.80)` に上書きして合わせます。Material 既定の `rgba(0, 0, 0, 0.87)` (白地で `#212121`) では濃すぎるためです。  
+pandoc 側は `styles/html/html-style.css` の `--docsfw-fg` を `#333333` とし、`body` の `color` に使います。
 
 見出しの色は直値で書かず `var(--md-default-fg-color--light)` を使用します。  
 ダーク (`slate`) でも「見出しは本文より淡い」という関係が保たれるためです。
@@ -1142,10 +1143,9 @@ Material は色を変えるだけで下線を引かないため、`.md-typeset a
 見出しのアンカー (`.headerlink`) は本文リンクではないため、対象から外します。  
 アンカーは静的発行でも `docsfw-nav.js` が付与します。仕様は [見出し書式](heading-style.md) を正本とし、Material 側は遷移だけを打ち消します。
 
-ナビゲーションの色と下線は、Material と同じ形のセレクターで指定します。  
-`.md-nav__link:hover` の詳細度 (0,2,0) では、Material が左ナビの現在ページへ当てる `.md-nav--primary .md-nav__item--active > .md-nav__link:hover` (0,4,0) に負け、ナビの色 `#1A5FAA` ではなく本文リンクのホバー色 `#005580` が出るためです。  
-アクティブ側も同じ理由で、`.md-nav__link--active` (0,1,0) は Material の `.md-nav__item .md-nav__link--active` (0,2,0) に負けます。  
-`extra_css` は `main.css` より後に読まれるため、詳細度を同じまで上げれば後勝ちします。
+リンクの色は、本文、左ナビ、ページ内目次で共通とし、ライトとダーク、静的発行と動的発行で同じ規則にします。  
+現在位置はリンク色、ホバーとフォーカスはリンクのホバー色です。ホバー色は、リンク色の色相と彩度を保ち、明度 (HSL の L) だけを 8% 変えます。ライトでは暗く、ダークでは明るくします。  
+Material の既定は、現在位置に `--md-typeset-a-color`、ホバーとフォーカスに `--md-accent-fg-color` を当てます。そのため動的発行では、配色ブロックでこの 2 変数を指定するだけでそろい、ナビゲーションのセレクターには色を指定しません。
 
 色の変わり方は静的発行を正とし、瞬時に切り替えます。  
 Material は `.md-nav__link` に `transition: color 125ms` を持ちますが、静的発行に対応する指定がないため `transition: none` で打ち消します。  
@@ -1174,10 +1174,10 @@ TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separa
 
 | 状態 | 白地 (`default`) | ダーク (`slate`) | 由来 |
 |---|---|---|---|
-| 通常 (未通過) | `#212121` | Material 既定 | Material の `--md-typeset-color` |
-| 通過済み | `#757575` | Material 既定 | Material の `--md-default-fg-color--light` |
-| アクティブ | `#1A5FAA` | `#9CC7EA` | 「色の対応」の「ナビ ホバーと現在ページ」 |
-| ホバーとフォーカス | `#1A5FAA` | `#9CC7EA` | 同上。下線を引く |
+| 通常 (未通過) | `#333333` | `rgba(255,255,255,.80)` | Material の `--md-typeset-color` |
+| 通過済み | `#757575` | `rgba(255,255,255,.54)` | Material の `--md-default-fg-color--light` |
+| アクティブ | `#4183C4` | `#6EA9DD` | 「色の対応」の「ナビと目次の現在位置」 |
+| ホバーとフォーカス | `#346FA8` | `#8FBDE5` | 「色の対応」の「ナビと目次のホバー」。下線を引く |
 
 Table: ページ内目次の表示状態とテーマ別カラー仕様
 

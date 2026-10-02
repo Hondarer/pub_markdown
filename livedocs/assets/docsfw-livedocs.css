@@ -713,7 +713,7 @@
 
 /* docsfw の Table: / CodeBlock: キャプションに相当する段落。 */
 /* 色と余白は pandoc 発行版の figcaption に合わせる。pandoc 発行版は
-   figcaption に色を指定せず body (#212121) を継承するため、見出し用の
+   figcaption に色を指定せず body (#333333) を継承するため、見出し用の
    --md-default-fg-color--light ではなく本文色を使う。 */
 .md-typeset .docsfw-caption {
   margin: 8px 0 0;

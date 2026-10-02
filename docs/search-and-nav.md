@@ -242,7 +242,7 @@ URL にフラグメントがあるページを再読み込みした場合は、P
 
 | クラス | 付与対象 | 表示 |
 |---|---|---|
-| `docsfw-toc-active` | 現在の見出しのリンク 1 件。`aria-current="location"` も同時に付与されます | `#1A5FAA` |
+| `docsfw-toc-active` | 現在の見出しのリンク 1 件。`aria-current="location"` も同時に付与されます | リンク色 (`#4183C4`) |
 | `docsfw-toc-passed` | 現在の見出しと、それより上にある見出しのリンク | `#757575` に淡色化 |
 
 Table: ページ内目次の追従強調クラス仕様

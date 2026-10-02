@@ -51,11 +51,11 @@
 }
 .docsfw-diagram--error {
   padding: 0.6rem 0.8rem;
-  border-left: 0.2rem solid var(--md-typeset-color, var(--docsfw-fg, #212121));
+  border-left: 0.2rem solid var(--md-typeset-color, var(--docsfw-fg, #333333));
   text-align: left;
   white-space: normal;
   font-size: 0.75rem;
-  color: var(--md-default-fg-color, var(--docsfw-fg, #212121));
+  color: var(--md-default-fg-color, var(--docsfw-fg, #333333));
 }
 .docsfw-diagram--error pre {
   white-space: pre-wrap;

@@ -73,7 +73,7 @@
   display: block;
   font-size: 13px;
   font-weight: bold;
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -148,14 +148,14 @@
 
 #docsfw-tree a:hover,
 .docsfw-home-link a:hover {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
   text-decoration: underline;
 }
 
 /* Keep the current file identifiable by weight as well as color. */
 #docsfw-tree a.docsfw-current,
 .docsfw-home-link a.docsfw-current {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
 }
 
 /* Directory nodes */
@@ -208,12 +208,12 @@
 }
 
 #docsfw-tree details > summary:hover {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
 }
 
 #docsfw-tree details:has(.docsfw-current) > summary,
 #docsfw-tree details:has(.docsfw-current) > summary > a {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
 }
 
 /* Indentation for child items */
@@ -290,14 +290,14 @@
 /* Placed after the passed rule so the active color wins at equal specificity. */
 #docsfw-page-toc a.docsfw-toc-active,
 #docsfw-page-toc a[aria-current="location"] {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
 }
 
 /* Last of the color rules, so hover wins over the passed and active colors. */
 #docsfw-page-toc a:hover,
 #docsfw-page-toc ul > li > a:hover,
 #docsfw-page-toc ul > li > a:focus {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
   text-decoration: underline;
   background-color: transparent;
 }
@@ -634,7 +634,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
 #docsfw-tree .docsfw-nav-row > a:hover,
 .docsfw-panel-home > a:hover {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
   text-decoration: underline;
 }
 
@@ -675,11 +675,11 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 
 #docsfw-page-toc.docsfw-combined-toc a.docsfw-toc-active,
 #docsfw-page-toc.docsfw-combined-toc a[aria-current="location"] {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
 }
 
 #docsfw-page-toc.docsfw-combined-toc a:hover {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
   text-decoration: underline;
 }
 
@@ -715,7 +715,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 }
 
 .docsfw-current {
-  color: var(--docsfw-nav-accent) !important;
+  color: var(--docsfw-link) !important;
   font-weight: 400;
 }
 
@@ -723,7 +723,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 #docsfw-tree .docsfw-nav-ancestor > .docsfw-nav-row > span,
 #docsfw-tree .docsfw-nav-ancestor > .docsfw-nav-row > .docsfw-nav-toggle,
 #docsfw-tree .docsfw-nav-row:has(> .docsfw-current) > .docsfw-nav-toggle {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link);
 }
 
 .docsfw-toc-separator {
@@ -1277,7 +1277,7 @@ body.docsfw-nav-open #docsfw-nav-backdrop {
 .docsfw-nav-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
 .docsfw-nav-toggle:hover,
 .docsfw-nav-toggle:focus {
-  color: var(--docsfw-nav-accent);
+  color: var(--docsfw-link-hover);
   outline: none;
 }
 .docsfw-nav-list[hidden] { display: none; }

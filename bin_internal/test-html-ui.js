@@ -481,8 +481,8 @@ async function main() {
     assert.equal(await page.$eval('.doc-title', node => node.getBoundingClientRect().left), 124.5);
     assert.equal(await page.$eval('.doc-title', node => getComputedStyle(node).color), 'rgba(0, 0, 0, 0.87)');
     assert.equal(await page.$eval('.docsfw-current', node => getComputedStyle(node).fontWeight), '400');
-    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > a', node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
-    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > .docsfw-nav-toggle', node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > a', node => getComputedStyle(node).color), 'rgb(65, 131, 196)');
+    assert.equal(await page.$eval('.docsfw-nav-ancestor > .docsfw-nav-row > .docsfw-nav-toggle', node => getComputedStyle(node).color), 'rgb(65, 131, 196)');
     assert.deepEqual(await page.$eval('.docsfw-search-form', node => {
       const style = getComputedStyle(node, '::before');
       return {width: style.width, height: style.height, left: style.left};
@@ -497,9 +497,9 @@ async function main() {
     assert.equal(await toggles[0].evaluate(node => node.getAttribute('aria-expanded')), 'true');
     assert.equal(await toggles[1].evaluate(node => node.getAttribute('aria-expanded')), 'false');
     await toggles[1].hover();
-    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(52, 111, 168)');
     await toggles[1].focus();
-    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(26, 95, 170)');
+    assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).color), 'rgb(52, 111, 168)');
     assert.equal(await toggles[1].evaluate(node => getComputedStyle(node).outlineStyle), 'none');
     await page.keyboard.press('Enter');
     assert.equal(await toggles[1].evaluate(node => document.getElementById(node.getAttribute('aria-controls')).hidden), false);
@@ -601,7 +601,7 @@ async function main() {
     });
     await page.mouse.move(topBox.x, topBox.y);
     await page.waitForFunction(() =>
-      getComputedStyle(document.getElementById('docsfw-top')).backgroundColor === 'rgb(0, 85, 128)');
+      getComputedStyle(document.getElementById('docsfw-top')).backgroundColor === 'rgb(52, 111, 168)');
     assert.equal(await page.$eval('#docsfw-top', node => getComputedStyle(node).color), 'rgb(255, 255, 255)');
     await page.mouse.click(topBox.x, topBox.y);
     assert.equal(await page.$eval('#docsfw-top', node => node.hidden), true);

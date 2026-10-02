@@ -1,7 +1,7 @@
 /* ライトは従来の配色、ダークは MkDocs Material の slate に対応する。 */
 :root {
   color-scheme: light;
-  --docsfw-fg: #212121;
+  --docsfw-fg: #333333;
   --docsfw-bg: white;
   --docsfw-muted: #757575;
   --docsfw-secondary: #333333;
@@ -10,8 +10,7 @@
   --docsfw-header-bg: #f7f7f7;
   --docsfw-header-border: #d4d4d4;
   --docsfw-link: #4183C4;
-  --docsfw-link-hover: #005580;
-  --docsfw-nav-accent: #1a5faa;
+  --docsfw-link-hover: #346fa8;
   --docsfw-accent-bg: #ffffff;
   --docsfw-absent: #cc0000;
   --docsfw-code-bg: #f8f8f8;
@@ -65,7 +64,7 @@
 
 html[data-md-color-scheme="slate"] {
   color-scheme: dark;
-  --docsfw-fg: rgba(255, 255, 255, 0.87);
+  --docsfw-fg: rgba(255, 255, 255, 0.80);
   --docsfw-bg: #1e2129;
   --docsfw-muted: rgba(255, 255, 255, 0.54);
   --docsfw-secondary: rgba(255, 255, 255, 0.87);
@@ -74,8 +73,7 @@ html[data-md-color-scheme="slate"] {
   --docsfw-header-bg: #1f2129;
   --docsfw-header-border: rgba(255, 255, 255, 0.32);
   --docsfw-link: #6ea9dd;
-  --docsfw-link-hover: #9cc7ea;
-  --docsfw-nav-accent: #9cc7ea;
+  --docsfw-link-hover: #8fbde5;
   --docsfw-accent-bg: #1f2129;
   --docsfw-absent: #f85149;
   --docsfw-code-bg: #272a35;
@@ -443,7 +441,7 @@ h6 tt, h6 code {
   font-size: inherit; }
 
 /* 見出しの書式は ../../docs/heading-style.md を正本とする。
-   本文を #212121、見出しを #757575 とし、見出しは本文より淡くする。
+   本文を #333333、見出しを #757575 とし、見出しは本文より淡くする。
    階層は太さで表し、Markdown の H1 - H3 を bold、H4 - H6 を normal にする。
    pandoc は --shift-heading-level-by=-1 で Markdown の H1 をページ見出し
    (テンプレートの <H1>) へ移すため、HTML の h1 - h5 が Markdown の H2 - H6 に
