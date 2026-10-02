@@ -24,8 +24,9 @@ from publish_info import (  # noqa: E402
     format_author,
 )
 
-DOCSFW_BIN = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "bin")
+# 静的発行の get_file_author.sh / get_file_date.sh は bin_internal に置かれている。
+DOCSFW_BIN_INTERNAL = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "bin_internal")
 )
 
 
@@ -195,7 +196,7 @@ class ResolvePublishFactsTest(unittest.TestCase):
         facts = self._facts("docs/a.md")
         expected = subprocess.run(
             ["git", "-C", self.repo, "log", "-1", "--format=%h%x02%cD", "--", "docs/a.md"],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, encoding="utf-8", check=True,
         ).stdout.strip().split("\x02")
         self.assertEqual(facts.short_sha, expected[0])
         self.assertEqual(facts.committer_date, expected[1])
@@ -267,12 +268,12 @@ class StaticPublishingParityTest(unittest.TestCase):
             handle.write(text)
 
     def _shell(self, script, relative):
-        path = os.path.join(DOCSFW_BIN, script)
+        path = os.path.join(DOCSFW_BIN_INTERNAL, script)
         if not os.path.isfile(path):
             self.skipTest("{} が見つかりません".format(script))
         result = subprocess.run(
             ["bash", path, os.path.join(self.repo, relative)],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, encoding="utf-8", check=True,
         )
         return result.stdout
 

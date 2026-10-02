@@ -13,7 +13,7 @@ DOCSFW = Path(__file__).resolve().parents[1]
 
 
 class PathSpacesTest(unittest.TestCase):
-    @unittest.skipIf(os.name == "nt", "chrome-wrapper の代替 Chromium 探索は Linux 用")
+    @unittest.skipIf(os.name == "nt", "[Linux] chrome-wrapper の代替 Chromium 探索は Linux 用")
     def test_chrome_fallback_preserves_paths(self):
         with tempfile.TemporaryDirectory(prefix="chrome space ") as temp:
             root = Path(temp)

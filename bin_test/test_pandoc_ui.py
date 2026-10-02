@@ -590,7 +590,7 @@ class PandocUiContractTest(unittest.TestCase):
             result = subprocess.run(
                 ["bash", "-c", 'htmlTocDepth="$1"; htmlTocEnable=true\n' + setup +
                  '\npandoc -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -t html',
-                 "test", configured], input=source, text=True, capture_output=True, check=True)
+                 "test", configured], input=source, text=True, encoding="utf-8", capture_output=True, check=True)
             self.assertIn('id="toc-level-three"', result.stdout)
             self.assertEqual('id="toc-level-four"' in result.stdout, includes_four)
             self.assertIn('id="level-four"', result.stdout)

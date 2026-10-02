@@ -107,7 +107,7 @@ class BuildBlobUrlTest(unittest.TestCase):
 
 def _git(repo, *args):
     subprocess.run(["git", "-C", repo] + list(args), check=True,
-                   capture_output=True, text=True)
+                   capture_output=True, text=True, encoding="utf-8")
 
 
 class ResolverTest(unittest.TestCase):
@@ -132,7 +132,7 @@ class ResolverTest(unittest.TestCase):
 
         self.head = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, encoding="utf-8", check=True,
         ).stdout.strip()
 
     def tearDown(self):
@@ -198,7 +198,7 @@ class ResolverTest(unittest.TestCase):
         _git(self.repo, "commit", "-q", "-am", "update")
         head = subprocess.run(
             ["git", "-C", self.repo, "rev-parse", "HEAD"],
-            capture_output=True, text=True, check=True,
+            capture_output=True, text=True, encoding="utf-8", check=True,
         ).stdout.strip()
         url, _provider = self._resolve("docs/tracked.md")
         self.assertIn("/blob/{}/".format(head), url)

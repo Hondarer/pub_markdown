@@ -64,7 +64,7 @@ class NodeChildEnvTest(unittest.TestCase):
         env = node_child_env({"globalPackages": {"unused": "/unused"}}, base_env=os.environ)
         result = subprocess.run(
             ["node", "-e", 'process.stdout.write("preload loaded")'], env=env,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=30,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", timeout=30,
         )
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertEqual(result.stdout, "preload loaded")

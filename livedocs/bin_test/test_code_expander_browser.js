@@ -114,6 +114,13 @@ extra_javascript:
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/local/bin/chrome',
       args: ['--no-sandbox', '--disable-crash-reporter'],
     }));
+    // SVG ダウンロード ボタンの検証で、利用者のダウンロード フォルダーへ保存しない。
+    // 保存先を一時ディレクトリにし、テストの終了時に削除する。
+    // see: https://chromedevtools.github.io/devtools-protocol/tot/Browser/#method-setDownloadBehavior
+    const browserSession = await browser.target().createCDPSession();
+    await browserSession.send('Browser.setDownloadBehavior', {
+      behavior: 'allow', downloadPath: path.join(temporary, 'downloads'),
+    });
     const noScriptPage = await browser.newPage();
     await noScriptPage.setJavaScriptEnabled(false);
     await noScriptPage.goto(url, {waitUntil: 'networkidle0'});
