@@ -104,7 +104,7 @@ class _VersionStore:
             except FileNotFoundError:
                 pass
             except OSError as error:
-                log.warning("使用済みの版を削除できませんでした: %s: %s", path, error)
+                log.warning("Could not remove retired site version: %s: %s", path, error)
 
 
 class _SnapshotServer:

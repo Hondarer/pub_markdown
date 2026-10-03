@@ -33,6 +33,7 @@ from stage_livedocs import (  # noqa: E402
     parse_livedocs_variant,
     write_if_changed,
 )
+from livedocs_progress import ProgressReporter  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -129,7 +130,7 @@ def resolve_node_components():
     try:
         return json.loads(result.stdout)
     except json.JSONDecodeError as error:
-        raise FileNotFoundError("node component resolve の JSON を解釈できません: {}".format(error))
+        raise FileNotFoundError("Cannot parse Node component resolution JSON: {}".format(error))
 
 
 def node_child_env(resolved, base_env=None):
@@ -156,7 +157,7 @@ def vendor_plantuml(assets_dir, source_dir, env=None):
     """``@plantuml/core`` のファイルを配置する。"""
     if not source_dir or not os.path.isdir(source_dir):
         raise FileNotFoundError(
-            "@plantuml/core が見つかりません。framework/docsfw/bin の node コンポーネントを解決してください"
+            "@plantuml/core is missing; resolve the Node components in framework/docsfw/bin"
         )
 
     subprocess.run(
@@ -174,7 +175,7 @@ def vendor_mermaid(assets_dir, mermaid_js):
         return 1 if copy_if_changed(mermaid_js, dst) else 0
 
     raise FileNotFoundError(
-        "mermaid.min.js が見つかりません。framework/docsfw/bin の node コンポーネントを解決してください"
+        "mermaid.min.js is missing; resolve the Node components in framework/docsfw/bin"
     )
 
 
@@ -195,7 +196,7 @@ def vendor_header_icons(assets_dir):
     for name in HEADER_ICONS:
         src = os.path.join(STYLES_HTML_DIR, name)
         if not os.path.isfile(src):
-            print("Warning: アイコンが見つかりません: {}".format(src))
+            print("Warning: Icon not found: {}".format(src))
             continue
         if copy_if_changed(src, os.path.join(assets_dir, name)):
             copied += 1
@@ -208,7 +209,7 @@ def vendor_favicon_icons(assets_dir):
     for name in FAVICON_ICONS:
         src = os.path.join(STYLES_HTML_DIR, name)
         if not os.path.isfile(src):
-            print("Warning: favicon が見つかりません: {}".format(src))
+            print("Warning: Favicon not found: {}".format(src))
             continue
         if copy_if_changed(src, os.path.join(assets_dir, name)):
             copied += 1
@@ -219,9 +220,9 @@ def vendor_root_favicon(src_dir, env=None):
     """MkDocs 用 SVG と同じ絵の ICO を docs_dir 直下の ``favicon.ico`` へ置く。"""
     svg = os.path.join(STYLES_HTML_DIR, "docsfw-mkdocs-favicon.svg")
     if not os.path.isfile(svg):
-        raise FileNotFoundError("favicon が見つかりません: {}".format(svg))
+        raise FileNotFoundError("Favicon not found: {}".format(svg))
     if not os.path.isfile(BUILD_FAVICON_ICO):
-        raise FileNotFoundError("favicon.ico の生成スクリプトが見つかりません: {}".format(BUILD_FAVICON_ICO))
+        raise FileNotFoundError("favicon.ico generation script not found: {}".format(BUILD_FAVICON_ICO))
     result = subprocess.run(
         ["node", BUILD_FAVICON_ICO, svg],
         stdout=subprocess.PIPE,
@@ -346,12 +347,12 @@ def generate_mkdocs_yml(livedocs_dir, nav_generated, variant=DEFAULT_LIVEDOCS_VA
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="mkdocs プレビューのアセットと設定を配置する")
+    parser = argparse.ArgumentParser(description="Prepare assets and configuration for MkDocs preview")
     parser.add_argument("--workspaceFolder", dest="workspace", required=True)
     parser.add_argument("--livedocsDir", dest="livedocs_dir", default=None,
-                        help="既定は <workspaceFolder>/pages/livedocs")
+                        help="Default: <workspaceFolder>/pages/livedocs")
     parser.add_argument("--configFile", dest="config", default=None,
-                        help="既定は <workspaceFolder>/.vscode/pub_markdown.config.yaml")
+                        help="Default: <workspaceFolder>/.vscode/pub_markdown.config.yaml")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
         "--variant",
@@ -367,24 +368,38 @@ def main(argv=None):
 
     try:
         _lang, _details, variant = parse_livedocs_variant(args.variant)
-        resolved = resolve_node_components()
-        node_env = node_child_env(resolved)
-        copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""),
-                                 env=node_env)
-        copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
-        copied += vendor_own_assets(assets_dir)
-        copied += vendor_header_icons(assets_dir)
-        copied += vendor_favicon_icons(assets_dir)
-        copied += vendor_root_favicon(os.path.dirname(assets_dir), env=node_env)
-        copied += vendor_theme(livedocs_dir)
+        with ProgressReporter(
+                lambda message: print("vendoring: " + message, flush=True),
+                "Resolving Node components", enabled=not args.quiet) as progress:
+            resolved = resolve_node_components()
+            node_env = node_child_env(resolved)
+            progress.set_phase("Preparing browser assets", 2, unit="steps")
+            copied = vendor_plantuml(assets_dir, resolved.get("paths", {}).get("plantumlCore", ""),
+                                     env=node_env)
+            progress.advance()
+            copied += vendor_mermaid(assets_dir, resolved.get("paths", {}).get("mermaidJs", ""))
+            progress.advance()
+            progress.report()
+            progress.set_phase("Preparing workspace assets", 5, unit="steps")
+            copied += vendor_own_assets(assets_dir)
+            progress.advance()
+            copied += vendor_header_icons(assets_dir)
+            progress.advance()
+            copied += vendor_favicon_icons(assets_dir)
+            progress.advance()
+            copied += vendor_root_favicon(os.path.dirname(assets_dir), env=node_env)
+            progress.advance()
+            copied += vendor_theme(livedocs_dir)
+            progress.advance()
+            progress.report()
+            progress.set_phase("Generating MkDocs configuration")
+            nav_generated = has_nav_files(os.path.join(livedocs_dir, "src"))
+            site_name = resolve_site_name(workspace, config_path)
+            changed = generate_mkdocs_yml(livedocs_dir, nav_generated, variant=variant,
+                                          site_name=site_name)
     except (FileNotFoundError, ValueError) as error:
         print("Error: {}".format(error), file=sys.stderr)
         return 1
-
-    nav_generated = has_nav_files(os.path.join(livedocs_dir, "src"))
-    site_name = resolve_site_name(workspace, config_path)
-    changed = generate_mkdocs_yml(livedocs_dir, nav_generated, variant=variant,
-                                  site_name=site_name)
 
     if not args.quiet:
         print("vendored: {} assets, mkdocs.yml {}".format(copied, "updated" if changed else "unchanged"))

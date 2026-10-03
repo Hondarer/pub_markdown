@@ -19,6 +19,7 @@ from stage_livedocs import (  # noqa: E402
     stage_index,
     stage_single,
 )
+from livedocs_progress import ProgressReporter  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -62,7 +63,7 @@ class _AutoStager:
 
     def __init__(self, workspace, config_path, out_dir, lang, details, variant,
                  timer_factory=threading.Timer,
-                 restage_delay=_INDEX_RESTAGE_DELAY_SECONDS):
+                 restage_delay=_INDEX_RESTAGE_DELAY_SECONDS, progress=None):
         self._workspace = workspace
         self._config_path = config_path
         self._out_dir = out_dir
@@ -75,7 +76,7 @@ class _AutoStager:
         # lang と details は呼び出し互換のために残す。言語対は variant から決める。
         del lang, details
         self._containers = build_detail_containers(
-            workspace, config_path, variant, announce=False,
+            workspace, config_path, variant, announce=False, progress=progress,
         )
 
         self._detected_generation = 0
@@ -127,9 +128,9 @@ class _AutoStager:
         self._timer = timer
         self._timer_kind = kind
         timer.start()
-        log.info("%d 秒後に%sを予約しました。",
-                 int(self._restage_delay),
-                 "サイト再生成" if kind == "site" else "索引再同期")
+        log.info("Scheduled %s in %d seconds",
+                 "site rebuild" if kind == "site" else "index refresh",
+                 int(self._restage_delay))
 
     def _cancel_timer_locked(self):
         self._timer_token += 1
@@ -151,7 +152,7 @@ class _AutoStager:
 
         with self._state_lock:
             generation = self._detected_generation
-        self._full_restage(generation, "遅延した索引再同期")
+        self._full_restage(generation, "scheduled index refresh")
 
     def _begin_batch(self):
         with self._state_lock:
@@ -184,7 +185,7 @@ class _AutoStager:
                     updated = updated or bool(result.updated)
                     found = found and bool(result.found)
         except Exception:
-            log.exception("単一ファイルの再ステージングに失敗しました: %s", real_path)
+            log.exception("Failed to restage source document: %s", real_path)
             saw = False
         finally:
             self._finish_batch(epoch, updated)
@@ -201,22 +202,23 @@ class _AutoStager:
         if saw and not found:
             with self._state_lock:
                 self._cancel_timer_locked()
-            self._full_restage(generation, "索引にないファイルの検出")
+            self._full_restage(generation, "unindexed source document")
 
     def handle_structural_change(self, generation):
         """ファイル構成の変更を即時に全体再同期する。"""
-        self._full_restage(generation, "ファイル構成の変更")
+        self._full_restage(generation, "source tree change")
 
     def _full_restage(self, generation, reason):
         epoch = self._begin_batch()
         result = None
         try:
-            with self._stage_lock:
+            with self._stage_lock, ProgressReporter(log.info, "Refreshing source indexes") as progress:
                 containers = build_detail_containers(
                     self._workspace,
                     self._config_path,
                     self._variant,
                     announce=False,
+                    progress=progress,
                 )
                 changed = False
                 for container in containers:
@@ -224,12 +226,13 @@ class _AutoStager:
                         container,
                         os.path.join(self._out_dir, container.variant),
                         quiet=True,
+                        progress=progress,
                     )
                     changed = changed or bool(one and one.changed)
                 self._containers = containers
                 result = SimpleNamespace(changed=changed)
         except Exception:
-            log.exception("%sに失敗しました。", reason)
+            log.exception("Failed to refresh indexes after %s", reason)
         finally:
             self._finish_batch(epoch, bool(result and result.changed))
 
@@ -247,7 +250,7 @@ class _AutoStager:
             self._required_publish_epoch = self._latest_output_epoch
             request_rebuild = self._evaluate_wait_locked()
 
-        log.info("%sを実行しました (索引世代 %d)。", reason, generation)
+        log.info("Refreshed indexes after %s (generation %d)", reason, generation)
         if request_rebuild:
             self._request_site_rebuild()
 
@@ -448,23 +451,28 @@ def on_serve(server, config, builder=None, **kwargs):
     lang, details, variant = _livedocs_lang_details(config)
 
     # 索引とディレクトリ走査が終わるまで、mkdocs は "Serving on" を出さない。
-    log.info("元の Markdown を索引してから配信を始めます")
-    stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant)
-    stager.set_rebuild_request(lambda: _request_server_rebuild(server))
-    handler = _make_handler(stager)
+    with ProgressReporter(log.info, "Indexing source documents") as progress:
+        stager = _AutoStager(workspace, config_path, out_dir, lang, details, variant,
+                             progress=progress)
+        stager.set_rebuild_request(lambda: _request_server_rebuild(server))
+        handler = _make_handler(stager)
 
-    # livedocs_versioned_hook が先に設定した builder を包む。この関数から
-    # 戻った時点は、候補サイトの生成だけでなく完成版の公開も完了している。
-    if server.builder is not None:
-        server.builder = stager.wrap_builder(server.builder)
+        # livedocs_versioned_hook が先に設定した builder を包む。この関数から
+        # 戻った時点は、候補サイトの生成だけでなく完成版の公開も完了している。
+        if server.builder is not None:
+            server.builder = stager.wrap_builder(server.builder)
 
-    from watchdog.observers.polling import PollingObserver
+        from watchdog.observers.polling import PollingObserver
 
-    observer = PollingObserver()
-    for root in _source_roots(workspace, config_path):
-        observer.schedule(handler, root, recursive=True)
-    observer.daemon = True
-    observer.start()
+        roots = _source_roots(workspace, config_path)
+        progress.set_phase("Preparing source monitoring", len(roots), unit="directories")
+        observer = PollingObserver()
+        for root in roots:
+            observer.schedule(handler, root, recursive=True)
+            progress.advance()
+        observer.daemon = True
+        observer.start()
+        progress.report()
 
     _observer = observer
     _handler = handler

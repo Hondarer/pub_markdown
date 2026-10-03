@@ -38,6 +38,7 @@ from expand_toc import DocIndex, expand_toc_commands, collapsible_open_tag, pars
 from git_link import GitLinkResolver, parse_host_provider_map  # noqa: E402
 from publish_info import build_publish_info  # noqa: E402
 from lang_details_filter import filter_lang_details  # noqa: E402
+from livedocs_progress import ProgressReporter  # noqa: E402
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -493,7 +494,7 @@ class Document:
         self.publish_date = ""
 
 
-def collect_sources(workspace, main_mdroot, subfolders):
+def collect_sources(workspace, main_mdroot, subfolders, progress=None):
     """主 mdRoot と追加ドキュメント サブフォルダーからファイルを収集する。
 
     :return: ``(markdown ドキュメント一覧, アセット一覧)``。
@@ -510,6 +511,8 @@ def collect_sources(workspace, main_mdroot, subfolders):
             continue
         for dirpath, dirnames, filenames in os.walk(root, followlinks=True):
             dirnames.sort()
+            if progress is not None:
+                progress.advance()
             for filename in sorted(filenames):
                 if filename in MAGIC_FILES:
                     continue
@@ -1158,7 +1161,7 @@ ROOT_NAV_SORT_YAML = """sort:
   sections: mixed"""
 
 
-def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
+def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs, progress=None):
     """``publocal.yaml`` の ``order:`` を mkdocs-awesome-nav の ``.nav.yml`` へ変換する。
 
     ルートには索引ページのタイトルをフォルダー表示名として使う設定を常に生成します。
@@ -1172,7 +1175,10 @@ def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
     mapper = PathMapper(main_mdroot, subfolders)
     generated = 0
 
-    for staged_dir in sorted(set(staged_dirs) | {""}):
+    directories = sorted(set(staged_dirs) | {""})
+    if progress is not None:
+        progress.set_phase("Writing navigation configuration", len(directories), unit="folders")
+    for staged_dir in directories:
         real_dir = mapper.virtual_to_real(staged_dir)
         publocal = os.path.join(real_dir, "publocal.yaml")
         order = parse_publocal_order(publocal) if os.path.isfile(publocal) else []
@@ -1201,6 +1207,8 @@ def generate_nav_files(out_dir, main_mdroot, subfolders, staged_dirs):
         target = os.path.join(out_dir, staged_dir, ".nav.yml") if staged_dir else os.path.join(out_dir, ".nav.yml")
         if write_if_changed(target, "\n".join(lines) + "\n"):
             generated += 1
+        if progress is not None:
+            progress.advance()
 
     return generated
 
@@ -1210,14 +1218,19 @@ def is_vendored(relative):
     return relative in VENDORED_FILES or relative.startswith(VENDORED_PREFIXES)
 
 
-def remove_stale(out_dir, keep_relative):
+def remove_stale(out_dir, keep_relative, progress=None):
     """前回の実行で作られ、今回は対象外になったファイルを削除する。
 
     ``bin/vendor_assets.py`` が配置したアセットは削除しません。
     """
     removed = 0
+    if progress is not None:
+        progress.report()
+        progress.set_phase("Checking obsolete staged files", unit="files checked", count=True)
     for dirpath, dirnames, filenames in os.walk(out_dir, topdown=False):
         for filename in filenames:
+            if progress is not None:
+                progress.advance()
             full = os.path.join(dirpath, filename)
             relative = _posix(os.path.relpath(full, out_dir))
             if is_vendored(relative):
@@ -1299,10 +1312,10 @@ class StageIndex:
 
 def build_stage_index(workspace, config_path, lang="ja", details=True,
                       variant=DEFAULT_LIVEDOCS_VARIANT, quiet=True,
-                      git_resolver=_GIT_UNSET, announce=None):
+                      git_resolver=_GIT_UNSET, announce=None, progress=None):
     """ワークスペース全体を走査し、索引 (mapper/index/real_to_staged) を構築する。
 
-    ``quiet`` の既定は True です。進捗を出すのは ``announce`` が真のときだけです。
+    ``quiet`` の既定は True です。通常の開始行は ``announce`` が真のときに出します。
     ``announce`` を省略したときは ``quiet`` の逆です。
     ``git_resolver`` を渡すと、リポジトリの ``git log`` を再実行しません。
     通常版と詳細版は本文だけが違うため、2 回目以降は同じ resolver を渡します。
@@ -1317,10 +1330,18 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
 
     if git_resolver is _GIT_UNSET:
         on_repo_collect = None
-        if announce:
+        if announce or progress is not None:
+            repositories = set()
+
             def on_repo_collect(root):
-                _progress(False, "staging: git index {}".format(
-                    _repo_progress_label(workspace, root)))
+                repositories.add(root)
+                label = _repo_progress_label(workspace, root)
+                if progress is not None:
+                    progress.set_phase("Reading Git metadata [{}]".format(label),
+                                       completed=len(repositories),
+                                       unit="repositories visited", count=True)
+                elif announce:
+                    _progress(False, "staging: git index {}".format(label))
 
         git_resolver = create_git_resolver(
             config, config_path,
@@ -1330,22 +1351,37 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
     auto_set_author = is_auto_set_author_enabled(config)
     auto_set_date = is_auto_set_date_enabled(config)
 
-    documents, assets = collect_sources(workspace, main_mdroot, subfolders)
+    if progress is not None:
+        progress.set_phase("Collecting source documents [{}]".format(variant),
+                           unit="folders scanned", count=True)
+    documents, assets = collect_sources(workspace, main_mdroot, subfolders, progress=progress)
     if announce:
         _progress(False, "staging: collected {} documents, {} assets".format(
             len(documents), len(assets)))
 
+    if progress is not None:
+        progress.set_phase("Indexing source documents [{}]".format(variant),
+                           len(documents), unit="documents")
     kept = []
-    for document in documents:
+    for completed, document in enumerate(documents):
+        if progress is not None:
+            # Git 情報の遅延収集から戻った後は、文書索引の処理段階へ戻す。
+            progress.set_phase("Indexing source documents [{}]".format(variant),
+                               len(documents), completed=completed,
+                               announce=False, unit="documents")
         try:
             raw = read_text(document.real_path)
         except OSError as error:
             print("Warning: cannot read {}: {}".format(document.real_path, error))
+            if progress is not None:
+                progress.advance()
             continue
 
         front_matter, body = split_front_matter(raw)
         fields = parse_front_matter_fields(front_matter)
         if is_skipped(fields):
+            if progress is not None:
+                progress.advance()
             continue
 
         document.front_matter = front_matter
@@ -1361,6 +1397,10 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
             document, git_resolver, auto_set_author, auto_set_date
         )
         kept.append(document)
+        if progress is not None:
+            progress.set_phase("Indexing source documents [{}]".format(variant),
+                               len(documents), completed=completed + 1,
+                               announce=False, unit="documents")
 
     resolve_staged_names(kept)
 
@@ -1375,6 +1415,8 @@ def build_stage_index(workspace, config_path, lang="ja", details=True,
     for real_path, virtual_rel in assets:
         real_to_staged[_norm_key(real_path)] = virtual_rel
 
+    if progress is not None:
+        progress.report()
     return StageIndex(
         workspace=workspace,
         config_path=config_path,
@@ -1414,7 +1456,7 @@ def _render_document(document, container):
     return content
 
 
-def write_documents(container, out_dir):
+def write_documents(container, out_dir, progress=None):
     """索引済みの全ドキュメントとアセットを変換・書き出す。
 
     :return: ``(更新数, 書き出したステージング相対パスの集合)``。
@@ -1427,11 +1469,19 @@ def write_documents(container, out_dir):
         if write_if_changed(os.path.join(out_dir, document.staged_rel), content):
             updated += 1
         keep_relative.add(document.staged_rel)
+        if progress is not None:
+            progress.advance()
 
+    if progress is not None:
+        progress.report()
+        progress.set_phase("Copying source assets [{}]".format(container.variant),
+                           len(container.assets), unit="files")
     for real_path, virtual_rel in container.assets:
         if copy_asset_if_changed(real_path, os.path.join(out_dir, virtual_rel)):
             updated += 1
         keep_relative.add(virtual_rel)
+        if progress is not None:
+            progress.advance()
 
     return updated, keep_relative
 
@@ -1524,13 +1574,20 @@ def stage_single(container, out_dir, real_path):
 # メイン
 # ----------------------------------------------------------------------------
 
-def stage_index(container, out_dir, quiet=False):
+def stage_index(container, out_dir, quiet=False, progress=None):
     """構築済み索引から全ドキュメントをステージングする。
 
     :return: ステージング先の更新、削除、ナビゲーション生成を含む結果。
     """
-    _progress(quiet, "staging: writing")
-    updated, keep_relative = write_documents(container, out_dir)
+    if progress is None:
+        _progress(quiet, "staging: writing")
+    else:
+        progress.set_phase("Writing staged documents [{}]".format(container.variant),
+                           len(container.kept), unit="documents")
+    updated, keep_relative = write_documents(container, out_dir, progress=progress)
+
+    if progress is not None:
+        progress.report()
 
     staged_dirs = {""}
     for rel in keep_relative:
@@ -1539,13 +1596,16 @@ def stage_index(container, out_dir, quiet=False):
             staged_dirs.add(directory)
             directory = posixpath.dirname(directory)
     staged_dirs = sorted(staged_dirs)
-    nav_count = generate_nav_files(out_dir, container.main_mdroot, container.subfolders, staged_dirs)
+    nav_count = generate_nav_files(out_dir, container.main_mdroot, container.subfolders,
+                                   staged_dirs, progress=progress)
     for staged_dir in staged_dirs:
         candidate = posixpath.join(staged_dir, ".nav.yml") if staged_dir else ".nav.yml"
         if os.path.isfile(os.path.join(out_dir, candidate)):
             keep_relative.add(candidate)
 
-    removed = remove_stale(out_dir, keep_relative)
+    removed = remove_stale(out_dir, keep_relative, progress=progress)
+    if progress is not None:
+        progress.report()
 
     if not quiet:
         _progress(False, "staged: variant {}, {} documents, {} assets, {} updated, {} removed, {} nav files".format(
@@ -1559,7 +1619,7 @@ def stage_index(container, out_dir, quiet=False):
     )
 
 
-def build_detail_containers(workspace, config_path, variant, announce=False):
+def build_detail_containers(workspace, config_path, variant, announce=False, progress=None):
     """同じ言語の通常版と詳細版の索引を作る。
 
     Git の走査は先頭のバリアントだけで行い、もう一方はその結果を使う。
@@ -1578,6 +1638,7 @@ def build_detail_containers(workspace, config_path, variant, announce=False):
             quiet=True,
             git_resolver=git_resolver,
             announce=announce and index == 0,
+            progress=progress,
         )
         git_resolver = container.git_resolver
         containers.append(container)
@@ -1617,7 +1678,7 @@ def prune_other_outputs(out_dir, keep_variants):
 
 
 def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
-          variant=DEFAULT_LIVEDOCS_VARIANT):
+          variant=DEFAULT_LIVEDOCS_VARIANT, progress=None):
     """同じ言語の通常版と詳細版を ``out_dir/<variant>/`` へ書き出す。
 
     ``variant`` は着地先です。``ja-details`` なら ``ja-details`` と ``ja``、
@@ -1631,13 +1692,14 @@ def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
     _progress(quiet, "staging: variants {}".format(", ".join(names)))
     containers = build_detail_containers(
         workspace, config_path, variant, announce=not quiet,
+        progress=progress,
     )
     updated = 0
     nav_count = 0
     for container in containers:
         variant_dir = os.path.join(out_dir, container.variant)
         os.makedirs(variant_dir, exist_ok=True)
-        result = stage_index(container, variant_dir, quiet=quiet)
+        result = stage_index(container, variant_dir, quiet=quiet, progress=progress)
         updated += result.updated
         nav_count += result.nav_count
     prune_other_outputs(out_dir, names)
@@ -1646,18 +1708,18 @@ def stage(workspace, out_dir, config_path, quiet=False, lang="ja", details=True,
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="mkdocs プレビュー用に Markdown をステージングする")
+    parser = argparse.ArgumentParser(description="Stage Markdown for MkDocs preview")
     parser.add_argument("--workspaceFolder", dest="workspace", required=True)
     parser.add_argument("--out", dest="out", default=None,
-                        help="ステージング先。既定は <workspaceFolder>/pages/livedocs/src")
+                        help="Staging directory; default: <workspaceFolder>/pages/livedocs/src")
     parser.add_argument("--configFile", dest="config", default=None,
-                        help="既定は <workspaceFolder>/.vscode/pub_markdown.config.yaml")
+                        help="Default: <workspaceFolder>/.vscode/pub_markdown.config.yaml")
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument(
         "--variant",
         default=DEFAULT_LIVEDOCS_VARIANT,
-        help="言語と着地先 (ja / ja-details / en / en-details)。"
-             "同じ言語の通常版と詳細版を両方書き出します (default: ja)",
+        help="Language and landing variant (ja / ja-details / en / en-details). "
+             "Write both regular and detailed variants in the same language (default: ja)",
     )
     args = parser.parse_args(argv)
 
@@ -1668,15 +1730,19 @@ def main(argv=None):
 
     try:
         lang, details, variant = parse_livedocs_variant(args.variant)
-        stage(
-            workspace,
-            os.path.abspath(out_dir),
-            config_path,
-            quiet=args.quiet,
-            lang=lang,
-            details=details,
-            variant=variant,
-        )
+        with ProgressReporter(
+                lambda message: _progress(False, "staging: " + message),
+                "Preparing documents", enabled=not args.quiet) as progress:
+            stage(
+                workspace,
+                os.path.abspath(out_dir),
+                config_path,
+                quiet=args.quiet,
+                lang=lang,
+                details=details,
+                variant=variant,
+                progress=progress,
+            )
     except ValueError as error:
         print("Error: {}".format(error), file=sys.stderr)
         return 1

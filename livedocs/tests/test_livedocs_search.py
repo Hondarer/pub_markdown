@@ -19,6 +19,7 @@ import jinja2
 BIN_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "bin"))
 sys.path.insert(0, BIN_DIR)
 
+from livedocs_progress import ProgressReporter  # noqa: E402
 from livedocs_search_hook import split_search_index, write_variant_indexes  # noqa: E402
 from vendor_assets import MKDOCS_DIR  # noqa: E402
 
@@ -57,7 +58,12 @@ class SplitSearchIndexTest(unittest.TestCase):
             os.makedirs(os.path.join(site, "search"))
             with open(os.path.join(site, "search", "search_index.json"), "w", encoding="utf-8") as handle:
                 json.dump(_index("ja/a/", "ja-details/b/"), handle)
-            self.assertTrue(write_variant_indexes(site, ["ja", "ja-details"]))
+            messages = []
+            with ProgressReporter(messages.append, "Preparing search indexes") as progress:
+                self.assertTrue(write_variant_indexes(site, ["ja", "ja-details"], progress=progress))
+            self.assertIn("Partitioning search index 2/2 entries", messages)
+            self.assertIn("Writing search indexes 3/3 files", messages)
+            self.assertNotIn("ja/a/", "\n".join(messages))
             for variant, expected in (("ja", ["a/"]), ("ja-details", ["b/"]), ("", [])):
                 path = os.path.join(site, variant, "search", "search_index.json")
                 with open(path, encoding="utf-8") as handle:

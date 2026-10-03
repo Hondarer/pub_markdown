@@ -268,9 +268,9 @@ def on_serve(server, config, builder=None, **kwargs):
     state = {"root": find_doxygen_root(workspace)}
 
     if state["root"] is None:
-        log.info("pages/doxygen はまだありません。作成後の /doxygen/ 要求から配信します")
+        log.info("pages/doxygen is not available yet; serving /doxygen/ once it is created")
     else:
-        log.info("pages/doxygen を http の /doxygen/ としてサーブします")
+        log.info("Serving pages/doxygen at /doxygen/")
 
     def app(environ, start_response):
         raw = environ.get("PATH_INFO", "")
@@ -287,7 +287,7 @@ def on_serve(server, config, builder=None, **kwargs):
                 )
                 return [b"404 Not Found"]
             state["root"] = root
-            log.info("pages/doxygen を http の /doxygen/ としてサーブします")
+            log.info("Serving pages/doxygen at /doxygen/")
         return serve_doxygen(root, path, environ, start_response, variant=landing)
 
     server.set_app(app)

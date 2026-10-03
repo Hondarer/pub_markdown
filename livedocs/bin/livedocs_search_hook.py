@@ -19,14 +19,18 @@ import json
 import logging
 import os
 
+import livedocs_progress as progress_state
+
 log = logging.getLogger("mkdocs.livedocs_search")
 
 INDEX_PATH = os.path.join("search", "search_index.json")
 
 
-def split_search_index(index, variants):
+def split_search_index(index, variants, progress=None):
     """索引を版ごとに分け、``{版: 索引, None: 版に属さない索引}`` を返す。"""
     docs = index.get("docs") or []
+    if progress is not None:
+        progress.set_phase("Partitioning search index", len(docs), unit="entries")
     buckets = {variant: [] for variant in variants}
     buckets[None] = []
     for doc in docs:
@@ -38,6 +42,8 @@ def split_search_index(index, variants):
             buckets[head].append(item)
         else:
             buckets[None].append(doc)
+        if progress is not None:
+            progress.advance()
     result = {}
     for key, bucket in buckets.items():
         item = {k: v for k, v in index.items() if k != "docs"}
@@ -52,17 +58,27 @@ def _write_json(path, data):
         json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
 
 
-def write_variant_indexes(site_dir, variants):
+def write_variant_indexes(site_dir, variants, progress=None):
     """``site_dir`` の索引を版ごとに分割して書き出す。索引が無ければ何もしない。"""
     root_path = os.path.join(site_dir, INDEX_PATH)
     if not variants or not os.path.exists(root_path):
         return False
+    if progress is not None:
+        progress.set_phase("Reading search index")
     with open(root_path, encoding="utf-8") as handle:
         index = json.load(handle)
-    parts = split_search_index(index, variants)
+    parts = split_search_index(index, variants, progress=progress)
+    if progress is not None:
+        progress.report()
+        progress.set_phase("Writing search indexes", len(variants) + 1, unit="files")
     for variant in variants:
         _write_json(os.path.join(site_dir, variant, INDEX_PATH), parts[variant])
+        if progress is not None:
+            progress.advance()
     _write_json(root_path, parts[None])
+    if progress is not None:
+        progress.advance()
+        progress.report()
     log.debug(
         "search index split: %s",
         ", ".join("{}={}".format(v, len(parts[v]["docs"])) for v in variants),
@@ -73,4 +89,4 @@ def write_variant_indexes(site_dir, variants):
 def on_post_build(config, **kwargs):
     extra = config.get("extra") or {}
     variants = [v for v in (extra.get("livedocs_variants") or []) if v]
-    write_variant_indexes(config["site_dir"], variants)
+    write_variant_indexes(config["site_dir"], variants, progress=progress_state.build_progress)

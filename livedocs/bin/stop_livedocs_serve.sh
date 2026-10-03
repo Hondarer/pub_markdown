@@ -227,7 +227,7 @@ wait_until_gone() {
 }
 
 if [ ! -d /proc ]; then
-    printf 'WARNING: /proc が無いため mkdocs serve を停止できません\n' >&2
+    printf 'WARNING: Cannot stop mkdocs serve because /proc is unavailable\n' >&2
     if [ "$require_stopped" -eq 1 ]; then
         exit 1
     fi
@@ -268,7 +268,7 @@ fi
 if ! wait_until_gone "${tree_pids[@]}"; then
     for pid in "${tree_pids[@]}"; do
         if pid_alive "$pid"; then
-            printf 'WARNING: livedocs mkdocs serve が残っています (pid %s)\n' "$pid" >&2
+            printf 'WARNING: livedocs mkdocs serve is still running (pid %s)\n' "$pid" >&2
         fi
     done
 fi
@@ -280,10 +280,10 @@ sleep 0.5
 mapfile -t leftover_pids < <(list_serve_pids | unique_pids)
 if [ "${#leftover_pids[@]}" -gt 0 ]; then
     for pid in "${leftover_pids[@]}"; do
-        printf 'WARNING: livedocs mkdocs serve が残っています (pid %s)\n' "$pid" >&2
+        printf 'WARNING: livedocs mkdocs serve is still running (pid %s)\n' "$pid" >&2
     done
     if [ "$require_stopped" -eq 1 ]; then
-        printf 'ERROR: 既存の mkdocs serve を止めきれなかったため、動的発行の配信を起動しません\n' >&2
+        printf 'ERROR: Cannot start livedocs because the existing mkdocs serve process could not be stopped\n' >&2
         exit 1
     fi
 fi

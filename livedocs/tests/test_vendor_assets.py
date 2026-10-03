@@ -113,6 +113,7 @@ class HooksDirTest(unittest.TestCase):
     """``hooks:`` のパスが docsfw の実際の配置から求まることを確認する。"""
 
     HOOK_NAMES = (
+        "livedocs_progress_hook.py",
         "livedocs_doxygen_hook.py",
         "livedocs_versioned_hook.py",
         "livedocs_autostage_hook.py",

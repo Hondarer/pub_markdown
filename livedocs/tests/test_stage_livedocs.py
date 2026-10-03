@@ -30,6 +30,7 @@ from stage_livedocs import (  # noqa: E402
     is_auto_set_author_enabled,
     is_auto_set_date_enabled,
     is_git_link_enabled,
+    main,
     resolve_document_git_link,
     resolve_document_publish_info,
     rewrite_links,
@@ -811,6 +812,31 @@ class StageProgressTest(unittest.TestCase):
         with redirect_stdout(captured):
             stage(workspace, out_dir, config_path, quiet=True)
         self.assertEqual(captured.getvalue(), "")
+
+    def test_quiet_cli_suppresses_periodic_progress(self):
+        workspace, out_dir, config_path = self._workspace()
+        captured = io.StringIO()
+        with redirect_stdout(captured):
+            result = main(["--workspaceFolder", workspace, "--out", out_dir,
+                           "--configFile", config_path, "--quiet"])
+        self.assertEqual(result, 0)
+        self.assertEqual(captured.getvalue(), "")
+
+    def test_cli_progress_uses_english_counts_without_file_names(self):
+        workspace, out_dir, config_path = self._workspace()
+        captured = io.StringIO()
+        with redirect_stdout(captured):
+            result = main(["--workspaceFolder", workspace, "--out", out_dir,
+                           "--configFile", config_path])
+        self.assertEqual(result, 0)
+        lines = captured.getvalue()
+        self.assertIn("Indexing source documents [ja] 2/2 documents", lines)
+        self.assertIn("Indexing source documents [ja-details] 2/2 documents", lines)
+        self.assertIn("Writing staged documents [ja] 1/1 documents", lines)
+        self.assertIn("Writing navigation configuration 1/1 folders", lines)
+        self.assertNotIn("page.md", lines)
+        self.assertNotIn("skip.md", lines)
+        self.assertNotRegex(lines, "[ぁ-んァ-ン一-龥]")
 
     def test_progress_lines_before_completion(self):
         workspace, out_dir, config_path = self._workspace()

@@ -134,6 +134,7 @@ extra_javascript:
 # docs_dir 監視がそれを検知してビルドとブラウザーの自動リロードを行う。
 # 詳細は docs/livedocs-design.md を参照。
 hooks:
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_progress_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_doxygen_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_versioned_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_autostage_hook.py

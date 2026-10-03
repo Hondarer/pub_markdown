@@ -358,7 +358,7 @@ class OnServeDoxygenMountTest(unittest.TestCase):
                 on_serve(server, config)
             self.assertIsNotNone(server.app)
             self.assertIn(
-                "pages/doxygen はまだありません。作成後の /doxygen/ 要求から配信します",
+                "pages/doxygen is not available yet; serving /doxygen/ once it is created",
                 self._messages(captured.records),
             )
 
@@ -379,7 +379,7 @@ class OnServeDoxygenMountTest(unittest.TestCase):
             self.assertTrue(captured_response["status"].startswith("200"))
             self.assertEqual(body, b"<html>calc</html>")
             self.assertIn(
-                "pages/doxygen を http の /doxygen/ としてサーブします",
+                "Serving pages/doxygen at /doxygen/",
                 self._messages(captured.records),
             )
 
@@ -415,8 +415,8 @@ class OnServeDoxygenMountTest(unittest.TestCase):
             with self.assertLogs("mkdocs.livedocs_doxygen", level="INFO") as captured:
                 on_serve(server, self._config(tmp))
             messages = self._messages(captured.records)
-            self.assertIn("pages/doxygen を http の /doxygen/ としてサーブします", messages)
-            self.assertFalse(any("まだありません" in message for message in messages))
+            self.assertIn("Serving pages/doxygen at /doxygen/", messages)
+            self.assertFalse(any("not available yet" in message for message in messages))
 
             captured_response, body = self._request(server.app, "/doxygen/")
             self.assertTrue(captured_response["status"].startswith("200"))
