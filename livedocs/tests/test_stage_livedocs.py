@@ -616,6 +616,243 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n",
         )
 
+    def test_moves_indented_table_caption_with_the_same_indent(self):
+        source = (
+            "- 東地区\n"
+            "\n"
+            "    | 項目 | 件数 |\n"
+            "    |---|---|\n"
+            "    | 完了 | 12 |\n"
+            "\n"
+            "    Table: 東地区の件数\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "- 東地区\n"
+            "\n"
+            "    東地区の件数\n"
+            "    {: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "    | 項目 | 件数 |\n"
+            "    |---|---|\n"
+            "    | 完了 | 12 |\n"
+            "\n",
+        )
+
+    def test_moves_nested_table_caption_with_eight_space_indent(self):
+        source = (
+            "- 親\n"
+            "    - 子\n"
+            "\n"
+            "        | 確認 | 結果 |\n"
+            "        |---|---|\n"
+            "        | コンパイル | 成功 |\n"
+            "\n"
+            "        Table: ビルドの確認結果\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "- 親\n"
+            "    - 子\n"
+            "\n"
+            "        ビルドの確認結果\n"
+            "        {: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "        | 確認 | 結果 |\n"
+            "        |---|---|\n"
+            "        | コンパイル | 成功 |\n"
+            "\n",
+        )
+
+    def test_moves_labeled_indented_table_caption(self):
+        source = (
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n"
+            "    Table: ラベル付き {#tbl:sample}\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "    ラベル付き\n"
+            "    {: #tbl:sample .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n",
+        )
+
+    def test_dedents_multiline_indented_table_caption(self):
+        source = (
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n"
+            "    Table: 1 行目\n"
+            "    2 行目\n"
+            "        3 行目\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "    1 行目\n"
+            "    2 行目\n"
+            "        3 行目\n"
+            "    {: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n",
+        )
+
+    def test_moves_indented_caption_for_table_without_outer_pipes(self):
+        source = "    項目 | 値\n    ---|---\n    A | B\n\n    Table: 表のキャプション\n"
+        self.assertTrue(convert_captions(source).startswith(
+            "    表のキャプション\n"
+            "    {: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "    項目 | 値\n"
+        ))
+
+    def test_treats_tab_and_four_spaces_as_the_same_indent(self):
+        source = (
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n"
+            "\tTable: 同じ幅\n"
+        )
+        self.assertTrue(convert_captions(source).startswith(
+            "    同じ幅\n"
+            "    {: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "    | 項目 |\n"
+        ))
+
+    def test_keeps_table_caption_when_indent_differs_from_table(self):
+        source = (
+            "    | 項目 | 値 |\n"
+            "    |---|---|\n"
+            "    | A | B |\n"
+            "\n"
+            "Table: 表のキャプション\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "    | 項目 | 値 |\n"
+            "    |---|---|\n"
+            "    | A | B |\n"
+            "\n"
+            "表のキャプション\n"
+            "{: .docsfw-caption .docsfw-table-caption }\n",
+        )
+
+    def test_keeps_deeper_table_caption_in_place(self):
+        source = (
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
+            "\n"
+            "        Table: 深いキャプション\n"
+        )
+        result = convert_captions(source)
+        self.assertTrue(result.startswith("    | 項目 |\n"))
+        self.assertIn(
+            "\n        深いキャプション\n"
+            "        {: .docsfw-caption .docsfw-table-caption }\n",
+            result,
+        )
+
+    def test_keeps_indented_codeblock_caption_as_text(self):
+        source = (
+            "    ```mermaid\n"
+            "    sequenceDiagram\n"
+            "    ```\n"
+            "\n"
+            "    CodeBlock: 図のキャプション\n"
+        )
+        self.assertEqual(convert_captions(source), source)
+
+    def test_indented_table_caption_stays_inside_list_item_for_markdown(self):
+        import markdown
+        from html.parser import HTMLParser
+
+        source = (
+            "- 東地区\n"
+            "\n"
+            "    | 項目 | 件数 |\n"
+            "    |---|---|\n"
+            "    | 完了 | 12 |\n"
+            "\n"
+            "    Table: 東地区の件数\n"
+            "\n"
+            "    件数は 2026-03 時点の値です。\n"
+            "\n"
+            "- 出荷前の確認\n"
+            "    - ビルド\n"
+            "\n"
+            "        | 確認 | 結果 |\n"
+            "        |---|---|\n"
+            "        | コンパイル | 成功 |\n"
+            "\n"
+            "        Table: ビルドの確認結果\n"
+        )
+        html = markdown.markdown(
+            convert_captions(source),
+            extensions=[
+                "tables",
+                "attr_list",
+                "md_in_html",
+                "nl2br",
+                "admonition",
+                "pymdownx.superfences",
+                "pymdownx.tasklist",
+                "pymdownx.mark",
+            ],
+        )
+
+        class Collector(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.stack = []
+                self.events = []
+                self.note_depths = []
+
+            def handle_starttag(self, tag, attrs):
+                self.stack.append(tag)
+                classes = dict(attrs).get("class", "").split()
+                depth = (self.stack.count("ul"), self.stack.count("li"))
+                if tag == "p" and "docsfw-table-caption" in classes:
+                    self.events.append(("caption", depth))
+                elif tag == "table":
+                    self.events.append(("table", depth))
+
+            def handle_endtag(self, tag):
+                for index in range(len(self.stack) - 1, -1, -1):
+                    if self.stack[index] == tag:
+                        del self.stack[index:]
+                        break
+
+            def handle_data(self, data):
+                if "2026-03" in data:
+                    self.note_depths.append(
+                        (self.stack.count("ul"), self.stack.count("li"))
+                    )
+
+        collector = Collector()
+        collector.feed(html)
+        self.assertEqual(
+            collector.events,
+            [
+                ("caption", (1, 1)),
+                ("table", (1, 1)),
+                ("caption", (2, 2)),
+                ("table", (2, 2)),
+            ],
+        )
+        self.assertEqual(collector.note_depths, [(1, 1)])
+
     def test_moves_labeled_table_caption_with_id_and_classes(self):
         source = (
             "| 項目 |\n"

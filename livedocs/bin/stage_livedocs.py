@@ -111,7 +111,9 @@ _LINK_RE = re.compile(r"(!?)\[((?:[^\[\]]|\[[^\]]*\])*)\]\((" + _LINK_TARGET + r
 _LINK_TARGET_PARTS_RE = re.compile(
     r"^[ \t]*(?:<([^<>\n]*)>|(.*?))((?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'))?)[ \t]*$"
 )
-_CAPTION_RE = re.compile(r"^(Table|CodeBlock):[ \t]*(.*)$")
+# 第 1 グループは行頭の字下げ。Table: は箇条書き内の表と同じ桁をキャプションにする。
+# CodeBlock: の字下げは convert_captions 側で除外する。
+_CAPTION_RE = re.compile(r"^([ \t]*)(Table|CodeBlock):[ \t]*(.*)$")
 _TABLE_SEPARATOR_RE = re.compile(
     r"^(?=[^\n]*\|)[ \t]*\|?[ \t]*:?-+:?[ \t]*"
     r"(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$"
@@ -740,22 +742,49 @@ def _wrap_diagram_with_caption(out, diagram_block, caption):
     out[block_start:] = figure
 
 
+def _leading_indent(line):
+    """行頭の空白を、タブを展開せずに返す。"""
+    index = 0
+    while index < len(line) and line[index] in " \t":
+        index += 1
+    return line[:index]
+
+
+def _indent_width(indent):
+    """空白の表示幅を返す。タブは 4 桁として数える。"""
+    return len(indent.expandtabs(4))
+
+
+def _dedent_line(line, indent):
+    """行頭が ``indent`` と一致するとき、その分だけ取り除く。"""
+    if indent and line.startswith(indent):
+        return line[len(indent):]
+    return line
+
+
+def _indent_lines(lines, indent):
+    """空行以外の行頭へ ``indent`` を付ける。"""
+    return [(indent + line) if line else line for line in lines]
+
+
 def convert_captions(text):
     """``Table:`` / ``CodeBlock:`` キャプションを mkdocs 向けの記法へ変換する。
 
-    docsfw は Pandoc のキャプション記法として扱いますが、mkdocs では次の 2 通り
-    で表現します。
+    docsfw は Pandoc のキャプション記法として扱いますが、mkdocs では次のように
+    表現します。
 
-    - PlantUML / Mermaid フェンスの直後に置かれた ``CodeBlock:`` は、フェンスと
-      ともに ``md_in_html`` の ``figure`` へ包みます。pandoc 発行版が図に
-      ``<figure>`` と枠を与えるのと同じ見た目になります。
-    - 表の直後に置かれた ``Table:`` は、表の前へ移して
-      ``.docsfw-table-caption`` クラスを付けます。
-    - それ以外は ``.docsfw-caption`` クラスを付けた段落として表現します。
+    - PlantUML / Mermaid フェンスの直後に置かれた行頭の ``CodeBlock:`` は、
+      フェンスとともに ``md_in_html`` の ``figure`` へ包みます。pandoc 発行版が
+      図に ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - 直前の表と字下げの幅が一致する ``Table:`` は、その字下げを保ったまま表の
+      前へ移して ``.docsfw-table-caption`` クラスを付けます。箇条書きの項目内も
+      同じです。
+    - それ以外は ``.docsfw-caption`` クラスを付けた段落として、その位置に残します。
 
     ``{#fig:xxx}`` などのラベルは id として残します。
 
     attr_list はブロック要素の属性を、段落の直後の属性だけの行から読み取ります。
+    キャプション本文と属性行は同じ字下げの 1 ブロックにします。
     """
     lines = text.split("\n")
     out = []
@@ -767,9 +796,10 @@ def convert_captions(text):
     fence_lang = None
     fence_content = []
     internal_caption = ""
-    # 直前に閉じた Markdown 表の ``(out 上の開始位置, 終了位置)``。
+    # 直前に閉じた Markdown 表の ``(out 上の開始位置, 終了位置, 先頭の字下げ)``。
     table_block = None
     block_start = None
+    block_indent = ""
     block_has_table_separator = False
 
     while index < len(lines):
@@ -778,6 +808,7 @@ def convert_captions(text):
         if fence_match:
             table_block = None
             block_start = None
+            block_indent = ""
             block_has_table_separator = False
             marker = fence_match.group(1)[0]
             if fence is None:
@@ -808,17 +839,27 @@ def convert_captions(text):
             continue
 
         caption_match = _CAPTION_RE.match(line)
+        # 字下げした CodeBlock: はキャプションにしない。字下げした生の HTML を
+        # md_in_html が扱えないため、図を figure へ包むのは行頭のフェンスに限る。
+        if (
+            caption_match
+            and caption_match.group(2) == "CodeBlock"
+            and caption_match.group(1)
+        ):
+            caption_match = None
         at_paragraph_start = not out or not out[-1].strip()
         if caption_match and at_paragraph_start:
-            paragraph = [caption_match.group(2).strip()]
+            caption_indent = caption_match.group(1)
+            caption_kind = caption_match.group(2)
+            paragraph = [caption_match.group(3).strip()]
             index += 1
             while index < len(lines) and lines[index].strip() and not _FENCE_RE.match(lines[index]):
-                paragraph.append(lines[index])
+                paragraph.append(_dedent_line(lines[index], caption_indent))
                 index += 1
 
             label, paragraph = _split_caption_label(paragraph)
 
-            if caption_match.group(1) == "CodeBlock" and _is_after_diagram(out, diagram_block):
+            if caption_kind == "CodeBlock" and _is_after_diagram(out, diagram_block):
                 block_start, block_end, _lang = diagram_block
                 figure = [_figure_open_tag(label, True), ""]
                 figure.extend(out[block_start:block_end])
@@ -835,22 +876,27 @@ def convert_captions(text):
                 internal_caption = ""
                 continue
 
-            is_table_caption = caption_match.group(1) == "Table"
+            is_table_caption = caption_kind == "Table"
             attrs = [".docsfw-caption"]
             if is_table_caption:
                 attrs.append(".docsfw-table-caption")
             if label:
                 attrs.insert(0, "#" + label)
             # attr_list はブロック要素に対して、属性だけの行を要求する。
+            # 本文と属性行の間に空行を置くと、字下げを外した後に別ブロックになる。
             paragraph.append("{{: {} }}".format(" ".join(attrs)))
+            moved_before_table = False
             if is_table_caption and table_block is not None:
-                block_start, _block_end = table_block
-                out[block_start:block_start] = paragraph + [""]
-            else:
-                out.extend(paragraph)
+                block_start, _block_end, table_indent = table_block
+                if _indent_width(caption_indent) == _indent_width(table_indent):
+                    out[block_start:block_start] = _indent_lines(paragraph, table_indent) + [""]
+                    moved_before_table = True
+            if not moved_before_table:
+                out.extend(_indent_lines(paragraph, caption_indent))
             diagram_block = None
             table_block = None
             block_start = None
+            block_indent = ""
             block_has_table_separator = False
             continue
 
@@ -866,12 +912,16 @@ def convert_captions(text):
             table_block = None
             if block_start is None:
                 block_start = len(out)
+                block_indent = _leading_indent(line)
                 block_has_table_separator = False
             if _TABLE_SEPARATOR_RE.match(line):
                 block_has_table_separator = True
         elif block_start is not None:
-            table_block = (block_start, len(out)) if block_has_table_separator else None
+            table_block = (
+                (block_start, len(out), block_indent) if block_has_table_separator else None
+            )
             block_start = None
+            block_indent = ""
             block_has_table_separator = False
         out.append(line)
         index += 1

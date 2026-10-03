@@ -435,6 +435,9 @@ Table: Markdown pipe tables による表 1
 
 Table: Markdown pipe tables による表 2
 
+箇条書きの項目の中に表を置くときは、表と同じ字下げで `Table:` を記述します。  
+例は [箇条書きの項目に入れる表](list-table.md) を参照してください。
+
 ## メタデータ
 
 Markdown の先頭に次のように記述します。
