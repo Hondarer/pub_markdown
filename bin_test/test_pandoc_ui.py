@@ -5,6 +5,12 @@ import re
 import subprocess
 import tempfile
 import unittest
+import shutil
+
+# Windows の subprocess は System32 を PATH より先に探すため、名前だけで起動すると
+# WSL の bash.exe を選ぶことがある。PATH 上の bash (Git Bash など) を明示して使う。
+# see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+BASH = shutil.which("bash") or "bash"
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -562,7 +568,7 @@ class PandocUiContractTest(unittest.TestCase):
             html = Path(directory) / "copy.html"
             html.write_text('<html lang="ja"><span class="docsfw-drawer-site-name">'
                             'Site (example) (ja)</span></html>', encoding="utf-8")
-            subprocess.run(["bash", "-c", function +
+            subprocess.run([BASH, "-c", function +
                             '\ndetails_suffix=-details\nset_html_lang_attributes "$1" en',
                             "test", str(html)], check=True)
             result = html.read_text(encoding="utf-8")
@@ -588,7 +594,7 @@ class PandocUiContractTest(unittest.TestCase):
         source = '# Title\n\n## Level two\n\n### Level three\n\n#### Level four\n'
         for configured, includes_four in [("", False), ("3", True)]:
             result = subprocess.run(
-                ["bash", "-c", 'htmlTocDepth="$1"; htmlTocEnable=true\n' + setup +
+                [BASH, "-c", 'htmlTocDepth="$1"; htmlTocEnable=true\n' + setup +
                  '\npandoc -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -t html',
                  "test", configured], input=source, text=True, encoding="utf-8", capture_output=True, check=True)
             self.assertIn('id="toc-level-three"', result.stdout)

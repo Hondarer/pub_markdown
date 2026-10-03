@@ -24,6 +24,11 @@ from publish_info import (  # noqa: E402
     format_author,
 )
 
+# Windows の subprocess は System32 を PATH より先に探すため、名前だけで起動すると
+# WSL の bash.exe を選ぶことがある。PATH 上の bash (Git Bash など) を明示して使う。
+# see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+BASH = shutil.which("bash") or "bash"
+
 # 静的発行の get_file_author.sh / get_file_date.sh は bin_internal に置かれている。
 DOCSFW_BIN_INTERNAL = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "bin_internal")
@@ -272,7 +277,7 @@ class StaticPublishingParityTest(unittest.TestCase):
         if not os.path.isfile(path):
             self.skipTest("{} が見つかりません".format(script))
         result = subprocess.run(
-            ["bash", path, os.path.join(self.repo, relative)],
+            [BASH, path, os.path.join(self.repo, relative)],
             capture_output=True, text=True, encoding="utf-8", check=True,
         )
         return result.stdout

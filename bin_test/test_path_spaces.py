@@ -8,6 +8,11 @@ import tempfile
 import unittest
 import zipfile
 
+# Windows の subprocess は System32 を PATH より先に探すため、名前だけで起動すると
+# WSL の bash.exe を選ぶことがある。PATH 上の bash (Git Bash など) を明示して使う。
+# see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+BASH = shutil.which("bash") or "bash"
+
 
 DOCSFW = Path(__file__).resolve().parents[1]
 
@@ -31,7 +36,7 @@ class PathSpacesTest(unittest.TestCase):
             env = dict(os.environ, PATH=str(tools) + os.pathsep + os.environ["PATH"],
                        MISSING_CHROME=str(missing), DOCSFW_BROWSER_EXECUTABLE_REPORT_FILE=str(report))
             result = subprocess.run(
-                ["bash", str(DOCSFW / "bin_internal/chrome-wrapper.sh"), "argument space"],
+                [BASH, str(DOCSFW / "bin_internal/chrome-wrapper.sh"), "argument space"],
                 env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 encoding="utf-8", timeout=30,
             )
@@ -57,7 +62,7 @@ class PathSpacesTest(unittest.TestCase):
             # Git Bash の PATH は POSIX 形式。変換は Bash 内で行う。
             env = dict(os.environ, PUB_MARKDOWN_BROWSER_WS_FILE=ws.as_posix())
             result = subprocess.run(
-                ["bash", "-c", 'PATH="$(cygpath -u "$1" 2>/dev/null || printf "%s" "$1"):$PATH"; shift; exec bash "$@"',
+                [BASH, "-c", 'PATH="$(cygpath -u "$1" 2>/dev/null || printf "%s" "$1"):$PATH"; shift; exec bash "$@"',
                  "test", str(tools), str(runtime / "mmdc-wrapper.sh"),
                  "-i", "input space.mmd", "-o", "output space.svg"],
                 env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -131,7 +136,7 @@ graph TD
             )
             env = dict(os.environ, PUB_MARKDOWN_BROWSER_REUSE="off", TMPDIR=(root / "tmp space").as_posix())
             result = subprocess.run(
-                ["bash", str(DOCSFW / "bin/pub_markdown.sh"), "--workspaceFolder=" + root.as_posix()],
+                [BASH, str(DOCSFW / "bin/pub_markdown.sh"), "--workspaceFolder=" + root.as_posix()],
                 env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 encoding="utf-8", errors="replace", timeout=180,
             )

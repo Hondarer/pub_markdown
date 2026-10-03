@@ -27,6 +27,11 @@ except ImportError:
 from expand_toc import DocIndex, expand_toc_commands, render_toc, parse_toc_params  # noqa: E402
 from stage_livedocs import convert_collapsible_list_fences  # noqa: E402
 
+# Windows の subprocess は System32 を PATH より先に探すため、名前だけで起動すると
+# WSL の bash.exe を選ぶことがある。PATH 上の bash (Git Bash など) を明示して使う。
+# see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+BASH = shutil.which("bash") or "bash"
+
 
 def _nested_index():
     index = DocIndex()
@@ -160,7 +165,7 @@ class CollapsibleTest(unittest.TestCase):
                     current_path = str(current).replace('\\', '/')
                     # 出力の絵文字は UTF-8。text=True だけでは Windows の
                     # 既定文字コード (cp932) で読み、比較前に化ける。
-                    result = subprocess.run(['bash', str(script), str(params['depth']), current_path,
+                    result = subprocess.run([BASH, str(script), str(params['depth']), current_path,
                                              'neutral', ','.join(params['exclude']), params['basedir'],
                                              str(params['exclude-basedir']).lower()],
                                             capture_output=True, encoding='utf-8',
