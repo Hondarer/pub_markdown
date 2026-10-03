@@ -111,7 +111,11 @@ extra_javascript:
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'win32'
       ? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe' : undefined);
-    browser = await puppeteer.launch(buildBrowserLaunchOptions({headless: true, executablePath}));
+    // CI のコンテナは root で動くため、ほかのブラウザー テストと同じくサンドボックスを無効にする。
+    // see: https://crbug.com/638180
+    browser = await puppeteer.launch(buildBrowserLaunchOptions({
+      headless: true, executablePath, args: ['--no-sandbox', '--disable-crash-reporter'],
+    }));
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(String(error)));
