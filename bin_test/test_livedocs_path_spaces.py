@@ -19,10 +19,8 @@ class LivedocsPathSpacesTest(unittest.TestCase):
     def test_make_livedocs(self):
         with tempfile.TemporaryDirectory(prefix="livedocs space ") as temp:
             root = Path(temp)
-            (root / "makefile").write_text(
-                (WORKSPACE / "makefile").read_text(encoding="utf-8"),
-                encoding="utf-8", newline="\n",
-            )
+            with open(root / "makefile", "w", encoding="utf-8", newline="\n") as handle:
+                handle.write((WORKSPACE / "makefile").read_text(encoding="utf-8"))
             (root / "docs").mkdir()
             (root / "docs/README.md").write_text(
                 "# Sample\n\nA page generated from a workspace with spaces.\n",

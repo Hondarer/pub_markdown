@@ -49,10 +49,8 @@ class PathSpacesTest(unittest.TestCase):
             tools = root / "tools space"
             tools.mkdir()
             node = tools / "node"
-            node.write_text(
-                '#!/bin/bash\n[ -f "$1" ] || exit 2\nshift\nprintf "%s\\n" "$@"\n',
-                encoding="utf-8", newline="\n",
-            )
+            with open(node, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write('#!/bin/bash\n[ -f "$1" ] || exit 2\nshift\nprintf "%s\\n" "$@"\n')
             node.chmod(0o755)
             ws = root / "browser ws.txt"
             ws.touch()
@@ -81,14 +79,13 @@ class PathSpacesTest(unittest.TestCase):
                 encoding="utf-8",
             )
             workspace = DOCSFW.parents[1]
-            (root / "makefile").write_text(
-                (workspace / "makefile").read_text(encoding="utf-8"),
-                encoding="utf-8", newline="\n",
-            )
+            with open(root / "makefile", "w", encoding="utf-8", newline="\n") as handle:
+                handle.write((workspace / "makefile").read_text(encoding="utf-8"))
             (root / "framework/docsfw").mkdir(parents=True)
             skills = root / "app/general/bin_internal/sync-skills.sh"
             skills.parent.mkdir(parents=True)
-            skills.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8", newline="\n")
+            with open(skills, "w", encoding="utf-8", newline="\n") as handle:
+                handle.write("#!/bin/bash\nexit 0\n")
             (root / "tmp space").mkdir()
             env = dict(os.environ, PUB_MARKDOWN_BROWSER_REUSE="off", TMPDIR=(root / "tmp space").as_posix())
             result = subprocess.run(
