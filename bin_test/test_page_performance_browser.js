@@ -108,7 +108,11 @@ async function collapsibleWrites(page, mode, temporary) {
   await page.waitForFunction(() => window.toggleEvents === 300);
   assert.equal(await page.evaluate(() => window.storageWrites), 2);
   assert.equal(await page.evaluate(() => Object.keys(JSON.parse(sessionStorage.getItem('collapsible-state:' + location.pathname))).length), 100);
-  assert.deepEqual(await page.screenshot({fullPage: true}), initial, '開閉後も初期表示と同じ外観');
+  // 全ページ撮影は撮影前のページ高さを使う。開閉直後は全項目を閉じたときの高さが残り、
+  // 画像が途中で切れることがあるため、描画フレームを 2 回待ってレイアウトを確定させる。
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  // deepEqual は不一致時に画像全体の差分を作り、メモリを使い切るため、バイト列の一致だけを確かめる。
+  assert(Buffer.from(await page.screenshot({fullPage: true})).equals(Buffer.from(initial)), '開閉後も初期表示と同じ外観');
   if (mode === 'mkdocs') {
     await page.addScriptTag({path: path.join(root, 'livedocs/assets/docsfw-collapsible-list.js')});
     await page.evaluate(() => { document.querySelector('details').open = false; });
