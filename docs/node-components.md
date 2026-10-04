@@ -11,7 +11,7 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 | パッケージ | 役割 | 検出 |
 |---|---|---|
 | `@mermaid-js/mermaid-cli` | Mermaid を SVG へ変換する `mmdc` | 実行ファイル |
-| `mermaid` | HTML と動的発行へ同梱する `mermaid.min.js` | `@mermaid-js/mermaid-cli` の推移依存。直下または mermaid-cli 配下 |
+| `mermaid` | フレーム HTML へ埋め込む `mermaid.min.js` | `@mermaid-js/mermaid-cli` の推移依存。直下または mermaid-cli 配下 |
 | `widdershins` | OpenAPI を Markdown へ変換する CLI | 実行ファイル |
 | `puppeteer` | 共有ブラウザー、`rsvg-convert.js`、`mmdc-reuse.js` | `require('puppeteer')` |
 | `minimist` | 自前 Node スクリプトの引数解析 | モジュール |

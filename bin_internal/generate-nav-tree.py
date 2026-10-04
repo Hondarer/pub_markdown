@@ -48,6 +48,7 @@ SKIP_NAMES = {
     'search-index.js', 'nav-tree.js', 'minisearch.min.js',
     'docsfw-search.js', 'docsfw-nav.js', 'docsfw-tokenize.js', 'docsfw-ui.css',
     'html-style.css', 'mermaid.min.js',
+    'docsfw-mermaid-frame.html', 'docsfw-plantuml-frame.html',
 }
 
 # ---------------------------------------------------------------------------

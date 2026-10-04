@@ -90,9 +90,9 @@ local mmd_filename = string.format("mermaid_%s.mmd", utils.sha1(el.text))
 
 ### HTML 出力
 
-HTML 出力では `.mmd` / `.svg` / `.png` は生成しません。発行処理が `mermaid.min.js` を HTML 出力ディレクトリへコピーし、Pandoc テンプレートに `mermaid-js` メタデータとして渡します。
+HTML 出力では `.mmd` / `.svg` / `.png` は生成しません。発行処理が `mermaid.min.js` を自己完結した `docsfw-mermaid-frame.html` へ埋め、そのパスを Pandoc の `mermaid-js` メタデータとして渡します。
 
-通常 HTML はコピーした `mermaid.min.js` を相対パスで参照します。self-contained HTML は同じファイルを `--embed-resources --standalone` により HTML 内へ埋め込みます。
+通常 HTML と `file://` は、描画開始後にそのフレーム HTML を iframe で読みます。self-contained HTML は `--embed-resources --standalone` に加え `docsfw-embed-frames` を渡し、同じフレーム文書を実行されないブロックへ埋め込んでから `srcdoc` で使います。親ページは `mermaid.min.js` をスクリプトとして評価しません。
 
 ### Mermaid-CLI 実行
 

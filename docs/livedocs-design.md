@@ -88,13 +88,13 @@ Table: 前処理に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
-| 14 | PlantUML の SVG 化 | `styles/browser/docsfw-diagrams.js` | 共通 | HTML は `@plantuml/core` によるブラウザー描画。実描画は隠し iframe へ分離する |
+| 14 | PlantUML の SVG 化 | `styles/browser/docsfw-diagrams.js` | 共通 | HTML は `@plantuml/core` によるブラウザー描画。Mermaid と別の iframe で描き、要求は共通キューで直列に処理する |
 | 15 | PlantUML の LibDeflate エンコード | `plantuml.lua:157-211` | 対象外 | サーバーを使わない |
 | 16 | `skinparam backgroundColor transparent` の注入 | `plantuml.lua:663-668` | 維持 | クライアント側 JavaScript で実施 |
 | 17 | `caption` 行と `@startuml <名前>` からのキャプション抽出 | `plantuml.lua:579-644` | 維持 | 同じ優先順を実装。`CodeBlock:` 行がある場合はそちらを優先する点も同じ |
 | 18 | SVG の処理命令移動とフォント パッチ | `plantuml.lua:358-400`, `:464-500` | 対象外 | docx 向けの対策 |
 | 19 | SVG から PNG への変換 | `plantuml.lua:781-802`、`bin_internal/rsvg-convert.js` | 対象外 | docx 専用 |
-| 20 | Mermaid のブラウザー描画 | `bin_internal/pandoc-filters/mermaid.lua:150-166` | 維持 | 同じ方式。ローカルの `mermaid.min.js` を使用 |
+| 20 | Mermaid のブラウザー描画 | `bin_internal/pandoc-filters/mermaid.lua:150-166` | 維持 | 同じ方式。`mermaid.min.js` は自己完結フレームへ埋め、親ページでは評価しない |
 | 21 | Mermaid の mmdc 変換 | `mermaid.lua:259-330` | 対象外 | docx 専用 |
 | 22 | 共有ブラウザー インスタンス | `bin_internal/browser-server.js` ほか | 対象外 | ビルド時にブラウザーを使わない |
 | 23 | draw.io SVG の `foreignObject` 除去 | `bin_internal/strip-foreignobject.py` | 対象外 | ブラウザーは `foreignObject` を解釈できる |
@@ -701,9 +701,10 @@ docsfw が使用する GPL 版とは一部の図種やスプライトで結果�
 ### 読み込みと描画
 
 Pandoc HTML と共用する `styles/browser/docsfw-diagrams.js` が描画します。  
-`bin_internal/build-browser-assets.js` が PlantUML エンジン、Graphviz、同梱アイコンを含むローダーを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
-実描画は隠し iframe へ分離し、描画待ちと失敗時の見た目も共有 CSS でそろえます。  
-配色変更時の再描画、DOM 構築完了後の直列描画、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
+`bin_internal/build-browser-assets.js` が PlantUML と Mermaid の自己完結フレームを生成し、`bin/vendor_assets.py` が共通資産を配置します。  
+両エンジンは別の iframe で描き、要求は 1 本のキューで文書順に処理します。  
+描画待ちと失敗時の見た目も共有 CSS でそろえます。  
+開始条件、保存用の `portable`、測定、失敗時の扱い、直接閲覧への対応は [HTML のテーマと図の描画](html-theme.md) を参照してください。
 
 ## 図の枠とキャプション
 
@@ -784,7 +785,8 @@ PlantUML ソース内に `caption` がある場合は、ステージング時に
 このため、ブラウザーの図描画処理が始まる前から外枠とキャプションを表示できます。  
 直後に `CodeBlock:` キャプションがある場合は、そちらを優先します。
 
-`mermaid.min.js` は解決済みの Mermaid バンドルから取り出して同梱します。
+`mermaid.min.js` は解決済みの Mermaid バンドルから取り出し、`docsfw-mermaid-frame.html` へ埋め込んで同梱します。  
+ページのスクリプトとしては配置しません。
 
 Material にも Mermaid 連携がありますが、こちらは unpkg から `mermaid.min.js` を取得します。  
 docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、  
@@ -1852,7 +1854,7 @@ Table: 動的発行基盤の実装ステップと進捗状況一覧
 - `git check-ignore` は既定で索引にあるパスを無視対象として報告しません。`get_file_git_url.sh` の `.gitignore` 判定は、追跡確認を先に行う構成のため実際には働いていません。生成 md の除外は未追跡であることで成立しています。
 - Material の `partials/header.html` は 69 行で、上流の構造も安定しています。`md-header__source` ブロックだけを差し替える上書きであれば、丸ごと上書きでも保守量は小さく収まります。
 - `publocal.yaml` の `order:` に対応する `.nav.yml` 生成は実装済みです。本ワークスペースの発行対象に `publocal.yaml` はありません。
-- PlantUML の実描画は、隠し `iframe` へ分離しました。詳細は [HTML のテーマと図の描画](html-theme.md) を参照してください。
+- Mermaid と PlantUML の実描画は、それぞれ別の `iframe` へ分離し、共通キューで直列に処理します。詳細は [HTML のテーマと図の描画](html-theme.md) を参照してください。
 - 描画待ちの縞模様と描画失敗時の枠は、共有 CSS へ集約しました。Pandoc HTML の `figure` は flex のため、描画待ちの間だけ `align-self: stretch` で幅を広げます。
 
 ### 未着手の課題

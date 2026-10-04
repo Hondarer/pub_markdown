@@ -16,7 +16,7 @@ const {buildBrowserLaunchOptions} = require('../bin_internal/browser-launch-opti
 const python = process.env.PYTHON || path.join(root, 'livedocs/.venv',
   process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-page-libraries-'));
-const heavy = /mermaid\.min\.js|docsfw-plantuml-loader\.js|tex-mml-chtml\.js/;
+const heavy = /docsfw-(?:mermaid|plantuml)-frame\.html|tex-mml-chtml\.js/;
 
 function generate() {
   execFileSync(python, ['-X', 'utf8', '-', root, temporary, JSON.stringify(resolved)], {encoding: 'utf8', input: String.raw`
@@ -97,8 +97,8 @@ async function diagramsSettled(page) {
     browser = await puppeteer.launch(buildBrowserLaunchOptions({headless: true,
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, args: ['--no-sandbox']}));
     const errors = [];
-    for (const [name, expected] of (process.argv.includes('--math-only') ? [] : [['', []], ['code/', []], ['mermaid/', ['mermaid.min.js']],
-      ['plantuml/', ['docsfw-plantuml-loader.js']], ['mixed/', ['docsfw-plantuml-loader.js', 'mermaid.min.js']]])) {
+    for (const [name, expected] of (process.argv.includes('--math-only') ? [] : [['', []], ['code/', []], ['mermaid/', ['docsfw-mermaid-frame.html']],
+      ['plantuml/', ['docsfw-plantuml-frame.html']], ['mixed/', ['docsfw-plantuml-frame.html', 'docsfw-mermaid-frame.html']]])) {
       const page = await browser.newPage();
       page.on('pageerror', error => errors.push(error.message));
       const requests = [];
@@ -127,14 +127,16 @@ async function diagramsSettled(page) {
       failed.on('pageerror', error => errors.push(error.message));
       await failed.setRequestInterception(true);
       failed.on('request', request => {
-        if (/mermaid\.min\.js/.test(request.url())) {
+        if (/docsfw-mermaid-frame\.html/.test(request.url())) {
           requests.push(request.url());
-          request.respond({status: 404, body: 'missing'});
+          request.respond({status: 404, contentType: 'text/html', body:
+            '<script>parent.postMessage({kind:"init-error",error:"missing"},"*");</script>'});
         } else request.continue();
       });
+      // 欠落した Mermaid は初期化失敗を通知する。正常な PlantUML の時間は制限しない。
       await failed.goto(url + 'mixed/');
       await diagramsSettled(failed);
-      assert.equal(requests.length, 1, '失敗したライブラリを図ごとに再取得しない');
+      assert.equal(requests.length, 2, '初期化に失敗したフレームは破棄し、次の Mermaid で再取得する');
       assert.equal(await failed.$$eval('.docsfw-mermaid.docsfw-diagram--error pre', nodes => nodes.length), 2);
       assert.equal(await failed.$$eval('.docsfw-plantuml > svg', nodes => nodes.length), 2);
       console.log('MkDocs 読み込み失敗: 元ソースを残し、他の図の描画を継続');

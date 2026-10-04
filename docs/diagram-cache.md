@@ -12,7 +12,7 @@
 
 HTML 出力では、両フィルターがファイルを一切生成せずに早期リターンします。図の描画元テキストを属性として埋め込み、ブラウザー側のスクリプトによってインライン SVG として描画されます。
 
-動的発行 (MkDocs) は Pandoc を経由しません。`livedocs/assets/docsfw-plantuml-loader.js` とベンダー済みの Mermaid がブラウザーで描画します。
+動的発行 (MkDocs) は Pandoc を経由しません。ベンダー済みの `docsfw-plantuml-frame.html` と `docsfw-mermaid-frame.html` を、共通の `docsfw-diagrams.js` がブラウザーで描画します。
 
 ## 命名と共有の単位
 
