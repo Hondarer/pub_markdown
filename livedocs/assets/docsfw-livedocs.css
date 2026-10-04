@@ -640,7 +640,7 @@
   display: block;
   border: none;
   padding: 0;
-  margin: 15px 0;
+  margin: 16px 0;
   text-align: center;
   /* Material の .md-typeset figure は width: fit-content で内容幅まで縮める。
      pandoc 発行版の figure はブロック要素として本文幅いっぱいに広がるため、
@@ -732,6 +732,11 @@
   max-width: none;
 }
 
+/* コードのキャプションと後続の本文との間隔を、図・表と同じ 16px にする。 */
+.md-typeset p.docsfw-caption:not(.docsfw-table-caption) {
+  margin-bottom: 16px;
+}
+
 /* Material のインライン コードは 22.5px の行高を持つため、キャプションの
    行ボックスだけが Pandoc HTML より高くならないように同じ寸法へ戻す。 */
 .md-typeset .docsfw-caption code {
@@ -749,7 +754,7 @@
 }
 
 .md-typeset .docsfw-table-caption {
-  margin: 12px 0 8px;
+  margin: 16px 0 8px;
 }
 
 /* Material は JavaScript の実行後に table を .md-typeset__table と

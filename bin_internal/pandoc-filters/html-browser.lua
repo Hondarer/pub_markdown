@@ -56,3 +56,14 @@ function Pandoc(doc)
     end
     return doc
 end
+
+-- 画像本体の原寸と、本文幅いっぱいの枠を別の要素で制御する。
+function Figure(figure)
+    if not FORMAT:match("html") then return nil end
+    local has_image = false
+    figure:walk({ Image = function() has_image = true end })
+    if has_image then
+        figure.content = { pandoc.Div(figure.content, pandoc.Attr("", { "docsfw-image-frame" })) }
+        return figure
+    end
+end

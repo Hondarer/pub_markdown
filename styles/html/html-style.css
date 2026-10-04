@@ -599,7 +599,7 @@ blockquote p {
 /* 表のキャプションは表の上に置き、本文カラム幅で折り返す。
    table の margin-top と相殺されないよう、直後の表の上余白を 0 にする。 */
 .docsfw-table-caption {
-  margin: 12px 0 8px; }
+  margin: 16px 0 8px; }
 
 .docsfw-table-caption + table {
   margin-top: 0; }
@@ -825,8 +825,8 @@ div.sourceCode > pre {
 figure {
   border: none;
   padding: 0;
-  margin-top: 15px;
-  margin-bottom: 15px;
+  margin-top: 16px;
+  margin-bottom: 16px;
   margin-left: 0;
   margin-right: 0;
   text-align: center; /* テキストやインライン要素を中央揃えにする */
@@ -853,6 +853,7 @@ figure > :not(img):not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-
   width: 100%;
 }
 
+figure .docsfw-image-frame img,
 figure > img {
   width: auto;
   max-width: 100%;
@@ -874,6 +875,7 @@ figure.docsfw-diagram-source-host .docsfw-diagram-source {
 
 div[data-custom-style="Source Code Caption"] {
   margin-top: 8px;
+  margin-bottom: 16px;
   text-align: center;
   line-height: 1.1;
 }

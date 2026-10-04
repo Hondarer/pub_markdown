@@ -39,8 +39,10 @@ md = '\n\n'.join([
     '# Test',
     fence + 'c\n' + long_line + '\nshort\ncode\n' + fence,
     '<p class="docsfw-caption">短いコードの見出し</p>',
+    '<p class="caption-following-body">本文</p>',
     fence + 'c\n' + long_line + '\nline2\nline3\nline4\nline5\nline6\nline7\n' + fence,
     '<p class="docsfw-caption">長いコードの見出し</p>',
+    '<p class="caption-following-body">本文</p>',
     fence + 'mermaid\nflowchart LR\n    A --> B\n' + fence,
     '<figure class="docsfw-figure docsfw-diagram-source-host" markdown="1">\n\n' +
         fence + 'plantuml\n@startuml\ncaption 図の見出し\nAlice -> Bob : Hello\n@enduml\n' + fence +
@@ -619,6 +621,9 @@ extra_javascript:
     assert.deepEqual(errors, []);
     const captionGaps = await page.$$eval('p.docsfw-caption', captions => captions.map(caption =>
       caption.getBoundingClientRect().top - caption.previousElementSibling.getBoundingClientRect().bottom));
+    const bodyGaps = await page.$$eval('p.docsfw-caption', captions => captions.map(caption =>
+      caption.nextElementSibling.getBoundingClientRect().top - caption.getBoundingClientRect().bottom));
+    assert(bodyGaps.every(gap => Math.abs(gap - 16) < 1), JSON.stringify(bodyGaps));
     assert.equal(captionGaps.length, 2);
     assert(captionGaps.every(gap => Math.abs(gap - 8) < 1), JSON.stringify(captionGaps));
     console.log('PASS: MkDocs code expander wrap, threshold, collapse hint, full copy, mermaid skipped, copy hover on code only');
@@ -635,10 +640,10 @@ extra_javascript:
     const pandocHtml = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><style>' +
       htmlStyle + '</style>' + expanderCss + '</head><body><main id="docsfw-content">' +
       '<pre><code>' + longLine + '\nshort\ncode\n</code></pre>' +
-      '<div data-custom-style="Source Code Caption">短いコードの見出し</div>' +
+      '<div data-custom-style="Source Code Caption">短いコードの見出し</div><p>本文</p>' +
       '<div class="sourceCode"><pre><code>' + longLine +
       '\nline2\nline3\nline4\nline5\nline6\nline7\n</code></pre></div>' +
-      '<div data-custom-style="Source Code Caption">長いコードの見出し</div>' +
+      '<div data-custom-style="Source Code Caption">長いコードの見出し</div><p>本文</p>' +
       '</main>' + expanderJs + '</body></html>';
     const pandocServer = http.createServer((request, response) => {
       response.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -689,6 +694,9 @@ extra_javascript:
     await assertStaysOnScroll(pandocPage, 1, '.docsfw-code-copy', 'pandoc long');
     const pandocCaptionGaps = await pandocPage.$$eval('[data-custom-style="Source Code Caption"]', captions =>
       captions.map(caption => caption.getBoundingClientRect().top - caption.previousElementSibling.getBoundingClientRect().bottom));
+    const pandocBodyGaps = await pandocPage.$$eval('[data-custom-style="Source Code Caption"]', captions =>
+      captions.map(caption => caption.nextElementSibling.getBoundingClientRect().top - caption.getBoundingClientRect().bottom));
+    assert(pandocBodyGaps.every(gap => Math.abs(gap - 16) < 1), JSON.stringify(pandocBodyGaps));
     assert.equal(pandocCaptionGaps.length, 2);
     assert(pandocCaptionGaps.every(gap => Math.abs(gap - 8) < 1), JSON.stringify(pandocCaptionGaps));
     await pandocPage.close();

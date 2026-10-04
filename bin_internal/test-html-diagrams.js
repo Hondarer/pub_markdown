@@ -249,16 +249,18 @@ async function exercise(page, url, name) {
   await settled(page);
   const imageSizes = await page.$$eval('figure[id^="fig:drawio-"]', figures => figures.map(figure => {
     const image = figure.querySelector('img');
+    const frame = image.closest('.docsfw-image-frame');
     const style = getComputedStyle(image);
     const width = image.getBoundingClientRect().width;
     const contentWidth = width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) -
       parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
     return { id: figure.id, naturalWidth: image.naturalWidth, contentWidth,
-      fits: width <= figure.getBoundingClientRect().width + 1,
-      captionOutside: figure.querySelector('figcaption').getBoundingClientRect().top >= image.getBoundingClientRect().bottom };
+      frameFullWidth: !!frame && Math.abs(frame.getBoundingClientRect().width - figure.getBoundingClientRect().width) < 1,
+      fits: width <= frame.getBoundingClientRect().width + 1,
+      captionOutside: figure.querySelector('figcaption').getBoundingClientRect().top >= frame.getBoundingClientRect().bottom };
   }));
   assert.equal(imageSizes.length, 2);
-  assert(imageSizes.every(item => item.fits && item.captionOutside), JSON.stringify(imageSizes));
+  assert(imageSizes.every(item => item.frameFullWidth && item.fits && item.captionOutside), JSON.stringify(imageSizes));
   assert(Math.abs(imageSizes[0].contentWidth - 120) < 1, JSON.stringify(imageSizes));
   assert(imageSizes[1].contentWidth < imageSizes[1].naturalWidth, JSON.stringify(imageSizes));
   const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(el => el.textContent));
