@@ -507,8 +507,7 @@ docx 変換時に改ページを挿入したい場合は、`\newpage` を挿入�
 
 `pandoc -o custom-reference.docx --print-default-data-file reference.docx` コマンドで出力したサンプルを Word テンプレート形式 (.dotx) で出力したものに置き換えることで、既定の出力に変更できます。
 
-図の幅はページ サイズおよび余白に基づいて Pandoc で調整されます。~~とじしろ (w:gutter) は考慮されないため、とじしろを定義した場合は図の横幅が期待通りとなりません。テンプレート作成時は留意してください。~~  
-→ Pandoc 3.1.6 より、ページ設定の余白のとじしろが反映されていないバグが修正されました。[Gutters on margin specs not picked up from custom-reference.docx (HTML to .docx) #8946](https://github.com/jgm/pandoc/issues/8946)
+図の幅はページ サイズおよび余白に基づいて Pandoc で調整されます。
 
 ## 発行方法
 
