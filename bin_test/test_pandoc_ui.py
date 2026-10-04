@@ -443,7 +443,11 @@ class PandocUiContractTest(unittest.TestCase):
     def test_table_caption_uses_body_width_and_eight_pixel_gap(self):
         self.assertRegex(
             self.style,
-            r"\.docsfw-table-caption\s*\{[^}]*margin:\s*12px 0 8px",
+            r"\.docsfw-table-caption\s*\{[^}]*margin:\s*16px 0 8px",
+        )
+        self.assertRegex(
+            self.livedocs_style,
+            r"\.md-typeset \.docsfw-table-caption\s*\{[^}]*margin:\s*16px 0 8px",
         )
         self.assertRegex(
             self.style,
