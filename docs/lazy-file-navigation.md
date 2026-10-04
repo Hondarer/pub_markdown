@@ -114,5 +114,5 @@ node bin_test/test_lazy_nav_browser.js
 ```
 
 Puppeteer は既存の Node コンポーネント探索処理で解決します。  
-Python とブラウザーの実行ファイルは、必要に応じて `PYTHON` と `PUPPETEER_EXECUTABLE_PATH` で指定します。  
+Python とブラウザーの実行ファイルは、必要に応じて `BIN_TEST_PYTHON` と `PUPPETEER_EXECUTABLE_PATH` で指定します。  
 生成した局所サイトは一時ディレクトリに配置し、終了時に除去します。

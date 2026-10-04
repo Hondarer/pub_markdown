@@ -217,7 +217,7 @@ class ResolverTest(unittest.TestCase):
                 "Name: " + name + "\nVersion: " + self.pinned[name][2:] + "\n", encoding="utf-8",
             )
         (self.root / "selected_fixture.py").write_text(
-            "import os, sys; print(sys.executable); print(os.environ['PYTHON']); raise SystemExit(7)\n",
+            "import os, sys; print(sys.executable); print(os.environ['BIN_TEST_PYTHON']); raise SystemExit(7)\n",
             encoding="utf-8",
         )
         environment = dict(os.environ, PYTHONPATH=str(self.root))

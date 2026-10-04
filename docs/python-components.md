@@ -45,7 +45,7 @@ venv 内のパッケージがシステム側より優先されるため、venv �
 
 発行と `make bin-test` は、選択した同じ Python を使用します。  
 文書の準備とアセット配置も、この Python で実行します。  
-スクリプトのテストでは `PYTHON` に選択結果を渡し、Python と Node.js のテストで共有します。  
+スクリプトのテストでは `BIN_TEST_PYTHON` に選択結果を渡し、Python と Node.js のテストで共有します。  
 MkDocs は選択した Python の `-m mkdocs` で実行します。  
 `stopdocs` は設定ファイルの絶対パスで配信を識別するため、システム Python による配信も停止できます。
 

@@ -14,7 +14,7 @@ const components = JSON.parse(execFileSync(process.execPath,
 const puppeteer = require(components.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require(path.join(root, 'bin_internal/browser-launch-options'));
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-nav-item-'));
-const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+const python = process.env.BIN_TEST_PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const themeDir = path.join(root, 'livedocs', 'theme');
 
 function run(command, args, options = {}) {

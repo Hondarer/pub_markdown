@@ -12,7 +12,7 @@ const resolved = JSON.parse(spawnSync(process.execPath,
 const puppeteer = require(resolved.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require('../../bin_internal/browser-launch-options');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-code-expander-'));
-const python = process.env.PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
+const python = process.env.BIN_TEST_PYTHON || path.join(root, 'livedocs/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const longLine = `long-line-${'x'.repeat(240)}`;
 
 function run(command, args, options = {}) {

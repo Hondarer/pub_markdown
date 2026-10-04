@@ -232,7 +232,7 @@ def main():
         if args.run or args.run_script:
             environment = os.environ.copy()
             # Python と Node.js のテストも発行処理と同じ環境を使う。
-            environment["PYTHON"] = python
+            environment["BIN_TEST_PYTHON"] = python
             command = [python, "-m"] + args.run if args.run else [python] + args.run_script
             return run_child(command, environment)
         return 0

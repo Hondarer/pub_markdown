@@ -15,7 +15,7 @@ const resolved = JSON.parse(execFileSync(process.execPath,
 const puppeteer = require(resolved.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require('../bin_internal/browser-launch-options');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-lazy-nav-'));
-const python = process.env.PYTHON || path.join(root, 'livedocs/.venv',
+const python = process.env.BIN_TEST_PYTHON || path.join(root, 'livedocs/.venv',
   process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 
 function pandocFixture() {

@@ -13,7 +13,7 @@ const resolved = JSON.parse(execFileSync(process.execPath,
   [path.join(root, 'bin_internal/resolve-node-components.js')], {encoding: 'utf8'}));
 const puppeteer = require(resolved.paths.puppeteer);
 const {buildBrowserLaunchOptions} = require('../bin_internal/browser-launch-options');
-const python = process.env.PYTHON || path.join(root, 'livedocs/.venv',
+const python = process.env.BIN_TEST_PYTHON || path.join(root, 'livedocs/.venv',
   process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-page-libraries-'));
 const heavy = /docsfw-(?:mermaid|plantuml)-frame\.html|tex-mml-chtml\.js/;
