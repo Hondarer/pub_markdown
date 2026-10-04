@@ -97,40 +97,6 @@ This project uses the following third-party libraries:
 
 - [LibDeflate](https://github.com/SafeteeWoW/LibDeflate) (zlib License) - Copyright (C) 2018-2021 Haoqian He
 
-## 解決済の問題
-
-### 多言語対応時に title を得られない問題
-
-以下のような記載で `--shift-heading-level-by=-1` を指定していても title タグを得ることができません。  
-Pandoc に渡す前に、第 1 レベルの内容を取得して設定しました。  
-(Lua フィルターの段階では、`--shift-heading-level-by=-1` が効果を発揮するため、第 1 レベルの内容は取得できません。)
-
-```html
-<!--ja:-->
-# トップレベルの index
-<!--:ja-->
-<!--en:
-# index of top level
-:en-->
-```
-
-```text
-This document format requires a nonempty <title> element.
-  Defaulting to '-' as the title.
-  To specify a title, use 'title' in metadata or --metadata title="...".
-```
-
-### PlantUML を docx に取り込んだ際のフォント名
-
-SVG ファイルの指定フォントが Sans Serif となっているため、docx に取り込んだ際にフォントが正しく設定されません。  
-`pub_markdown.config.yaml` の `plantuml.format` が SVG の場合は、font-family を、Word で日本語フォントとして解釈されやすい font-family="Segoe UI, メイリオ" に置換するように改修しました。
-
-### 多言語ブロック内に : があると Pandoc が正しく解釈しない問題
-
-旧 replace-tag.sh は、多言語タグを HTML コメントとして本文に残したまま Pandoc に渡していました。  
-このため、多言語ブロック内に定義リスト記法 (`: 定義`) など `:` で始まる行があると、閉じタグや後続の言語ブロックが定義リストの `<dd>` 要素に取り込まれ、出力が破壊されていました。  
-replace-tag.sh を行単位処理に再実装し、タグ行と非対象言語のコンテンツを Pandoc に渡す前に除去するように変更して解消しました。
-
 ## 既知の問題
 
 ### widdershins の問題
@@ -138,10 +104,6 @@ replace-tag.sh を行単位処理に再実装し、タグ行と非対象言語�
 - テンプレートが Slate 向けのため、Pandoc 向けに変更する必要があります (一部作業中)。
 - Request Body のサンプル記述が複数個ある場合に、最初の 1 つしか処理対象とされません (仕様上、複数存在することを想定していません)。
 - operationId が重複した場合に、処理が不正となります。
-
-### caption に改行を含む場合
-
-plantuml の caption に '\n' を含む場合、docx writer で改行が正しく出力されません。
 
 ### 実行時に Error: Failed to launch the browser process! のエラーが発生する場合
 

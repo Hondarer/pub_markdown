@@ -38,6 +38,26 @@ CodeBlock: Sample.txt
 
 CodeBlock: ラベル付きのコード ブロック {#lst:codeblock-caption-label}
 
+## 複数行のキャプション
+
+キャプションを同じ段落内で改行すると、HTML と DOCX の出力でも改行が保持されます。
+
+```text
+hello
+```
+
+CodeBlock: 1 行目のキャプション  
+2 行目のキャプション
+
+最後の行の末尾にラベルを付けると、[@lst:codeblock-caption-multiline] のように本文から参照できます。
+
+```text
+hello
+```
+
+CodeBlock: 1 行目のラベル付きキャプション  
+2 行目のキャプション {#lst:codeblock-caption-multiline}
+
 ## キャプションなし
 
 `text` による出力例。
