@@ -55,11 +55,12 @@ ASSET_EXTENSIONS = (
 MAGIC_FILES = ("pubpart.yaml", "pubchild.yaml", "publocal.yaml")
 
 # bin/vendor_assets.py が配置するファイル。ステージングの掃除対象から外す。
-VENDORED_PREFIXES = ("assets/plantuml/", "assets/mermaid/")
+VENDORED_PREFIXES = ()
 VENDORED_FILES = (
     "assets/docsfw-diagrams.js",
     "assets/docsfw-diagrams.css",
-    "assets/docsfw-plantuml-loader.js",
+    "assets/docsfw-mermaid-frame.html",
+    "assets/docsfw-plantuml-frame.html",
     "assets/docsfw-plantuml-LICENSE.txt",
     "assets/docsfw-theme.js",
     "assets/docsfw-libraries.js",

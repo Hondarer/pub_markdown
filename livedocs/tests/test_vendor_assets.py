@@ -420,9 +420,13 @@ class VendorThemeTest(unittest.TestCase):
             self.assertIn('assets/docsfw-libraries.js', VENDORED_FILES)
             self.assertTrue(os.path.isfile(os.path.join(assets, 'docsfw-libraries.js')))
             self.assertNotIn('  - assets/docsfw-plantuml-loader.js', config)
+            self.assertNotIn('  - assets/docsfw-mermaid-frame.html', config)
+            self.assertNotIn('  - assets/docsfw-plantuml-frame.html', config)
             self.assertNotIn('  - assets/mermaid/mermaid.min.js', config)
             self.assertNotIn('  - https://cdn.jsdelivr.net/npm/mathjax', config)
-            self.assertIn('assets/docsfw-plantuml-loader.js', VENDORED_FILES)
+            self.assertIn('assets/docsfw-mermaid-frame.html', VENDORED_FILES)
+            self.assertIn('assets/docsfw-plantuml-frame.html', VENDORED_FILES)
+            self.assertNotIn('assets/docsfw-plantuml-loader.js', VENDORED_FILES)
 
 
 if __name__ == "__main__":

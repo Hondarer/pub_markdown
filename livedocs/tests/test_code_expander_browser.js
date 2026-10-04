@@ -53,16 +53,6 @@ vendor_mermaid(str(docs / 'assets'), resolved['mermaidJs'])
 window.docsfwDiagramTest = {};
 window.docsfwDiagramTest.mermaid = new Promise(resolve => { window.docsfwDiagramTest.resolveMermaid = resolve; });
 window.docsfwDiagramTest.plantuml = new Promise(resolve => { window.docsfwDiagramTest.resolvePlantuml = resolve; });
-const originalPlantuml = window.docsfwLoadPlantuml;
-window.docsfwLoadPlantuml = async function () {
-  await window.docsfwDiagramTest.plantuml;
-  return originalPlantuml();
-};
-const originalMermaidLoad = window.docsfwLoadMermaid;
-window.docsfwLoadMermaid = async function () {
-  await window.docsfwDiagramTest.mermaid;
-  return originalMermaidLoad();
-};
 """, encoding='utf-8')
 (target / 'mkdocs.yml').write_text("""site_name: Test
 theme:

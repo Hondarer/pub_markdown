@@ -12,7 +12,43 @@ const puppeteer = require('puppeteer');
 const { buildBrowserAssets } = require('./build-browser-assets');
 const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 const root = path.resolve(__dirname, '..');
+const diagramsScript = path.join(root, 'styles/browser/docsfw-diagrams.js');
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-diagrams-'));
+
+function stubFrame(options = {}) {
+  const delay = options.delayMs || 0;
+  const hang = !!options.hang;
+  const fail = options.fail || '';
+  const initError = options.initError || '';
+  const svg = options.svg || '<svg xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 80 40"></svg>';
+  return `<!doctype html><meta charset="utf-8"><body><script>
+    var released = ${options.hold ? 'false' : 'true'};
+    var waiting = [];
+    function emit(data) { parent.postMessage(data, '*'); }
+    window.addEventListener('message', function (event) {
+      if (event.source !== parent) return;
+      var data = event.data || {};
+      if (data.kind === 'release') {
+        released = true;
+        waiting.splice(0).forEach(function (send) { send(); });
+        return;
+      }
+      if (data.kind !== 'render' || typeof data.requestId !== 'string' || typeof data.source !== 'string' ||
+          typeof data.dark !== 'boolean' || typeof data.portable !== 'boolean') return;
+      emit({ kind: 'started', requestId: data.requestId, source: data.source, dark: data.dark, portable: data.portable });
+      var send = function () {
+        setTimeout(function () {
+          ${hang ? '' : fail
+            ? `emit({ kind: 'result', requestId: data.requestId, error: ${JSON.stringify(fail)} });`
+            : `emit({ kind: 'result', requestId: data.requestId, svg: ${JSON.stringify(svg)} });
+          ${options.lateSvg ? `setTimeout(function () { emit({ kind: 'result', requestId: data.requestId, svg: ${JSON.stringify(options.lateSvg)} }); }, 50);` : ''}`}
+        }, ${delay});
+      };
+      if (released) send(); else waiting.push(send);
+    });
+    ${initError ? `emit({ kind: 'init-error', error: ${JSON.stringify(initError)} });` : 'emit({ kind: "ready" });'}
+  </script></body>`;
+}
 const assets = path.join(output, 'assets');
 const source = `---
 title: 図とテーマの検証
@@ -89,8 +125,7 @@ sequenceDiagram
 
 function generate() {
   const resolved = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'resolve-node-components.js')], { encoding: 'utf8' }));
-  buildBrowserAssets(resolved.paths.plantumlCore, assets);
-  fs.copyFileSync(resolved.paths.mermaidJs, path.join(assets, 'mermaid.min.js'));
+  buildBrowserAssets(resolved.paths.plantumlCore, assets, resolved.paths.mermaidJs);
   for (const name of ['html-style.css', 'docsfw-ui.css', 'docsfw-nav.js']) {
     fs.copyFileSync(path.join(root, 'styles/html', name), path.join(assets, name));
   }
@@ -107,12 +142,12 @@ function generate() {
     const temporaryTemplate = path.join(output, template);
     fs.writeFileSync(temporaryTemplate, content);
     const args = ['sample.md', '-s', '-t', 'html', '--toc', '--template', temporaryTemplate,
-      '-c', 'assets/html-style.css', '-M', 'mermaid-js=assets/mermaid.min.js',
+      '-c', 'assets/html-style.css', '-M', 'mermaid-js=assets/docsfw-mermaid-frame.html',
       '-M', 'docsfw-ui-enable=true', '-M', 'search-base=assets/'];
     for (const filter of ['codeblock-caption-line', 'plantuml', 'mermaid', 'admonition', 'html-browser']) {
       args.push('--lua-filter', path.join(__dirname, 'pandoc-filters', filter + '.lua'));
     }
-    if (embed) { args.push('--embed-resources'); }
+    if (embed) { args.push('--embed-resources', '-M', 'docsfw-embed-frames=true'); }
     args.push('-o', filename);
     execFileSync('pandoc', args, { cwd: output, stdio: 'pipe', timeout: 120000 });
     const html = fs.readFileSync(path.join(output, filename), 'utf8');
@@ -122,12 +157,23 @@ function generate() {
     assert(!/<img[^>]+(?:puml_|mermaid_)/.test(html));
     assert(html.includes('id="fig:sequence"'));
     assert(html.includes('id="fig:flow"'));
+    assert(!html.includes('docsfw-plantuml-loader.js'), filename);
+    assert(!html.includes('src="assets/mermaid.min.js"'), filename);
+    if (embed) {
+      assert(html.includes('type="text/plain"'), filename);
+      assert(html.includes('id="docsfw-mermaid-frame"'), filename);
+      assert(html.includes('id="docsfw-plantuml-frame"'), filename);
+      assert(html.includes('DOCSFW_FRAME_SCRIPT_END_7f3a9c'), filename);
+      assert(!html.includes('<script src="assets/docsfw-mermaid-frame.html"></script>'), filename);
+    } else {
+      assert(!html.includes('id="docsfw-mermaid-frame"'), filename);
+    }
   }
   assert(!fs.readdirSync(output).some(name => /^puml_|^mermaid_/.test(name)));
   fs.writeFileSync(path.join(output, 'clip.html'), `<!doctype html>
 <html lang="ja"><head><meta charset="utf-8">
-<script src="assets/docsfw-plantuml-loader.js"></script>
-<script src="assets/docsfw-diagrams.js"></script>
+<link rel="stylesheet" href="assets/docsfw-diagrams.css">
+<script defer src="assets/docsfw-diagrams.js"></script>
 </head>
 <body data-md-color-scheme="default">
 <div class="docsfw-plantuml">@startmindmap
@@ -135,6 +181,18 @@ function generate() {
 ** test2
 ** test3
 @endmindmap</div>
+</body></html>
+`);
+  fs.writeFileSync(path.join(output, 'measure.html'), `<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<link rel="stylesheet" href="assets/docsfw-diagrams.css">
+<script defer src="assets/docsfw-diagrams.js"></script>
+</head>
+<body data-md-color-scheme="default">
+<div class="docsfw-mermaid">flowchart LR
+  A["日本語の長いラベルが折り返しと寸法を確認します"] --> B["1行目<br/>2行目"]
+  click A "https://example.com/docsfw" "詳細"
+</div>
 </body></html>
 `);
   // 狭い画面の配色ボタン確認は、PlantUML の再描画と重ねない。
@@ -167,6 +225,11 @@ async function settled(page) {
 
 async function exercise(page, url, name) {
   await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+  await page.evaluateOnNewDocument(() => {
+    window.__docsfwRaf = 0;
+    const tick = () => { window.__docsfwRaf += 1; requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
   const moduleRequests = [];
   const recordModule = request => {
     if (request.resourceType() === 'script' && request.frame() !== page.mainFrame()) {
@@ -183,6 +246,20 @@ async function exercise(page, url, name) {
   assert(moduleRequests.some(url => url.startsWith('blob:')), 'PlantUML module must load from a Blob URL');
   assert(!moduleRequests.some(url => url.startsWith('data:')), 'PlantUML must not import a data URL');
   assert.equal(await page.$$eval('.docsfw-mermaid > svg', nodes => nodes.length), 2);
+  const parentApis = await page.evaluate(() => ({
+    mermaid: typeof window.mermaid,
+    plantuml: typeof window.docsfwLoadPlantuml,
+    raf: window.__docsfwRaf,
+  }));
+  assert.equal(parentApis.mermaid, 'undefined', name);
+  assert.equal(parentApis.plantuml, 'undefined', name);
+  assert(parentApis.raf > 5, name + ' parent raf ' + parentApis.raf);
+  const measured = await page.$eval('.docsfw-mermaid > svg', svg => {
+    const box = svg.viewBox.baseVal;
+    return { text: svg.textContent, width: box.width, height: box.height };
+  });
+  assert(measured.text.includes('開始'), name + ' ' + measured.text);
+  assert(measured.width > 0 && measured.height > 0, JSON.stringify(measured));
   assert(await page.$eval('.docsfw-diagram--error', el => el.textContent.includes('Salt')));
   assert.equal(await page.$$eval('.plantuml-figure .docsfw-diagram-toolbar', nodes => nodes.length), 1);
   assert.equal(await page.$$eval('.plantuml-figure .docsfw-diagram-action', nodes => nodes.length), 3);
@@ -373,19 +450,22 @@ async function exercise(page, url, name) {
 async function race(page) {
   await page.goto('about:blank');
   await page.setContent('<body data-md-color-scheme="default"><main id="docsfw-content"><div class="docsfw-plantuml">@startuml\nA -> B\n@enduml</div></main></body>');
-  await page.evaluate(() => {
+  await page.evaluate(srcdoc => {
     window.calls = [];
-    window.docsfwLoadPlantuml = async () => ({ renderToString(source, ok, fail, options) {
-      window.calls.push(options.dark);
-      setTimeout(() => ok('<svg xmlns="http://www.w3.org/2000/svg"><text>' + options.dark + '</text></svg>'), 100);
-    } });
-  });
-  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+    window.addEventListener('message', event => {
+      if (event.data && event.data.kind === 'started') window.calls.push(event.data.dark);
+    });
+    window.docsfwDiagramFrames = { plantuml: { srcdoc } };
+  }, stubFrame({
+    delayMs: 100,
+    svg: '<svg xmlns="http://www.w3.org/2000/svg"><text>done</text></svg>',
+  }));
+  await page.addScriptTag({ path: diagramsScript });
   await page.waitForFunction(() => window.calls.length === 1);
   await page.evaluate(() => { document.body.dataset.mdColorScheme = 'slate'; });
   await settled(page);
   assert.deepEqual(await page.evaluate(() => window.calls), [false, true]);
-  assert.equal(await page.$eval('.docsfw-plantuml svg', el => el.textContent), 'true');
+  assert.equal(await page.$eval('.docsfw-plantuml svg', el => el.textContent), 'done');
   console.log('theme change during rendering: passed');
 }
 
@@ -396,25 +476,18 @@ async function diagramStateMatrix(page) {
     '<div class="docsfw-mermaid">flowchart LR\nA --> B</div></main></body>');
   await page.addStyleTag({ path: path.join(root, 'styles/html/html-style.css') });
   await page.addStyleTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.css') });
-  await page.evaluate(() => {
+  await page.evaluate((plantumlFrame, mermaidFrame) => {
     window.matrix = {};
     window.matrix.plantuml = new Promise(resolve => { window.matrix.resolvePlantuml = resolve; });
     window.matrix.mermaid = new Promise(resolve => { window.matrix.resolveMermaid = resolve; });
-    window.docsfwLoadPlantuml = async () => {
-      await window.matrix.plantuml;
-      return { renderToString(lines, ok) {
-        ok('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120"></svg>');
-      } };
+    window.docsfwDiagramTest = { plantuml: window.matrix.plantuml, mermaid: window.matrix.mermaid };
+    window.docsfwDiagramFrames = {
+      plantuml: { srcdoc: plantumlFrame },
+      mermaid: { srcdoc: mermaidFrame },
     };
-    window.mermaid = {
-      initialize() {},
-      async render() {
-        await window.matrix.mermaid;
-        return { svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="200" viewBox="0 0 400 200"></svg>' };
-      },
-    };
-  });
-  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+  }, stubFrame({ svg: '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120"></svg>' }),
+    stubFrame({ svg: '<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="200" viewBox="0 0 400 200"></svg>' }));
+  await page.addScriptTag({ path: diagramsScript });
   await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-svg-download.js') });
 
   async function states() {
@@ -488,21 +561,24 @@ async function sequentialAfterDomReady(page) {
   await page.setContent('<body data-md-color-scheme="default"><main style="padding-top: 2000px">' +
     ['A', 'B', 'C'].map(name => '<div class="docsfw-plantuml">@startuml\n' + name + ' -> X\n@enduml</div>').join('') +
     '</main></body>');
-  await page.evaluate(() => {
+  await page.evaluate(srcdoc => {
     window.calls = [];
     window.activeCalls = 0;
     window.maxActiveCalls = 0;
-    window.docsfwLoadPlantuml = async () => ({ renderToString(source, ok) {
-      window.calls.push(source.find(line => line.includes(' -> ')).split(' ')[0]);
-      window.activeCalls += 1;
-      window.maxActiveCalls = Math.max(window.maxActiveCalls, window.activeCalls);
-      setTimeout(() => {
+    window.addEventListener('message', event => {
+      const data = event.data || {};
+      if (data.kind === 'started') {
+        window.activeCalls += 1;
+        window.maxActiveCalls = Math.max(window.maxActiveCalls, window.activeCalls);
+        const match = data.source.match(/^([A-C]) -> /m);
+        window.calls.push(match ? match[1] : data.source);
+      } else if (data.kind === 'result') {
         window.activeCalls -= 1;
-        ok('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-      }, 20);
-    } });
-  });
-  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+      }
+    });
+    window.docsfwDiagramFrames = { plantuml: { srcdoc } };
+  }, stubFrame({ delayMs: 20 }));
+  await page.addScriptTag({ path: diagramsScript });
   await settled(page);
   const result = await page.evaluate(() => ({
     calls: window.calls,
@@ -524,19 +600,14 @@ async function engineFailure(page) {
     '<div class="docsfw-plantuml">@startuml\nC -> D\n@enduml</div>' +
     '<div class="docsfw-mermaid">flowchart LR\n  A[start] --> B[end]</div>' +
     '</main></body>');
-  await page.evaluate(() => {
-    // 隠し iframe 側の engine import が失敗した状況を模す。
-    window.docsfwLoadPlantuml = () => Promise.reject(new Error('engine import failed in sandboxed frame'));
-    window.mermaid = {
-      initialize() {},
-      async render(id, source, host) {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        host.appendChild(svg);
-        return { svg: svg.outerHTML, bindFunctions: undefined };
-      },
+  await page.evaluate((plantumlFrame, mermaidFrame) => {
+    window.docsfwDiagramFrames = {
+      plantuml: { srcdoc: plantumlFrame },
+      mermaid: { srcdoc: mermaidFrame },
     };
-  });
-  await page.addScriptTag({ path: path.join(root, 'styles/browser/docsfw-diagrams.js') });
+  }, stubFrame({ initError: 'engine import failed in sandboxed frame' }),
+    stubFrame());
+  await page.addScriptTag({ path: diagramsScript });
   await settled(page);
   const result = await page.evaluate(() => ({
     plantumlErrors: [...document.querySelectorAll('.docsfw-plantuml')].map(el => ({
@@ -622,6 +693,377 @@ async function initialSourceAlignment(page, url) {
   console.log('source before diagram rendering: styled and left aligned');
 }
 
+async function measureDiagram(page, url) {
+  await page.goto(url, { waitUntil: 'load' });
+  await settled(page);
+  const display = await page.$eval('.docsfw-mermaid > svg', svg => {
+    const texts = [...svg.querySelectorAll('text, span, foreignObject')].map(node => ({
+      text: node.textContent,
+      width: node.getBBox ? node.getBBox().width : node.getBoundingClientRect().width,
+    }));
+    return {
+      html: svg.innerHTML,
+      width: svg.viewBox.baseVal.width,
+      height: svg.viewBox.baseVal.height,
+      texts,
+    };
+  });
+  assert(display.html.includes('日本語の長いラベル'), display.html.slice(0, 200));
+  assert(display.html.includes('1行目') && display.html.includes('2行目'), display.html.slice(0, 300));
+  assert(/foreignObject/i.test(display.html), 'HTML ラベル');
+  assert(/example\.com\/docsfw/.test(display.html), 'SVG 内リンク');
+  assert(display.width > 0 && display.height > 0, JSON.stringify(display));
+  assert(display.texts.some(item => item.text.includes('日本語') && item.width > 0), JSON.stringify(display.texts));
+  const portable = await page.evaluate(() => window.docsfwDiagramTools.renderSvg(
+    document.querySelector('.docsfw-mermaid'), 'default'));
+  assert(!/foreignObject/i.test(portable), portable.slice(0, 300));
+  assert(portable.includes('日本語の長いラベル'));
+  const parent = await page.evaluate(() => typeof window.mermaid);
+  assert.equal(parent, 'undefined');
+  console.log('mermaid measurement and portable svg: passed ' + url);
+}
+
+function traceOf(page) {
+  return page.evaluate(() => window.docsfwDiagramTrace || []);
+}
+
+async function gateCases(page) {
+  const diagram = '<div class="docsfw-plantuml">@startuml\nA -> B\n@enduml</div>';
+  await page.evaluateOnNewDocument(stub => {
+    window.docsfwDiagramFrames = { plantuml: { srcdoc: stub } };
+  }, stubFrame());
+  const loading = path.join(output, 'gate-loading.html');
+  fs.writeFileSync(loading, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">${diagram}
+<script src="assets/docsfw-diagrams.js"></script></body>`);
+  await page.goto(pathToFileURL(loading).href, { waitUntil: 'load' });
+  await settled(page);
+  let trace = await traceOf(page);
+  const scan = trace.find(item => item.event === 'scan');
+  const loaded = trace.find(item => item.event === 'content-loaded');
+  const paint = trace.find(item => item.event === 'paint-opportunity');
+  const frame = trace.find(item => item.event === 'frame-load');
+  assert.equal(scan.readyState, 'loading', JSON.stringify(trace));
+  assert.notEqual(loaded.readyState, 'loading');
+  assert(scan.time < loaded.time && loaded.time <= paint.time && paint.time <= frame.time, JSON.stringify(trace));
+  console.log('gate loading: passed');
+
+  const deferred = path.join(output, 'gate-defer.html');
+  fs.writeFileSync(deferred, `<!doctype html><head><meta charset="utf-8"><script defer src="assets/docsfw-diagrams.js"></script></head>
+<body data-md-color-scheme="default"><script>window.__dcl = 0; document.addEventListener('DOMContentLoaded', function () { window.__dcl = performance.now(); });</script>
+${diagram}</body>`);
+  await page.goto(pathToFileURL(deferred).href, { waitUntil: 'load' });
+  await settled(page);
+  const deferredResult = await page.evaluate(() => ({ dcl: window.__dcl, trace: window.docsfwDiagramTrace }));
+  assert.equal(deferredResult.trace.find(item => item.event === 'scan').readyState, 'interactive');
+  assert(deferredResult.dcl > 0 && deferredResult.trace.find(item => item.event === 'frame-load').time > deferredResult.dcl,
+    JSON.stringify(deferredResult));
+  console.log('gate interactive before DOMContentLoaded: passed');
+
+  const delayed = path.join(output, 'gate-delayed-defer.html');
+  fs.writeFileSync(delayed, `<!doctype html><head><meta charset="utf-8">
+<script defer src="assets/docsfw-diagrams.js"></script><script defer src="assets/delayed-toc.js"></script></head>
+<body data-md-color-scheme="default">${diagram}<script>
+document.addEventListener('DOMContentLoaded', function () { window.__dcl = performance.now(); });
+</script></body>`);
+  await page.setRequestInterception(true);
+  const delayedToc = request => {
+    if (!request.url().endsWith('/delayed-toc.js')) { request.continue(); return; }
+    setTimeout(() => request.respond({ contentType: 'text/javascript', body:
+      'window.__tocPlaced = performance.now();' }), 400);
+  };
+  page.on('request', delayedToc);
+  try {
+    await page.goto(pathToFileURL(delayed).href, { waitUntil: 'load' });
+    await settled(page);
+    const result = await page.evaluate(() => ({
+      toc: window.__tocPlaced, dcl: window.__dcl, trace: window.docsfwDiagramTrace,
+    }));
+    assert(result.toc > result.trace.find(item => item.event === 'scan').time + 200, JSON.stringify(result));
+    assert(result.trace.find(item => item.event === 'content-loaded').time >= result.dcl, JSON.stringify(result));
+    assert(result.trace.find(item => item.event === 'frame-load').time > result.toc, JSON.stringify(result));
+  } finally {
+    page.off('request', delayedToc);
+    await page.setRequestInterception(false);
+  }
+  console.log('gate waits for delayed defer and toc placement: passed');
+
+  const done = path.join(output, 'gate-done.html');
+  fs.writeFileSync(done, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">${diagram}</body>`);
+  await page.goto(pathToFileURL(done).href, { waitUntil: 'load' });
+  await page.addScriptTag({ path: diagramsScript });
+  await settled(page);
+  assert.equal((await traceOf(page)).find(item => item.event === 'content-loaded').readyState, 'complete');
+  console.log('gate after DOMContentLoaded: passed');
+
+  const during = path.join(output, 'gate-during.html');
+  const script = fs.readFileSync(diagramsScript, 'utf8');
+  const encoded = JSON.stringify(script).replace(/</g, '\\u003c');
+  fs.writeFileSync(during, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">${diagram}
+<script>document.addEventListener('DOMContentLoaded', function () {
+  var element = document.createElement('script');
+  element.textContent = ${encoded};
+  document.body.appendChild(element);
+});</script></body>`);
+  await page.goto(pathToFileURL(during).href, { waitUntil: 'load' });
+  await settled(page);
+  console.log('gate re-entry during DOMContentLoaded: passed');
+  const withoutTiming = await page.evaluateOnNewDocument(() => {
+    const getEntries = performance.getEntriesByType.bind(performance);
+    performance.getEntriesByType = type => type === 'navigation' ? [] : getEntries(type);
+  });
+  try {
+    await page.goto(pathToFileURL(during).href, { waitUntil: 'load' });
+    await settled(page);
+    assert((await traceOf(page)).some(item => item.event === 'frame-load'));
+  } finally {
+    await page.removeScriptToEvaluateOnNewDocument(withoutTiming.identifier);
+  }
+  console.log('gate re-entry without navigation timing: passed');
+}
+
+async function hiddenAndTheme(page) {
+  await page.evaluateOnNewDocument(stub => {
+    let hidden = true;
+    Object.defineProperty(document, 'hidden', { configurable: true, get() { return hidden; } });
+    window.__showDoc = () => { hidden = false; document.dispatchEvent(new Event('visibilitychange')); };
+    window.docsfwDiagramFrames = { plantuml: { srcdoc: stub } };
+    window.__started = [];
+    window.addEventListener('message', event => {
+      if (event.data && event.data.kind === 'started') window.__started.push(event.data);
+    });
+  }, stubFrame());
+  const hiddenPage = path.join(output, 'hidden-theme.html');
+  fs.writeFileSync(hiddenPage, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startuml
+A -> B
+@enduml</div>
+<script src="assets/docsfw-diagrams.js"></script>
+</body>`);
+  await page.goto(pathToFileURL(hiddenPage).href, { waitUntil: 'load' });
+  await page.evaluate(() => {
+    document.body.setAttribute('data-md-color-scheme', 'slate');
+    const block = document.querySelector('.docsfw-plantuml');
+    window.docsfwDiagramTools.showDiagram(block);
+    window.docsfwDiagramTools.renderSvg(block, 'default');
+  });
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const before = await page.evaluate(() => ({
+    frame: !!document.querySelector('iframe'),
+    events: (window.docsfwDiagramTrace || []).map(item => item.event),
+  }));
+  assert.equal(before.frame, false, JSON.stringify(before));
+  assert(!before.events.includes('paint-opportunity'), JSON.stringify(before));
+  await page.evaluate(() => window.__showDoc());
+  await page.waitForFunction(() => window.__started.some(item => item.portable));
+  await settled(page);
+  const started = await page.evaluate(() => window.__started);
+  assert.equal(started[0].dark, true, JSON.stringify(started));
+  assert.equal(started[0].portable, false, JSON.stringify(started));
+  assert(started.some(item => item.portable && item.dark === false), JSON.stringify(started));
+  console.log('hidden tab and pre-start theme: passed');
+}
+
+async function serialAndFailures(page) {
+  await page.evaluateOnNewDocument((plantumlFrame, mermaidFrame) => {
+    window.docsfwDiagramFrames = {
+      plantuml: { srcdoc: plantumlFrame },
+      mermaid: { srcdoc: mermaidFrame },
+    };
+    window.__started = [];
+    window.addEventListener('message', event => {
+      if (event.data && event.data.kind === 'started') window.__started.push(event.data);
+    });
+  }, stubFrame({ hold: true }), stubFrame());
+  const serialPage = path.join(output, 'serial-queue.html');
+  fs.writeFileSync(serialPage, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startuml
+A -> B
+@enduml</div>
+<div class="docsfw-mermaid">flowchart LR
+A --> B</div>
+<script src="assets/docsfw-diagrams.js"></script>
+</body>`);
+  await page.goto(pathToFileURL(serialPage).href, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__started.length === 1);
+  await page.evaluate(() => {
+    window.docsfwDiagramTools.renderSvg(document.querySelector('.docsfw-plantuml'), 'default');
+  });
+  await new Promise(resolve => setTimeout(resolve, 50));
+  let started = await page.evaluate(() => window.__started);
+  assert.equal(started.length, 1, JSON.stringify(started));
+  assert.equal(started[0].portable, false);
+  assert(started[0].source.includes('@startuml'));
+  await page.evaluate(() => window.postMessage({
+    kind: 'result', requestId: 'd1', svg: '<svg id="forged" xmlns="http://www.w3.org/2000/svg"></svg>',
+  }, '*'));
+  await page.evaluate(() => document.querySelector('iframe').contentWindow.postMessage({ kind: 'release' }, '*'));
+  await page.waitForFunction(() => window.__started.some(item => item.portable));
+  await settled(page);
+  started = await page.evaluate(() => window.__started);
+  assert(started.some(item => item.portable), JSON.stringify(started));
+  assert.equal(await page.$('#forged'), null);
+  assert.equal(await page.$$eval('.docsfw-mermaid > svg', nodes => nodes.length), 1);
+  console.log('serial queue, portable request, foreign message: passed');
+}
+
+async function timeoutAndLate(page) {
+  await page.evaluateOnNewDocument((plantumlFrame, mermaidFrame) => {
+    window.docsfwDiagramTimeouts = { init: 2000, render: 400 };
+    window.docsfwDiagramFrames = {
+      plantuml: { srcdoc: plantumlFrame },
+      mermaid: { srcdoc: mermaidFrame },
+    };
+  }, stubFrame({ hang: true }), stubFrame({
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" id="mermaid-ok"></svg>',
+  }));
+  const timeoutPage = path.join(output, 'timeout-queue.html');
+  fs.writeFileSync(timeoutPage, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startuml
+A -> B
+@enduml</div>
+<div class="docsfw-mermaid">flowchart LR
+A --> B</div>
+<script src="assets/docsfw-diagrams.js"></script>
+</body>`);
+  await page.goto(pathToFileURL(timeoutPage).href, { waitUntil: 'load' });
+  await settled(page);
+  const result = await page.evaluate(() => ({
+    plantuml: document.querySelector('.docsfw-plantuml').innerText,
+    mermaid: !!document.querySelector('.docsfw-mermaid > svg'),
+  }));
+  assert(result.plantuml.includes('タイムアウト'), result.plantuml);
+  assert.equal(result.mermaid, true);
+  console.log('timeout advances the queue: passed');
+
+  await page.evaluateOnNewDocument(stub => {
+    window.docsfwDiagramFrames = { plantuml: { srcdoc: stub } };
+  }, stubFrame({
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" id="first"></svg>',
+    lateSvg: '<svg xmlns="http://www.w3.org/2000/svg" id="late"></svg>',
+  }));
+  const latePage = path.join(output, 'late-reply.html');
+  fs.writeFileSync(latePage, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startuml
+A -> B
+@enduml</div>
+<script src="assets/docsfw-diagrams.js"></script>
+</body>`);
+  await page.goto(pathToFileURL(latePage).href, { waitUntil: 'load' });
+  await settled(page);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  const html = await page.$eval('.docsfw-plantuml', node => node.innerHTML);
+  assert(html.includes('id="first"'), html);
+  assert(!html.includes('id="late"'), html);
+  console.log('late reply ignored: passed');
+}
+
+async function missingFrame(page) {
+  await page.evaluateOnNewDocument(() => {
+    window.docsfwDiagramTimeouts = { init: 700, render: 700 };
+  });
+  const missingPage = path.join(output, 'missing-frame.html');
+  fs.writeFileSync(missingPage, `<!doctype html><meta charset="utf-8"><body data-md-color-scheme="default">
+<div class="docsfw-plantuml">@startuml
+A -> B
+@enduml</div>
+<div class="docsfw-mermaid">flowchart LR
+A --> B</div>
+<script src="${pathToFileURL(diagramsScript).href}"></script>
+</body>`);
+  await page.goto(pathToFileURL(missingPage).href, { waitUntil: 'load' });
+  await settled(page);
+  const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(node => node.textContent));
+  assert.equal(errors.length, 2, JSON.stringify(errors));
+  assert(errors.every(text => text.includes('読み込めません') || text.includes('タイムアウト')), JSON.stringify(errors));
+  console.log('missing frame does not stop the queue: passed');
+}
+
+async function paintBeforeDiagram(page, base) {
+  await page.setViewport({ width: 1440, height: 1100 });
+  let held = null;
+  await page.setRequestInterception(true);
+  page.on('request', request => {
+    if (!held && /docsfw-(?:mermaid|plantuml)-frame\.html/.test(request.url())) {
+      held = request;
+      return;
+    }
+    request.continue();
+  });
+  await page.goto(base + '/normal.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => document.querySelector('iframe.docsfw-diagram-frame'), { timeout: 10000 });
+  const atFrame = await page.evaluate(() => {
+    const toc = document.getElementById('docsfw-page-toc');
+    const body = document.getElementById('docsfw-content') || document.querySelector('main') || document.body;
+    return {
+      tocHeight: toc ? toc.getBoundingClientRect().height : 0,
+      tocHidden: !!(toc && toc.hidden),
+      bodyHeight: body.getBoundingClientRect().height,
+      svg: !!document.querySelector('.docsfw-mermaid > svg, .docsfw-plantuml > svg'),
+      trace: (window.docsfwDiagramTrace || []).map(item => item.event),
+    };
+  });
+  assert(atFrame.bodyHeight > 0, JSON.stringify(atFrame));
+  assert(atFrame.tocHeight > 0 && !atFrame.tocHidden, JSON.stringify(atFrame));
+  assert.equal(atFrame.svg, false);
+  assert(atFrame.trace.indexOf('content-loaded') < atFrame.trace.indexOf('paint-opportunity'));
+  assert(atFrame.trace.indexOf('paint-opportunity') < atFrame.trace.indexOf('frame-load'));
+  await page.screenshot({ path: path.join(output, 'before-diagram.png') });
+  await held.continue();
+  await settled(page);
+  console.log('body and toc before diagram frame: passed');
+}
+
+async function parentResponsiveness(page, base) {
+  await page.goto(base + '/measure.html', { waitUntil: 'load' });
+  await settled(page);
+  const frame = page.frames().find(item => item.url().endsWith('/docsfw-mermaid-frame.html'));
+  assert(frame, '実 Mermaid フレーム');
+  // 実エンジンの呼出し中に同期処理を加え、親の応答を確実に観測できる時間を作る。
+  const patched = await frame.evaluate(() => {
+    const render = window.mermaid.render;
+    window.mermaid.render = async function (...args) {
+      parent.postMessage({ kind: 'test-busy' }, '*');
+      // 通知を配送してから同期処理へ入り、通知の IPC バッファリングを測定から除く。
+      await new Promise(resolve => setTimeout(resolve, 100));
+      window.__busyStarted = Date.now();
+      const end = performance.now() + 1500;
+      while (performance.now() < end) { /* フレーム内の重い同期処理 */ }
+      window.__busyEnded = Date.now();
+      parent.postMessage({ kind: 'test-idle' }, '*');
+      return render.apply(this, args);
+    };
+    return window.mermaid.render !== render;
+  });
+  assert(patched, 'Mermaid render の負荷計測フック');
+  await page.evaluate(() => {
+    window.__busy = false;
+    window.addEventListener('message', event => {
+      if (event.data.kind === 'test-busy') window.__busy = true;
+      if (event.data.kind === 'test-idle') window.__busy = false;
+    });
+    const button = document.createElement('button');
+    button.id = 'response-probe';
+    button.textContent = '応答確認';
+    button.style.cssText = 'position:fixed;top:0;left:0;z-index:9999';
+    button.onclick = () => { window.__clickedAt = Date.now(); };
+    document.body.appendChild(button);
+    window.__export = window.docsfwDiagramTools.renderSvg(document.querySelector('.docsfw-mermaid'), 'dark');
+  });
+  await page.waitForFunction(() => window.__busy);
+  await new Promise(resolve => setTimeout(resolve, 250));
+  await page.click('#response-probe');
+  await page.evaluate(() => window.__export);
+  const interval = await frame.evaluate(() => ({ start: window.__busyStarted, end: window.__busyEnded }));
+  const clickedAt = await page.evaluate(() => window.__clickedAt);
+  assert(interval.end - interval.start >= 1500, JSON.stringify(interval));
+  assert(clickedAt >= interval.start, JSON.stringify({ clickedAt, interval }));
+  const result = { clickedAt, interval, responsive: clickedAt < interval.end };
+  fs.writeFileSync(path.join(output, 'parent-responsiveness.json'), JSON.stringify(result, null, 2));
+  // プロセス分離はブラウザーに依存するため、描画中に応答しない環境も計測結果として残す。
+  console.log('parent input during Mermaid execution: ' +
+    (result.responsive ? 'responsive' : 'blocked until frame execution finished'));
+}
+
 async function main() {
   console.log('Artifacts: ' + output);
   generate();
@@ -662,11 +1104,23 @@ async function main() {
     const page = await browser.newPage();
     await page.setViewport({ width: 1440, height: 1100 });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-    await exercise(page, 'http://127.0.0.1:' + server.address().port + '/normal.html', 'http');
+    const base = 'http://127.0.0.1:' + server.address().port;
+    await exercise(page, base + '/normal.html', 'http');
     await diagramStateMatrix(page);
     await race(page);
     await sequentialAfterDomReady(page);
     await engineFailure(page);
+    const schedule = await browser.newPage();
+    await schedule.setViewport({ width: 1440, height: 1100 });
+    await gateCases(schedule);
+    await hiddenAndTheme(await browser.newPage());
+    await serialAndFailures(await browser.newPage());
+    await timeoutAndLate(await browser.newPage());
+    await missingFrame(await browser.newPage());
+    await measureDiagram(await browser.newPage(), pathToFileURL(path.join(output, 'measure.html')).href);
+    await measureDiagram(await browser.newPage(), base + '/measure.html');
+    await paintBeforeDiagram(await browser.newPage(), base);
+    await parentResponsiveness(await browser.newPage(), base);
   } finally {
     await browser.close();
     server.close();

@@ -126,7 +126,8 @@ extra_javascript:
   - assets/docsfw-mathjax.js
   - assets/docsfw-responsive-nav.js
   - assets/docsfw-svg-download.js
-  # 図のエンジンと MathJax は、本文に必要なときだけ上記スクリプトから読み込む。
+  # 図のフレーム HTML は本文に必要なときだけ docsfw-diagrams.js が読む。
+  # MathJax は本文に数式があるときだけ docsfw-mathjax.js が読む。
 
 # Doxygen HTML の静的サーブと単一ページ リンクを先に登録する。
 # 元の Markdown の変更を検知し、1 ファイル単位の軽量なステージングを

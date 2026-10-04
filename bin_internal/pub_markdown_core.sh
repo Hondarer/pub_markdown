@@ -2025,8 +2025,7 @@ for langElement in ${lang}; do
     for details_suffix in "${details_suffixes[@]}"; do
         mkdir -p "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html"
         copy_if_different_timestamp "${htmlStyleSheet}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css"
-        copy_if_different_timestamp "${mermaidScript}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js"
-        node "${SCRIPT_DIR}/build-browser-assets.js" "${DOCSFW_PLANTUML_CORE}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html" || exit 1
+        node "${SCRIPT_DIR}/build-browser-assets.js" "${DOCSFW_PLANTUML_CORE}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html" "${mermaidScript}" || exit 1
         # DOCX ダウンロード リンク用アイコン (docxOutput の設定切り替えで既存 HTML が参照する場合に備えて常時配置する)
         copy_if_different_timestamp "${htmlWordIconSvg}" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-word-icon.svg"
         # ヘッダー左上のロゴ アイコン (ライト/ダーク用の 2 種を常時配置する)
@@ -2262,7 +2261,7 @@ while ((${#_pending_files[@]} > 0)); do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/codeblock-caption.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                            --metadata "mermaid-js=${up_dir}mermaid.min.js" \
+                            --metadata "mermaid-js=${up_dir}docsfw-mermaid-frame.html" \
                             "${crossref_metadata_args[@]}" \
                             "${pandoc_crossref_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/listing-caption-style.lua" \
@@ -2302,7 +2301,8 @@ while ((${#_pending_files[@]} > 0)); do
                                 "${math_method_args[@]}" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                                 --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
-                                --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
+                                --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-mermaid-frame.html" \
+                                --metadata docsfw-embed-frames=true \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                                 2>"$_pm_pandoc_stderr"
@@ -2779,7 +2779,7 @@ while ((${#_pending_files[@]} > 0)); do
                         "${math_method_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                         --template="${htmlTemplate}" -c "${up_dir}html-style.css" \
-                        --metadata "mermaid-js=${up_dir}mermaid.min.js" \
+                        --metadata "mermaid-js=${up_dir}docsfw-mermaid-frame.html" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         "${_nav_title_option[@]}" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
@@ -2818,7 +2818,8 @@ while ((${#_pending_files[@]} > 0)); do
                             "${math_method_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/html-browser.lua" \
                             --template="${htmlSelfContainTemplate}" -c "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/html-style.css" \
-                            --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/mermaid.min.js" \
+                            --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-mermaid-frame.html" \
+                                --metadata docsfw-embed-frames=true \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             "${_nav_title_option[@]}" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \

@@ -216,7 +216,7 @@ Table: 文字種ごとの検索トークン化方式
 - `index.html` はそのディレクトリのノードとして扱います (URL はそのページを指します)
 - 子要素の並びは本文の `\toc` と同じ規則です。ファイルとフォルダーを混在させ、ソース名 (`*.md` / フォルダー名) の大文字小文字を無視したアルファベット順にします (short-title ではなくファイル名基準)
 - ただし、対応するソース ディレクトリに `publocal.yaml` の `order` がある場合は、その順序を優先します (列挙されたものを先頭に、未列挙は名前順で末尾)。詳細は [pubparts.md](pubparts.md) を参照してください
-- 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`
+- 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`、`docsfw-mermaid-frame.html`、`docsfw-plantuml-frame.html`
 
 ブラウザー側の `docsfw-nav.js` は `__DOCSFW_NAV__` を読み込み、`<details>`/`<summary>` で折りたたみツリーを描画します。  
 現在ページは `__DOCSFW_CURRENT__` と URL 照合してハイライトし、祖先ディレクトリを自動展開します。  

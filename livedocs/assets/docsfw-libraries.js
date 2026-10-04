@@ -1,4 +1,5 @@
-// 図・数式が必要になったときだけライブラリを読み込む。
+// 数式が必要になったときだけ MathJax を読み込む。
+// 図のエンジンは親ページで評価せず、docsfw-diagrams.js がフレーム HTML を iframe で読む。
 (function () {
   "use strict";
 
@@ -18,27 +19,7 @@
     return pending.get(absolute);
   };
 
-  window.docsfwLoadMermaid = async function () {
-    // id="mermaid" の見出しも window.mermaid になるため、API を確認する。
-    // see: https://html.spec.whatwg.org/multipage/nav-history-apis.html#named-access-on-the-window-object
-    if (!window.mermaid || typeof window.mermaid.render !== "function") {
-      await window.docsfwLoadScript("mermaid/mermaid.min.js");
-    }
-    if (!window.mermaid || typeof window.mermaid.render !== "function") {
-      throw new Error("Mermaid の描画エンジンを読み込めません。");
-    }
-    return window.mermaid;
+  window.docsfwDiagramFrameUrl = function (kind) {
+    return new URL("docsfw-" + kind + "-frame.html", base).href;
   };
-
-  if (!window.docsfwLoadPlantuml) {
-    var loadPlantuml = async function () {
-      await window.docsfwLoadScript("docsfw-plantuml-loader.js");
-      // ローダーはこの関数を実エンジンの初期化関数で置き換える。
-      if (window.docsfwLoadPlantuml === loadPlantuml) {
-        throw new Error("PlantUML の描画エンジンを読み込めません。");
-      }
-      return window.docsfwLoadPlantuml();
-    };
-    window.docsfwLoadPlantuml = loadPlantuml;
-  }
 })();

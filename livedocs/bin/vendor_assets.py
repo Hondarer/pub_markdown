@@ -3,8 +3,8 @@
 
 配置するものを次に示します。
 
-- ``@plantuml/core`` の JavaScript と WebAssembly (ブラウザー上の PlantUML 描画)
-- ``mermaid`` の ``mermaid.min.js`` (ブラウザー上の Mermaid 描画)
+- ``@plantuml/core`` を埋め込んだ ``docsfw-plantuml-frame.html``
+- ``mermaid.min.js`` を埋め込んだ ``docsfw-mermaid-frame.html``
 - ``livedocs/assets/`` 配下の自前スクリプトとスタイル
 - Doxygen と Git の単一ページ リンク用 SVG、favicon SVG、サイト直下の favicon.ico、および theme 上書き
 - ``livedocs/mkdocs.yml.in`` から生成した ``pages/livedocs/mkdocs.yml``
@@ -168,15 +168,19 @@ def vendor_plantuml(assets_dir, source_dir, env=None):
     return 1
 
 
-def vendor_mermaid(assets_dir, mermaid_js):
-    """``mermaid.min.js`` を配置する。"""
-    if mermaid_js and os.path.isfile(mermaid_js):
-        dst = os.path.join(assets_dir, "mermaid", "mermaid.min.js")
-        return 1 if copy_if_changed(mermaid_js, dst) else 0
-
-    raise FileNotFoundError(
-        "mermaid.min.js is missing; resolve the Node components in framework/docsfw/bin"
+def vendor_mermaid(assets_dir, mermaid_js, env=None):
+    """Mermaid を自己完結フレームへ埋め込む。"""
+    if not mermaid_js or not os.path.isfile(mermaid_js):
+        raise FileNotFoundError(
+            "mermaid.min.js is missing; resolve the Node components in framework/docsfw/bin"
+        )
+    subprocess.run(
+        ["node", os.path.join(DOCSFW_DIR, "bin_internal", "build-browser-assets.js"),
+         "--mermaid", mermaid_js, assets_dir],
+        check=True,
+        env=env,
     )
+    return 1
 
 
 def vendor_own_assets(assets_dir):

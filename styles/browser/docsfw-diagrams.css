@@ -38,6 +38,18 @@
   left: -100000px;
   top: 0;
 }
+/* 描画 iframe はビューポートに重ねて透過する。display:none は Mermaid の文字寸法を変え、
+   ビューポート外は不透明オリジンの requestAnimationFrame を止める。
+   幅と高さは docsfw-diagrams.js がビューポートに合わせて設定する。 */
+.docsfw-diagram-frame {
+  position: fixed;
+  left: 0;
+  top: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
 /* 描画待ちの図は、レイアウトが飛ばないように最小の高さを確保する。
    MkDocs (docsfw-livedocs.css) の同名ルールと見た目を揃えるため、値をここに集約する。
    Pandoc HTML の figure は display: flex; align-items: center; のため、

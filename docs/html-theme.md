@@ -41,15 +41,19 @@ HTML の Lua フィルターは、図ソースをエスケープして `div.docs
 DOCX の画像生成、変換、キャッシュの経路は変更しません。
 
 `bin_internal/pandoc-filters/html-browser.lua` は変換後の図と数式を調べ、テンプレートに必要な資産のメタデータを設定します。  
-資産の基準位置は既存の `mermaid-js` から求めるため、発行 CLI や設定キーの追加はありません。  
+資産の基準位置は既存の `mermaid-js` から求めます。  
+値は `docsfw-mermaid-frame.html` を指し、そのディレクトリが `docsfw-browser-base` になります。  
+単一 HTML だけは、同じフレーム文書をページへ埋め込むため `docsfw-embed-frames` を追加します。  
+通常 HTML と `file://` はこのメタデータを付けず、開始後に兄弟ファイルを読みます。  
 独自テンプレートを使用する場合は、標準テンプレートの `docsfw-browser-base`、`docsfw-has-mermaid`、`docsfw-has-plantuml`、`docsfw-has-math` の読み込み部分も反映してください。
 
 ### 図と数式に必要なライブラリだけを読み込む
 
-Pandoc の標準・簡易テンプレートは、図種に応じたライブラリと、数式がある場合の MathJax だけを読み込みます。  
-MkDocs は `livedocs/assets/docsfw-libraries.js` を常時配置し、PlantUML ローダーと Mermaid を描画時に必要になった段階で取得します。  
-同じ URL の読み込みは Promise を共有するため、図が複数ある場合や配色を変更した場合も、同じライブラリを重複して取得しません。  
-図の描画は共通キューで文書内の先頭から一つずつ処理し、ライブラリの読み込み完了もこのキュー内で待ちます。
+Pandoc の標準・簡易テンプレートは、図があるページに共通の `docsfw-diagrams.js` を置き、数式がある場合だけ MathJax を読み込みます。  
+親ページは `mermaid.min.js` と PlantUML ローダーを評価しません。  
+MkDocs は `livedocs/assets/docsfw-libraries.js` を常時配置し、フレームの URL だけを共通スクリプトへ渡します。  
+エンジンのフレームは、初回の描画開始条件を満たしたあと、そのページに存在する図種だけ取得します。  
+図のないページはフレームを取得せず、配色の変更でも取得済みのフレームを再利用します。
 
 MkDocs の `docsfw-mathjax.js` は、本文に `.arithmatex` がある場合だけ MathJax 3 を取得し、起動完了後に本文を組版します。  
 Material の `document$` によるページ差し替え後も必要時に読み込み、組版は前の処理の完了を待って実行します。  
@@ -65,14 +69,30 @@ Material の `document$` によるページ差し替え後も必要時に読み�
 
 `styles/browser/docsfw-diagrams.js` を Pandoc HTML と MkDocs で共用します。  
 `body` の `data-md-color-scheme` が `slate` ならダーク、それ以外ならライトとして描画します。  
+Pandoc は `body` の直後に、`html` へ付いた配色を `body` へ写します。  
 元ソースを保持し、配色が変わると再描画します。  
 描画中に配色が変わった場合は古い結果を表示せず、最新の配色で描画し直します。  
-DOM 構築直後と描画待ちでは元ソースを左寄せで表示し、描画後の図だけを中央寄せにします。  
-描画後の初期表示は図で、右上のボタンから元ソースとの表示を切り替えます。  
+DOM が読める時点で各図を整形済みの元ソース表示へ置き、`aria-busy` と最小高さ 3rem で位置を保ちます。  
+この段階ではエンジンを読み込みません。  
+初期表示は図で、右上のボタンから元ソースとの表示を切り替えます。  
 ソース表示中に配色が変わっても表示状態を維持し、図へ戻すと現在の配色を反映します。
 
-PlantUML は共有状態を持つため、描画完了まで直列に処理します。  
-DOM 構築完了後、画面内外を問わず文書内の先頭から順に PlantUML を描画します。  
+描画要求は Mermaid と PlantUML で 1 本のキューにまとめ、文書の先頭から 1 枚ずつ処理します。  
+先行する要求の成功または失敗が確定するまで、後続の要求は送りません。  
+配色の変更、表示の切り替え、保存用の描画も同じキューを通ります。  
+最初の要求は、`DOMContentLoaded` の完了を確認してから `requestAnimationFrame` を 2 回重ねたあとに始めます。  
+2 回の `requestAnimationFrame` は描画の機会を挟むためのもので、画面への表示そのものは保証しません。  
+defer 実行中の `interactive` はイベント完了と区別し、navigation エントリの `domContentLoadedEventEnd` も見ます。  
+`interactive` でも後続の defer スクリプトが読み込まれるまでイベントを待ちます。  
+イベントの配送開始を navigation エントリで確認できた場合だけ、次タスクで待機を解除します。  
+エントリが無いときは、`complete` なら完了済みとし、それ以外は `DOMContentLoaded` と予備の `load` 通知を待ちます。  
+非表示のタブでは `requestAnimationFrame` を保留し、表示へ戻ってから開始します。  
+目次の追従、ファイル一覧、画像、検索索引は待ちません。  
+`requestIdleCallback` は使いません。  
+開始前の通常描画は、開始時点の `body` の配色へまとめます。  
+保存用に明示したテーマはまとめずに残します。  
+開始後の再 scan は、この開始条件を再度待ちません。
+
 Mermaid は SVG の viewBox に基づいて表示寸法を 0.875 倍に補正します。  
 PlantUML は線幅が viewBox の外へはみ出さないよう、描画後に viewBox をわずかに広げます。  
 ダウンロードと画像コピーではページの配色にかかわらずライト テーマで描画します。  
@@ -82,17 +102,55 @@ Mermaid の保存・コピー用 SVG は Canvas で PNG に変換できるよう
 描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は `styles/browser/docsfw-diagrams.css` に置き、Pandoc HTML と MkDocs で共用します。  
 Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文全体に広げます。
 
-### PlantUML の描画をメイン スレッドから分離する
+### 両エンジンの描画を iframe へ分離する
 
-`@plantuml/core` のエンジン (`plantuml.js`) は数 MB あり、評価と `renderToString` 呼び出し自体がメイン スレッド上の同期処理になります。  
-文書内の PlantUML 図をすべてメイン スレッドで直接実行すると、描画中に UI の応答が停止したように見え、ブラウザーによっては描画エラーや無応答につながります。  
-これを避けるため、PlantUML の実描画は隠し `<iframe sandbox="allow-scripts">` の中で行います。  
-この `iframe` はページ内で 1 つだけ遅延生成し、`srcdoc` に自己完結した HTML を設定して構築します。外部ファイルや `data-src` によるナビゲーションは行いません。  
-`docsfw-diagrams.js` からは `postMessage` で `{ requestId, lines, dark }` を送り、`iframe` 側は `renderToString` の結果を `{ requestId, svg }` または `{ requestId, error }` として返します。  
-`window.docsfwLoadPlantuml()` が返すオブジェクトの形 (`renderToString(lines, onSuccess, onError, options)`) は変わらないため、`docsfw-diagrams.js` の直列キューや配色切り替えの扱いはこの分離と無関係に動作します。  
-`sandbox="allow-scripts"` は `allow-same-origin` を含めないため、`iframe` は不透明オリジンになり、`postMessage` の相手確認は `event.origin` ではなく `event.source` で行います。  
-Chromium 系ブラウザーでは不透明オリジンの `iframe` が別プロセスに分離されやすく、メイン スレッドの応答性が改善しやすいことを局所検証で確認しています。  
-WebKit 系 (Safari / iOS) が同一文書内の `srcdoc` `iframe` をどこまでプロセスまたはスレッド分離するかは未確認です。改善が見られない場合は、実機での再現手順を添えて報告してください。
+Mermaid の描画と PlantUML のエンジン評価は、それぞれ自己完結したフレーム文書の中で行います。  
+親ページは `mermaid.render` と `renderToString` を呼びません。  
+フレームはエンジンごとに 1 つで、要求のキューは共通です。  
+HTTP と `file://` は、開始条件のあと `iframe.src` でフレーム HTML を読みます。  
+単一 HTML は、実行されない `text/plain` のブロックに同じ文書を埋め、開始後に `srcdoc` へ渡します。  
+埋め込み時の `</script>` は予約語へ置き換え、`srcdoc` に戻す直前に復元します。  
+`sandbox="allow-scripts"` は `allow-same-origin` を含めないため、`iframe` は不透明オリジンになります。  
+親は `event.source` が対象 `iframe` の `contentWindow` であることを確認し、子は `event.source` が `parent` であることを確認します。  
+不透明オリジンでは送信先に `"*"` が必要です。  
+不透明オリジンだけで、すべてのブラウザーが別プロセスで実行するとは扱いません。  
+WebKit 系 (Safari / iOS) のプロセス分離は未確認です。
+
+親から送る描画要求は `{ kind, requestId, source, dark, portable }` です。  
+`source` はエンジンへ渡す描画用ソースで、PlantUML の前処理後のテキストと、表示用の元ソースは分けたままです。  
+`portable` が true のときは保存・コピー用です。  
+フレームは準備ができた時点で `{ kind: "ready" }` を返し、失敗時は `{ kind: "init-error", error }` を返します。  
+描画結果は `{ kind: "result", requestId, svg }` または `{ kind: "result", requestId, error }` です。  
+Mermaid の通常表示は `htmlLabels` を有効にし、`portable` では無効にして `foreignObject` による Canvas の汚染を避けます。  
+表示用と保存用のキャッシュは、テーマと `portable` の組み合わせで区別します。  
+`securityLevel` は `"loose"` です。  
+JavaScript 関数を呼ぶ Mermaid の `click` は、`bindFunctions` を `postMessage` で渡せないため対象外です。  
+SVG の文字列として残るリンクは維持します。
+
+Mermaid はフレーム内の DOM で文字寸法を測ります。  
+`display: none` にすると寸法が変わり、ビューポート外の不透明オリジンでは `requestAnimationFrame` が保留されます。  
+iframe は `position: fixed` でビューポートへ重ね、`opacity: 0`、`pointer-events: none`、`inert`、`aria-hidden` により操作と表示へ影響しないようにします。  
+幅は親の `documentElement.clientWidth` で下限は 320px、高さは 4000px です。  
+フレーム内の本文フォントは `"trebuchet ms", verdana, arial, sans-serif`、大きさは 16px、行送りは `normal` です。  
+測定要素は絶対配置で左上に置き、幅はフレームのビューポートに任せます。  
+フォントの `document.fonts.ready` と、描画前の `requestAnimationFrame` 1 回をフレーム内で待ちます。  
+HTTP、`file://`、`srcdoc` でこの条件は同じです。
+
+iframe 化だけでは、親ページと別プロセスでの実行を保証しません。  
+局所テストは実 Mermaid フレームに 1.5 秒の同期負荷を加え、親ページへのクリック時刻を `parent-responsiveness.json` に記録します。  
+2026-10-04 の headless Edge では、クリックへの応答は同期負荷の完了後でした。  
+本文の先行表示は開始条件で確保しますが、描画中の操作性はブラウザーのプロセス分離に依存します。
+
+フレームの load は準備完了を意味しません。  
+親は `ready` を受け取ってから要求を送ります。  
+初期化のタイムアウトは 30 秒、描画のタイムアウトは 15 秒です。  
+2026-10-04 に headless の Edge、ビューポート幅 1440px、高さ 1100px、`file://` で既存のサンプルを測ると、Mermaid の初回準備は 434ms、フローチャートの描画は 68ms、日本語の複数行ラベルは 60ms、保存用は 55ms でした。  
+PlantUML の準備は 823ms と 728ms、描画は 187ms と 165ms でした。  
+タイムアウトは、この実測の最大 (準備 823ms、描画 187ms) に対して、キャッシュの無い解析と遅い端末を見込んだ余裕です。  
+局所テストは `window.docsfwDiagramTimeouts` の `init` と `render` で上書きできます。  
+初期化の失敗と描画のタイムアウトでは、その要求を失敗させ、元ソースと理由を表示して次の図へ進みます。  
+タイムアウト後のフレームは破棄し、遅れて届く応答は無視します。  
+エンジンが返した描画エラーではフレームを破棄せず、次の図で再利用します。
 
 Salt は同梱するブラウザー版 PlantUML の非対応図種です。  
 HTML 内に非対応の説明と元ソースを表示し、他の図の描画は継続します。  
@@ -102,20 +160,21 @@ Salt の画像が必要な場合は DOCX を使用してください。
 
 ## 直接閲覧と単一 HTML
 
-`bin_internal/build-browser-assets.js` が共通資産と PlantUML のローダーを生成します。  
-PlantUML エンジンを Base64 からバイト列へ復元し、隠し iframe 内で Blob URL のモジュールとして読み込みます。  
-Graphviz と同梱アイコン資産もローダーに含めます。  
+`bin_internal/build-browser-assets.js` が共通資産と、両エンジンの自己完結したフレーム HTML を生成します。  
+フレームは別のローカル JavaScript を読みません。  
+PlantUML エンジンを Base64 からバイト列へ復元し、フレーム内で Blob URL のモジュールとして読み込みます。  
+Graphviz と同梱アイコン資産もフレームに含めます。  
 iPhone の Edge で data URL の import が失敗し、Blob URL では描画できたため、この方式を採用しています。  
 比較条件は [PlantUML の切り分け試験](https://github.com/Hondarer/plantuml-core-test) の試験 09 と 13 を参照してください。  
 Blob URL は追加処理と再描画のため、iframe の破棄まで保持します。  
-ローカルの ES モジュールを相対パスで取得しないため、`file://` での直接閲覧と Pandoc の `--embed-resources` に対応します。  
-上記の隠し `iframe` も `srcdoc` による同一文書内の構築であり、追加のファイルや外部 URL を必要としません。  
+Mermaid は `mermaid.min.js` をフレーム内の classic script として埋め込みます。  
 図の描画のためにサーバーへソースを送信しません。  
-既存の HTML テンプレートが参照する CDN 資産は、この図のローダーとは別です。
+既存の HTML テンプレートが参照する CDN 資産は、このフレームとは別です。
 
 アイコン資産は PlantUML の内部ローダーの完了表にも登録します。  
 `@plantuml/core` を更新する際は、完了表の契約とオフラインのアイコン描画を確認してください。  
-PlantUML のライセンスは、ローダーと同じ場所の `docsfw-plantuml-LICENSE.txt` に配置します。
+PlantUML のライセンスは、フレーム先頭の HTML コメントと、同じ場所の `docsfw-plantuml-LICENSE.txt` に置きます。  
+Mermaid のライセンス表記は、埋め込んだ `mermaid.min.js` の中に残します。
 
 ## 局所検証
 
