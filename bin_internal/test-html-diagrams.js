@@ -126,12 +126,18 @@ sequenceDiagram
 `;
 
 function generate() {
+  for (const [name, width] of [['small', 120], ['wide', 2400]]) {
+    fs.writeFileSync(path.join(output, name + '.drawio.svg'),
+      '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="60" viewBox="0 0 ' + width + ' 60"><rect width="100%" height="100%" fill="lightblue"/></svg>');
+  }
   const resolved = JSON.parse(execFileSync(process.execPath, [path.join(__dirname, 'resolve-node-components.js')], { encoding: 'utf8' }));
   buildBrowserAssets(resolved.paths.plantumlCore, assets, resolved.paths.mermaidJs);
   for (const name of ['html-style.css', 'docsfw-ui.css', 'docsfw-nav.js']) {
     fs.copyFileSync(path.join(root, 'styles/html', name), path.join(assets, name));
   }
-  fs.writeFileSync(path.join(output, 'sample.md'), source);
+  fs.writeFileSync(path.join(output, 'sample.md'), source + '\n' +
+    '![小さい draw.io 図](small.drawio.svg){#fig:drawio-small}\n\n' +
+    '![大きい draw.io 図](wide.drawio.svg){#fig:drawio-wide}\n');
   for (const [template, filename, embed] of [
     ['html-template.html', 'normal.html', false],
     ['html-simple-template.html', 'simple.html', false],
@@ -241,6 +247,20 @@ async function exercise(page, url, name) {
   page.on('request', recordModule);
   await page.goto(url, { waitUntil: 'load' });
   await settled(page);
+  const imageSizes = await page.$$eval('figure[id^="fig:drawio-"]', figures => figures.map(figure => {
+    const image = figure.querySelector('img');
+    const style = getComputedStyle(image);
+    const width = image.getBoundingClientRect().width;
+    const contentWidth = width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) -
+      parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
+    return { id: figure.id, naturalWidth: image.naturalWidth, contentWidth,
+      fits: width <= figure.getBoundingClientRect().width + 1,
+      captionOutside: figure.querySelector('figcaption').getBoundingClientRect().top >= image.getBoundingClientRect().bottom };
+  }));
+  assert.equal(imageSizes.length, 2);
+  assert(imageSizes.every(item => item.fits && item.captionOutside), JSON.stringify(imageSizes));
+  assert(Math.abs(imageSizes[0].contentWidth - 120) < 1, JSON.stringify(imageSizes));
+  assert(imageSizes[1].contentWidth < imageSizes[1].naturalWidth, JSON.stringify(imageSizes));
   const errors = await page.$$eval('.docsfw-diagram--error', nodes => nodes.map(el => el.textContent));
   assert.equal(errors.length, 2, JSON.stringify(errors));
   assert.equal(await page.$$eval('.docsfw-plantuml > svg', nodes => nodes.length), 3);
@@ -270,18 +290,24 @@ async function exercise(page, url, name) {
     for (const block of document.querySelectorAll('.mermaid-figure > .docsfw-mermaid, .plantuml-figure > .docsfw-plantuml')) {
       const host = block.closest('figure');
       const toggle = host.querySelector('.docsfw-diagram-toggle');
+      const captionOutside = () => getComputedStyle(host.querySelector('.docsfw-diagram-toolbar')).borderStyle === 'none' &&
+        getComputedStyle(host).borderStyle === 'none' &&
+        getComputedStyle(block).borderStyle === 'solid' &&
+        host.querySelector('figcaption').getBoundingClientRect().top >= block.getBoundingClientRect().bottom;
+      const diagramCaptionOutside = captionOutside();
       const diagramWidth = host.getBoundingClientRect().width;
       toggle.click();
       await new Promise(resolve => setTimeout(resolve, 0));
       const sourceWidth = host.getBoundingClientRect().width;
+      const sourceCaptionOutside = captionOutside();
       toggle.click();
       await new Promise(resolve => setTimeout(resolve, 0));
-      results.push({ diagramWidth, sourceWidth });
+      results.push({ diagramWidth, sourceWidth, captionOutside: diagramCaptionOutside && sourceCaptionOutside });
     }
     return results;
   });
   assert(captionedWidths.length === 2 && captionedWidths.every(item =>
-    Math.abs(item.diagramWidth - item.sourceWidth) < 1), JSON.stringify(captionedWidths));
+    item.captionOutside && Math.abs(item.diagramWidth - item.sourceWidth) < 1), JSON.stringify(captionedWidths));
   if (name === 'normal') {
     await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
     await page.waitForFunction(() => document.body.dataset.mdColorScheme === 'slate');
@@ -683,11 +709,12 @@ async function initialSourceAlignment(page, url) {
       lineHeight: style.lineHeight,
       sourceBorder: style.borderStyle,
       hostBorder: figure ? getComputedStyle(figure).borderStyle : 'none',
+      blockBorder: getComputedStyle(block).borderStyle,
     };
   }));
   assert(styles.length > 0);
   assert(styles.every(style => style.hasSource && style.align === 'left' && style.background !== 'rgba(0, 0, 0, 0)' &&
-    ((style.hostBorder === 'solid' && style.sourceBorder === 'none') ||
+    ((style.hostBorder === 'none' && style.blockBorder === 'solid' && style.sourceBorder === 'none') ||
       (style.hostBorder === 'none' && style.sourceBorder === 'solid')) &&
     parseFloat(style.paddingLeft) > 0 && /mono|Consolas|Menlo/i.test(style.family) &&
     style.lineHeight === '19px'),

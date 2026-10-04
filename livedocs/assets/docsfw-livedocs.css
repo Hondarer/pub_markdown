@@ -629,7 +629,7 @@
   line-height: 19px;
 }
 
-/* キャプションを持つ図の枠。pandoc 発行版の
+/* キャプションを持つ図の配置。pandoc 発行版の
    ../../styles/html/html-style.css の figure と同じ寸法にする。
    pandoc 発行版と同じく、キャプションを持たない図には付けない。
 
@@ -638,9 +638,8 @@
    横スクロールが効かなくなる。block のまま text-align で中央へ寄せる。 */
 .md-typeset .docsfw-figure {
   display: block;
-  border: 1px solid var(--md-default-fg-color--lighter);
-  border-radius: 3px;
-  padding: 8px;
+  border: none;
+  padding: 0;
   margin: 15px 0;
   text-align: center;
   /* Material の .md-typeset figure は width: fit-content で内容幅まで縮める。
@@ -650,7 +649,7 @@
   max-width: 100%;
 }
 
-/* figure の内余白が図の上下余白と二重にならないようにする。
+/* 図本体の内余白が図の上下余白と二重にならないようにする。
    画像は md_in_html により <p> で包まれるため、段落側も対象にする。 */
 .md-typeset .docsfw-figure > p,
 .md-typeset .docsfw-figure > .docsfw-plantuml,
@@ -663,24 +662,27 @@
   height: auto;
 }
 
-/* ソース表示では figure 自身を単一の枠にし、内側のコード枠を重ねない。 */
-.md-typeset figure.docsfw-diagram-source-host {
+/* 枠は図本体に付け、下側のキャプションを枠の外へ置く。 */
+.md-typeset .docsfw-figure > :not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-dl) {
+  box-sizing: border-box;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 3px;
+  padding: 8px;
+}
+
+/* 画像は原寸を保ち、画像以外の図本体だけを本文幅へ広げる。 */
+.md-typeset .docsfw-figure > :not(img):not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-dl) {
+  width: 100%;
+}
+
+.md-typeset figure.docsfw-diagram-source-host > .docsfw-plantuml[data-docsfw-view],
+.md-typeset figure.docsfw-diagram-source-host > .docsfw-mermaid[data-docsfw-view] {
   padding: 0;
 }
 
-.md-typeset figure.docsfw-diagram-source-host > .docsfw-plantuml:not([data-docsfw-view]),
-.md-typeset figure.docsfw-diagram-source-host > .docsfw-mermaid:not([data-docsfw-view]),
 .md-typeset figure.docsfw-diagram-source-host .docsfw-diagram-source {
   border: none;
   border-radius: 0;
-}
-
-.md-typeset figure.docsfw-diagram-source-host > figcaption {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  padding: 8px;
-  border-top: 1px solid var(--md-default-fg-color--lighter);
 }
 
 .md-typeset .docsfw-plantuml svg,
@@ -738,6 +740,12 @@
   font-feature-settings: normal;
   line-height: 16.5px;
   white-space: nowrap;
+}
+
+/* 開閉用の枠も含め、コード枠からキャプションまでの間隔を 8px にする。 */
+.md-typeset :is(pre, .highlight, .code-copy-shell):has(+ .docsfw-caption:not(.docsfw-table-caption)),
+.md-typeset .highlight:has(+ .docsfw-caption:not(.docsfw-table-caption)) :is(pre, .code-copy-shell) {
+  margin-bottom: 0 !important;
 }
 
 .md-typeset .docsfw-table-caption {

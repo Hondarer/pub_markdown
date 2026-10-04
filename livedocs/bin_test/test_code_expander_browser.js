@@ -38,7 +38,9 @@ long_line = ${JSON.stringify(longLine)}
 md = '\n\n'.join([
     '# Test',
     fence + 'c\n' + long_line + '\nshort\ncode\n' + fence,
+    '<p class="docsfw-caption">短いコードの見出し</p>',
     fence + 'c\n' + long_line + '\nline2\nline3\nline4\nline5\nline6\nline7\n' + fence,
+    '<p class="docsfw-caption">長いコードの見出し</p>',
     fence + 'mermaid\nflowchart LR\n    A --> B\n' + fence,
     '<figure class="docsfw-figure docsfw-diagram-source-host" markdown="1">\n\n' +
         fence + 'plantuml\n@startuml\ncaption 図の見出し\nAlice -> Bob : Hello\n@enduml\n' + fence +
@@ -137,7 +139,7 @@ extra_javascript:
       parseFloat(style.paddingLeft) > 0 && (style.figure ?
         style.marginTop === '0px' && style.marginBottom === '0px' :
         parseFloat(style.marginTop) > 0 && parseFloat(style.marginBottom) > 0) &&
-      (style.figure ? style.border.includes('none') && style.hostBorderStyle === 'solid' :
+      (style.figure ? style.border.includes('solid') && style.hostBorderStyle === 'none' :
         style.border.includes('solid') && style.borderRadius === '3px') &&
       /mono|Consolas|Menlo/i.test(style.family)), JSON.stringify(initialStyles));
     await noScriptPage.close();
@@ -177,8 +179,7 @@ extra_javascript:
     assert(initialStates.every(item => item.margin === '0px' && item.background !== 'rgba(0, 0, 0, 0)'),
       JSON.stringify(initialStates));
     assert(initialStates.every(item => item.hatch === 'none' && item.opacity === '1' &&
-      (item.figure ? item.blockWidth < item.hostWidth && item.hostWidth - item.blockWidth < 20 :
-        Math.abs(item.blockWidth - item.hostWidth) < 1)),
+      Math.abs(item.blockWidth - item.hostWidth) < 1),
       JSON.stringify(initialStates));
     await page.evaluate(() => window.docsfwDiagramTest.resolveMermaid());
     await page.waitForSelector('.docsfw-mermaid > svg');
@@ -251,6 +252,13 @@ extra_javascript:
         const blockRect = block.getBoundingClientRect();
         const centered = Math.abs((svgRect.left + svgRect.width / 2) -
           (blockRect.left + blockRect.width / 2)) < 1;
+        const figure = block.closest('figure');
+        const captionOutside = () => !figure || (
+          getComputedStyle(host.querySelector('.docsfw-diagram-toolbar')).borderStyle === 'none' &&
+          getComputedStyle(figure).borderStyle === 'none' &&
+          getComputedStyle(block).borderStyle === 'solid' &&
+          figure.querySelector('figcaption').getBoundingClientRect().top >= block.getBoundingClientRect().bottom);
+        const diagramCaptionOutside = captionOutside();
         const diagramWidth = host.getBoundingClientRect().width;
         const imageCopyLabel = host.querySelector('.docsfw-diagram-copy').title;
         host.querySelector('.docsfw-diagram-toggle').click();
@@ -262,6 +270,7 @@ extra_javascript:
         host.querySelector('.docsfw-diagram-copy').click();
         await new Promise(resolve => setTimeout(resolve, 0));
         results.push({
+          captionOutside: diagramCaptionOutside && captionOutside(),
           actions: host.querySelectorAll('.docsfw-diagram-action').length,
           initialSvg,
           centered,
@@ -308,11 +317,13 @@ extra_javascript:
     assert(diagramTools.every(item => item.lineHeight ===
       initialStyles[item.expected.startsWith('@start') ? 1 : 0].lineHeight),
     JSON.stringify({initialStyles, diagramTools}));
+    assert(diagramTools.every(item => item.captionOutside), JSON.stringify(diagramTools));
     assert(diagramTools.every(item => {
       const initial = initialStyles[item.expected.startsWith('@start') ? 1 : 0];
-      return item.border === initial.border && item.borderRadius === initial.borderRadius &&
+      return (initial.figure ? item.border.includes('none') && item.borderRadius === '0px' :
+        item.border === initial.border && item.borderRadius === initial.borderRadius) &&
         item.paddingLeft === '16px' && item.family === initial.family && item.fontSize === initial.fontSize &&
-        (initial.figure ? item.hostBorderStyle === 'solid' && item.border.includes('none') :
+        (initial.figure ? item.hostBorderStyle === 'none' && item.border.includes('none') :
           item.hostBorderStyle === 'none' && item.border.includes('solid'));
     }), JSON.stringify({initialStyles, diagramTools}));
     const mermaidCopy = await page.evaluate(async () => {
@@ -442,7 +453,7 @@ extra_javascript:
       assert.equal(info.splitPaddingBottom, 0, JSON.stringify(info));
       assert.equal(info.splitPaddingTop, 0, JSON.stringify(info));
       assert.equal(info.marginTop, '15px', JSON.stringify(info));
-      assert.equal(info.marginBottom, '15px', JSON.stringify(info));
+      assert.equal(info.marginBottom, '0px', JSON.stringify(info));
       assert.equal(info.borderBottomColor,
         scheme === 'default' ? 'rgb(221, 221, 221)' : 'rgba(255, 255, 255, 0.12)');
       assert.equal(info.borderTopColor, info.borderBottomColor);
@@ -606,6 +617,10 @@ extra_javascript:
       );
     }
     assert.deepEqual(errors, []);
+    const captionGaps = await page.$$eval('p.docsfw-caption', captions => captions.map(caption =>
+      caption.getBoundingClientRect().top - caption.previousElementSibling.getBoundingClientRect().bottom));
+    assert.equal(captionGaps.length, 2);
+    assert(captionGaps.every(gap => Math.abs(gap - 8) < 1), JSON.stringify(captionGaps));
     console.log('PASS: MkDocs code expander wrap, threshold, collapse hint, full copy, mermaid skipped, copy hover on code only');
 
     const htmlStyle = fs.readFileSync(path.join(root, 'styles/html/html-style.css'), 'utf8');
@@ -620,8 +635,10 @@ extra_javascript:
     const pandocHtml = '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><style>' +
       htmlStyle + '</style>' + expanderCss + '</head><body><main id="docsfw-content">' +
       '<pre><code>' + longLine + '\nshort\ncode\n</code></pre>' +
+      '<div data-custom-style="Source Code Caption">短いコードの見出し</div>' +
       '<div class="sourceCode"><pre><code>' + longLine +
       '\nline2\nline3\nline4\nline5\nline6\nline7\n</code></pre></div>' +
+      '<div data-custom-style="Source Code Caption">長いコードの見出し</div>' +
       '</main>' + expanderJs + '</body></html>';
     const pandocServer = http.createServer((request, response) => {
       response.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -670,6 +687,10 @@ extra_javascript:
     assert.equal(await copyOpacityAfterHover('.code-expander-scroll'), '1');
     await assertStaysOnScroll(pandocPage, 0, '.docsfw-code-copy', 'pandoc short');
     await assertStaysOnScroll(pandocPage, 1, '.docsfw-code-copy', 'pandoc long');
+    const pandocCaptionGaps = await pandocPage.$$eval('[data-custom-style="Source Code Caption"]', captions =>
+      captions.map(caption => caption.getBoundingClientRect().top - caption.previousElementSibling.getBoundingClientRect().bottom));
+    assert.equal(pandocCaptionGaps.length, 2);
+    assert(pandocCaptionGaps.every(gap => Math.abs(gap - 8) < 1), JSON.stringify(pandocCaptionGaps));
     await pandocPage.close();
     await new Promise((resolve) => pandocServer.close(resolve));
     console.log('PASS: Pandoc/MkDocs code metrics, themes, expander colors, and copy hover');

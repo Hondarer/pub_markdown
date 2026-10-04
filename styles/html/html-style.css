@@ -823,9 +823,8 @@ div.sourceCode > pre {
   min-width: max-content; }
 
 figure {
-  border: 1px solid var(--docsfw-border);
-  border-radius: 3px;
-  padding: 8px;
+  border: none;
+  padding: 0;
   margin-top: 15px;
   margin-bottom: 15px;
   margin-left: 0;
@@ -841,8 +840,25 @@ figcaption {
   line-height: 1.1;
 }
 
-/* ソース表示では figure 自身を単一の枠にし、内側のコード枠を重ねない。 */
-figure.docsfw-diagram-source-host {
+/* 枠は図本体に付け、下側のキャプションを枠の外へ置く。 */
+figure > :not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-dl) {
+  box-sizing: border-box;
+  border: 1px solid var(--docsfw-border);
+  border-radius: 3px;
+  padding: 8px;
+}
+
+/* 画像は原寸を保ち、画像以外の図本体だけを本文幅へ広げる。 */
+figure > :not(img):not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-dl) {
+  width: 100%;
+}
+
+figure > img {
+  width: auto;
+  max-width: 100%;
+}
+
+figure.docsfw-diagram-source-host > :not(figcaption):not(.docsfw-diagram-toolbar):not(.docsfw-svg-dl) {
   padding: 0;
 }
 
@@ -851,15 +867,13 @@ figure.docsfw-diagram-source-host .docsfw-diagram-source {
   border-radius: 0;
 }
 
-figure.docsfw-diagram-source-host > figcaption {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0;
-  padding: 8px;
-  border-top: 1px solid var(--docsfw-border);
+/* コード枠の下余白を取り除き、図・表と同じ 8px をキャプション側に置く。 */
+:is(pre, div.sourceCode, .code-copy-shell):has(+ div[data-custom-style="Source Code Caption"]) {
+  margin-bottom: 0 !important;
 }
 
 div[data-custom-style="Source Code Caption"] {
+  margin-top: 8px;
   text-align: center;
   line-height: 1.1;
 }
