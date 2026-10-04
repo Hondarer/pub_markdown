@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -17,6 +18,12 @@ WORKSPACE = DOCSFW.parents[1]
 
 class LivedocsPathSpacesTest(unittest.TestCase):
     def test_make_livedocs(self):
+        self.run_make_livedocs()
+
+    def test_make_livedocs_with_complete_system_environment(self):
+        self.run_make_livedocs(system_python=sys.executable)
+
+    def run_make_livedocs(self, system_python=None):
         with tempfile.TemporaryDirectory(prefix="livedocs space ") as temp:
             root = Path(temp)
             with open(root / "makefile", "w", encoding="utf-8", newline="\n") as handle:
@@ -35,6 +42,8 @@ class LivedocsPathSpacesTest(unittest.TestCase):
                  "MAKEFW_HOME=" + (WORKSPACE / "framework/makefw").as_posix(),
                  "LIVEDOCS_HOME=" + (DOCSFW / "livedocs").as_posix(),
                  "LIVEDOCS_VENV=" + (root / "venv space").as_posix()]
+            if system_python:
+                command.append("LIVEDOCS_SYSTEM_PYTHON=" + Path(system_python).as_posix())
             result = subprocess.run(
                 command + ["livedocs"],
                 cwd=root, env=dict(os.environ), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -45,8 +54,10 @@ class LivedocsPathSpacesTest(unittest.TestCase):
             self.assertTrue(html.is_file(), result.stdout)
             self.assertIn("A page generated from a workspace with spaces.", html.read_text(encoding="utf-8"))
             self.assertNotIn("Cannot find module", result.stdout)
+            if system_python:
+                self.assertFalse((root / "venv space").exists(), result.stdout)
 
-            # 同じ空白入り venv から配信し、stopdocs がこの配信を識別して停止できるか確認する。
+            # 選択した Python から配信し、stopdocs が空白入り設定パスで停止できるか確認する。
             with socket.socket() as reservation:
                 reservation.bind(("127.0.0.1", 0))
                 port = reservation.getsockname()[1]

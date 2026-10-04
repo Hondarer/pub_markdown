@@ -21,6 +21,7 @@ Markdown の文章や記法を作成・推敲する際に参照します。
 
 - [発行処理の構成](pipeline.md) - 静的発行パイプラインのアーキテクチャーと処理フロー
 - [動的発行基盤](livedocs-design.md) - MkDocs による動的発行基盤 (livedocs) の設計
+- [動的発行の Python 依存](python-components.md) - システム Python の優先、不足分の導入、CI のキャッシュ
 - [発行対象の指定](pubparts.md) - pubpart.mk による発行対象ファイルの構成
 
 ### フレームワークの保守

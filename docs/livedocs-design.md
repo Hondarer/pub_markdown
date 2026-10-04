@@ -1455,15 +1455,16 @@ Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw
 | `servedocs` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`LIVEDOCS_VARIANT` で言語と着地先の詳細度を選ぶ (既定 `ja`)。選んだ言語の通常版と詳細版を同時に配信する |
 | `livedocs` | ステージング後に `mkdocs build` を実行する。`LIVEDOCS_STRICT=1` のときは `--strict` を付ける。バリアントは `servedocs` と同じ |
 | `livedocs-stage` | ステージングとアセット配置だけを実行する。`servedocs` と `livedocs` の前提 |
-| `livedocs-venv` | `livedocs/.venv` を作成し `requirements.txt` の依存を導入する。未作成のときだけ動く |
-| `stopdocs` | このワークスペースの動的発行の venv で動いている `mkdocs serve` を停止する |
+| `livedocs-venv` | システム Python と既存 venv の依存を確認する。不足がある場合だけ、システム側を参照する venv に固定版で補完する |
+| `stopdocs` | このワークスペースの設定ファイルを指定した `mkdocs serve` を停止する |
 | `cleanlivedocs` | serve を停止してから `pages/livedocs/` を削除する |
 
 Table: ルート makefile の動的発行ターゲット一覧
 
 ルートの `make clean` は `cleandocs` を呼び、`cleandocs` と `cleanlivedocs` は削除の前に `stopdocs` を実行します。  
 `mkdocs serve` は `pages/livedocs` を監視し続けるため、Windows では削除対象が busy になり `rm -rf` が失敗します。  
-`stopdocs` はこのワークスペースの動的発行の venv をコマンド ラインに含み、かつ引数がちょうど `serve` であるプロセスとその子孫だけを止めます。  
+`stopdocs` はこのワークスペースの設定ファイルを絶対パスで指定し、かつ引数がちょうど `serve` である MkDocs のプロセスとその子孫だけを止めます。  
+変更前に起動した、設定ファイルの指定がない配信は、従来どおり動的発行の venv のパスで識別します。  
 ポート番号や作業ディレクトリだけでは判定しません。  
 Linux では TERM のあと残っていれば KILL します。プロセス グループ全体へは送りません。`make servedocs` は端末とグループを共有するためです。  
 Windows では SIGTERM がネイティブの python や watchdog に届かず、親だけが先に死ぬとハンドルが残ります。  
@@ -1502,7 +1503,8 @@ Windows では Ctrl+C を Python が受け取り、Git Bash には SIGINT が届
 配信開始後の待機中は表示せず、文書準備とアセット配置の `--quiet` 指定時も追加の進捗を出力しません。  
 全体の百分率や残り時間は推定しません。
 
-Python の依存は `framework/docsfw/livedocs/.venv` に閉じ込め、`requirements.txt` で固定します。
+Python の依存はシステム側を優先し、不足分だけ `framework/docsfw/livedocs/.venv` に固定版で補完します。  
+採用範囲と補完用の固定版、CI のキャッシュは [動的発行の Python 依存](python-components.md) を参照してください。
 
 ### ポートの競合
 

@@ -37,13 +37,20 @@ jobs:
       - name: Configure git safe directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      - name: Identify docsfw Node cache
+        id: docsfw-node-cache
+        run: |
+          echo "node-version=$(node --version)" >> "$GITHUB_OUTPUT"
+          echo "npm-cache=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
       - name: Restore docsfw npm and puppeteer cache
         uses: actions/cache@v5
         with:
           path: |
             bin_internal/node_modules
             .cache/puppeteer
-          key: docsfw-cache-ol8-${{ hashFiles('bin_internal/package-lock.json') }}
+            ${{ steps.docsfw-node-cache.outputs.npm-cache }}
+          key: docsfw-cache-ol8-${{ runner.arch }}-${{ steps.docsfw-node-cache.outputs.node-version }}-${{ hashFiles('bin_internal/package.json', 'bin_internal/package-lock.json') }}
 
       - name: Generate documentation
         run: bin/pub_markdown.sh --workspaceFolder="$GITHUB_WORKSPACE" --details=both --docxOutput=true

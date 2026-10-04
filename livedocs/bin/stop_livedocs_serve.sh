@@ -5,8 +5,8 @@
 # 先に動いていた serve が消えてからステージングする。
 # stopdocs / clean は停止しきれなくても失敗しない。
 #
-# 対象は、動的発行の venv のパスをコマンドラインに含み、かつ引数が
-# ちょうど serve であるプロセスとその子孫に限る。
+# 対象は、このワークスペースの設定ファイルを指定する mkdocs serve とその子孫。
+# 変更前に起動した配信は、動的発行の venv のパスと serve 引数で識別する。
 # ポート番号や作業ディレクトリだけでは判定しない。
 #
 # Windows では SIGTERM がネイティブ子プロセスに届かず、親だけが先に死ぬと
@@ -17,17 +17,23 @@
 set -u
 
 usage() {
-    echo "Usage: $0 --venv <livedocs-venv-dir> [--require-stopped]" >&2
+    echo "Usage: $0 [--venv <livedocs-venv-dir>] [--config <mkdocs.yml>] [--require-stopped]" >&2
     exit 2
 }
 
 venv=""
+config=""
 require_stopped=0
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --venv)
             [ "$#" -ge 2 ] || usage
             venv=$2
+            shift 2
+            ;;
+        --config)
+            [ "$#" -ge 2 ] || usage
+            config=$2
             shift 2
             ;;
         --require-stopped)
@@ -43,7 +49,7 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-[ -n "$venv" ] || usage
+[ -n "$venv" ] || [ -n "$config" ] || usage
 
 # 末尾の区切りを除き、存在するなら絶対パスにする。存在しなくても文字列照合は行う。
 venv=${venv%/}
@@ -62,6 +68,9 @@ is_windows_host() {
             ;;
     esac
 }
+
+windows_host=0
+if is_windows_host; then windows_host=1; fi
 
 # venv パスの表記ゆれ (POSIX、Windows、mixed) を照合用に集める。
 needles=()
@@ -90,6 +99,20 @@ if command -v cygpath >/dev/null 2>&1; then
     add_needle "$(cygpath -m "$venv" 2>/dev/null || true)"
 fi
 
+# 設定ファイルは完全一致で比較し、別のワークスペースを停止しない。
+# 新規起動時は makefile が絶対パスを渡す。表記ゆれは venv と同じ規則で扱う。
+venv_needles=("${needles[@]}")
+needles=()
+add_needle "$config"
+add_needle "${config//\\//}"
+add_needle "${config//\//\\}"
+if [ -n "$config" ] && command -v cygpath >/dev/null 2>&1; then
+    add_needle "$(cygpath -u "$config" 2>/dev/null || true)"
+    add_needle "$(cygpath -w "$config" 2>/dev/null || true)"
+    add_needle "$(cygpath -m "$config" 2>/dev/null || true)"
+fi
+config_needles=("${needles[@]}")
+
 pid_alive() {
     kill -0 "$1" 2>/dev/null
 }
@@ -104,23 +127,57 @@ ppid_of() {
     awk '/^PPid:/{print $2; exit}' "/proc/$1/status" 2>/dev/null
 }
 
-# /proc/<pid>/cmdline の NUL 区切り引数を見て、venv パスと serve サブコマンドを確認する。
+# /proc/<pid>/cmdline の NUL 区切り引数で設定ファイルと serve を確認する。
 # スクリプト名に serve が含まれていても、引数そのものが serve でなければ一致しない。
 is_livedocs_serve() {
     local pid="$1"
     local arg
     local has_venv=0
     local has_serve=0
+    local has_config=0
+    local has_mkdocs=0
+    local config_argument=0
+    local saw_config=0
     local needle
     local cmdline="/proc/$pid/cmdline"
 
     [ -r "$cmdline" ] || return 1
     while IFS= read -r -d '' arg || [ -n "$arg" ]; do
+        # Windows ネイティブプロセスの /proc は引数を囲む引用符を残す場合がある。
+        # 観測した表記だけを正規化し、eval による再解釈は行わない。
+        # see: https://cygwin.com/cygwin-ug-net/proc.html
+        if [ "$windows_host" -eq 1 ] && [[ "$arg" == \"*\" ]]; then
+            arg=${arg#\"}
+            arg=${arg%\"}
+        fi
         if [ "$arg" = "serve" ]; then
             has_serve=1
         fi
+        case "$arg" in
+            mkdocs|*/mkdocs|*/mkdocs.exe|*\\mkdocs.exe)
+                has_mkdocs=1
+                ;;
+        esac
+        if [ "$config_argument" -eq 1 ]; then
+            for needle in "${config_needles[@]}"; do
+                if [ "$arg" = "$needle" ]; then has_config=1; fi
+            done
+            config_argument=0
+        fi
+        case "$arg" in
+            --config-file|-f)
+                config_argument=1
+                saw_config=1
+                ;;
+            --config-file=*)
+                saw_config=1
+                for needle in "${config_needles[@]}"; do
+                    if [ "${arg#--config-file=}" = "$needle" ]; then has_config=1; fi
+                done
+                ;;
+        esac
         if [ "$has_venv" -eq 0 ]; then
-            for needle in "${needles[@]}"; do
+            for needle in "${venv_needles[@]}"; do
                 case "$arg" in
                     *"$needle"*)
                         has_venv=1
@@ -129,11 +186,9 @@ is_livedocs_serve() {
                 esac
             done
         fi
-        if [ "$has_venv" -eq 1 ] && [ "$has_serve" -eq 1 ]; then
-            return 0
-        fi
     done < "$cmdline"
-    return 1
+    [ "$has_mkdocs" -eq 1 ] && [ "$has_serve" -eq 1 ] && \
+        { [ "$has_config" -eq 1 ] || { [ "$has_venv" -eq 1 ] && [ "$saw_config" -eq 0 ]; }; }
 }
 
 list_serve_pids() {

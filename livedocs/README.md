@@ -21,7 +21,9 @@ docx 出力と、2 言語を一度に出す 4 バリアントは静的発行だ�
 make servedocs
 ```
 
-初回は `livedocs/.venv` を作成し、`requirements.txt` の依存を導入します。  
+システム Python に必要な依存が揃っていれば、その Python を使用します。  
+不足がある場合だけ、システム側を参照する `livedocs/.venv` に不足分を導入します。  
+採用する版の範囲、補完用の固定版、CI のキャッシュは [動的発行の Python 依存](../docs/python-components.md) を参照してください。  
 その後、ステージングを行い `mkdocs serve` を起動します。  
 ステージング中は、完了行 `staged:` の前に進行状況を 1 行ずつ出力します。  
 `make servedocs` の実行中は、文書の索引作成、ナビゲーション構築、変換、リンク検査などの進捗を 10 秒周期の英語メッセージで件数表示します。  
@@ -101,6 +103,7 @@ make stopdocs
 | `bin/git_link.py` | Git 由来のページ情報 (blob URL、発行者、発行日時) の解決 |
 | `bin/publish_info.py` | 発行者と発行日時の文字列への整形 |
 | `bin/vendor_assets.py` | アセットの配置と `mkdocs.yml` の生成 |
+| `bin/resolve_python_components.py` | Python 依存の判定、不足分の導入、実行環境の選択 |
 | `bin/livedocs_doxygen_hook.py` | `/doxygen/` の静的サーブと単一ページ リンク |
 | `bin/livedocs_versioned_hook.py` | 再生成中の完成済み版の配信と版切り替え |
 | `bin/stop_livedocs_serve.sh` | このワークスペースの `mkdocs serve` を停止する |
@@ -115,7 +118,8 @@ make stopdocs
 | `assets/docsfw-livedocs.css` | 追加スタイル |
 | `assets/docsfw-header-links.css` | ヘッダー内アイコンのスタイル |
 | `assets/docsfw-header-meta.css` | ヘッダーの発行者と発行日時のスタイル |
-| `requirements.txt` | Python 依存 |
+| `requirements.txt` | 不足分を導入する Python 依存の固定版 |
+| `requirements-compatible.txt` | 既存 Python 環境から採用する版の範囲 |
 
 Table: livedocs スクリプトのファイル構成と役割
 

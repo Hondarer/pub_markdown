@@ -1,5 +1,6 @@
 # mkdocs による動的発行の Python 依存
-# framework/docsfw/livedocs/.venv へ導入します。
+# 不足分を framework/docsfw/livedocs/.venv へ導入する際の固定版です。
+# 既存環境の採用範囲は requirements-compatible.txt に置きます。
 # 導入手順は README.md を参照してください。
 mkdocs==1.6.1
 mkdocs-material==9.7.7
