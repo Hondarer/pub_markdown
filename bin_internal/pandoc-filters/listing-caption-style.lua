@@ -64,9 +64,16 @@ function Div(elem)
 
     -- 先頭のキャプションを custom-style 付きで末尾へ移動する
     elem.content:remove(1)
-    elem.content:insert(pandoc.Div(
+    local caption_div = pandoc.Div(
         caption,
         pandoc.Attr("", {}, { ["custom-style"] = CAPTION_STYLE })
-    ))
+    )
+    -- pandoc-crossref が属性内の改行を SoftBreak に変換するため、表示用の改行へ戻す。
+    caption_div = caption_div:walk({
+        SoftBreak = function()
+            return pandoc.LineBreak()
+        end
+    })
+    elem.content:insert(caption_div)
     return elem
 end

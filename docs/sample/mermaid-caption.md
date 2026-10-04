@@ -29,9 +29,6 @@ CodeBlock: ラベル付きの Mermaid {#fig:mermaid-caption-label}
 
 キャプションを段落内で改行すると、キャプションも複数行で出力されます。
 
-> [!NOTE]
-> 複数行のキャプションは DOCX 出力で結果が崩れるため、非推奨です。
-
 ```mermaid
 sequenceDiagram
     Alice->>John: 複数行キャプションの例

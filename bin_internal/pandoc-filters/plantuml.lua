@@ -665,7 +665,7 @@ return {
                     table.insert(inlines, pandoc.LineBreak())
                 end
                 if #inlines > 0 then table.remove(inlines) end
-                return pandoc.Figure({ block }, inlines,
+                return pandoc.Figure({ block }, pandoc.Caption({ pandoc.Plain(inlines) }),
                     pandoc.Attr(identifier, { "plantuml-figure", "docsfw-diagram-source-host" }))
             end
 
@@ -790,7 +790,6 @@ return {
                 return pandoc.Figure(pandoc.Image("plantuml", image_src, ""))
             end
 
-            -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待通り改行されない。要調査。
             caption = caption:gsub("\\n", "\n")
             local caption_elements = {}
             for line in caption:gmatch("[^\n]+") do
@@ -800,6 +799,8 @@ return {
             end
             -- Remove the last LineBreak
             table.remove(caption_elements)
+            -- インライン列を一つの段落にまとめ、DOCX でも段落内の改行を保持する。
+            local figure_caption = pandoc.Caption({ pandoc.Plain(caption_elements) })
 
             -- identifier は pandoc-crossref の採番に用いる
             local figure_attr = pandoc.Attr(identifier)
@@ -807,9 +808,9 @@ return {
             if display_width and display_height then
                 return pandoc.Figure(pandoc.Image(caption, image_src, "",
                     pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
-                                        {"height", tostring(display_height) .. "px"}})), caption_elements, figure_attr)
+                                        {"height", tostring(display_height) .. "px"}})), figure_caption, figure_attr)
             end
-            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements, figure_attr)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), figure_caption, figure_attr)
         end
     }
 }

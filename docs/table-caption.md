@@ -23,6 +23,12 @@ Table: 表のキャプション {#tbl:sample}
 キャプションの末尾に `{#tbl:xxx}` を記述すると、pandoc-crossref による採番と相互参照の対象になります。  
 ラベルがない場合も、キャプションの位置と表示は同じです。
 
+## 複数行のキャプション
+
+`Table:` に続く同じ段落内で改行すると、HTML、DOCX、MkDocs の出力でも改行が保持されます。  
+ラベルを付ける場合は、最後の行の末尾に `{#tbl:xxx}` を記述します。  
+書き方と出力例は [表のキャプションのサンプル](sample/table-caption.md) を参照してください。
+
 ## HTML の構造
 
 Pandoc HTML と MkDocs は、どちらもキャプション ブロックと `table` が隣り合う構造で出力します。  
@@ -48,6 +54,9 @@ Pandoc HTML では、pandoc-crossref の後に `table-caption-style.lua` を適�
 このフィルターは採番済みのキャプションを `table` の直前へ移し、表の identifier は `table` に残します。  
 pandoc-crossref がない場合も同じフィルターがキャプションを移します。  
 docx 出力にはこのフィルターを適用しません。
+
+`Table:` は Pandoc が一つのキャプション段落として解析し、段落内の改行を保持します。  
+Mermaid と PlantUML で発生していた、インライン列が別々の段落へ変換される問題はありません。
 
 ```text
 pandoc-crossref

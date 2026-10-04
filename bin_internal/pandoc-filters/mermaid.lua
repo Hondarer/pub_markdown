@@ -169,7 +169,7 @@ local function mermaid_html_block(text, caption, identifier)
     end
     return pandoc.Figure(
         { block },
-        caption_to_inlines(caption),
+        pandoc.Caption({ pandoc.Plain(caption_to_inlines(caption)) }),
         pandoc.Attr(identifier or "", { "mermaid-figure", "docsfw-diagram-source-host" })
     )
 end
@@ -464,8 +464,9 @@ return {
                 return pandoc.Figure(pandoc.Image("mermaid", image_src, ""))
             end
 
-            -- TODO: caption に '\n' が含まれる場合の改行処理。構文的には問題なく html では動作するが、docx writer 経由で不要な改行が挿入され期待どおりに改行されない。要調査。
             local caption_elements = caption_to_inlines(caption)
+            -- インライン列を一つの段落にまとめ、DOCX でも段落内の改行を保持する。
+            local figure_caption = pandoc.Caption({ pandoc.Plain(caption_elements) })
 
             -- identifier は pandoc-crossref の採番に使用する
             local figure_attr = pandoc.Attr(identifier)
@@ -473,9 +474,9 @@ return {
             if display_width and display_height then
                 return pandoc.Figure(pandoc.Image(caption, image_src, "",
                     pandoc.Attr("", {}, {{"width", tostring(display_width) .. "px"},
-                                        {"height", tostring(display_height) .. "px"}})), caption_elements, figure_attr)
+                                        {"height", tostring(display_height) .. "px"}})), figure_caption, figure_attr)
             end
-            return pandoc.Figure(pandoc.Image(caption, image_src, ""), caption_elements, figure_attr)
+            return pandoc.Figure(pandoc.Image(caption, image_src, ""), figure_caption, figure_attr)
 
         end
     }
