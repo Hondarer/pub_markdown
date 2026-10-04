@@ -14,6 +14,8 @@ const { buildBrowserLaunchOptions } = require('./browser-launch-options');
 const root = path.resolve(__dirname, '..');
 const diagramsScript = path.join(root, 'styles/browser/docsfw-diagrams.js');
 const output = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-diagrams-'));
+const downloads = path.join(output, 'downloads');
+const downloadBehavior = { policy: 'allow', downloadPath: downloads };
 
 function stubFrame(options = {}) {
   const delay = options.delayMs || 0;
@@ -1064,12 +1066,16 @@ async function parentResponsiveness(page, base) {
     (result.responsive ? 'responsive' : 'blocked until frame execution finished'));
 }
 
-async function main() {
+async function runTests() {
   console.log('Artifacts: ' + output);
   generate();
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || (process.platform === 'win32' ?
     ['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', 'C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(fs.existsSync) : undefined);
-  const launch = () => puppeteer.launch(buildBrowserLaunchOptions({ headless: true, executablePath }));
+  // 既定と個別のコンテキストで、利用者のダウンロード フォルダーへ保存しない。
+  // see: https://pptr.dev/api/puppeteer.downloadbehavior
+  const launch = () => puppeteer.launch(buildBrowserLaunchOptions({
+    headless: true, executablePath, downloadBehavior,
+  }));
   const clipBrowser = await launch();
   try {
     const clipPage = await clipBrowser.newPage();
@@ -1091,7 +1097,7 @@ async function main() {
   try {
     for (const name of ['normal', 'simple', 'standalone']) {
       if (process.env.DOCSFW_TEST_ONLY && name !== process.env.DOCSFW_TEST_ONLY) { continue; }
-      const context = await browser.createBrowserContext();
+      const context = await browser.createBrowserContext({ downloadBehavior });
       try {
         const page = await context.newPage();
         page.on('pageerror', error => console.error('Browser:', error.message.slice(0,500)));
@@ -1124,6 +1130,16 @@ async function main() {
   } finally {
     await browser.close();
     server.close();
+  }
+}
+
+async function main() {
+  fs.mkdirSync(downloads);
+  try {
+    await runTests();
+  } finally {
+    // HTML とスクリーンショットは残し、ダウンロード ファイルだけ削除する。
+    fs.rmSync(downloads, { recursive: true, force: true });
   }
 }
 
