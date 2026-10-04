@@ -50,6 +50,19 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertNotIn('class="docsfw-header"', self.simple)
         self.assertNotIn('id="docsfw-hamburger"', self.simple)
 
+    def test_templates_copy_color_scheme_to_body_before_deferred_diagrams(self):
+        marker = 'document.body.setAttribute("data-md-color-scheme", scheme)'
+        for name, template in (("standard", self.template), ("simple", self.simple)):
+            body = template.index("<body>")
+            copy = template.index(marker)
+            theme = template.index('src="$docsfw-browser-base$docsfw-theme.js"')
+            self.assertLess(theme, body, name)
+            self.assertLess(body, copy, name)
+            script_at = template.rindex("<script>", body, copy)
+            opening = template[script_at:template.index(">", script_at) + 1]
+            self.assertEqual(opening, "<script>", name)
+            self.assertNotIn("$", template[script_at:copy], name)
+
     def test_templates_use_the_pandoc_favicon(self):
         marker = (
             '<link rel="icon" type="image/svg+xml" '
