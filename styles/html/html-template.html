@@ -71,7 +71,15 @@ $if(docsfw-ui-enable)$
 $endif$
 </head>
 <body>
-
+$if(docsfw-browser-base)$
+  <script>
+    // defer の図描画より前に、head で決めた配色を body へ写す。
+    (function () {
+      var scheme = document.documentElement.getAttribute("data-md-color-scheme");
+      if (scheme) { document.body.setAttribute("data-md-color-scheme", scheme); }
+    })();
+  </script>
+$endif$
 
   <header class="docsfw-header" data-docsfw-component="header">
     <nav class="docsfw-header-inner container" aria-label="Header">
