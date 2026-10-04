@@ -184,6 +184,18 @@ local mermaid_svg_font_family = "\'Segoe UI\', Meiryo, \'Hiragino Sans\', \'Hira
 local RSVG_DPI_X = 120
 local RSVG_DPI_Y = 120
 
+-- docx の貼り込み寸法は、これまで Image 属性へ渡していた幅と高さの 80% とする。
+-- 0.875 倍は SVG の width / height に既に入っている。ここでの 0.8 はその後段である。
+-- 幅が本文に収まらない場合の縮小は Pandoc の docx writer が行い、高さは fit-docx-images-to-page.py が行う。
+local DOCX_DISPLAY_SCALE = 0.8
+
+local function scale_docx_display_size(width, height)
+    if not (FORMAT and FORMAT:match("docx") and width and height) then
+        return width, height
+    end
+    return width * DOCX_DISPLAY_SCALE, height * DOCX_DISPLAY_SCALE
+end
+
 --- SVG ファイルのルートタグから表示用の幅と高さ (px) を取得する。
 --- width/height 属性を優先し、なければ viewBox から取得する。
 local function get_svg_display_size(svg_path)
@@ -422,6 +434,7 @@ return {
                 local png_filename = string.format("mermaid_%s.png", utils.sha1(el.text))
                 local png_file_path = paths.join({out_dir, png_filename})
                 display_width, display_height = get_svg_display_size(utf8_to_active_cp(image_file_path))
+                display_width, display_height = scale_docx_display_size(display_width, display_height)
                 if not file_exists(png_file_path) then
                     set_job_phase("Mermaid SVG から PNG への変換: " .. (caption or "名称なし"))
                     local png_temp_path = cache.tempfile(png_filename, resource_dir)
