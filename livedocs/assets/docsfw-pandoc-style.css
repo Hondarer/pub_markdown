@@ -101,13 +101,14 @@ body {
 /* 見出しの自動採番。
    pandoc 発行版は -N (--number-sections) と --shift-heading-level-by=-1 に
    より、Markdown 上の H1 (文書タイトル) を除いた H2 以降に 1 / 1.1 / 1.1.1 ...
-   と番号を振る (framework/docsfw/docs/mpe-heading-numbering.md も参照)。
+   と番号を振る。発行時に H5/H6 の番号を (1)/(a) へ変換する
+   (framework/docsfw/docs/mpe-heading-numbering.md も参照)。
    mkdocs は H1 をページ見出しとして残す構成のため、H1 は対象外のまま
    H2 から CSS カウンターで同じ番号を再現する。 */
-.md-typeset h1 { counter-reset: docsfw-h2; }
-.md-typeset h2 { counter-reset: docsfw-h3; }
-.md-typeset h3 { counter-reset: docsfw-h4; }
-.md-typeset h4 { counter-reset: docsfw-h5; }
+.md-typeset h1 { counter-reset: docsfw-h2 docsfw-h3 docsfw-h4 docsfw-h5 docsfw-h6; }
+.md-typeset h2 { counter-reset: docsfw-h3 docsfw-h4 docsfw-h5 docsfw-h6; }
+.md-typeset h3 { counter-reset: docsfw-h4 docsfw-h5 docsfw-h6; }
+.md-typeset h4 { counter-reset: docsfw-h5 docsfw-h6; }
 .md-typeset h5 { counter-reset: docsfw-h6; }
 
 .md-typeset h2::before {
@@ -127,29 +128,16 @@ body {
 
 .md-typeset h5::before {
   counter-increment: docsfw-h5;
-  content: counter(docsfw-h2) "." counter(docsfw-h3) "." counter(docsfw-h4) "." counter(docsfw-h5) " ";
+  content: "(" counter(docsfw-h5) ") ";
 }
 
 .md-typeset h6::before {
   counter-increment: docsfw-h6;
-  content: counter(docsfw-h2) "." counter(docsfw-h3) "." counter(docsfw-h4) "." counter(docsfw-h5) "." counter(docsfw-h6) " ";
+  content: "(" counter(docsfw-h6, lower-alpha) ") ";
 }
 
-/* ページ内 TOC (右サイドバー) にも同じ番号を振る。
-   partials/toc.html は入れ子の <ul class="md-nav__list"> で見出し階層を
-   表現するため、複数形の counters() で階層を問わず連結できる。
-   H1 は toc.html 側で既定除外されるため、ここでの除外処理は不要。 */
-.md-nav--secondary .md-nav__list {
-  counter-reset: docsfw-toc-num;
-}
-
-.md-nav--secondary .md-nav__item {
-  counter-increment: docsfw-toc-num;
-}
-
-.md-nav--secondary .md-nav__item > .md-nav__link .md-ellipsis::before {
-  content: counters(docsfw-toc-num, ".") " ";
-}
+/* 目次の番号は livedocs_heading_numbering_hook.py が本文の見出しレベルから
+   挿入する。階層を飛ばした文書や目次の深さ制限でも本文と一致する。 */
 
 /* ------------------------------------------------------------------------ */
 /* 段落・リスト                                                              */

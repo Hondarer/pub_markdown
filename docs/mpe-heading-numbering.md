@@ -32,19 +32,19 @@ VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示�
 /*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
 
 h1 {
-  counter-reset: chapter;
+  counter-reset: chapter sub-chapter section sub-section sub-sub-section;
 }
 
 h2 {
-  counter-reset: sub-chapter;
+  counter-reset: sub-chapter section sub-section sub-sub-section;
 }
 
 h3 {
-  counter-reset: section;
+  counter-reset: section sub-section sub-sub-section;
 }
 
 h4 {
-  counter-reset: sub-section;
+  counter-reset: sub-section sub-sub-section;
 }
 
 h5 {
@@ -69,12 +69,12 @@ h5 {
 
   h5::before {
     counter-increment: sub-section;
-    content: counter(chapter) "." counter(sub-chapter) "." counter(section) "." counter(sub-section) " ";
+    content: "(" counter(sub-section) ") ";
   }
 
   h6::before {
     counter-increment: sub-sub-section;
-    content: counter(chapter) "." counter(sub-chapter) "." counter(section) "." counter(sub-section)  "." counter(sub-sub-section) " ";
+    content: "(" counter(sub-sub-section, lower-alpha) ") ";
   }
 }
 ```
@@ -90,20 +90,20 @@ h5 {
 1 見出し2
 1.1 見出し3
 1.1.1 見出し4
-1.1.1.1 見出し5
-1.1.1.1.1 見出し6
+(1) 見出し5
+(a) 見出し6
 ```
 
 ## CSS カウンターの仕組み
 
 ### counter-reset
 
-上位の見出しが出現したとき、下位のカウンターをリセットします。
+上位の見出しが出現したとき、下位のカウンターをリセットします。上位見出しで下位のすべてのカウンターをリセットすることで、見出し階層を飛ばした場合でも初期化漏れを防ぎます。
 
-- `h1` で `chapter` カウンターをリセット
-- `h2` で `sub-chapter` カウンターをリセット
-- `h3` で `section` カウンターをリセット
-- `h4` で `sub-section` カウンターをリセット
+- `h1` で `chapter`、`sub-chapter`、`section`、`sub-section`、`sub-sub-section` カウンターをリセット
+- `h2` で `sub-chapter`、`section`、`sub-section`、`sub-sub-section` カウンターをリセット
+- `h3` で `section`、`sub-section`、`sub-sub-section` カウンターをリセット
+- `h4` で `sub-section`、`sub-sub-section` カウンターをリセット
 - `h5` で `sub-sub-section` カウンターをリセット
 
 ### counter-increment と content
@@ -120,8 +120,8 @@ h5 {
 | h2 | chapter | 1 |
 | h3 | sub-chapter | 1.1 |
 | h4 | section | 1.1.1 |
-| h5 | sub-section | 1.1.1.1 |
-| h6 | sub-sub-section | 1.1.1.1.1 |
+| h5 | sub-section | (1) |
+| h6 | sub-sub-section | (a) |
 
 Table: 見出し階層と CSS カウンター変数の対応一覧
 

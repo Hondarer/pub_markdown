@@ -1206,7 +1206,9 @@ Material の `.md-nav__link` が持つ `margin-top: .625em` を、両側でそ�
 
 節番号はリンクの文字色に従わせます。  
 静的発行は `docsfw-nav.js` の `normalizeTocLinks()` が目次リンクを 1 つのテキスト ノードへ平坦化するため、`span.toc-section-number` は実行時に存在せず、番号はリンクの色になります。  
-動的発行は Material の `::before` にカウンターで番号を出すので、`--md-default-fg-color--light` による独自の色付けをやめて同じ扱いにします。  
+動的発行は、`livedocs_heading_numbering_hook.py` が本文の見出しレベルから番号を求め、`page.toc` のタイトルへ `span.docsfw-toc-number` として挿入します。  
+目次の番号は実体のテキストになり、本文の CSS カウンターと同じ形式で表示されます。  
+`span.docsfw-toc-number` には色を指定せず、`--md-default-fg-color--light` による独自の色付けもしないため、番号はリンクの色になります。  
 これにより、通過済みとアクティブでも番号と本文が同じ色で動きます。
 
 静的発行の目次には Bootstrap の `template.css` (CDN) が `.toc ul > li > a` (0,2,3) で `padding: 3px 15px` を当て、`.toc ul > li > a:hover` で `text-decoration: none` と `background-color: #eeeeee` を当てます。  

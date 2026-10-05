@@ -127,6 +127,7 @@ class HooksDirTest(unittest.TestCase):
         "livedocs_versioned_hook.py",
         "livedocs_autostage_hook.py",
         "livedocs_abstract_hook.py",
+        "livedocs_heading_numbering_hook.py",
         "livedocs_search_hook.py",
     )
 

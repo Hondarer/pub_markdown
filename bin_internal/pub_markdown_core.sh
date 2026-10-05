@@ -1808,6 +1808,25 @@ set_html_lang_attributes() {
     mv "$tmp_file" "$html_file"
 }
 
+# Pandoc が出力した HTML の見出し番号を docsfw の採番形式へ変換する。
+format_html_section_numbers() {
+    local html_file="$1"
+    local tmp_file=""
+
+    if [[ ! -f "$html_file" ]]; then
+        echo "Warning: Html file does not exist: $html_file"
+        return 1
+    fi
+
+    tmp_file=$(mktemp)
+    if ! bash "${SCRIPT_DIR}/format-section-numbers.sh" < "$html_file" > "$tmp_file"; then
+        rm -f "$tmp_file"
+        return 1
+    fi
+
+    mv "$tmp_file" "$html_file"
+}
+
 #-------------------------------------------------------------------
 
 echo "*** pub_markdown_core start $(date -Is)"
@@ -2282,6 +2301,7 @@ while ((${#_pending_files[@]} > 0)); do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    format_html_section_numbers "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                     if [[ "$htmlSelfContainOutput" == "true" ]]; then
                         build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
@@ -2318,6 +2338,7 @@ while ((${#_pending_files[@]} > 0)); do
                             printf "\e[0m"
                         fi
                         rm -f "$_pm_pandoc_stderr"
+                        format_html_section_numbers "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                     fi
                     if [[ "$docxOutput" == "true" ]]; then
@@ -2797,6 +2818,7 @@ while ((${#_pending_files[@]} > 0)); do
                     printf "\e[0m"
                 fi
                 rm -f "$_pm_pandoc_stderr"
+                format_html_section_numbers "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                 set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$langElement"
                 if [[ "$htmlSelfContainOutput" == "true" ]]; then
                     build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-doxygen-icon.svg"
@@ -2836,6 +2858,7 @@ while ((${#_pending_files[@]} > 0)); do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    format_html_section_numbers "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                     set_html_lang_attributes "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" "$langElement"
                 fi
                 if [[ "$docxOutput" == "true" ]]; then

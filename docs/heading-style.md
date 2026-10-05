@@ -10,8 +10,9 @@
 - 静的発行 (`bin_internal/pub_markdown_core.sh` が生成する HTML)
 - 動的発行 (MkDocs が生成する HTML)
 
-docx 出力は対象外です。  
-Word の段落スタイルは `styles/docx/docx-template.dotx` が持ち、印刷媒体の慣習に従うため、この文書の規則を適用しません。
+docx 出力の文字書式は対象外です。  
+Word の段落スタイルは `styles/docx/docx-template.dotx` が持ち、印刷媒体の慣習に従うため、この文書の書式の規則を適用しません。  
+ただし、見出しの採番形式は docx 出力にも揃えます。詳細は「採番との関係」で述べます。
 
 ## 書式
 
@@ -121,13 +122,31 @@ MkDocs 側では、次の Material 既定を打ち消す必要があります。
 
 ## 採番との関係
 
-採番の実装は 2 つの出力で異なりますが、表示される番号は一致します。
+採番の実装は出力ごとに異なりますが、表示される番号形式は一致します。  
+対象は静的発行、動的発行、docx 出力の 3 つです。
 
-- pandoc は `-N` (`--number-sections`) が `<span class="header-section-number">` を実体として出力します。
-- MkDocs は `livedocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` で表示します。
+Markdown の H2 から H6 に対する採番形式は次のとおりです。ページ見出しである H1 は採番しません。
 
-いずれも Markdown の H2 から採番し、H1 は対象外です。  
-番号は見出しの `color` を継承するため、色を変更しても追随します。
+- H2: `1`
+- H3: `1.1`
+- H4: `1.1.1`
+- H5: `(1)`
+- H6: `(a)`
+
+### 出力系統別の採番実装
+
+静的発行 (Pandoc) では、`-N` (`--number-sections`) オプションが出力した番号を、`bin_internal/format-section-numbers.sh` が発行時に変換します。  
+`pub_markdown_core.sh` の `format_html_section_numbers` が、Pandoc で生成した HTML ごとにこのスクリプトを呼び出します。  
+変換の対象は、本文の `<span class="header-section-number">` と目次の `<span class="toc-section-number">` です。見出し要素の `id` とリンク先 (`href`) は変更しません。
+
+動的発行 (MkDocs) では、本文の番号を `livedocs/assets/docsfw-pandoc-style.css` の CSS カウンターが `::before` 疑似要素で表示します。  
+目次の番号は、`livedocs_heading_numbering_hook.py` が本文の見出しレベルから求め、`page.toc` のタイトルへ `<span class="docsfw-toc-number">` として挿入します。
+
+docx 出力では、Pandoc が Markdown の H2 から H6 を Word の見出し 1 から見出し 5 として出力し、`styles/docx/docx-template.dotx` の見出しスタイルに設定した段落番号が番号を表示します。  
+テンプレートは見出し 6 から見出し 9 にも `(i)`、`(A)`、`(I)`、`(ア)` の形式を定義しています。  
+Markdown の見出しは H6 までのため、これらの段は使用しません。Word の 9 段の見出し全体で形式を統一するために定義しています。
+
+HTML 出力では、番号は見出しの `color` を継承するため、色を変更しても追随します。
 
 ## 見出しのアンカー
 
