@@ -11,12 +11,15 @@ import unittest
 
 
 STOP = Path(__file__).resolve().parents[1] / "bin/stop_livedocs_serve.sh"
+# Windows の CreateProcess は PATH より先に System32 を探すため、WSL の bash.exe を避けて PATH から解決する。
+# see: https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw
+BASH = shutil.which("bash") or "bash"
 
 
 class StopServeTest(unittest.TestCase):
     def start_server(self, arguments):
         # 実際に配信せず、コマンドラインと子孫の停止だけを検証する。
-        command = ["bash", "-c", '"$@" & wait', "fixture", sys.executable, "-c",
+        command = [BASH, "-c", '"$@" & wait', "fixture", sys.executable, "-c",
                    "import time; print('ready', flush=True); time.sleep(120)"] + arguments
         server = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                   start_new_session=os.name != "nt",
@@ -38,7 +41,7 @@ class StopServeTest(unittest.TestCase):
         server.stderr.close()
 
     def stop(self, *arguments):
-        result = subprocess.run(["bash", str(STOP)] + list(arguments), capture_output=True,
+        result = subprocess.run([BASH, str(STOP)] + list(arguments), capture_output=True,
                                 text=True, timeout=30, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
