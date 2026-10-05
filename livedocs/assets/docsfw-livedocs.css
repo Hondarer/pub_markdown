@@ -400,7 +400,7 @@
   /* 行の上下はこの幅のものをそのまま使う。Material の
      .md-nav--primary .md-nav__link の padding: 0.6rem 0.8rem がタップ領域を持つ。
      左右は Material が 60em 以上で各リストへ加える 12px を打ち消し、
-     Pandoc と同じく先頭を 16px、子階層を 32px に固定する。
+     Pandoc と同じく先頭を 16px、子階層を 32px、孫階層を 48px に固定する。
      区切り線 (.md-nav__item の border-top) も残し、ファイル一覧からの
      続きとして並べる。 */
   [dir="ltr"] .md-nav--primary .docsfw-combined-toc .md-nav__list {
@@ -421,6 +421,20 @@
   > .md-nav > .md-nav__list > .md-nav__item > .md-nav
   > .md-nav__list > .md-nav__item > .md-nav__link {
     padding-right: 32px;
+  }
+
+  [dir="ltr"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav__link {
+    padding-left: 48px;
+  }
+
+  [dir="rtl"] .md-nav--primary .docsfw-combined-toc
+  > .md-nav > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav
+  > .md-nav__list > .md-nav__item > .md-nav__link {
+    padding-right: 48px;
   }
 
   /* 目次の見出しも行の左端にそろえる。 */
@@ -552,14 +566,14 @@
     overscroll-behavior: contain;
   }
 
-  /* 連続一覧でもページ内目次の子階層を Pandoc と同じ 16px 刻みにする。 */
+  /* 連続一覧でもページ内目次の子階層以下を Pandoc と同じ 16px 刻みにする。 */
   [dir="ltr"] .md-nav--primary .docsfw-combined-toc
-  > .md-nav > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list {
+  > .md-nav > .md-nav__list .md-nav__list {
     padding-left: 16px;
   }
 
   [dir="rtl"] .md-nav--primary .docsfw-combined-toc
-  > .md-nav > .md-nav__list > .md-nav__item > .md-nav > .md-nav__list {
+  > .md-nav > .md-nav__list .md-nav__list {
     padding-right: 16px;
   }
 }

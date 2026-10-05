@@ -604,19 +604,21 @@ class PandocUiContractTest(unittest.TestCase):
         self.assertIn("--docsfw-accent-bg: #ffffff", self.style)
         self.assertIn("--docsfw-accent-bg: #1f2129", self.style)
 
-    def test_default_toc_matches_source_heading_level_three(self):
+    def test_default_toc_matches_source_heading_level_four(self):
         start = self.publisher.index('if [[ "$htmlTocDepth" == "" ]]')
         end = self.publisher.index('\n# 設定ファイルに mathLatexEnable', start)
         setup = self.publisher[start:end]
-        source = '# Title\n\n## Level two\n\n### Level three\n\n#### Level four\n'
-        for configured, includes_four in [("", False), ("3", True)]:
+        source = '# Title\n\n## Level two\n\n### Level three\n\n#### Level four\n\n##### Level five\n'
+        for configured, includes_four, includes_five in [("", True, False), ("2", False, False),
+                                                         ("4", True, True)]:
             result = subprocess.run(
                 [BASH, "-c", 'htmlTocDepth="$1"; htmlTocEnable=true\n' + setup +
                  '\npandoc -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -t html',
                  "test", configured], input=source, text=True, encoding="utf-8", capture_output=True, check=True)
             self.assertIn('id="toc-level-three"', result.stdout)
             self.assertEqual('id="toc-level-four"' in result.stdout, includes_four)
-            self.assertIn('id="level-four"', result.stdout)
+            self.assertEqual('id="toc-level-five"' in result.stdout, includes_five)
+            self.assertIn('id="level-five"', result.stdout)
 
 
 if __name__ == "__main__":

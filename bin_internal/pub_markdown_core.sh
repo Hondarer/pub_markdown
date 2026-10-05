@@ -1109,10 +1109,11 @@ if [[ "$htmlTocEnable" == "" ]]; then
     htmlTocEnable="true"
 fi
 
-# --shift-heading-level-by=-1 の後の深さ 2 は、MkDocs の toc_depth: 3 と対応する。
+# --shift-heading-level-by=-1 の後の深さ 3 は、MkDocs の toc_depth: 4 と対応する。
+# いずれも Markdown の H2 から H4 までを目次に含める。
 # 明示された htmlTocDepth は、従来どおり変換後の見出し深さとして扱う。
 if [[ "$htmlTocDepth" == "" ]]; then
-    htmlTocDepth="2"
+    htmlTocDepth="3"
 fi
 
 # toc 関連オプションの組み立て

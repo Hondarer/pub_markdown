@@ -65,7 +65,7 @@ markdown_extensions:
   - github-callouts
   - toc:
       permalink: true
-      toc_depth: 3
+      toc_depth: 4
       # 見出しの id を GitHub と同じ規則にする。
       # Python-Markdown の既定は非 ASCII を落とすため、日本語見出しへのリンクが切れる。
       slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}

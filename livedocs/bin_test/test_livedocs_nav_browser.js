@@ -36,7 +36,7 @@ function run(command, args, options = {}) {
 function headings() {
   return Array.from({length: 40}, (_, index) =>
     '## Heading ' + (index + 1) + '\n\n本文です。\n' +
-    (index === 0 ? '\n### Nested heading\n\n子見出しです。\n' : '')
+    (index === 0 ? '\n### Nested heading\n\n子見出しです。\n\n#### Deep heading\n\n孫見出しです。\n' : '')
   ).join('\n');
 }
 
@@ -79,7 +79,7 @@ theme:
 markdown_extensions:
   - toc:
       permalink: true
-      toc_depth: 3
+      toc_depth: 4
 extra_css:
   - assets/docsfw-livedocs.css
   - assets/docsfw-pandoc-style.css
@@ -369,7 +369,8 @@ extra_javascript:
           range.selectNodeContents(link);
           return range.getBoundingClientRect().left - drawer.left;
         };
-        return {topLevel: position('Heading 1'), nested: position('Nested heading')};
+        return {topLevel: position('Heading 1'), nested: position('Nested heading'),
+          deep: position('Deep heading')};
       });
     }
 
@@ -403,8 +404,8 @@ extra_javascript:
       await tocPositionPage.waitForSelector('.docsfw-combined-toc');
       const positions = await drawerTocTextPositions(tocPositionPage);
       const expected = width < 1220
-        ? {topLevel: 16, nested: 32}
-        : {topLevel: 24, nested: 40};
+        ? {topLevel: 16, nested: 32, deep: 48}
+        : {topLevel: 24, nested: 40, deep: 56};
       assert.deepEqual(positions, expected,
         width + 'px drawer toc positions ' + JSON.stringify(positions));
       const boundary = await drawerTocBoundaryMetrics(tocPositionPage);
