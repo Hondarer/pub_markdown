@@ -32,6 +32,25 @@ Markdown の H2 から H6 は見出し 1 から見出し 5 になり、HTML 出�
 見出し 6 以降は Markdown から使用しませんが、Word の 9 段の見出し全体で形式を統一するために定義しています。  
 HTML 出力との対応は [見出し書式](heading-style.md) の「採番との関係」を参照してください。
 
+## 見出し配下の字下げ
+
+見出し 4 以降は、段落番号の 1 行目の字下げにより 7.5mm ずつ字下げしています。  
+本文の段落スタイルは見出しのレベルを区別できないため、見出しの配下の本文は発行後の後処理で字下げします。
+
+`bin_internal/pandoc-filters/indent-docx-heading-content.py` は、Pandoc が生成した docx の本文を先頭から読み、直前の見出しの 1 行目の位置を本文の各段落の左インデントへ加算します。  
+加算する値はテンプレートの見出しスタイルと段落番号から求めるため、見出しの字下げを変更すると本文も追従します。  
+見出し 1 から見出し 3 は字下げしないため、その配下の本文も字下げしません。
+
+- 段落、箇条書き、コード ブロック、図、引用、admonition は、スタイルや段落番号が持つ字下げに加算します。
+- 図の画像は、字下げ後の本文幅を超える場合に縦横比を保って縮小します。
+- 表と表のキャプション (`Table Caption`) は字下げしません。Word は中央揃えの表に左インデントを適用しないため、表とキャプションをページ中央にそろえます。
+
+字下げは段落ごとの直接書式として書き込みます。  
+Word で段落スタイルを再適用すると、この字下げは解除されます。
+
+HTML 出力も同じ 7.5mm で字下げします。HTML 出力の実装は [見出し書式](heading-style.md) の「見出し配下の字下げ」を参照してください。  
+HTML 出力の字下げ幅は CSS に直接記載しているため、テンプレートの見出しの字下げを変更する場合は `styles/html/html-style.css` と `livedocs/assets/docsfw-pandoc-style.css` もそろえて変更します。
+
 ## コード スタイルの注意点
 
 Pandoc 3.x の docx writer はインライン コードとハイライトなしコード ブロックの各行に同じ文字スタイル `VerbatimChar` を割り当てます。  
@@ -133,5 +152,6 @@ print('shd in VerbatimChar:', 'w:shd' in m.group(0))
 - `bin_internal/pandoc-filters/admonition.md` - admonition フィルターの仕様説明
 - `bin_internal/pandoc-filters/inline-code-style.lua` - インライン コード スタイル変換フィルター
 - `bin_internal/pandoc-filters/codeblock-caption.lua` - コード キャプション変換フィルター
+- `bin_internal/pandoc-filters/indent-docx-heading-content.py` - 見出し配下の本文を字下げする後処理
 - `styles/html/html-style.css` - HTML 出力のコード スタイル (`code, tt` セレクター)
 - `bin_internal/pub_markdown_core.sh` - Pandoc 呼び出し集約 (フィルター列の登録箇所)

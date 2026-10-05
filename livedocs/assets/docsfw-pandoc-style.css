@@ -98,6 +98,19 @@ body {
   margin-top: 20px;
 }
 
+/* Markdown の H5 以降の見出しと配下の本文を、docx テンプレートの見出しと
+   同じ 7.5mm ずつ字下げする。livedocs_heading_indent_hook.py が見出しにクラスを
+   付け、次の見出しまでの本文を同じクラスの div で囲む (Pandoc 発行版の
+   heading-content-indent.lua と同じ構造)。Material の見出しの margin (0,1,1)
+   より詳細度を上げるため .md-typeset を付ける。 */
+.md-typeset .docsfw-heading-indent-1 {
+  margin-left: 7.5mm;
+}
+
+.md-typeset .docsfw-heading-indent-2 {
+  margin-left: 15mm;
+}
+
 /* 見出しの自動採番。
    pandoc 発行版は -N (--number-sections) と --shift-heading-level-by=-1 に
    より、Markdown 上の H1 (文書タイトル) を除いた H2 以降に 1 / 1.1 / 1.1.1 ...

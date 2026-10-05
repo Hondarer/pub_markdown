@@ -460,6 +460,16 @@ h4, h5, h6 {
   font-size: 17px;
   line-height: 20px; }
 
+/* Markdown の H5 以降の見出しと配下の本文を、docx テンプレートの見出しと
+   同じ 7.5mm ずつ字下げする。heading-content-indent.lua が見出しにクラスを
+   付け、次の見出しまでの本文を同じクラスの div で囲む。
+   表と表のキャプションも div の内側に入るため、字下げした範囲の中央にそろう。 */
+.docsfw-heading-indent-1 {
+  margin-left: 7.5mm; }
+
+.docsfw-heading-indent-2 {
+  margin-left: 15mm; }
+
 /* TOC は Bootstrap の .well (塗りつぶし #F5F5F5、枠 #E3E3E3、角丸、内側の影)
    でカード風になる。mkdocs プレビュー (Material) のサイドバーは
    .md-sidebar { padding: 1.2rem 0 } だけで背景も枠も影も持たないため、

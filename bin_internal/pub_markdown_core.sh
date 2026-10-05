@@ -2294,6 +2294,7 @@ while ((${#_pending_files[@]} > 0)); do
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/table-caption-style.lua" \
                             "${math_method_args[@]}" \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/heading-content-indent.lua" \
                             --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                             2>"$_pm_pandoc_stderr"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then
@@ -2331,6 +2332,7 @@ while ((${#_pending_files[@]} > 0)); do
                                 --metadata "mermaid-js=${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/html/docsfw-mermaid-frame.html" \
                                 --metadata docsfw-embed-frames=true \
                                 --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
+                                --lua-filter="${SCRIPT_DIR}/pandoc-filters/heading-content-indent.lua" \
                                 --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                                 2>"$_pm_pandoc_stderr"
                         if [[ -s "$_pm_pandoc_stderr" ]]; then
@@ -2376,6 +2378,9 @@ while ((${#_pending_files[@]} > 0)); do
                             printf "\e[0m"
                         fi
                         rm -f "$_pm_pandoc_stderr"
+                        python3 "${SCRIPT_DIR}/pandoc-filters/indent-docx-heading-content.py" \
+                            "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                            >/dev/null || true
                         python3 "${SCRIPT_DIR}/pandoc-filters/fit-docx-images-to-page.py" \
                             "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                             >/dev/null 2>/dev/null || true
@@ -2810,6 +2815,7 @@ while ((${#_pending_files[@]} > 0)); do
                         --metadata "mermaid-js=${up_dir}docsfw-mermaid-frame.html" \
                         --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                         "${_nav_title_option[@]}" \
+                        --lua-filter="${SCRIPT_DIR}/pandoc-filters/heading-content-indent.lua" \
                         --wrap=none -t html -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" \
                         2>"$_pm_pandoc_stderr"
                 progress_log "HTML 生成を終了しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
@@ -2851,6 +2857,7 @@ while ((${#_pending_files[@]} > 0)); do
                                 --metadata docsfw-embed-frames=true \
                             --resource-path="${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/$publish_dir" \
                             "${_nav_title_option[@]}" \
+                            --lua-filter="${SCRIPT_DIR}/pandoc-filters/heading-content-indent.lua" \
                             --wrap=none -t html --embed-resources --standalone -o "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html" \
                             2>"$_pm_pandoc_stderr"
                     if [[ -s "$_pm_pandoc_stderr" ]]; then
@@ -2901,6 +2908,9 @@ while ((${#_pending_files[@]} > 0)); do
                         printf "\e[0m"
                     fi
                     rm -f "$_pm_pandoc_stderr"
+                    python3 "${SCRIPT_DIR}/pandoc-filters/indent-docx-heading-content.py" \
+                        "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
+                        >/dev/null || true
                     python3 "${SCRIPT_DIR}/pandoc-filters/fit-docx-images-to-page.py" \
                         "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx" \
                         >/dev/null 2>/dev/null || true

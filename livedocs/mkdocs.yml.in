@@ -141,5 +141,6 @@ hooks:
   - @LIVEDOCS_HOOKS_DIR@/livedocs_autostage_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_abstract_hook.py
   - @LIVEDOCS_HOOKS_DIR@/livedocs_heading_numbering_hook.py
+  - @LIVEDOCS_HOOKS_DIR@/livedocs_heading_indent_hook.py
   # search プラグインの後に動き、索引を通常版と詳細版へ分ける。
   - @LIVEDOCS_HOOKS_DIR@/livedocs_search_hook.py

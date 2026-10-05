@@ -148,6 +148,23 @@ Markdown の見出しは H6 までのため、これらの段は使用しませ�
 
 HTML 出力では、番号は見出しの `color` を継承するため、色を変更しても追随します。
 
+## 見出し配下の字下げ
+
+Markdown の H5 以降の見出しと、次の見出しまでの本文を、1 段ごとに 7.5mm 字下げします。  
+H5 とその本文は 7.5mm、H6 とその本文は 15mm です。H4 以前の見出しと本文は字下げしません。  
+字下げ幅は docx テンプレートの見出し 4 以降の字下げと同じ値です。
+
+HTML 出力では、見出しに `docsfw-heading-indent-N` クラス (H5 が 1、H6 が 2) を付け、次の見出しまでの本文を同じクラスの `div` で囲みます。  
+CSS がこのクラスに左マージンを与えます。  
+見出しは `div` の外に残し、見出し同士を兄弟要素に保ちます。見出しの `id`、CSS カウンター、目次の追従処理が見出しを直接参照するためです。
+
+- 静的発行 (Pandoc) は `bin_internal/pandoc-filters/heading-content-indent.lua` が構造を作り、`styles/html/html-style.css` が字下げします。
+- 動的発行 (MkDocs) は `livedocs_heading_indent_hook.py` が Python-Markdown の treeprocessor を登録して同じ構造を作り、`livedocs/assets/docsfw-pandoc-style.css` が字下げします。
+
+HTML 出力では、表と表のキャプションも `div` の内側に入り、字下げした範囲の中央にそろいます。  
+docx 出力では、Word が中央揃えの表に左インデントを適用しないため、表と表のキャプションだけは字下げしません。  
+docx 出力の実装は [docx テンプレートのスタイル定義](docx-template-styles.md) の「見出し配下の字下げ」を参照してください。
+
 ## 見出しのアンカー
 
 どちらの出力も、見出しの末尾に `¶` のパーマリンクを表示します。  
