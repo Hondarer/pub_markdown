@@ -10,6 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "bin_internal/pandoc-filters/indent-docx-heading-content.py"
+RULE_FILTER = ROOT / "bin_internal/pandoc-filters/horizontal-rule.lua"
 TEMPLATE = ROOT / "styles/docx/docx-template.dotx"
 IMAGE = ROOT / "docs/sample/images/docx-category.png"
 
@@ -49,9 +50,27 @@ Table: caption five
 
 Body six.
 
+---
+
+After rule.
+
+---
+
+##### Second five
+
+Body second.
+
+---
+
 #### Next item
 
 Back to item.
+
+##### Last five
+
+Last body.
+
+---
 """
 
 
@@ -76,7 +95,7 @@ class DocxHeadingIndentTest(unittest.TestCase):
         cls.temporary = tempfile.TemporaryDirectory()
         docx = Path(cls.temporary.name) / "out.docx"
         subprocess.run(["pandoc", "-f", "markdown", "-t", "docx", "--shift-heading-level-by=-1",
-                        "--reference-doc", str(TEMPLATE), "-o", str(docx)],
+                        "--lua-filter", str(RULE_FILTER), "--reference-doc", str(TEMPLATE), "-o", str(docx)],
                        input=MARKDOWN, encoding="utf-8", check=True, capture_output=True)
         with zipfile.ZipFile(docx) as source:
             cls.before = source.read("word/document.xml").decode("utf-8")
@@ -104,6 +123,12 @@ class DocxHeadingIndentTest(unittest.TestCase):
         self.assertEqual(self.block("Body six.")[1], f'w:left="{H6_INDENT}"')
         # 上位の見出しへ戻ると字下げしない。
         self.assertEqual(self.block("Back to item.")[1], "")
+
+    def test_horizontal_rule_uses_the_shallower_indent_of_its_neighbors(self):
+        rules = re.findall(r"<w:p><w:pPr><w:pBdr><w:bottom [^>]*/></w:pBdr>(.*?)</w:pPr></w:p>", self.after)
+        # 本文の途中、H5 の直前、H4 の直前、文書の末尾の順に並ぶ。
+        self.assertEqual(rules, [f'<w:ind w:left="{H6_INDENT}" />', f'<w:ind w:left="{H5_INDENT}" />', "", ""])
+        self.assertEqual(self.block("After rule.")[1], f'w:left="{H6_INDENT}"')
 
     def test_headings_keep_the_template_indent(self):
         for text in ("Level five", "Level six", "Next item"):

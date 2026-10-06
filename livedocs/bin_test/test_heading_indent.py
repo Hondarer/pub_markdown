@@ -1,8 +1,8 @@
 """MkDocs で H5 以降の見出しと配下の本文に、静的発行と同じ字下げクラスを付ける。"""
 
-import re
 import sys
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -34,10 +34,60 @@ Body five.
 
 Body six.
 
+---
+
+After rule.
+
+---
+
+##### Second five
+
+Body second.
+
+---
+
 #### Next item
 
 Back to item.
+
+##### Last five
+
+Last body.
+
+---
 """
+
+INDENT_1 = "docsfw-heading-indent-1"
+INDENT_2 = "docsfw-heading-indent-2"
+
+
+class TopLevel(HTMLParser):
+    """最上位の要素を (タグ, class, 子要素のタグ) の並びとして集める。"""
+
+    VOID = {"hr", "br", "img", "col", "input"}
+
+    def __init__(self):
+        super().__init__()
+        self.depth = 0
+        self.items = []
+
+    def handle_starttag(self, tag, attrs):
+        if self.depth == 0:
+            self.items.append((tag, dict(attrs).get("class") or "", []))
+        elif self.depth == 1:
+            self.items[-1][2].append(tag)
+        if tag not in self.VOID:
+            self.depth += 1
+
+    def handle_startendtag(self, tag, attrs):
+        if self.depth == 0:
+            self.items.append((tag, dict(attrs).get("class") or "", []))
+        elif self.depth == 1:
+            self.items[-1][2].append(tag)
+
+    def handle_endtag(self, tag):
+        if tag not in self.VOID:
+            self.depth -= 1
 
 
 def render(source=SOURCE):
@@ -45,27 +95,40 @@ def render(source=SOURCE):
                                                  HeadingIndentExtension()])
 
 
+def top_level(html):
+    parser = TopLevel()
+    parser.feed(html)
+    return parser.items
+
+
 class HeadingIndentTest(unittest.TestCase):
-    def test_headings_and_bodies_get_the_indent_class(self):
-        html = render()
-        self.assertRegex(html, r'<h5 class="docsfw-heading-indent-1" id="level-five">')
-        # attr_list で指定したクラスは残す。
-        self.assertRegex(html, r'<h6 class="custom docsfw-heading-indent-2" id="level-six">')
-        wrappers = re.findall(r'<div class="(docsfw-heading-indent-\d)">', html)
-        self.assertEqual(wrappers, ["docsfw-heading-indent-1", "docsfw-heading-indent-2"])
+    def test_top_level_structure_matches_the_static_output(self):
+        self.assertEqual(top_level(render()), [
+            ("h1", "", []),
+            ("h4", "", []),
+            ("p", "", []),
+            ("h5", INDENT_1, []),
+            # 表と admonition も本文の div に入る。
+            ("div", INDENT_1, ["p", "table", "div"]),
+            # attr_list で指定したクラスは残す。
+            ("h6", "custom " + INDENT_2, []),
+            # 本文の途中の水平線は本文と同じ字下げにする。
+            ("div", INDENT_2, ["p", "hr", "p"]),
+            # 上位の見出しの直前の水平線は、その見出しの字下げにする。
+            ("div", INDENT_1, ["hr"]),
+            ("h5", INDENT_1, []),
+            ("div", INDENT_1, ["p"]),
+            ("hr", "", []),
+            ("h4", "", []),
+            ("p", "", []),
+            ("h5", INDENT_1, []),
+            ("div", INDENT_1, ["p"]),
+            # 文書の末尾の水平線は字下げしない。
+            ("hr", "", []),
+        ])
 
-    def test_table_and_admonition_are_inside_the_body_but_nested_headings_are_untouched(self):
-        html = render()
-        body = re.search(r'<div class="docsfw-heading-indent-1">(.*)</div>\s*<h6', html, re.S).group(1)
-        self.assertIn("<table>", body)
-        self.assertIn('class="admonition note"', body)
-        # 本文の中の見出しは字下げの対象外で、囲みも作らない。
-        self.assertRegex(body, r'<h5 id="nested-heading">')
-
-    def test_body_under_shallow_headings_is_not_wrapped(self):
-        html = render()
-        self.assertIn("<p>Under item.</p>", html)
-        self.assertRegex(html, r'</div>\s*<h4 id="next-item">Next item</h4>\s*<p>Back to item.</p>')
+    def test_headings_inside_the_body_are_untouched(self):
+        self.assertIn('<h5 id="nested-heading">Nested heading</h5>', render())
 
     def test_on_config_registers_the_extension_once(self):
         config = SimpleNamespace(markdown_extensions=["toc"])

@@ -11,6 +11,7 @@ Pandoc が生成した DOCX の本文を、直前の見出しと同じ位置ま�
 - 段落: スタイル、段落番号、直接指定から求めた左インデントに加算する。
 - 画像: 字下げ後の本文幅を超える場合は縦横比を保って縮小する。
 - 表と表の表題: Word は中央揃えの表に左インデントを適用しないため、字下げしない。
+- 水平線: 前後の字下げのうち浅い方で引く。上位の見出しの直前では字下げを戻す。
 
 Usage:
     indent-docx-heading-content.py <docx_path>
@@ -175,6 +176,13 @@ def paragraph_style(ppr):
     return w_attr(ppr.find("w:pStyle", NS), "val") if ppr is not None else None
 
 
+def is_horizontal_rule(paragraph, ppr):
+    """horizontal-rule.lua が出力する、下罫線だけを持つ空の段落か判定する。"""
+    if ppr is None or ppr.find("w:pStyle", NS) is not None or ppr.find("w:pBdr/w:bottom", NS) is None:
+        return False
+    return all(child.tag == qname("w", "pPr") for child in paragraph)
+
+
 def ensure_ppr(paragraph):
     ppr = paragraph.find("w:pPr", NS)
     if ppr is None:
@@ -256,23 +264,45 @@ class Indenter:
         self.images = 0
 
     def process_blocks(self, container):
-        for child in list(container):
+        children = [child for child in container
+                    if child.tag in (qname("w", "p"), qname("w", "tbl"), qname("w", "sdt"))]
+        for index, child in enumerate(children):
             if child.tag == qname("w", "p"):
-                self.process_paragraph(child)
+                following = children[index + 1] if index + 1 < len(children) else None
+                self.process_paragraph(child, following)
             elif child.tag == qname("w", "sdt"):
                 content = child.find("w:sdtContent", NS)
                 if content is not None:
                     self.process_blocks(content)
             # 表 (w:tbl) は字下げしない。
 
-    def process_paragraph(self, paragraph):
+    def heading_indent(self, paragraph):
+        """見出しの段落なら 1 行目の位置を返し、見出しでなければ None を返す。"""
+        if paragraph is None or paragraph.tag != qname("w", "p"):
+            return None
         ppr = paragraph.find("w:pPr", NS)
         style_id = paragraph_style(ppr)
-        if self.sheet.outline_level(ppr, style_id) is not None:
+        if self.sheet.outline_level(ppr, style_id) is None:
+            return None
+        return max(0, self.sheet.effective_indent(ppr, style_id).first_line_position())
+
+    def process_paragraph(self, paragraph, following):
+        heading = self.heading_indent(paragraph)
+        if heading is not None:
             # 以降の本文は、この見出しの 1 行目の位置まで字下げする。
-            self.delta = max(0, self.sheet.effective_indent(ppr, style_id).first_line_position())
+            self.delta = heading
             return
+        ppr = paragraph.find("w:pPr", NS)
+        style_id = paragraph_style(ppr)
         if self.delta <= 0 or self.sheet.style_name(style_id) in EXCLUDED_STYLE_NAMES:
+            return
+        if is_horizontal_rule(paragraph, ppr):
+            # 水平線は前後の字下げのうち浅い方で引く。文書の末尾は字下げ 0 とみなす。
+            next_indent = 0 if following is None else self.heading_indent(following)
+            delta = self.delta if next_indent is None else min(self.delta, next_indent)
+            if delta > 0:
+                indent_paragraph(paragraph, delta, self.sheet)
+                self.paragraphs += 1
             return
         indent_paragraph(paragraph, self.delta, self.sheet)
         self.paragraphs += 1

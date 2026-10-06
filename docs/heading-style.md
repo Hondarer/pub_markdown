@@ -156,7 +156,9 @@ H5 とその本文は 7.5mm、H6 とその本文は 15mm です。H4 以前の�
 
 HTML 出力では、見出しに `docsfw-heading-indent-N` クラス (H5 が 1、H6 が 2) を付け、次の見出しまでの本文を同じクラスの `div` で囲みます。  
 CSS がこのクラスに左マージンを与えます。  
-見出しは `div` の外に残し、見出し同士を兄弟要素に保ちます。見出しの `id`、CSS カウンター、目次の追従処理が見出しを直接参照するためです。
+見出しは `div` の外に残し、見出し同士を兄弟要素に保ちます。見出しの `id`、CSS カウンター、目次の追従処理が見出しを直接参照するためです。  
+水平線は区切りのため、前後の字下げのうち浅い方で引きます。  
+本文の途中の水平線は本文と同じ字下げになり、上位の見出しの直前の水平線はその見出しの字下げになります。文書の末尾の水平線は字下げしません。
 
 - 静的発行 (Pandoc) は `bin_internal/pandoc-filters/heading-content-indent.lua` が構造を作り、`styles/html/html-style.css` が字下げします。
 - 動的発行 (MkDocs) は `livedocs_heading_indent_hook.py` が Python-Markdown の treeprocessor を登録して同じ構造を作り、`livedocs/assets/docsfw-pandoc-style.css` が字下げします。
