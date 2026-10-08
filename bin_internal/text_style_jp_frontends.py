@@ -129,11 +129,11 @@ _TEST_PHASE_COMMENT_RE = re.compile(
 )
 _TEST_ON_CALL_STATE_TAG_RE = re.compile(r"\[状態\]")
 _TEST_EXPECT_CALL_CHECK_TAG_RE = re.compile(
-    r"\[Pre-Assert確認_(?:正常系|異常系)\]"
+    r"\[Pre-Assert確認_(?:正常系|異常系)(?:\s+回数\s*=\s*[^\]\r\n]+)?\]"
 )
 _TEST_EXPECT_CALL_STEP_TAG_RE = re.compile(r"\[Pre-Assert手順\]")
 _TEST_ASSERTION_CHECK_TAG_RE = re.compile(
-    r"\[(?:状態確認|Pre-Assert確認_(?:正常系|異常系)|確認_(?:正常系|異常系))\]"
+    r"\[(?:状態確認|(?:Pre-Assert確認|確認)_(?:正常系|異常系)(?:\s+回数\s*=\s*[^\]\r\n]+)?)\]"
 )
 _TEST_EXPECT_CALL_ACTION_RE = re.compile(
     r"\.\s*Will(?:Once|Repeatedly)\s*\("
