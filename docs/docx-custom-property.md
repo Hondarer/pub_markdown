@@ -31,7 +31,7 @@ Pandoc は docx 出力時に、Markdown の YAML メタデータを Office Open 
 
 ## 確認方法
 
-Word では、以下の手順で確認できます。
+Word では、次の手順で確認できます。
 
 1. 「ファイル」を開きます。
 2. 「情報」を開きます。
@@ -44,7 +44,7 @@ Word では、以下の手順で確認できます。
 unzip -p output.docx docProps/custom.xml
 ```
 
-`document-id` が反映されていれば、以下のような要素が出力されます。
+`document-id` が反映されていれば、次のような要素が出力されます。
 
 ```xml
 <property name="document-id"><vt:lpwstr>DOCSFW-SAMPLE-001</vt:lpwstr></property>
@@ -54,7 +54,7 @@ unzip -p output.docx docProps/custom.xml
 
 Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フィールドを使用します。
 
-手動で挿入する場合は、以下の手順で設定します。
+手動で挿入する場合は、次の手順で設定します。
 
 1. Word で docx を開きます。
 2. プロパティ値を表示したい位置にカーソルを置きます。
@@ -64,7 +64,7 @@ Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フ�
 6. プロパティ一覧から `document-id` を選択します。
 7. 「OK」を押します。
 
-フィールド コードで記述すると、以下の形式になります。
+フィールド コードで記述すると、次の形式になります。
 
 ```text
 { DOCPROPERTY "document-id" }
@@ -84,7 +84,7 @@ Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フ�
 エラー! プロパティ名が不明です。
 ```
 
-このため、以下のようなフィールドは、docx 内に `document-id` カスタム プロパティが存在しない場合にエラー表示になります。
+このため、次のようなフィールドは、docx 内に `document-id` カスタム プロパティが存在しない場合にエラー表示になります。
 
 ```text
 { DOCPROPERTY "document-id" }
@@ -94,7 +94,7 @@ Word 文書内にプロパティ値を表示する場合は、`DOCPROPERTY` フ�
 
 ## 未設定時の回避方法
 
-未設定時のエラー表示を避ける方法は、主に以下の 2 つです。
+未設定時のエラー表示を避ける方法は、主に次の 2 つです。
 
 ### カスタム プロパティを必ず作成する
 
@@ -109,7 +109,7 @@ document-id: ""
 
 値を未設定にしたい場合でも、プロパティ自体が存在すれば `DOCPROPERTY` はプロパティ名不明のエラーにはなりません。
 
-Pandoc 3.9 では、以下のいずれの書き方でも空文字のカスタム プロパティとして `docProps/custom.xml` に出力されることを確認しています。
+Pandoc 3.9 では、次のいずれの書き方でも空文字のカスタム プロパティとして `docProps/custom.xml` に出力されることを確認しています。
 
 ```yaml
 ---
@@ -123,7 +123,7 @@ document-id:
 ---
 ```
 
-出力される `docProps/custom.xml` の該当部分は、以下のようになります。
+出力される `docProps/custom.xml` の該当部分は、次のようになります。
 
 ```xml
 <property name="document-id"><vt:lpwstr></vt:lpwstr></property>
@@ -143,7 +143,7 @@ Word のフィールドだけで回避する場合は、`IF` フィールドで 
 
 Word の組み込みプロパティを使う場合、プロパティが存在しないことによる `プロパティ名が不明です` のエラーを回避しやすくなります。
 
-例えば、文書 ID を `keywords` に流用する場合は、Markdown の YAML front matter に以下のように記述します。
+例えば、文書 ID を `keywords` に流用する場合は、Markdown の YAML front matter に次のように記述します。
 
 ```yaml
 ---
@@ -152,7 +152,7 @@ keywords: DOCSFW-SAMPLE-001
 ---
 ```
 
-Word では、以下のフィールドで表示できます。
+Word では、次のフィールドで表示できます。
 
 ```text
 { DOCPROPERTY "Keywords" }
@@ -166,7 +166,7 @@ Word では、以下のフィールドで表示できます。
 
 ## 組み込みプロパティの一覧
 
-`DOCPROPERTY` フィールドは、Word の「詳細プロパティ」ダイアログにあるプロパティ名を指定して表示します。Microsoft の `WdBuiltInProperty` 一覧では、Word の組み込み文書プロパティとして以下が定義されています。
+`DOCPROPERTY` フィールドは、Word の「詳細プロパティ」ダイアログにあるプロパティ名を指定して表示します。Microsoft の `WdBuiltInProperty` 一覧では、Word の組み込み文書プロパティとして次が定義されています。
 
 この表の「フィールド指定例」は、`DOCPROPERTY` で指定する英語名です。Word の UI 表示名は、Word のバージョンや表示言語により異なる場合があります。例えば、`Keywords` は日本語 UI の「詳細」タブでは「タグ」、`Category` は「分類項目」と表示されます。
 
@@ -202,13 +202,13 @@ Table: Word 組み込みプロパティと Pandoc メタデータの対応一覧
 
 Microsoft の `WdBuiltInProperty` には、`Format`、`Number of Slides`、`Number of Hidden Slides`、`Number of Multimedia Clips`、`Hyperlink Base` も定義されています。ただし、Word の `WdBuiltInProperty` 一覧では `Not supported` とされているため、未定義エラーの回避を目的にした `DOCPROPERTY` では使用しません。
 
-例として、`subject` を文書内に表示する場合は以下のフィールドを使用します。
+例として、`subject` を文書内に表示する場合は次のフィールドを使用します。
 
 ```text
 { DOCPROPERTY "Subject" }
 ```
 
-Microsoft の `BuiltInDocumentProperties` の説明では、組み込みプロパティであっても Word が値を定義していない場合、VBA で `Value` を取得するとエラーになるとされています。`DOCPROPERTY` で未定義プロパティ名エラーを避ける目的では、上記の対応プロパティ名を使用し、値そのものが空になるケースは許容する前提で扱います。
+Microsoft の `BuiltInDocumentProperties` の説明では、組み込みプロパティであっても Word が値を定義していない場合、VBA で `Value` を取得するとエラーになるとされています。`DOCPROPERTY` で未定義プロパティ名エラーを避ける目的では、前述の対応プロパティ名を使用し、値そのものが空になるケースは許容する前提で扱います。
 
 参考:
 

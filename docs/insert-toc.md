@@ -2,18 +2,18 @@
 
 ## 概要
 
-この Lua フィルターは、指定された Markdown ファイルが存在する階層以下の Markdown ファイルから、自動的に目次リストを生成し、対象ファイルに挿入します。
+この Lua フィルターは、指定された Markdown ファイルが存在する階層配下の Markdown ファイルから、自動的に目次リストを生成し、対象ファイルに挿入します。
 
 ### 出力形式
 
-生成される目次は以下の形式で出力されます:
+生成される目次は次の形式で出力されます:
 
 - **ファイル**: `📄 [ファイル名](パス) <br/>     説明文`
-- **フォルダー** (index.md あり): `📁 [フォルダ名](パス) <br/>     説明文`
-- **フォルダー** (index.md なし): `📁 フォルダ名`
+- **ディレクトリ** (index.md あり): `📁 [ディレクトリ名](パス) <br/>     説明文`
+- **ディレクトリ** (index.md なし): `📁 ディレクトリ名`
 - **ネストした項目**: 1 階層あたり半角スペース 4 個で字下げします。
 
-ファイル名/フォルダー名がリンク テキストとして表示され、Markdown ファイル内の最初の見出し (`# タイトル`) が説明文として表示されます。
+ファイル名/ディレクトリ名がリンク テキストとして表示され、Markdown ファイル内の最初の見出し (`# タイトル`) が説明文として表示されます。
 
 ## 目次挿入の書式
 
@@ -130,7 +130,7 @@ details=false の場合: `short-title-ja` > `short-title`
 
 #### 使用例
 
-プロジェクト ルートの `index.md` から、`docs/` サブディレクトリ以下の目次を生成する場合:
+プロジェクト ルートの `index.md` から、`docs/` サブディレクトリ配下の目次を生成する場合:
 
 ```text
 project/
@@ -142,7 +142,7 @@ project/
         +-- reference.md
 ```
 
-`index.md` 内で以下のように記述:
+`index.md` 内で次のように記述:
 
 ```markdown
 # ドキュメント一覧
@@ -162,7 +162,7 @@ project/
 
 ### 基準ディレクトリ除外 (exclude-basedir)
 
-目次生成時に、基準ディレクトリ自体を目次から除外し、直下のファイル/フォルダーを第一階層として表示します。
+目次生成時に、基準ディレクトリ自体を目次から除外し、直下のファイル/ディレクトリを第一階層として表示します。
 
 指定方法を次に示します。
 
@@ -172,7 +172,7 @@ project/
 
 #### 使用例
 
-`docs/README.md` で以下のように記述した場合:
+`docs/README.md` で次のように記述した場合:
 
 ```markdown
 ## 関連ドキュメント
@@ -185,14 +185,14 @@ project/
 ```markdown
 - 📁 [docs](index.md) <br/>     Document of c-modernization-kit
     - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
-    - 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
+    - 📄 [build-design.md](build-design.md) <br/>     クロス プラットフォーム ビルド システムの実装
 ```
 
 **exclude-basedir=true**:
 
 ```markdown
 - 📄 [about-modern-development.md](about-modern-development.md) <br/>     レガシー C コードにモダン手法を適用する全体像
-- 📄 [build-design.md](build-design.md) <br/>     クロスプラットフォームビルドシステムの実装
+- 📄 [build-design.md](build-design.md) <br/>     クロス プラットフォーム ビルド システムの実装
 ```
 
 #### 用途
@@ -208,7 +208,7 @@ Pandoc HTML と MkDocs では、`open-level` で目次の初期展開階層を�
 
 ### 既定値
 
-Lua フィルター内で定義される既定値は以下の通りです。
+Lua フィルター内で定義される既定値は次のとおりです。
 
 ```lua
 local defaults = {
@@ -238,7 +238,7 @@ local defaults = {
 
 **出力形式**:
 
-- ファイル/フォルダー名をリンク テキストとして表示
+- ファイル/ディレクトリ名をリンク テキストとして表示
 - `<br/>     ` (5 つの `&nbsp;`) の後に Markdown ファイル内の見出し (説明文) を表示
 
 #### 1 階層下まで指定
@@ -264,11 +264,11 @@ local defaults = {
 **階層名の表示ロジック**:
 
 1. ディレクトリ索引が存在する場合:
-    - フォルダー名をリンク テキストとして表示
+    - ディレクトリ名をリンク テキストとして表示
     - 採用された Markdown 内の最初の `# タイトル` を説明文として表示
     - タイトルがない場合 → 説明文は表示されません。
 2. ディレクトリ索引が存在しない場合:
-    - フォルダー名のみ表示されます (リンクなし、説明文なし)。
+    - ディレクトリ名のみ表示されます (リンクなし、説明文なし)。
 
 ```markdown
 # プロジェクト概要
@@ -299,7 +299,7 @@ local defaults = {
 ## チュートリアルのみ
 \toc depth=1 exclude="reference/*" exclude="intro.md"
 
-## docs ディレクトリ以下のすべて
+## docs ディレクトリ配下のすべて
 \toc basedir="docs" depth=-1
 
 ## API リファレンス（別ディレクトリ指定 + 除外）
@@ -339,7 +339,7 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ### データ構造
 
-各行は以下の 5 つのフィールドをタブで区切った構造です。
+各行は次の 5 つのフィールドをタブで区切った構造です。
 
 ```text
 絶対パス	ファイル名	種別	ベースタイトル	言語別タイトル
@@ -377,7 +377,7 @@ pandoc -L index-filter.lua --verbose index.md -o output.html
 
 ### ディレクトリ タイトル解決
 
-ディレクトリのタイトルは以下の優先順位で解決されます。
+ディレクトリのタイトルは次の優先順位で解決されます。
 
 1. `index.md` > `README.md` > `SKILL.md` の順で検索
 2. 大文字小文字を正規化 (`INDEX.md` → `index.md`)

@@ -8,7 +8,7 @@ pub_markdown のビルド プロセスでは、SVG→PNG 変換 (rsvg-convert.js
 
 ### ブラウザー起動コストの問題
 
-Puppeteer による Chromium 起動には約 1〜2 秒を要します。ビルド対象に多数の SVG 画像や Mermaid 図が含まれる場合、以下の累積コストが発生します。
+Puppeteer による Chromium 起動には約 1〜2 秒を要します。ビルド対象に多数の SVG 画像や Mermaid 図が含まれる場合、次の累積コストが発生します。
 
 1. **rsvg-convert.js**: Pandoc が DOCX 生成時に SVG→PNG 変換のたびにブラウザーを起動・停止
 2. **mmdc (mermaid-cli)**: Mermaid 図のレンダリングのたびにブラウザーを起動・停止
@@ -154,7 +154,7 @@ puppeteer.launch(buildLaunchOptions())
 
 Mermaid ライブラリの検出:
 
-以下の優先順位でブラウザー バンドル (`mermaid.min.js`) を探索します。
+次の優先順位でブラウザー バンドル (`mermaid.min.js`) を探索します。
 
 1. `require.resolve('mermaid/package.json')` 経由
 2. `require.resolve('@mermaid-js/mermaid-cli/package.json')` 経由のネスト検索
@@ -223,7 +223,7 @@ Browser executable: /usr/local/bin/chrome
 
 ### 二重ラップの回避
 
-`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、以下の無限ループが発生する可能性があります。
+`browser-server.js` の起動時に `prepare_puppeteer_env.sh` を適用すると、次の無限ループが発生する可能性があります。
 
 1. 呼び出し元が `prepare_puppeteer_env.sh` を source し、`PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を設定します。
 2. `browser-server.js` が同じ準備処理を適用し、`ORG_PUPPETEER_EXECUTABLE_PATH` に `chrome-wrapper.sh` を退避します。

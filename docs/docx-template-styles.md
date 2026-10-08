@@ -69,7 +69,7 @@ HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` 
 
 ## admonition スタイルの定義詳細
 
-`admonition.lua` は GitHub-style alert 構文 (`> [!NOTE]` 等) を検出し、docx では `custom-style` 属性付き Div に変換します。各タイプと対応スタイルの関係は以下のとおりです。
+`admonition.lua` は GitHub-style alert 構文 (`> [!NOTE]` 等) を検出し、docx では `custom-style` 属性付き Div に変換します。各タイプと対応スタイルの関係は次のとおりです。
 
 | タイプ | custom-style 値 | styleId | 基底スタイル | 左罫線色 | 背景色 |
 |---|---|---|---|---|---|
@@ -132,7 +132,7 @@ Word による保存では ZIP の全エントリが再生成され、Git のバ
 
 ### 編集後の反映確認
 
-`.dotx` はバイナリのため `git diff` に内容が表示されません。以下のコマンドで確認します。
+`.dotx` はバイナリのため `git diff` に内容が表示されません。次のコマンドで確認します。
 
 ```bash
 unzip -p styles/docx/docx-template.dotx word/styles.xml \

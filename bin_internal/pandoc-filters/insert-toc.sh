@@ -488,7 +488,7 @@ get_depth_level() {
 # パターン形式:
 #   - "pattern/*" : pattern ディレクトリ配下のすべてを除外
 #   - "pattern"   : パスに pattern を含むものを除外 (部分文字列マッチング)
-# トラブルシューティング: デバッグが必要な場合は、以下の echo 行のコメントを外してください
+# トラブルシューティング: デバッグが必要な場合は、次の echo 行のコメントを外してください
 is_excluded() {
     local file_path="$1"
     local exclude_patterns="$2"

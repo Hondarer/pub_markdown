@@ -407,7 +407,7 @@ return {
                     end
                 end
 
-                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (デフォルトの場合のフォント名) を、
+                -- font-family:"trebuchet ms",verdana,arial,sans-serif; (既定の場合のフォント名) を、
                 -- Word で日本語フォントとして解釈されやすいフォントスタックに置換する。
                 -- (docx にインポートした際に MS ゴシック になってしまうことへの対応)
                 --patched_svg = string.gsub(patched_svg, 'font%-family:"trebuchet ms",verdana,arial,sans%-serif;', 'font-family:' .. mermaid_svg_font_family .. ';')

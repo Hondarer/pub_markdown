@@ -151,7 +151,7 @@ Jenkinsfile を使わない **フリースタイル プロジェクト** では�
 
 ### ステップ 1 — キャッシュ復元 (ビルド前)
 
-「シェルの実行」に以下を記述します。
+「シェルの実行」に次を記述します。
 
 ```bash
 #!/bin/bash
@@ -182,7 +182,7 @@ fi
 
 ### ステップ 2 — ドキュメント生成
 
-「シェルの実行」に以下を記述します。
+「シェルの実行」に次を記述します。
 
 ```bash
 #!/bin/bash
@@ -197,7 +197,7 @@ bash "${WORKSPACE}/framework/docsfw/bin/pub_markdown.sh" \
 
 ### ステップ 3 — キャッシュ保存 (キャッシュ ミス時のみ)
 
-「シェルの実行」に以下を記述します。
+「シェルの実行」に次を記述します。
 
 ```bash
 #!/bin/bash
@@ -272,7 +272,7 @@ Table: フリースタイル ジョブのビルド ステップ一覧
 
 ### Chrome の既定のダウンロード位置
 
-`puppeteer ^24` は `npm ci` の postinstall で以下のパスに Chrome for Testing をダウンロードします。
+`puppeteer ^24` は `npm ci` の postinstall で次のパスに Chrome for Testing をダウンロードします。
 
 ```text
 $HOME/.cache/puppeteer/chrome/linux-<バージョン>/chrome-linux64/chrome
@@ -350,7 +350,7 @@ args '-v /var/cache/docsfw-node-modules:/cache/node-modules ' +
 node_modules キャッシュがヒットすると `npm ci` がスキップされます。  
 このとき Chrome キャッシュが空だと、headless レンダリング (Mermaid 変換等) が失敗します。
 
-以下のコマンドでビルド前に Chrome の存在を確認できます。
+次のコマンドでビルド前に Chrome の存在を確認できます。
 
 ```bash
 ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \

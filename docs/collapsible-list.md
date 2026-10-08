@@ -112,7 +112,7 @@ Table: open-level 属性値と初期展開動作の一覧
 
 ## 変換後の HTML 構造
 
-JavaScript により、子要素を持つ `<li>` 要素が以下のように変換されます。
+JavaScript により、子要素を持つ `<li>` 要素が次のように変換されます。
 
 変換前:
 
@@ -142,7 +142,7 @@ JavaScript により、子要素を持つ `<li>` 要素が以下のように変�
 
 ```css
 .collapsible-list {
-  /* 現時点ではデフォルトスタイルのみ */
+  /* 現時点では既定スタイルのみ */
 }
 
 .collapsible-list details > summary {
@@ -182,7 +182,7 @@ JavaScript により、子要素を持つ `<li>` 要素が以下のように変�
 
 ### 対象要素
 
-JavaScript は以下の条件を満たす要素を変換します。
+JavaScript は次の条件を満たす要素を変換します。
 
 1. `.collapsible-list` クラスを持つ要素の子孫であること
 2. `<li>` 要素であること

@@ -2,12 +2,12 @@
 
 ## 何が起きているか
 
-PlantUML は **v1.2020.21 以降**、Windows 環境で外部 Graphviz (`dot.exe`) が見つからない場合に、**最小構成の Graphviz (graphviz-lite) を同梱** しており、実行時に **ユーザーの一時フォルダーへ自動展開** してから利用します。展開先の既定パスは次のとおりです。  
+PlantUML は **v1.2020.21 以降**、Windows 環境で外部 Graphviz (`dot.exe`) が見つからない場合に、**最小構成の Graphviz (graphviz-lite) を同梱** しており、実行時に **ユーザーの一時ディレクトリへ自動展開** してから利用します。展開先の既定パスは次のとおりです。  
 `%LOCALAPPDATA%\Temp\_graphviz\dot.exe`。(外部の `dot.exe` が見つからない場合に限る) ([PlantUML.com][1]) ([GitHub][2])
 
 ## 導入の経緯 (タイムライン)
 
-- **1.2020.21 以降**: Windows では **Graphviz を手動インストールしなくてもよい** 運用を公式に案内。最小版 `dot.exe` を **必要時に一時フォルダーへ自動展開** して使用する挙動が導入されました。1.2020.25 以前は生成時にメッセージが出力される不具合があり、**1.2020.25 以上の利用が推奨**。 ([PlantUML.com][1])
+- **1.2020.21 以降**: Windows では **Graphviz を手動インストールしなくてもよい** 運用を公式に案内。最小版 `dot.exe` を **必要時に一時ディレクトリへ自動展開** して使用する挙動が導入されました。1.2020.25 以前は生成時にメッセージが出力される不具合があり、**1.2020.25 以上の利用が推奨**。 ([PlantUML.com][1])
 - 同梱される `graphviz-lite` の配布元 (公式 GitHub リポジトリ) でも、**「PlantUML v1.2020.21+ はここからの lite 版を内蔵しており、外部 `dot.exe` が存在しないときだけ `%LOCALAPPDATA%\Temp\_graphviz` に展開する」** と明記。 ([GitHub][2])
 
 ## 探索と優先順位
@@ -45,7 +45,7 @@ Linux/Mac の項では、基本的に **外部 Graphviz のインストール** 
 
 ### 参考リンク (公式)
 
-- **Graphviz/DOT (公式ドキュメント)**: Windows セクションに「1.2020.21 以降は同梱 `dot.exe` を一時フォルダーへ自動展開して使用する」旨を明記。探索順や `GRAPHVIZ_DOT`、`-testdot` もここに記載。 ([PlantUML.com][1])
+- **Graphviz/DOT (公式ドキュメント)**: Windows セクションに「1.2020.21 以降は同梱 `dot.exe` を一時ディレクトリへ自動展開して使用する」旨を明記。探索順や `GRAPHVIZ_DOT`、`-testdot` もここに記載。 ([PlantUML.com][1])
 - **graphviz-distributions (PlantUML 公式 GitHub)**: 同梱する **graphviz-lite** の内容と、**「`%LOCALAPPDATA%\Temp\_graphviz` に抽出する」仕様** を README に明記。 ([GitHub][2])
 
 [1]: https://plantuml.com/graphviz-dot "Test your GraphViz installation"  

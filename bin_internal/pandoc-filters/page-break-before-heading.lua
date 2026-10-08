@@ -1,6 +1,6 @@
 -- page-break-before-heading.lua
 -- 見出し1~Nがページの指定位置(%)を超えた場所から始まる場合、直前に改ページを挿入
--- デフォルトは無効。メタデータで明示的に有効化した文書にのみ機能する。
+-- 既定は無効。メタデータで明示的に有効化した文書にのみ機能する。
 --
 -- 使用例 (ショートハンド):
 --   pandoc input.md -o output.docx --lua-filter=page-break-before-heading.lua \
@@ -17,22 +17,22 @@
 --     --metadata-file=settings.yaml
 --
 -- オプション (page-break-before-heading: 配下):
---   enabled              : フィルター有効フラグ (デフォルト: false)
---   threshold            : 改ページを挿入する閾値 [%] (デフォルト: 75)
---   chars-per-page       : 1ページあたりの推定文字数 (デフォルト: 1500)
---   heading-level-always : 常に改ページする見出しレベルの上限 (デフォルト: 1、0 で無効)
---   heading-level-to     : 対象見出しレベルの上限 (デフォルト: 2、範囲は 1~N)
---   shift-heading-level-by: --shift-heading-level-by と同じ値を指定 (デフォルト: 自動検出)
+--   enabled              : フィルター有効フラグ (既定値: false)
+--   threshold            : 改ページを挿入する閾値 [%] (既定値: 75)
+--   chars-per-page       : 1ページあたりの推定文字数 (既定値: 1500)
+--   heading-level-always : 常に改ページする見出しレベルの上限 (既定値: 1、0 で無効)
+--   heading-level-to     : 対象見出しレベルの上限 (既定値: 2、範囲は 1~N)
+--   shift-heading-level-by: --shift-heading-level-by と同じ値を指定 (既定値: 自動検出)
 --                           heading-level-always / heading-level-to は出力上のレベルで指定する。
 --                           Pandoc 3.x 以降は PANDOC_WRITER_OPTIONS から自動取得するため
 --                           通常は指定不要。
---   image-height-chars   : 画像1枚あたりの推定文字数 (デフォルト: 300)
---   table-row-chars      : 表の1行あたりの推定文字数 (デフォルト: 80)
---   debug                : デバッグ出力を stderr に出力する (デフォルト: false)
+--   image-height-chars   : 画像1枚あたりの推定文字数 (既定値: 300)
+--   table-row-chars      : 表の1行あたりの推定文字数 (既定値: 80)
+--   debug                : デバッグ出力を stderr に出力する (既定値: false)
 
 -- 設定値 (メタデータで上書き可能)
 local CONFIG = {
-  enabled = false,               -- フィルター有効フラグ (デフォルト: false)
+  enabled = false,               -- フィルター有効フラグ (既定値: false)
   threshold = 75,                -- ページ位置の閾値 [%]
   chars_per_page = 1500,         -- 1ページあたりの推定文字数
   heading_level_to = 2,          -- 対象見出しレベルの上限 (出力上のレベル、1~この値)
@@ -40,7 +40,7 @@ local CONFIG = {
   shift_heading_level_by = nil,  -- --shift-heading-level-by の値 (nil = 自動検出)
   image_height_chars = 300,      -- 画像1枚あたりの推定文字数 (約5行相当)
   table_row_chars = 80,          -- 表の1行あたりの推定文字数
-  debug = false,                 -- デバッグ出力フラグ (デフォルト: false)
+  debug = false,                 -- デバッグ出力フラグ (既定値: false)
 }
 
 -- デバッグ出力ヘルパー

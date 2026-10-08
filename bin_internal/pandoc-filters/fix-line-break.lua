@@ -1,4 +1,4 @@
--- 以下のようなケースで、-f markdown+hard_line_breaks を指定した場合に、
+-- 次のようなケースで、-f markdown+hard_line_breaks を指定した場合に、
 -- para1 と para2 の間に不要な改行が挿入されることを防ぐ。
 --
 -- <!---->

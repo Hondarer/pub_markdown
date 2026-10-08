@@ -111,7 +111,7 @@ resolve_source_root_for_file() {
 # publocal / pubpart / pubchild の defaults: を pandoc の --metadata-file 群として構築する。
 # 優先順位 (低 -> 高): 遠い階層 -> 近い階層、同一階層では child -> part -> local。
 # pandoc は後に指定した --metadata-file を優先し、ドキュメント自身の YAML / -M が
-# すべてに勝つため、ドキュメントに指定があればデフォルトは適用されない。
+# すべてに勝つため、ドキュメントに指定があれば既定値は適用されない。
 # 結果: グローバル配列 defaults_metadata_file_args と defaults_metadata_tmpfiles を設定する。
 build_defaults_metadata_args() {
     local file="$1"
@@ -970,7 +970,7 @@ while [[ $# -gt 0 ]]; do
 done
 #echo ""
 
-# 定義ファイルのデフォルト パス
+# 定義ファイルの既定パス
 if [[ -z "$configFile" ]]; then
     configFile="${workspaceFolder}/.vscode/pub_markdown.config.yaml"
 else
@@ -1875,7 +1875,7 @@ if [ -n "$relativeFile" ]; then
         files_raw_initial=("${workspaceFolder}/${real_relativeFile}")
     fi
 else
-    # relativeFile が指定されていない場合: mdRoot 以下の対象ファイル (.md / .yaml / .json) を対象
+    # relativeFile が指定されていない場合: mdRoot 配下の対象ファイル (.md / .yaml / .json) を対象
     # -L を付与してシンボリック リンクも対象にする
     # ディレクトリ制御マジック ファイル (pubpart.yaml / pubchild.yaml / publocal.yaml) は発行対象から除外する
     mapfile -d '' -t files_raw_initial < <(
@@ -2713,7 +2713,7 @@ while ((${#_pending_files[@]} > 0)); do
         _first_generated_suffix=""
 
         # ディレクトリ階層の publocal / pubpart / pubchild から
-        # フロント マター デフォルト値 (--metadata-file 群) を構築する。
+        # フロント マター 既定値 (--metadata-file 群) を構築する。
         # 内容は lang / details に依存しないため 1 回だけ構築する。
         build_defaults_metadata_args "$file"
 

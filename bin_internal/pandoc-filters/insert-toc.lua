@@ -1,5 +1,5 @@
 -- Pandoc Markdown インデックス挿入 Lua フィルタ
--- \toc コマンドを指定された階層以下の Markdown ファイルから自動生成したインデックスに置換
+-- \toc コマンドを指定された階層配下の Markdown ファイルから自動生成したインデックスに置換
 
 local paths = require 'pandoc.path'
 
@@ -79,7 +79,7 @@ local function debug_print(...)
     io.stderr:flush()
 end
 
--- デフォルト設定
+-- 既定設定
 local defaults = {
     depth = 0,                  -- 現在のディレクトリのみ
     exclude = {},               -- 除外なし
@@ -91,7 +91,7 @@ local defaults = {
 -- クォート除去関数
 -- 注意: スマートクォート（" "）にも対応しています。
 -- 一部のエディタは自動的に通常のダブルクォート " を スマートクォートに変換するため、
--- この対応が必要です。トラブルシューティング時は、以下のデバッグ行のコメントを外してください。
+-- この対応が必要です。トラブルシューティング時は、次のデバッグ行のコメントを外してください。
 local function unquote(str)
     --debug_print("unquote input:", str, "length:", #str)
 
@@ -198,7 +198,7 @@ local function parse_toc_params(params_str)
         end
     end
     
-    -- デフォルト値とマージ
+    -- 既定値とマージ
     local result = {}
     for k, v in pairs(defaults) do
         if k == "exclude" then
@@ -278,7 +278,7 @@ local function find_bash_path()
         if ok and output and output ~= "" then
             return output:gsub("[\r\n]+$", "")
         end
-        return "/bin/bash" -- デフォルト
+        return "/bin/bash" -- 既定
     end
 end
 

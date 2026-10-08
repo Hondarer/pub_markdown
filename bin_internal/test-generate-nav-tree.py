@@ -25,7 +25,7 @@ nav = _load_generate_nav_tree()
 
 
 def child_urls(tree):
-    """直下の子を、ファイルはファイル名、フォルダーはディレクトリ名で返す。"""
+    """直下の子を、ファイルはファイル名、ディレクトリはディレクトリ名で返す。"""
     names = []
     for child in tree["children"]:
         if "children" in child:

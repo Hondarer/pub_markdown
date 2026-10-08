@@ -8,7 +8,7 @@
 
 ### Puppeteer の WebSocket 接続問題
 
-Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブラウザーを制御しますが、この通信は WebSocket 接続を通じて行われます。特に WSL 環境や仮想環境では、以下の問題が発生する可能性があります。
+Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブラウザーを制御しますが、この通信は WebSocket 接続を通じて行われます。特に WSL 環境や仮想環境では、次の問題が発生する可能性があります。
 
 1. **タイミング競合**: Chromium が DevTools WebSocket ポートを開放したことを stderr に出力しても、実際にはまだポートが完全に利用可能でない場合があります。
 2. **接続拒否エラー**: `connect ECONNREFUSED 127.0.0.1:{PORT}` エラーが発生し、`puppeteer.launch()` が失敗します。
@@ -16,7 +16,7 @@ Puppeteer は内部的に Chrome DevTools Protocol を使用して Chromium ブ�
 
 ### 従来の対処法の問題点
 
-一般的な対処法として以下が提案されることがありますが、それぞれに課題があります。
+一般的な対処法として次が提案されることがありますが、それぞれに課題があります。
 
 - **固定的な sleep**: 環境により必要な待機時間が異なり、過剰な遅延を生じさせます。
 - **Puppeteer オプション調整**: 根本的な解決にならない場合が多くあります。
@@ -62,14 +62,14 @@ prepare_puppeteer_env.sh    # 環境設定用スクリプト
 
 ### 環境変数の管理
 
-スクリプトは以下の環境変数を使用して非破壊的な動作を実現します。
+スクリプトは次の環境変数を使用して非破壊的な動作を実現します。
 
 - `PUPPETEER_EXECUTABLE_PATH`: Puppeteer が使用する実行可能ファイル パス
 - `ORG_PUPPETEER_EXECUTABLE_PATH`: 元の実行可能ファイル パスの退避用
 
 ### ポート待機アルゴリズム
 
-DevTools WebSocket ポートが完全に利用可能になるまでの確認は、以下の 2 段階で行われます。
+DevTools WebSocket ポートが完全に利用可能になるまでの確認は、次の 2 段階で行われます。
 
 1. **LISTEN 状態確認**:
 
@@ -85,7 +85,7 @@ DevTools WebSocket ポートが完全に利用可能になるまでの確認は�
 
 ### 出力バッファリング機構
 
-stderr の出力は以下のロジックでバッファリングされます。
+stderr の出力は次のロジックでバッファリングされます。
 
 - DevTools WebSocket 行が出現するまで、すべての stderr 出力をメモリ上にバッファリング
 - ポートが利用可能になった時点で、バッファーされた出力を一括して Puppeteer に転送
@@ -119,7 +119,7 @@ node your-puppeteer-script.js
 
 ### カスタム Chromium パスの指定
 
-特定の Chromium バイナリを使用したい場合は、以下のように設定します。
+特定の Chromium バイナリを使用したい場合は、次のように設定します。
 
 ```bash
 export ORG_PUPPETEER_EXECUTABLE_PATH="/path/to/custom/chrome"
@@ -150,7 +150,7 @@ npm start
 
 ### デバッグ支援
 
-スクリプトは以下のデバッグ情報を stderr に出力します。
+スクリプトは次のデバッグ情報を stderr に出力します。
 
 ```bash
 echo "Chrome wrapper script started." >&2
@@ -196,7 +196,7 @@ chmod +x chrome-wrapper.sh prepare_puppeteer_env.sh
 
 ### ログ出力の確認
 
-デバッグ時は以下の方法で詳細な動作を確認できます。
+デバッグ時は次の方法で詳細な動作を確認できます。
 
 ```bash
 # stderr の出力を確認

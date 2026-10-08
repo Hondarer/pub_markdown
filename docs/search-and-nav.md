@@ -214,7 +214,7 @@ Table: 文字種ごとの検索トークン化方式
 その他のルール:
 
 - `index.html` はそのディレクトリのノードとして扱います (URL はそのページを指します)
-- 子要素の並びは本文の `\toc` と同じ規則です。ファイルとフォルダーを混在させ、ソース名 (`*.md` / フォルダー名) の大文字小文字を無視したアルファベット順にします (short-title ではなくファイル名基準)
+- 子要素の並びは本文の `\toc` と同じ規則です。ファイルとディレクトリを混在させ、ソース名 (`*.md` / ディレクトリ名) の大文字小文字を無視したアルファベット順にします (short-title ではなくファイル名基準)
 - ただし、対応するソース ディレクトリに `publocal.yaml` の `order` がある場合は、その順序を優先します (列挙されたものを先頭に、未列挙は名前順で末尾)。詳細は [pubparts.md](pubparts.md) を参照してください
 - 除外: `search-index.js`、`nav-tree.js`、`docsfw-*.js`、`docsfw-*.css`、`html-style.css`、`mermaid.min.js`、`docsfw-mermaid-frame.html`、`docsfw-plantuml-frame.html`
 
@@ -354,7 +354,7 @@ MkDocs Material の `.md-top` に合わせ、`#docsfw-top` をヘッダー直下
 
 ## 部分発行 (--relativeFile) 時の動作
 
-VS Code タスクや `pub_markdown_core.sh --relativeFile=...` で特定のファイル/フォルダーのみを発行した場合の挙動を示します。
+VS Code タスクや `pub_markdown_core.sh --relativeFile=...` で特定のファイル/ディレクトリのみを発行した場合の挙動を示します。
 
 ### HTML 生成
 
@@ -363,7 +363,7 @@ VS Code タスクや `pub_markdown_core.sh --relativeFile=...` で特定のフ�
 | 実行モード | 対象 | 出力クリーン |
 |---|---|---|
 | `singlefile` | 指定した 1 ファイル | なし |
-| `folder` | 指定フォルダー配下の全ファイル | 指定フォルダーの出力を削除後に再生成 |
+| `folder` | 指定ディレクトリ配下の全ファイル | 指定ディレクトリの出力を削除後に再生成 |
 
 Table: 部分発行における HTML 生成モードと処理対象
 

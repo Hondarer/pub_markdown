@@ -5,7 +5,7 @@
 #
 #   出力 (標準出力 1 行): "<url><TAB><provider>"
 #     provider は github / gitlab / gitbucket / gitea / git のいずれか (アイコン選択に使用)。
-#   以下の場合は何も出力しない (= リンクを表示しない):
+#   次の場合は何も出力しない (= リンクを表示しない):
 #     ・git コマンドが使えない
 #     ・Git 管理下にない (未追跡)
 #     ・.gitignore 対象 (例: doxyfw 等の生成物 .md)

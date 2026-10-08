@@ -214,7 +214,7 @@ framework/docsfw/
 
 ### 生成物
 
-生成物はワークスペースの `pages/livedocs/` 以下に出力します。  
+生成物はワークスペースの `pages/livedocs/` 配下に出力します。  
 `/pages/` はワークスペースの `.gitignore` で除外済みのため、追加の設定は不要です。
 
 ```text

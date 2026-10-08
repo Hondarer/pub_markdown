@@ -59,10 +59,10 @@ Table: コミッター人数に応じた発行者の表示形式
 `pub_markdown.config.yaml` で表示を制御します。どちらも既定は有効です。
 
 ```yaml
-# 発行日時の自動設定 (true / false)。デフォルト: true
+# 発行日時の自動設定 (true / false)。既定値: true
 autoSetDate: true
 
-# 発行者の自動設定 (true / false)。デフォルト: true
+# 発行者の自動設定 (true / false)。既定値: true
 autoSetAuthor: true
 ```
 

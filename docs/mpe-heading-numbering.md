@@ -25,7 +25,7 @@ VS Code の拡張機能「Markdown Preview Enhanced」のプレビュー表示�
 
 ### 見出し自動採番の CSS を追記する
 
-`style.less` を以下のように置換します。すでに他のカスタマイズが行われている場合は適宜マージしてください。
+`style.less` を次のように置換します。すでに他のカスタマイズが行われている場合は適宜マージしてください。
 
 ```css
 /* Please visit the URL below for more information: */

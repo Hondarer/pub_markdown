@@ -221,7 +221,7 @@ def _render_dir(index, vdir, base_dir, level, params, from_dir, lines, merge_roo
             _render_dir(index, child_path, base_dir, level + 1, params, from_dir, lines, merge_roots)
         else:
             entry = child[2]
-            # ディレクトリ索引はフォルダー行に集約されるため、ファイルとしては出さない。
+            # ディレクトリ索引はディレクトリ行に集約されるため、ファイルとしては出さない。
             if entry["staged_name"].lower() == "index.md":
                 continue
             link = posixpath.relpath(entry["staged_rel"], from_dir) if from_dir else entry["staged_rel"]
