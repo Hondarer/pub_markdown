@@ -10,8 +10,7 @@
 コンテナー内のホーム ディレクトリが毎回リセットされる環境では、この Chrome ダウンロードも毎ビルドで発生します。また `node_modules` キャッシュがヒットして `npm ci` がスキップされると postinstall も実行されないため、Chrome キャッシュが空のままでは headless レンダリングが失敗します。
 
 GitHub Actions では `actions/cache` が利用できますが、Jenkins には同等の標準機能がありません。  
-ここでは **固定エージェントおよびコンテナー エージェント** を対象に、  
-ホストのファイル システムを活用した `node_modules` と **Chrome キャッシュ** の永続化方式を説明します。
+ここでは **固定エージェントおよびコンテナー エージェント** を対象に、ホストのファイル システムを活用した `node_modules` と **Chrome キャッシュ** の永続化方式を説明します。
 
 ## キャッシュ方式の概要
 
@@ -141,11 +140,9 @@ pipeline {
 
 ## フリースタイル ジョブ (スクリプト記述) サンプル
 
-Jenkinsfile を使わない **フリースタイル プロジェクト** では、「ビルド」セクションの  
-「**シェルの実行**」ステップを複数追加して同等の処理を実現します。
+Jenkinsfile を使わない **フリースタイル プロジェクト** では、「ビルド」セクションの「**シェルの実行**」ステップを複数追加して同等の処理を実現します。
 
-各ステップは独立したサブシェルで動くため、変数の受け渡しにはワークスペース上の  
-一時ファイル (`${WORKSPACE}/.node_modules_cache_state`) を使用します。
+各ステップは独立したサブシェルで動くため、変数の受け渡しにはワークスペース上の一時ファイル (`${WORKSPACE}/.node_modules_cache_state`) を使用します。
 
 ---
 
@@ -280,8 +277,7 @@ $HOME/.cache/puppeteer/chrome-headless-shell/linux-<バージョン>/chrome-head
 ```
 
 `bin_internal/chrome-wrapper.sh` もこのディレクトリ構造を前提に代替バージョンを探索します。  
-`.puppeteerrc.cjs` は配置していないため、環境変数 `PUPPETEER_CACHE_DIR` を明示しない限り  
-`os.homedir()/.cache/puppeteer` が既定値になります。
+`.puppeteerrc.cjs` は配置していないため、環境変数 `PUPPETEER_CACHE_DIR` を明示しない限り `os.homedir()/.cache/puppeteer` が既定値になります。
 
 コンテナー CI でホームが毎回リセットされる場合は、ホスト側の永続ディレクトリをマウントして引き継ぎます。
 
@@ -363,8 +359,7 @@ ls "${PUPPETEER_CACHE_DIR:-$HOME/.cache/puppeteer}/chrome" 2>/dev/null \
 ### 初回投入・オフライン環境
 
 オフライン環境で Chrome を事前配置する手順は [puppeteer-offline-chrome.md](puppeteer-offline-chrome.md) を参照してください。  
-ダウンロード済みの `chrome/` および `chrome-headless-shell/` をホスト永続ディレクトリに配置すれば、  
-コンテナー起動時にそのままマウントされて利用できます。
+ダウンロード済みの `chrome/` および `chrome-headless-shell/` をホスト永続ディレクトリに配置すれば、コンテナー起動時にそのままマウントされて利用できます。
 
 ## 補足
 

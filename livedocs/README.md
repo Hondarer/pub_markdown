@@ -136,43 +136,28 @@ Table: livedocs の生成ファイルと内容
 `pages/` はワークスペースの `.gitignore` で除外済みです。  
 `make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に削除されます。
 
-サイト名は、ワークスペースの `.vscode/pub_markdown.config.yaml` の `siteName` を読み、  
-`mkdocs.yml` の `site_name` へ展開します。  
+サイト名は、ワークスペースの `.vscode/pub_markdown.config.yaml` の `siteName` を読み、`mkdocs.yml` の `site_name` へ展開します。  
 未指定の場合はワークスペース フォルダー名を使用します。  
 画面上の見出しには、開いているページのバリアント名を足します。
 
-`mkdocs.yml` の `hooks:` に記述するパスは、`vendor_assets.py` が docsfw の実際の配置と  
-生成先から求めます。docsfw をワークスペース内の既定位置以外へ置いた場合や、  
-`--livedocsDir` で生成先を変えた場合も、生成後のパスは実ファイルを指します。
+`mkdocs.yml` の `hooks:` に記述するパスは、`vendor_assets.py` が docsfw の実際の配置と生成先から求めます。docsfw をワークスペース内の既定位置以外へ置いた場合や、`--livedocsDir` で生成先を変えた場合も、生成後のパスは実ファイルを指します。
 
 ## 元の Markdown を編集したときの反映
 
-`make servedocs` で `mkdocs serve` を実行している間は、元の Markdown  
-(`app/*/docs` 等) を保存すると自動的に反映されます。  
-`mkdocs.yml.in` の `hooks:` に登録した `bin/livedocs_autostage_hook.py` が  
-元の Markdown ディレクトリを監視し、変更されたファイルだけを軽量に  
-再ステージングします (ワークスペース全体の再走査は行いません)。  
-ステージング結果は `mkdocs serve` が監視しているステージング先  
-(`pages/livedocs/src/`) に書き込まれるため、続けて MkDocs 標準の仕組みが  
-ビルドとブラウザーの自動リロードを行います。
+`make servedocs` で `mkdocs serve` を実行している間は、元の Markdown (`app/*/docs` 等) を保存すると自動的に反映されます。  
+`mkdocs.yml.in` の `hooks:` に登録した `bin/livedocs_autostage_hook.py` が元の Markdown ディレクトリを監視し、変更されたファイルだけを軽量に再ステージングします (ワークスペース全体の再走査は行いません)。  
+ステージング結果は `mkdocs serve` が監視しているステージング先 (`pages/livedocs/src/`) に書き込まれるため、続けて MkDocs 標準の仕組みがビルドとブラウザーの自動リロードを行います。
 
 再生成中の通常の HTTP 要求には、直前に完成した版を返します。  
-次版は別の一時ディレクトリへ生成し、正常に完了した場合だけサイト全体を  
-切り替えます。  
+次版は別の一時ディレクトリへ生成し、正常に完了した場合だけサイト全体を切り替えます。  
 生成に失敗した場合も、ブラウザーでは直前の完成済み版を操作できます。  
 詳細は [設計ドキュメントの「再生成中の配信」](../docs/livedocs-design.md) を参照してください。
 
-ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査した  
-ときの情報をキャッシュして再利用しているため、対象ファイル自身の内容以外  
-(タイトル変更や新規ファイルの追加など) は反映が遅れることがあります。  
-ファイルの作成・削除・移動を検知した場合は自動でフル ステージングへ  
-切り替わります。  
-既知ファイルの内容変更では、最初の変更を検知してから 120 秒後に索引を  
-再同期します。  
-再同期中またはサイト再生成中に変更があった場合は、完成版の公開後から  
-改めて 120 秒待って再同期します。  
-変更が止まった後は、検出した変更、索引、公開サイトが一致するまで処理を  
-繰り返し、最終的な安定状態へ収束します。  
+ページ内リンクの解決や `\toc` の索引一覧は、ワークスペース全体を再走査したときの情報をキャッシュして再利用しているため、対象ファイル自身の内容以外 (タイトル変更や新規ファイルの追加など) は反映が遅れることがあります。  
+ファイルの作成・削除・移動を検知した場合は自動でフル ステージングへ切り替わります。  
+既知ファイルの内容変更では、最初の変更を検知してから 120 秒後に索引を再同期します。  
+再同期中またはサイト再生成中に変更があった場合は、完成版の公開後から改めて 120 秒待って再同期します。  
+変更が止まった後は、検出した変更、索引、公開サイトが一致するまで処理を繰り返し、最終的な安定状態へ収束します。  
 詳細は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。
 
 ## ステージングだけを実行する
@@ -192,16 +177,11 @@ python3 framework/docsfw/livedocs/bin/stage_livedocs.py --workspaceFolder="$PWD"
 python3 framework/docsfw/livedocs/bin/vendor_assets.py --workspaceFolder="$PWD" --variant=en
 ```
 
-`mkdocs serve` を起動する前の準備 (`make servedocs` の前提) や、  
-`make livedocs` (`mkdocs serve` を経由しない一括生成) では、  
-上記のフル ステージングが唯一の同期手段です。  
-また `assets/` (JS/CSS) や `mkdocs.yml` 自体の更新は自動ステージングの対象外  
-のため、更新した場合はこのフル ステージングを手動で実行するか、  
-`make servedocs` を再起動してください。
+`mkdocs serve` を起動する前の準備 (`make servedocs` の前提) や、`make livedocs` (`mkdocs serve` を経由しない一括生成) では、上記のフル ステージングが唯一の同期手段です。  
+また `assets/` (JS/CSS) や `mkdocs.yml` 自体の更新は自動ステージングの対象外のため、更新した場合はこのフル ステージングを手動で実行するか、`make servedocs` を再起動してください。
 
 ## 静的発行だけが持つ機能
 
-Word (docx) 出力、2 言語を一度に出す 4 バリアント、pandoc-crossref の採番、  
-`file://` での動作は動的発行では扱いません。  
+Word (docx) 出力、2 言語を一度に出す 4 バリアント、pandoc-crossref の採番、`file://` での動作は動的発行では扱いません。  
 これらが必要な場合は `make docs` を使用してください。  
 詳細は [設計ドキュメント](../docs/livedocs-design.md) を参照してください。

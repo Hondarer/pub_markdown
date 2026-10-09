@@ -4,8 +4,7 @@
 出力される docx のフォント、段落スタイル、文字スタイル、配色はすべてこのファイルで定義されます。
 
 Pandoc docx writer と docsfw の Lua フィルターは `w:styleId` でスタイルを参照します。  
-Pandoc 標準の見出しスタイル (`Heading 1` 等) と構文ハイライト用トークン スタイル (`KeywordTok` 等) は  
-Pandoc が自動生成するため、ここでは docsfw 固有のカスタム スタイルのみを説明します。
+Pandoc 標準の見出しスタイル (`Heading 1` 等) と構文ハイライト用トークン スタイル (`KeywordTok` 等) は Pandoc が自動生成するため、ここでは docsfw 固有のカスタム スタイルのみを説明します。
 
 ## 独自スタイル一覧
 

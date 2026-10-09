@@ -4,8 +4,7 @@ GitHub 形式の admonition (注意書きブロック) を Pandoc フィルタ�
 
 ## 概要
 
-`> [!NOTE]` 等の GitHub-style alert 構文を検出し、HTML では色分けされた `<div>` に、  
-docx ではカスタム段落スタイル付き Div に変換します。  
+`> [!NOTE]` 等の GitHub-style alert 構文を検出し、HTML では色分けされた `<div>` に、docx ではカスタム段落スタイル付き Div に変換します。  
 マッチしない blockquote は従来通りの表示を維持します。
 
 ## 対応タイプ
@@ -38,8 +37,7 @@ BlockQuote
     Str "本文"
 ```
 
-フィルターは `BlockQuote.content[1]` (Para/Plain) の先頭 Inline が `[!TYPE]` パターンに  
-マッチするか判定し、マッチした場合は `[!TYPE]` と直後の LineBreak/SoftBreak を除去します。
+フィルターは `BlockQuote.content[1]` (Para/Plain) の先頭 Inline が `[!TYPE]` パターンにマッチするか判定し、マッチした場合は `[!TYPE]` と直後の LineBreak/SoftBreak を除去します。
 
 ## HTML 出力
 
@@ -102,8 +100,7 @@ HTML は絵文字なし、docx は絵文字付きです。
 
 Table: admonition タイプ別の docx 段落スタイル仕様
 
-スタイルの定義詳細 (styleId・背景色・左罫線色・styles.xml 追加例・`.dotx` 編集手順) は  
-[docs/docx-template-styles.md](../../docs/docx-template-styles.md) を参照してください。
+スタイルの定義詳細 (styleId・背景色・左罫線色・styles.xml 追加例・`.dotx` 編集手順) は [docs/docx-template-styles.md](../../docs/docx-template-styles.md) を参照してください。
 
 ## フィルター チェーン上の位置
 
@@ -112,19 +109,15 @@ Table: admonition タイプ別の docx 段落スタイル仕様
 - HTML: `pagebreak.lua` → **`admonition.lua`** → `link-to-html.lua`
 - docx: `pagebreak.lua` → **`admonition.lua`** → `toc-pagebreak.lua`
 
-admonition に変換された BlockQuote は Div になるため、  
-`separate-consecutive-blockquotes.lua` の対象から外れます (意図した動作です)。
+admonition に変換された BlockQuote は Div になるため、`separate-consecutive-blockquotes.lua` の対象から外れます (意図した動作です)。
 
 ## docx 出力の制約事項
 
 ### admonition 内のリスト
 
-docx 出力で admonition 内にリスト (箇条書き・番号付きリスト) を含めると、  
-リスト段落が admonition ブロックの外側に描画されます。
+docx 出力で admonition 内にリスト (箇条書き・番号付きリスト) を含めると、リスト段落が admonition ブロックの外側に描画されます。
 
-**原因**: Pandoc の docx ライターは `custom-style` 付き Div 内の段落 (Para) にスタイルを適用しますが、  
-BulletList / OrderedList は独自のリスト スタイル (List Paragraph 等) で段落を生成するため、  
-Div の `custom-style` が適用されません。
+**原因**: Pandoc の docx ライターは `custom-style` 付き Div 内の段落 (Para) にスタイルを適用しますが、BulletList / OrderedList は独自のリスト スタイル (List Paragraph 等) で段落を生成するため、Div の `custom-style` が適用されません。
 
 **影響**: リスト項目が admonition の左罫線・背景色の外側に表示されます。
 

@@ -237,8 +237,7 @@ pages/livedocs/
 
 ### MkDocs 側の制約
 
-MkDocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる  
-(`framework/docsfw/mkdocs/.venv/Lib/site-packages/mkdocs/livereload/__init__.py:139-161`)。
+MkDocs 1.6.1 の `LiveReloadServer.watch(path, func=None)` は、変更されたファイルのパスを受け取れるカスタム コールバックを渡せない。`func` は `None` かビルダー本体のみに限定されており、それ以外を渡すと `TypeError` になる (`framework/docsfw/mkdocs/.venv/Lib/site-packages/mkdocs/livereload/__init__.py:139-161`)。
 
 このため `livedocs_autostage_hook.py` は、MkDocs 本体が使う `PollingObserver` とは別に、`on_serve` イベントで独自の `watchdog.observers.polling.PollingObserver` を登録し、変更されたファイルを 1 件ずつ捕捉する。`watchdog` は MkDocs 自身の推移的依存としてすでに導入されているが (`watchdog==6.0.0`)、直接 import して使うため `requirements.txt` にも明記した。
 
@@ -388,12 +387,10 @@ URL の解決はステージング時に行い、staged Markdown のフロント
 
 ステージング先 (`src/<alias>/...`) は仮想パスで、リポジトリ ルートからの相対パスを保持しません。  
 このため Material の `repo_url` と `edit_uri` では正しい URL になりません。  
-一方 `stage_livedocs.py` はファイルごとにディスク上の実体パス (`Document.real_path`) を持つため、  
-静的発行と同じ「実体パスから所属リポジトリを決める」規則をそのまま適用できます。  
+一方 `stage_livedocs.py` はファイルごとにディスク上の実体パス (`Document.real_path`) を持つため、静的発行と同じ「実体パスから所属リポジトリを決める」規則をそのまま適用できます。  
 サブモジュール配下のファイルは、当該サブモジュール自身のリポジトリを指します。
 
-フロント マターで運ぶことで、`mkdocs build` と `mkdocs serve` が同じ経路になり、  
-`stage_single()` による 1 ファイル単位の再ステージングにも自動で追従します。  
+フロント マターで運ぶことで、`mkdocs build` と `mkdocs serve` が同じ経路になり、`stage_single()` による 1 ファイル単位の再ステージングにも自動で追従します。  
 専用のフックは持ちません。
 
 ### ref の一括取得
@@ -433,24 +430,19 @@ Git URL を解決できないページでは Git ボタンを出しません。
 ### ヘッダーへの配置
 
 Material の `partials/header.html` を `custom_dir` で上書きします。  
-上流の `md-header__source` ブロック (`repo_url` を設定したときのリポジトリ カード) を取り除き、  
-配色トグルと検索ボックスの間へ `partials/docsfw-header-links.html` の include を加えます。  
+上流の `md-header__source` ブロック (`repo_url` を設定したときのリポジトリ カード) を取り除き、配色トグルと検索ボックスの間へ `partials/docsfw-header-links.html` の include を加えます。  
 それ以外は上流のままです。
 
 並びは概要版と詳細版の切り替え、Doxygen、Git の順で、静的発行のナビバーと同じです。  
-検索ボックスの右ではなく左へ置くのは、検索ボックスが画面幅に応じて伸縮し、  
-右端に置くとアイコンの位置が幅によって動くためです。
+検索ボックスの右ではなく左へ置くのは、検索ボックスが画面幅に応じて伸縮し、右端に置くとアイコンの位置が幅によって動くためです。
 
 上流の複製であるため、mkdocs-material を更新したときは差分の取り直しが要ります。  
-`requirements.txt` はバージョンを固定しており、`bin_test/test_livedocs_header.py` が上流 `header.html` の  
-内容ハッシュと `requirements.txt` の固定版を突き合わせて、更新に気付けるようにしています。
+`requirements.txt` はバージョンを固定しており、`bin_test/test_livedocs_header.py` が上流 `header.html` の内容ハッシュと `requirements.txt` の固定版を突き合わせて、更新に気付けるようにしています。
 
 ラベルは `config.theme.language` で「ソースを開く」と「View source」を出し分けます。  
-静的発行は読み込み後の JavaScript で `<html lang>` を見て差し替えますが、動的発行は `LIVEDOCS_VARIANT` で  
-言語が 1 つに固定されるため、テンプレートで決められます。
+静的発行は読み込み後の JavaScript で `<html lang>` を見て差し替えますが、動的発行は `LIVEDOCS_VARIANT` で言語が 1 つに固定されるため、テンプレートで決められます。
 
-アイコンは provider 別に切り替えます。`vendor_assets.py` が `styles/html/` から  
-`docsfw-{doxygen,git,github,gitlab,gitbucket}-icon.svg` の 5 種を常時コピーします。  
+アイコンは provider 別に切り替えます。`vendor_assets.py` が `styles/html/` から `docsfw-{doxygen,git,github,gitlab,gitbucket}-icon.svg` の 5 種を常時コピーします。  
 `slate` では GitHub (`#181717`) と GitBucket (`#303030`) だけを反転し、ヘッダー背景に沈まないようにします。  
 狭い画面での非表示は、静的発行と同じ 767px を境にします。
 
@@ -466,16 +458,13 @@ Material の `partials/header.html` を `custom_dir` で上書きします。
 アイコン自身には独自の余白を与えません。
 
 例外は検索ボックスとの間です。  
-検索ボックス (`.md-search`) は自身に左マージンを持たないため、直前のアイコンとの間隔が、  
-アイコン同士の 8px に対して 4px しかありません。  
+検索ボックス (`.md-search`) は自身に左マージンを持たないため、直前のアイコンとの間隔が、アイコン同士の 8px に対して 4px しかありません。  
 `.md-header .md-search` へ 4px の左マージンを補い、間隔をそろえます。
 
 このマージンは、Material が検索を入力欄として並べる 60em 以上でだけ効かせます。  
-これ未満では検索も 40px 四方のボタン (`label[for="__search"]`) になり、  
-`.md-header__button` の margin によって間隔がすでにそろっているためです。
+これ未満では検索も 40px 四方のボタン (`label[for="__search"]`) になり、`.md-header__button` の margin によって間隔がすでにそろっているためです。
 
-Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないため、`object-fit: contain` で  
-縦横比を保ったまま同じ枠に収めます。
+Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないため、`object-fit: contain` で縦横比を保ったまま同じ枠に収めます。
 
 ## 発行者と発行日時
 
@@ -485,13 +474,11 @@ Doxygen (28.66x27.2) と GitBucket (316x329) の SVG は正方形ではないた
 値の仕様は [発行者と発行日時](publish-info.md) を参照してください。
 
 要件は「同じページについて、静的発行と動的発行が同一の文字列を出力すること」です。  
-`bin_test/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin_internal/get_file_author.sh` と  
-`bin_internal/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
+`bin_test/test_livedocs_publish_info.py` は、一時リポジトリに対して `bin_internal/get_file_author.sh` と `bin_internal/get_file_date.sh` を実際に実行し、動的発行の結果と突き合わせます。
 
 ### 解決のタイミング
 
-Git 単一ページ リンクと同じく、ステージング時に解決して staged Markdown のフロント マターへ  
-`author` と `date` を書きます。テンプレートは `page.meta` から読みます。  
+Git 単一ページ リンクと同じく、ステージング時に解決して staged Markdown のフロント マターへ `author` と `date` を書きます。テンプレートは `page.meta` から読みます。  
 `stage_single()` による 1 ファイル単位の再ステージングにも自動で追従するため、専用のフックは持ちません。
 
 キーは静的発行の pandoc メタデータと同じ `author` と `date` にします。  
@@ -507,19 +494,15 @@ Git 単一ページ リンクと同じく、ステージング時に解決して
 - `git diff --name-only HEAD` による未コミット差分のパス集合
 - `git config user.name` による現在のユーザー名
 
-`get_file_author.sh` はファイルごとに `git log --reverse` を、`get_file_date.sh` はファイルごとに  
-`git log -1` を呼びますが、動的発行は発行対象すべてを 1 回のステージングで処理します。  
-942 ファイル分の子プロセス起動は、特に Windows で `make servedocs` の起動を遅くするため、  
-Git 単一ページ リンクと同じ一括取得の方針を広げました。
+`get_file_author.sh` はファイルごとに `git log --reverse` を、`get_file_date.sh` はファイルごとに `git log -1` を呼びますが、動的発行は発行対象すべてを 1 回のステージングで処理します。  
+942 ファイル分の子プロセス起動は、特に Windows で `make servedocs` の起動を遅くするため、Git 単一ページ リンクと同じ一括取得の方針を広げました。
 
-モジュールは `git_link.py` のまま据え置きます。3 つとも同一の走査から導出されるため、  
-分割すると走査が重複するか、リポジトリ単位のキャッシュを共有できなくなります。  
+モジュールは `git_link.py` のまま据え置きます。3 つとも同一の走査から導出されるため、分割すると走査が重複するか、リポジトリ単位のキャッシュを共有できなくなります。  
 文字列への整形だけは `bin/publish_info.py` へ分け、git を呼ばない純粋な関数として試験できるようにしました。
 
 ### コミッター名の並び
 
-`get_file_author.sh` は `git log --reverse --format=%cn | awk '!seen[$0]++'` で、  
-古い順・初出優先の並びを作ります。
+`get_file_author.sh` は `git log --reverse --format=%cn | awk '!seen[$0]++'` で、古い順・初出優先の並びを作ります。
 
 一括取得は新しい順に走査するため、同じ並びを直接は作れません。  
 そこで、既出の名前を取り除いてから末尾へ追加し、参照時に反転します。  
@@ -528,18 +511,15 @@ Git 単一ページ リンクと同じ一括取得の方針を広げました。
 ### remote に依存させない
 
 Git 単一ページ リンクは remote URL を解決できないと出せませんが、発行者と発行日時は remote を見ません。  
-`RepoInfo._collect()` は remote を解決できない時点で処理を打ち切っていたため、  
-追跡済みパスとコミット索引の収集を先に行い、`base` と `provider` の有無は URL 生成だけの条件にしました。  
+`RepoInfo._collect()` は remote を解決できない時点で処理を打ち切っていたため、追跡済みパスとコミット索引の収集を先に行い、`base` と `provider` の有無は URL 生成だけの条件にしました。  
 remote を持たないリポジトリでも発行者と発行日時が出ます。
 
 `gitLinkEnable` を無効にした構成でも、発行者と発行日時のために resolver は要ります。  
-`create_git_resolver()` は 3 つのいずれかが有効なら resolver を作り、  
-どの情報を出すかは `gitLinkEnable`、`autoSetAuthor`、`autoSetDate` が個別に決めます。
+`create_git_resolver()` は 3 つのいずれかが有効なら resolver を作り、どの情報を出すかは `gitLinkEnable`、`autoSetAuthor`、`autoSetDate` が個別に決めます。
 
 ### git-origin による差し替えを行わない理由
 
-Git 単一ページ リンクは、doxyfw 生成 md のフロント マター `git-origin` を読み、  
-md 自身ではなく元ソースを解決対象にします。  
+Git 単一ページ リンクは、doxyfw 生成 md のフロント マター `git-origin` を読み、md 自身ではなく元ソースを解決対象にします。  
 発行者と発行日時では、この差し替えを行いません。
 
 静的発行が `get_file_author.sh` と `get_file_date.sh` へ発行対象の md をそのまま渡しているためです。  
@@ -573,36 +553,29 @@ md 自身ではなく元ソースを解決対象にします。
 
 ## 概要 (Abstract)
 
-静的発行は `abstract` / `abstract-title` フロント マターを Pandoc 標準のテンプレート変数として扱い、  
-`styles/html/html-template.html` でタイトル (`$title$` の H1) の直後・本文の前に概要ブロックを描画します。  
+静的発行は `abstract` / `abstract-title` フロント マターを Pandoc 標準のテンプレート変数として扱い、`styles/html/html-template.html` でタイトル (`$title$` の H1) の直後・本文の前に概要ブロックを描画します。  
 動的発行でも同じ配置と見た目をそろえます。
 
 ### ステージング時の変換が不要な理由
 
-発行者と発行日時、Git 単一ページ リンクはステージング処理 (`bin/stage_livedocs.py`) がフロント マターへ書き込み、  
-テーマ側は `page.meta` を読むだけでした。  
+発行者と発行日時、Git 単一ページ リンクはステージング処理 (`bin/stage_livedocs.py`) がフロント マターへ書き込み、テーマ側は `page.meta` を読むだけでした。  
 概要はこの書き込みが要りません。  
-mkdocs はフロント マターを自前でパースするため、ソース側に `abstract` / `abstract-title` を記述するだけで、  
-そのまま `page.meta` から取得できるためです。
+mkdocs はフロント マターを自前でパースするため、ソース側に `abstract` / `abstract-title` を記述するだけで、そのまま `page.meta` から取得できるためです。
 
 ### 挿入方式と、テーマを上書きしない理由
 
-概要ブロックは `bin/livedocs_abstract_hook.py` の `on_page_content` (Markdown を HTML 化した直後・  
-テンプレート適用前に HTML 文字列を書き換えられる mkdocs 標準イベント) で挿入します。  
+概要ブロックは `bin/livedocs_abstract_hook.py` の `on_page_content` (Markdown を HTML 化した直後・テンプレート適用前に HTML 文字列を書き換えられる mkdocs 標準イベント) で挿入します。  
 本文の HTML 中の最初の `</h1>` の直後へ正規表現で差し込み、`<h1>` が無いページでは先頭へ前置します。
 
 mkdocs-material のテーマ (`partials/content.html`) が H1 を合成するのは、本文の HTML に `<h1` が無い場合だけです。  
 docsfw のドキュメントはほとんど本文側に `# 見出し` を持つため、本文の HTML にはすでに `<h1>` が含まれます。  
-テーマ側 (`partials/content.html`) を上書きしてブロックを差し込む方式では、  
-本文側の H1 より前に出てしまい、静的発行の見た目と一致しません。  
+テーマ側 (`partials/content.html`) を上書きしてブロックを差し込む方式では、本文側の H1 より前に出てしまい、静的発行の見た目と一致しません。  
 `on_page_content` で本文の HTML そのものを書き換える方式なら、この順序を保てます。  
-また `partials/header.html` のようにテーマをフォークする必要が無いため、  
-上流差分を追い掛けるテストも増えません。
+また `partials/header.html` のようにテーマをフォークする必要が無いため、上流差分を追い掛けるテストも増えません。
 
 ### 概要本文と概要タイトルの扱い
 
-`abstract` (概要本文) は、Pandoc が Markdown として解釈する挙動に合わせ、  
-サイト本文と同じ Markdown 拡張 (`config["markdown_extensions"]` / `config["mdx_configs"]`) で HTML へ変換します。  
+`abstract` (概要本文) は、Pandoc が Markdown として解釈する挙動に合わせ、サイト本文と同じ Markdown 拡張 (`config["markdown_extensions"]` / `config["mdx_configs"]`) で HTML へ変換します。  
 `abstract-title` (見出しラベル) は Pandoc 側と同じくプレーン文字列として扱い、Markdown 変換はせず HTML エスケープだけを行います。
 
 `abstract-title` を省略した場合は、静的発行と同じく見出し行が空のまま出ます。  
@@ -610,27 +583,19 @@ mkdocs 側で「概要」や「Abstract」を自動補完することはしま�
 
 ### 見た目の一致
 
-概要タイトルには、通常の見出しと同じテーマ追従色と太字を、静的発行と動的発行の両方に追加します。<br>  
-静的発行は `styles/html/html-style.css` の `.abstract-title`、  
-動的発行は `docsfw-pandoc-style.css` の `.md-typeset .abstract-title` です。  
+概要タイトルには、通常の見出しと同じテーマ追従色と太字を、静的発行と動的発行の両方に追加します。<br>静的発行は `styles/html/html-style.css` の `.abstract-title`、動的発行は `docsfw-pandoc-style.css` の `.md-typeset .abstract-title` です。  
 それ以外の装飾は無く、概要ブロックの本文は通常の段落と同じ見た目になります。
 
 ## ヘッダーの寸法とタイトルの固定表示
 
-上記の「寸法と幅不足時の表示」は文字サイズとアイコン寸法の固定でしたが、  
-検索ボックスの幅、ヘッダーの高さと余白、およびヘッダー タイトルの表示内容にも  
-同じ「画面幅や状態で変えない」方針を広げます。
+上記の「寸法と幅不足時の表示」は文字サイズとアイコン寸法の固定でしたが、検索ボックスの幅、ヘッダーの高さと余白、およびヘッダー タイトルの表示内容にも同じ「画面幅や状態で変えない」方針を広げます。
 
 ### 検索ボックスの幅
 
-Material は検索ボックスの幅を rem で指定しています。60em 以上で、常時表示の入力欄  
-(`.md-search__inner` の既定値) が `11.7rem`、検索を開いたとき  
-(`[data-md-toggle="search"]:checked`) の候補パネル (`.md-search__inner` の checked 版と  
-`.md-search__scrollwrap`) が `23.4rem` になります。
+Material は検索ボックスの幅を rem で指定しています。60em 以上で、常時表示の入力欄 (`.md-search__inner` の既定値) が `11.7rem`、検索を開いたとき (`[data-md-toggle="search"]:checked`) の候補パネル (`.md-search__inner` の checked 版と `.md-search__scrollwrap`) が `23.4rem` になります。
 
 `html` の font-size は 125% に固定します。  
-検索ボックスの幅は、ヘッダーの他要素と同じく 1rem = 20px の換算値を px にします  
-(`11.7rem` → `234px`、`23.4rem` → `468px`)。  
+検索ボックスの幅は、ヘッダーの他要素と同じく 1rem = 20px の換算値を px にします (`11.7rem` → `234px`、`23.4rem` → `468px`)。  
 常時表示の入力欄と、検索を開いたときの候補パネルの両方を固定します。
 
 Material は 76.25em 以上で候補パネルをさらに `34.4rem` へ広げますが、この段も `468px` でそろえます。  
@@ -642,40 +607,27 @@ Material は 76.25em 以上で候補パネルをさらに `34.4rem` へ広げま
 Material 既定の rem のままでは、html の font-size が上がると箱と余白だけが伸びて間延びして見えました。  
 html は 125% に固定したうえで、pandoc と同じ 48px 基準の px を置きます。
 
-タイトル領域 (`.md-header__title` の `2.4rem`)、ボタン (`margin .2rem` と `padding .4rem`)、  
-検索ボックス (`.md-search` の `padding .2rem`、`.md-search__form` の `1.8rem`) は、  
-いずれも等倍で 48px の高さに収まります。
+タイトル領域 (`.md-header__title` の `2.4rem`)、ボタン (`margin .2rem` と `padding .4rem`)、検索ボックス (`.md-search` の `padding .2rem`、`.md-search__form` の `1.8rem`) は、いずれも等倍で 48px の高さに収まります。
 
-検索ボックス内の指定も同じ基準でそろえます。入力欄と入力候補の左右余白 `2.2rem` を 44px、  
-虫めがねと消去ボタンの左右位置 `.5rem` を 10px、  
-候補パネルの上端 `1.9rem` を 38px にします。  
+検索ボックス内の指定も同じ基準でそろえます。入力欄と入力候補の左右余白 `2.2rem` を 44px、虫めがねと消去ボタンの左右位置 `.5rem` を 10px、候補パネルの上端 `1.9rem` を 38px にします。  
 虫めがねと消去ボタンの上端は、20px のアイコンを 36px の入力欄の中央へ置く 8px です。  
 対象は入力欄として並ぶ 60em 以上だけです。  
 60em 未満では検索も 40px 四方のボタンになります。
 
 ヘッダーの高さに追従する外側の指定も、同じ 48px 基準へそろえます。  
 サイドバーの sticky 上端 (`.md-sidebar` の `top: 2.4rem`) はヘッダーの高さと同じ値です。  
-実際の表示では vendor JS が測定したヘッダーの高さを `style` 属性へ書き込むため、  
-CSS の指定は JS が動かない場合の代替値として効きます。  
-見出しへのアンカー移動時の上余白 (`--md-scroll-margin` の `3.6rem`) も、  
-ヘッダー 48px と余白 24px の合計として書かれているため、72px に固定します。
+実際の表示では vendor JS が測定したヘッダーの高さを `style` 属性へ書き込むため、CSS の指定は JS が動かない場合の代替値として効きます。  
+見出しへのアンカー移動時の上余白 (`--md-scroll-margin` の `3.6rem`) も、ヘッダー 48px と余白 24px の合計として書かれているため、72px に固定します。
 
-ボタンの `padding` については、モード切り替え、Doxygen、Git の 4px を `docsfw-header-links.css` が  
-詳細度で勝って指定しています。ここでの 8px は、メニュー、ロゴ、検索の既定ボタンにだけ効きます。
+ボタンの `padding` については、モード切り替え、Doxygen、Git の 4px を `docsfw-header-links.css` が詳細度で勝って指定しています。ここでの 8px は、メニュー、ロゴ、検索の既定ボタンにだけ効きます。
 
 ### ヘッダー タイトルの固定表示
 
-Material は既定で、ページ上部ではサイト名 (`config.site_name`)、本文をスクロールすると  
-文書タイトル (`page.meta.title` または `page.title`) へ、ヘッダー タイトルをクロス フェード切り替えします。  
-切り替えは本文の見出しの可視性を監視する vendor JS が `.md-header__title--active` を付け外しし、  
-`.md-header__topic:first-child` (サイト名) と `.md-header__topic + .md-header__topic` (文書タイトル)  
-の不透明度を入れ替えることで実現しています。
+Material は既定で、ページ上部ではサイト名 (`config.site_name`)、本文をスクロールすると文書タイトル (`page.meta.title` または `page.title`) へ、ヘッダー タイトルをクロス フェード切り替えします。  
+切り替えは本文の見出しの可視性を監視する vendor JS が `.md-header__title--active` を付け外しし、`.md-header__topic:first-child` (サイト名) と `.md-header__topic + .md-header__topic` (文書タイトル) の不透明度を入れ替えることで実現しています。
 
 動的発行では、本文のスクロール状況によらずヘッダー タイトルを常に文書タイトルにします。  
-`theme/partials/header.html` (上流の複製) と vendor JS は変更せず、CSS だけで  
-`.md-header__topic:first-child` を常に非表示にし、`.md-header__topic + .md-header__topic` を  
-常に不透明度 1 で表示することで、`.md-header__title--active` の付け外しに関係なく  
-文書タイトルだけが出るようにします。
+`theme/partials/header.html` (上流の複製) と vendor JS は変更せず、CSS だけで `.md-header__topic:first-child` を常に非表示にし、`.md-header__topic + .md-header__topic` を常に不透明度 1 で表示することで、`.md-header__title--active` の付け外しに関係なく文書タイトルだけが出るようにします。
 
 ## PlantUML のブラウザー レンダリング
 
@@ -789,8 +741,7 @@ PlantUML ソース内に `caption` がある場合は、ステージング時に
 ページのスクリプトとしては配置しません。
 
 Material にも Mermaid 連携がありますが、こちらは unpkg から `mermaid.min.js` を取得します。  
-docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、  
-クラス名を `docsfw-mermaid` として Material 側の処理と競合しないようにしています。
+docsfw が同梱方式であることと、描画結果を docsfw の HTML 出力にそろえることを優先し、クラス名を `docsfw-mermaid` として Material 側の処理と競合しないようにしています。
 
 ## MkDocs の設定
 
@@ -1359,12 +1310,10 @@ Pandoc HTML 側も同じ規則です。詳細は [検索とナビゲーション
 覆いには `--docsfw-viewport-slack` の分の余裕を足し、その間も下端に本文が出ないようにします。
 
 マウスまたはタッチで開閉した場合は、開閉後にメニュー ボタンへフォーカス表示を残しません。  
-Material は開閉を `<label class="md-header__button md-icon" for="__drawer">` と `<label class="md-overlay" for="__drawer">`、  
-および `.md-toggle{display:none}` のチェック ボックス `#__drawer` で行います。  
+Material は開閉を `<label class="md-header__button md-icon" for="__drawer">` と `<label class="md-overlay" for="__drawer">`、および `.md-toggle{display:none}` のチェック ボックス `#__drawer` で行います。  
 `<label>` はフォーカスを受けず、チェック ボックスは `display: none` でフォーカスを受けられないため、この規則を実装で持つ必要がありません。  
 Pandoc HTML 側は `position: fixed` の要素を JS で開閉するため、閉じたときに戻すフォーカスをポインター操作かどうかで出し分けます。  
-規則は同じで、実装の有無だけが違います。差が出たら気付けるよう、覆いをタップして閉じたあとのフォーカス位置を  
-`bin_test/test_livedocs_nav_browser.js` で確認します。  
+規則は同じで、実装の有無だけが違います。差が出たら気付けるよう、覆いをタップして閉じたあとのフォーカス位置を `bin_test/test_livedocs_nav_browser.js` で確認します。  
 詳細は [検索とナビゲーションの該当節](search-and-nav.md) を参照してください。
 
 ドロワーの上端と本文に接する側面には、ヘッダーおよびフッターの境界線と同じ色で 1px の線を引きます。  
@@ -1519,8 +1468,7 @@ MkDocs はこの `OSError` を捕捉しないため、traceback を出力して�
 
 WSL2 の既定のネットワークモード (`wslinfo --networking-mode` が `nat`) では、Windows 側のポート使用は bind の失敗になりません。  
 WSL は Windows とは別のネットワーク名前空間を持つため、Windows 側が `127.0.0.1:8000` を待ち受けていても、WSL 内の bind は成功します。  
-一方、Windows から WSL への localhost 転送は、Windows 側で同じポートが先に使われていると成立しません  
-([Accessing network applications with WSL](https://learn.microsoft.com/windows/wsl/networking))。  
+一方、Windows から WSL への localhost 転送は、Windows 側で同じポートが先に使われていると成立しません ([Accessing network applications with WSL](https://learn.microsoft.com/windows/wsl/networking))。  
 そのため Windows のブラウザーで <http://127.0.0.1:8000/> を開くと、配信中の MkDocs ではなく Windows 側のプロセスへ接続します。  
 `make servedocs` は起動したままで、この食い違いを報告しません。
 
@@ -1600,10 +1548,8 @@ Table: TinySegmenter による日本語検索結果の実測例
 2 文字程度の語やカタカナ語は引けますが、`同期プリミティブ` のような複合語は引けません。  
 また `同期` が `同梱` にも一致するなど、分かち書きの精度は docsfw の 2-gram より劣ります。
 
-mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、mkdocs-material では直せない」と upstream に帰責しています  
-([squidfunk/mkdocs-material Discussion #3916](https://github.com/squidfunk/mkdocs-material/discussions/3916))。  
-検索クエリのトークン化処理を差し替える機能も、2026 年 8 月時点で未実装です  
-([squidfunk/mkdocs-material Issue #4980](https://github.com/squidfunk/mkdocs-material/issues/4980))。
+mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr-languages が使用) 側のバグであり、mkdocs-material では直せない」と upstream に帰責しています ([squidfunk/mkdocs-material Discussion #3916](https://github.com/squidfunk/mkdocs-material/discussions/3916))。  
+検索クエリのトークン化処理を差し替える機能も、2026 年 8 月時点で未実装です ([squidfunk/mkdocs-material Issue #4980](https://github.com/squidfunk/mkdocs-material/issues/4980))。
 
 #### 緩和策 (実装済み)
 
@@ -1612,15 +1558,9 @@ mkdocs-material のメンテナーは、この不具合を「TinySegmenter (lunr
 lunr の `separator` は索引構築時とクエリ解析時の両方に同じ正規表現が使われるため、TinySegmenter のような言語別の分かち書きに頼らずに、文字単位に近い粒度で索引語とクエリを対称に分割できます。  
 これにより `同期プリミティブ` のような複合語も検索でヒットするようになります。
 
-再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の  
-2-gram 実装と同程度のノイズ (無関係な部分一致) が生じます。`lang: en` を明示しているのは、  
-Porter stemmer や英語ストップワード フィルターが ASCII 文字列にしか作用しないため日本語トークンへの  
-副作用がなく、かつ `lang: ja` を指定した場合に自動的に読み込まれる TinySegmenter を確実に外すためです。
+再現率を優先するトレードオフとして、`同` のような 1 文字の一致でもヒットしやすくなり、docsfw の 2-gram 実装と同程度のノイズ (無関係な部分一致) が生じます。`lang: en` を明示しているのは、Porter stemmer や英語ストップワード フィルターが ASCII 文字列にしか作用しないため日本語トークンへの副作用がなく、かつ `lang: ja` を指定した場合に自動的に読み込まれる TinySegmenter を確実に外すためです。
 
-見直しの合図: 上記 Discussion #3916 または関連 issue で TinySegmenter 側の根本修正が upstream で  
-取り込まれた場合、あるいは mkdocs-material 側でクエリ トークン化のカスタム パイプライン  
-(Issue #4980) が実装された場合は、この緩和策 (`separator` への CJK 境界追加と `lang: en` 指定) を  
-見直してください。
+見直しの合図: 上記 Discussion #3916 または関連 issue で TinySegmenter 側の根本修正が upstream で取り込まれた場合、あるいは mkdocs-material 側でクエリ トークン化のカスタム パイプライン (Issue #4980) が実装された場合は、この緩和策 (`separator` への CJK 境界追加と `lang: en` 指定) を見直してください。
 
 索引の大きさは 791 ページで約 13 MB です。  
 初回の検索操作から結果が出るまで、ブラウザー上で約 10 秒の索引構築が入ります。  
@@ -1672,8 +1612,7 @@ Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だ�
 
 ## PlantUML の描画差
 
-`@plantuml/core` 1.2026.7 (MIT ライセンス版、ブラウザー) と、ローカルの PlantUML 1.2026.2 (GPL 版、CLI) で  
-[PlantUML ショーケース](sample/plantuml-showcase.md) の 19 図を描画し、SVG の viewBox 面積と text 要素数を比較しました。
+`@plantuml/core` 1.2026.7 (MIT ライセンス版、ブラウザー) と、ローカルの PlantUML 1.2026.2 (GPL 版、CLI) で [PlantUML ショーケース](sample/plantuml-showcase.md) の 19 図を描画し、SVG の viewBox 面積と text 要素数を比較しました。
 
 結果は次のとおりです。
 
@@ -1697,15 +1636,13 @@ Salt の画像が必要な場合は DOCX を使用してください。
 `skinparam backgroundColor transparent` とスタイル設定は、`@start<種別>` の行の直後へ挿入します。  
 この規則は静的発行の `bin_internal/pandoc-filters/plantuml.lua` と、動的発行の `styles/browser/docsfw-diagrams.js` で共通です。
 
-もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の  
-4 種類だけから探していました。  
+もともと `plantuml.lua` は挿入位置を `@startuml` / `@startmindmap` / `@startjson` / `@startyaml` の 4 種類だけから探していました。  
 `@startebnf` や `@startregex` では該当行が見つからず、`@start` より前の行へ挿入されます。
 
 PlantUML の CLI とサーバーは `@start` より前の行を無視するため、docsfw では表面化しませんでした。  
 一方 `@plantuml/core` は認識できない指示としてエラー図を返します。
 
-そのため、探索を `@start<種別>` 全般 (Lua は `^%s*@start%w+`、JavaScript は `/^\s*@start\w+/`) へ広げ、  
-docsfw 側にも同じ対策を入れました。
+そのため、探索を `@start<種別>` 全般 (Lua は `^%s*@start%w+`、JavaScript は `/^\s*@start\w+/`) へ広げ、docsfw 側にも同じ対策を入れました。
 
 変更の影響は次のとおり確認済みです。
 
@@ -1740,8 +1677,7 @@ Table: startuml からのキャプション抽出における新旧動作比較
 最後の 1 件だけが採用されなくなります。  
 旧実装が空白 1 文字をキャプションとして拾っていたもので、本ワークスペースに該当行はありません。
 
-本ワークスペースで列挙外の図種を名前付きで使っている 5 件 (`@startwbs`, `@startgantt`, `@startsalt`,  
-`@startebnf`, `@startregex`) は、いずれも `caption` 行を明示しています。  
+本ワークスペースで列挙外の図種を名前付きで使っている 5 件 (`@startwbs`, `@startgantt`, `@startsalt`, `@startebnf`, `@startregex`) は、いずれも `caption` 行を明示しています。  
 `caption` 行が優先されるため、現時点の出力は変わりません。  
 ショーケースの 19 図を `plantuml.lua` へ通し、キャプションが変更前と一致することを確認しました。
 

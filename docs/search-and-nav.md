@@ -423,8 +423,7 @@ Table: 部分発行時における再生成ページと未更新旧ページの�
 ### インデックスの更新タイミング
 
 `pub_markdown_core.sh` のタイムスタンプ スキップにより、変更のない `.md` は再生成されません。  
-`search-index.js` と `nav-tree.js` は毎回の発行で再生成されますが、索引対象の HTML 自体が古い場合、  
-そのページの `<main id="docsfw-content">` マーカーが存在しないため本文抽出の精度がやや下がります。  
+`search-index.js` と `nav-tree.js` は毎回の発行で再生成されますが、索引対象の HTML 自体が古い場合、そのページの `<main id="docsfw-content">` マーカーが存在しないため本文抽出の精度がやや下がります。  
 フル ビルド (`make cleandocs && make docs`) で全ページに新テンプレートが適用されます。
 
 ### インデックス サイズ
