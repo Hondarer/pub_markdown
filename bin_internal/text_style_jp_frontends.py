@@ -1227,6 +1227,26 @@ def _add_test_comment_finding(
     )
 
 
+def _find_cpp_subprocedure_bodies(
+    text: str,
+    comment_ranges: Sequence[Tuple[int, int]],
+) -> List[Tuple[int, int]]:
+    """独立した行コメントで囲んだサブ手順もコメント検査の対象にする。"""
+    bodies: List[Tuple[int, int]] = []
+    start: Optional[int] = None
+    for first, last in comment_ranges:
+        line_start = text.rfind("\n", 0, first) + 1
+        if text[line_start:first].strip() or not text[first:last].startswith("//"):
+            continue
+        comment = text[first:last].rstrip("\r\n")
+        if re.fullmatch(r"//\s*\[サブ手順\s+名前\s*=\s*[^\]]+\]\s*", comment):
+            start = last
+        elif re.fullmatch(r"//\s*\[サブ手順終了\]\s*", comment) and start is not None:
+            bodies.append((start, first))
+            start = None
+    return bodies
+
+
 def _find_cpp_test_comment_findings(
     text: str,
     collector: "DiagnosticCollector",
@@ -1234,12 +1254,18 @@ def _find_cpp_test_comment_findings(
     """GoogleTest / Google Mock マクロの不足コメントを検出する。"""
     masked, comment_ranges = _mask_cpp_test_scan_text(text)
 
-    for body_start, body_end in _find_cpp_test_bodies(masked):
+    bodies = _find_cpp_test_bodies(masked) + _find_cpp_subprocedure_bodies(text, comment_ranges)
+    visited = set()
+    for body_start, body_end in sorted(set(bodies)):
         cursor = body_start
         while cursor < body_end:
             match = _CPP_TEST_COMMENT_TARGET_RE.search(masked, cursor, body_end)
             if match is None:
                 break
+            if match.start() in visited:
+                cursor = match.end()
+                continue
+            visited.add(match.start())
             if _is_cpp_preprocessor_line(masked, match.start()):
                 cursor = match.end()
                 continue
