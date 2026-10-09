@@ -589,12 +589,15 @@ return {
             end
 
             -- "caption キャプション" の行を削除
+            -- caption 属性 ("CodeBlock:" 行) がある場合はそちらを優先し、
+            -- caption 行は描画用ソースから取り除くだけとする。
             local removeCaptionLines = {}
             local captionPattern = "^%s*[Cc][Aa][Pp][Tt][Ii][Oo][Nn]%s*(.-)%s*$"
+            local hasCaptionAttribute = caption ~= nil
             for _, line in ipairs(lines) do
                 if not line:match(captionPattern) then
                     table.insert(removeCaptionLines, line)
-                else
+                elseif not hasCaptionAttribute then
                     -- キャプションの部分を得る
                     caption = line:match(captionPattern)
                 end
