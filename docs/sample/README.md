@@ -238,7 +238,7 @@ plantuml とします。
 ## Mermaid
 
 Mermaid 記法について、次のとおり Markdown に記述します。  
-Mermaid と PlantUML は実現できることが重複します。PlantUML を優先して採用してください。
+Mermaid を優先して採用してください。Mermaid で表現できない場合は PlantUML を使用します。両者で表現できない場合は draw.io を使用し、`.drawio.svg` 形式で保存します。
 
 ### タイトル
 
