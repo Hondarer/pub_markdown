@@ -30,7 +30,8 @@ _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN = re.compile(
     r"[@\\][A-Za-z_]+(?:\[[^\]\n]*\]|\s+\[[^\]\n]*\])?(?:\s+<[^>\n]+>|\s+\[[^\]\n]*\]|\s+\"[^\n\"]*\")*\s+\{[^{}\n]*\}"
 )
 _DOXYGEN_MATH_PATTERN = re.compile(r"@f(?:\[[^\n]*?@f\]|\$.*?@f\$)")
-_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("/・、。，．,.!?！？)]}）］｝」』】〕〉》*_~〜～")
+# `-` はインライン コード同士の範囲 (`0`-`124`) や連結語 (`foo`-based) をつなぐ。
+_INLINE_CODE_NO_SPACE_FOLLOWERS = frozenset("/・、。，．,.!?！？)]}）］｝」』】〕〉》*_~〜～-")
 _INLINE_CODE_NO_SPACE_PREFIX_RE = re.compile(r"(?:==|!=|<=|>=|=|:)")
 _INLINE_CODE_SPACED_SUFFIX_RE = re.compile(r"(?:`{2,}.+?`{2,}|`[^`\n]+`)( +)(?:==|!=|<=|>=|=|:)")
 _INLINE_CODE_WITH_SPACE_BEFORE_SLASH_RE = re.compile(r"(`{2,}.+?`{2,}|`[^`\n]+`)\s+/(`{2,}.+?`{2,}|`[^`\n]+`)")
@@ -47,8 +48,10 @@ _DOXYGEN_INLINE_COMMAND_PATTERN = re.compile(r"[@\\][A-Za-z_]+(?:\{[^}]*\})?")
 #  読み取るため、直後に日本語句読点が空白なしで続くと句読点までが引数に取り込まれ、
 #  意図しない書式 (@p など) や @ref のリンク解決失敗を招く。
 _DOXYGEN_INLINE_ARG_COMMAND_RE = r"(?:[@\\]ref\s+[A-Za-z_][A-Za-z0-9_:~.-]*|[@\\](?:p|c|a|b|e|em)\s+[A-Za-z_][A-Za-z0-9_]*)"
+# コマンド引数は空白までを名前とみなすため、直後の句読点やコロンとの間の空白は
+# 区切りとして必要になる (`@ref name :` を詰めると `name:` が名前の一部になる)。
 _DOXYGEN_REF_TRAILING_JP_PUNCT_PATTERN = re.compile(
-    _DOXYGEN_INLINE_ARG_COMMAND_RE + r"\s+[、。，．]"
+    _DOXYGEN_INLINE_ARG_COMMAND_RE + r"\s+[、。，．:]"
 )
 _DOXYGEN_REF_MISSING_SPACE_BEFORE_JP_PUNCT_RE = re.compile(
     r"(" + _DOXYGEN_INLINE_ARG_COMMAND_RE + r")([、。，．])"

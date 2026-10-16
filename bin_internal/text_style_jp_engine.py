@@ -138,6 +138,45 @@ def _record_step_changes(
         collector.add(i1 + 1, original_fragment, corrected_fragment, rule, source, message)
 
 
+def record_unattributed_line_changes(
+    before: str,
+    after: str,
+    collector: "DiagnosticCollector",
+) -> None:
+    """規則名つきの Finding がない変更行を、行単位の Finding として補う。
+
+    dry-run の報告と実際の整形結果を一致させるための安全網。
+    個々の規則が差分を記録しない処理 (インライン コード周りのスペース復元や
+    Markdown の行末スペース整理など) の変更も、行単位で必ず報告する。
+    """
+    if before == after:
+        return
+    before_lines = before.split("\n")
+    after_lines = after.split("\n")
+    reported_lines = {finding.line for finding in collector.findings}
+    matcher = difflib.SequenceMatcher(None, before_lines, after_lines, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag == "equal":
+            continue
+        if i1 == i2:
+            # 行の挿入。直前の行に結び付けて報告する。
+            line_no = max(i1, 1)
+            if line_no in reported_lines:
+                continue
+            collector.set_line(line_no)
+            collector.add(1, "", "\n".join(after_lines[j1:j2]), "unattributed-change", message="規則に帰属しない変更")
+            reported_lines.add(line_no)
+            continue
+        for offset, index in enumerate(range(i1, i2)):
+            line_no = index + 1
+            if line_no in reported_lines:
+                continue
+            corrected = after_lines[j1 + offset] if j1 + offset < j2 else ""
+            collector.set_line(line_no)
+            collector.add(1, before_lines[index], corrected, "unattributed-change", message="規則に帰属しない変更")
+            reported_lines.add(line_no)
+
+
 def replace_nbsp_with_space(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
@@ -657,10 +696,13 @@ def remove_space_before_punctuation(text: str) -> str:
     text = re.sub(r" +([、。，．,;])", r"\1", text)
     # 直後が空白または行末の ? ! は、文末の約物ではなく記号そのものを指している
     # (「- ! で始まる否定パターン」など) ため、前のスペースを保持する。
-    text = re.sub(r" +([?？!！])(?![=\s])", r"\1", text)
+    # 直後に英数字や開き括弧が続く ! ? は、否定演算子などの語頭の記号
+    # (「!(A && B)」など) を指すため、前のスペースを保持する。
+    text = re.sub(r" +([?？!！])(?![=\s(A-Za-z0-9_])", r"\1", text)
     # 直後が ASCII の識別子で始まるコロンは、約物ではなくトークンの一部
     # (「行全体が :key--> の形式」の `:key-->` など) を指すため、前のスペースを保持する。
-    text = re.sub(r" +:(?![ =]|[A-Za-z0-9_])", ":", text)
+    # 続けて書かれたコロン (C++ のスコープ解決演算子「::」など) も記号そのものを指す。
+    text = re.sub(r" +:(?![ =:]|[A-Za-z0-9_])", ":", text)
     # 直後が空白または行末の . は、文末の約物ではなく記号そのものを指している
     # (「(数字 + . + 空白)」など) ため、前のスペースを保持する。
     text = re.sub(r" +\.(?![A-Za-z./\\\s])", ".", text)
@@ -671,12 +713,69 @@ def remove_space_around_middle_dot_between_katakana(text: str) -> str:
     return re.sub(r"(?<=[ァ-ヿ])\s*・\s*(?=[ァ-ヿ])", "・", text)
 
 
+_ASCII_SQUARE_CURLY_PAIRS = {"]": "[", "}": "{"}
+
+
+def _matched_ascii_square_curly_positions(line: str) -> Tuple[set, set]:
+    """同じ行で対を成す ASCII の角括弧と波括弧の位置を返す。
+
+    対を成さない括弧 (「ESC [ 1 ~」「対を成さない }」) や、`{{` `}}` のように
+    同じ括弧が連続するものは記号そのものを指すため、対として扱わない。
+    """
+    openers: set = set()
+    closers: set = set()
+    stack: List[Tuple[str, int]] = []
+    for index, char in enumerate(line):
+        if char not in "[]{}":
+            continue
+        if index > 0 and line[index - 1] == "\\":
+            continue
+        doubled = (index > 0 and line[index - 1] == char) or (
+            index + 1 < len(line) and line[index + 1] == char
+        )
+        if char in "[{":
+            stack.append((char, -1 if doubled else index))
+            continue
+        if not stack or stack[-1][0] != _ASCII_SQUARE_CURLY_PAIRS[char]:
+            stack.clear()
+            continue
+        _opener, opener_index = stack.pop()
+        if opener_index >= 0 and not doubled:
+            openers.add(opener_index)
+            closers.add(index)
+    return openers, closers
+
+
+def _remove_space_inside_ascii_square_curly(line: str) -> str:
+    openers, closers = _matched_ascii_square_curly_positions(line)
+    if not openers:
+        return line
+    result = []
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == " ":
+            end = index
+            while end < len(line) and line[end] == " ":
+                end += 1
+            after_opener = index > 0 and (index - 1) in openers
+            before_closer = end < len(line) and end in closers
+            if after_opener or before_closer:
+                index = end
+                continue
+        result.append(char)
+        index += 1
+    return "".join(result)
+
+
 def remove_space_inside_brackets(text: str) -> str:
     # バックスラッシュでエスケープされた括弧 (LaTeX の \[ など) は文字そのものを
     # 指すため、直後のスペースを保持する。
-    text = re.sub(r"(?<!\\)([\(\[{（［｛「『【〔〈《]) +", r"\1", text)
-    text = re.sub(r" +([\)\]}）］｝」』】〕〉》])", r"\1", text)
-    return text
+    text = re.sub(r"(?<!\\)([\(（［｛「『【〔〈《]) +", r"\1", text)
+    text = re.sub(r" +([\)）］｝」』】〕〉》])", r"\1", text)
+    # ASCII の角括弧と波括弧は、文中では記号そのものを指すことが多い。
+    # 同じ行で対を成すものに限って内側のスペースを削除する。
+    return "\n".join(_remove_space_inside_ascii_square_curly(line) for line in text.split("\n"))
 
 
 def remove_space_before_unit_no_space(text: str) -> str:
@@ -695,7 +794,9 @@ def add_space_after_punctuation_before_alnum(text: str) -> str:
     # 開き括弧 (も対象に含める。全角の `？（` は半角化後に `?(` となり、
     # 英数字と同じく直前の約物との間にスペースが必要になる。
     # 角括弧は Markdown の画像記法 `![alt](url)` を壊すため対象にしない。
-    text = re.sub(r"([?？!！])([A-Za-z0-9(])", r"\1 \2", text)
+    # 語頭の ! ? (空白や開き括弧の直後) は否定演算子などの記号であり、
+    # 文末の約物ではないため、後ろにスペースを入れない。
+    text = re.sub(r"(?<=[^\s(\[{])([?？!！])([A-Za-z0-9(])", r"\1 \2", text)
     # 半角 `? !` の後に日本語 (全角文字) が続く場合もスペースを挿入する。
     # 直後が全角の句読点・閉じ括弧などのときは挿入しない。
     text = re.sub(

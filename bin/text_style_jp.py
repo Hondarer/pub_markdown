@@ -20,6 +20,7 @@ from text_style_jp_engine import (
     _drop_inverse_replace_pairs,
     _loads_jsonc,
     _record_step_changes,
+    record_unattributed_line_changes,
     apply_ms_style,
     style_prose,
     style_text,
@@ -63,6 +64,17 @@ def run_tests() -> bool:
         ("戻り値 != 0", "戻り値 != 0"),
         ("列 A ( タイトル )", "列 A (タイトル)"),
         ("[ 新規 ] をクリック", "[新規] をクリック"),
+        # 対を成さない、または連続する ASCII の角括弧と波括弧は記号そのものとして扱う
+        ("ESC [ 1 ~ を分類する。", "ESC [ 1 ~ を分類する。"),
+        ("({{ と }} が 1 文字の波括弧になる)", "({{ と }} が 1 文字の波括弧になる)"),
+        ("対を成さない } を含む書式と、{ で終わる書式。", "対を成さない } を含む書式と、{ で終わる書式。"),
+        # 語頭の ! は否定演算子であり、前後の空白を調整しない
+        ("これは !(A && B) の形。", "これは !(A && B) の形。"),
+        ("すごい !", "すごい!"),
+        # 続けて書かれたコロンはスコープ解決演算子として扱う
+        ("STL が :: 修飾で呼ぶ。", "STL が :: 修飾で呼ぶ。"),
+        # インライン コード同士をつなぐハイフンの前後に空白を入れない
+        ("範囲 `0`-`124` の外。", "範囲 `0`-`124` の外。"),
         ("「 test 」と入力", "「test」と入力"),
         ("45 °", "45°"),
         ("50 %", "50%"),
@@ -715,6 +727,21 @@ def run_tests() -> bool:
         ),
         (
             "c",
+            "#else  /* !(__GLIBC__ && _GNU_SOURCE) */\n",
+            "#else  /* !(__GLIBC__ && _GNU_SOURCE) */\n",
+        ),
+        (
+            "c",
+            " *  - @ref cplat_hashtable_delete_rec :\n",
+            " *  - @ref cplat_hashtable_delete_rec :\n",
+        ),
+        (
+            "c",
+            "// [手順] - ESC [ 1 ~ を分類する。\n",
+            "// [手順] - ESC [ 1 ~ を分類する。\n",
+        ),
+        (
+            "c",
             "/** @retval          0以外 第3章の失敗。 */\n",
             "/** @retval          0以外 第 3 章の失敗。 */\n",
         ),
@@ -1114,6 +1141,15 @@ def run_tests() -> bool:
             all_passed = False
 
     # --- dry-run / DiagnosticCollector テスト ---
+
+    # 規則名を記録しない変更も、dry-run で行単位に報告する
+    c = DiagnosticCollector()
+    record_unattributed_line_changes("a\nb  \nc", "a\nb\nc", c)
+    passed = [(f.line, f.rule) for f in c.findings] == [(2, "unattributed-change")]
+    status = "✓" if passed else "✗"
+    print(f"\n{status} dry-run 規則に帰属しない変更の報告: {[(f.line, f.rule) for f in c.findings]}")
+    if not passed:
+        all_passed = False
 
     # 隣接する no_space 語の境界へのスペース挿入も dry-run で検出する
     c = DiagnosticCollector()
@@ -1953,7 +1989,8 @@ def main(
 
     if args.dry_run:
         collector = DiagnosticCollector()
-        style_by_mode(text, mode, collector=collector)
+        styled = style_by_mode(text, mode, collector=collector)
+        record_unattributed_line_changes(text, styled, collector)
         if collector.findings:
             sys.stdout.write(_format_findings_stylish(args.input or "(stdin)", collector.findings))
             return 1
