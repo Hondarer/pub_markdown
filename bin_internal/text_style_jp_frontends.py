@@ -8,12 +8,19 @@ from typing import Callable, List, Optional, Sequence, Tuple
 from text_style_jp_engine import (
     DiagnosticCollector,
     _needs_space_between,
+    _protect_patterns,
+    _restore_replacements,
     _record_step_changes,
     lexical_styling_disabled,
     replace_nbsp_with_space,
     style_text,
 )
 
+
+_CPP_COMMENT_QUOTE_RE = re.compile(
+    r'"(?:[^"\\\r\n]|\\[^\r\n])*"'
+    r"|'(?:[^'\\\r\n]|\\(?:[0-7]{1,3}|x[0-9A-Fa-f]+|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|[^\r\n]))'"
+)
 
 _BACKTICK_PATTERN = re.compile(r"(?<!`)(`+)(?!`)[^\n]*?(?<!`)\1(?!`)")
 _ADMONITION_MARKER_PATTERN = re.compile(r"\[![A-Za-z][A-Za-z0-9_-]*\]")
@@ -1215,7 +1222,7 @@ def _add_test_comment_finding(
     message: str,
     collector: "DiagnosticCollector",
 ) -> None:
-    """不足コメントを対象マクロの位置へ記録する。"""
+    """対象マクロまたはコメントの位置へ診断を記録する。"""
     line_start = text.rfind("\n", 0, index) + 1
     collector.set_line(text.count("\n", 0, index) + 1)
     collector.add(
@@ -1247,12 +1254,123 @@ def _find_cpp_subprocedure_bodies(
     return bodies
 
 
+def _find_cpp_phase_comment_findings(
+    text: str,
+    masked: str,
+    comment_ranges: Sequence[Tuple[int, int]],
+    collector: "DiagnosticCollector",
+) -> None:
+    """テスト本体のフェーズとエビデンス説明を診断する (自動修正なし)。"""
+    subprocedures = _find_cpp_subprocedure_bodies(text, comment_ranges)
+    tag_re = re.compile(
+        r"\[(状態|状態確認|手順|Pre-Assert手順|(?:Pre-Assert確認|確認)_[^\]\r\n]+)\]"
+    )
+    phase_re = re.compile(
+        r"//\s*(Arrange|Pre-Assert|Act|Assert|Cleanup)(?:_[0-9]+)?\s*$"
+    )
+    for body_start, body_end in _find_cpp_test_bodies(masked):
+        phases = []
+        comments = []
+        for first, last in comment_ranges:
+            if not body_start <= first < body_end:
+                continue
+            if any(start <= first < end for start, end in subprocedures):
+                continue
+            comment = text[first:last]
+            if not text[_line_start_index(text, first):first].strip():
+                phase_match = phase_re.fullmatch(comment.rstrip("\r\n"))
+                if phase_match:
+                    phases.append((first, phase_match.group(1)))
+            comments.append((first, last))
+
+        def phase_at(index: int) -> str:
+            return next((phase for first, phase in reversed(phases) if first < index), "Arrange")
+
+        # EXPECT_CALL / ON_CALL の文に含まれるラムダ本体を識別する。
+        mock_statements = []
+        callback_bodies = []
+        for match in re.finditer(r"\b(?:EXPECT_CALL|ON_CALL)\s*\(", masked[body_start:body_end]):
+            start = body_start + match.start()
+            end = _find_cpp_statement_end(masked, start, body_end)
+            if end is None:
+                continue
+            associated_end = _find_associated_test_comment_end(text, end, body_end, comment_ranges)
+            mock_statements.append((start, associated_end, masked[start:start + 11] == "EXPECT_CALL"))
+            for capture in re.finditer(r"\[[^\[\]]*\]", masked[start:end]):
+                opening = start + capture.end()
+                while opening < end and masked[opening].isspace():
+                    opening += 1
+                if opening < end and masked[opening] == "(":
+                    closing_paren = _find_matching_delimiter(masked, opening, "(", ")", end)
+                    if closing_paren is None:
+                        continue
+                    opening = closing_paren + 1
+                qualifiers = re.match(
+                    r"\s*(?:mutable\s*)?(?:noexcept(?:\s*\([^()]*\))?\s*)?"
+                    r"(?:->[^;{}]+)?\s*\{", masked[opening:end]
+                )
+                if qualifiers is not None:
+                    opening += qualifiers.end() - 1
+                    closing = _find_matching_delimiter(masked, opening, "{", "}", end)
+                    if closing is not None:
+                        callback_bodies.append((opening, closing))
+
+        for match in re.finditer(r"\bEXPECT_(?!CALL\b)[A-Z0-9_]+\s*\(", masked[body_start:body_end]):
+            index = body_start + match.start()
+            if (phase_at(index) == "Act"
+                    and not _is_cpp_preprocessor_line(masked, index)
+                    and not any(a <= index < b for a, b in subprocedures)):
+                name = match.group().rstrip().rstrip("(").rstrip()
+                _add_test_comment_finding(text, index, name, "test-comment-act-expect",
+                                          "Act フェーズに EXPECT_* を置かない", collector)
+
+        for first, last in comments:
+            comment = text[first:last]
+            # 引用した文字列中のタグはエビデンスとして扱わない。
+            visible = _CPP_COMMENT_QUOTE_RE.sub(lambda m: " " * len(m.group()), comment)
+            for tag in tag_re.finditer(visible):
+                index = first + tag.start()
+                phase = phase_at(index)
+                name = tag.group(1)
+                if name == "手順" and phase == "Assert":
+                    _add_test_comment_finding(text, index, tag.group(), "test-comment-assert-step",
+                                              "Assert フェーズに [手順] を置かない", collector)
+                if name.startswith("Pre-Assert") and phase != "Pre-Assert":
+                    in_callback = any(a < index < b for a, b in callback_bodies)
+                    cleanup_expect = phase == "Cleanup" and any(
+                        a <= index < b and is_expect for a, b, is_expect in mock_statements
+                    )
+                    if not in_callback and not cleanup_expect:
+                        _add_test_comment_finding(text, index, tag.group(), "test-comment-pre-assert-phase",
+                                                  "Pre-Assert タグを置くフェーズを確認", collector)
+                line_end = visible.find("\n", tag.end())
+                line_end = len(visible) if line_end < 0 else line_end
+                next_tag = tag_re.search(visible, tag.end(), line_end)
+                description_end = next_tag.start() if next_tag else line_end
+                separator = visible.find(" - ", tag.end(), description_end)
+                if separator < 0:
+                    continue
+                description_start = separator + 3
+                description = visible[description_start:description_end]
+                for tick in re.finditer("`", description):
+                    _add_test_comment_finding(text, first + description_start + tick.start(), "`",
+                                              "test-comment-backtick", "説明文にバッククォートを使わない", collector)
+                if name == "状態確認":
+                    for expectation in re.finditer(r"。\([^\r\n]*?ことの確認\)", description):
+                        offset = description_start + expectation.start() + 1
+                        original = comment[offset:description_start + expectation.end()]
+                        _add_test_comment_finding(text, first + offset, original,
+                                                  "test-comment-state-check-expectation",
+                                                  "[状態確認] に総合期待を付けない", collector)
+
+
 def _find_cpp_test_comment_findings(
     text: str,
     collector: "DiagnosticCollector",
 ) -> None:
     """GoogleTest / Google Mock マクロの不足コメントを検出する。"""
     masked, comment_ranges = _mask_cpp_test_scan_text(text)
+    _find_cpp_phase_comment_findings(text, masked, comment_ranges, collector)
 
     bodies = _find_cpp_test_bodies(masked) + _find_cpp_subprocedure_bodies(text, comment_ranges)
     visited = set()
@@ -1931,6 +2049,18 @@ def _style_c_like_comments(
     language: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
+    def style_comment(comment: str, formatter: Callable, **kwargs) -> str:
+        if language not in {"c", "cpp"}:
+            return formatter(comment, **kwargs)
+        protected, replacements = _protect_patterns(comment, [_CPP_COMMENT_QUOTE_RE])
+        # 内側の style_text() が使う PROT と識別子を分ける。
+        quote_replacements = []
+        for index, (placeholder, original) in enumerate(replacements):
+            quote_placeholder = f"\x00CPPQUOTE{index}\x00"
+            protected = protected.replace(placeholder, quote_placeholder)
+            quote_replacements.append((quote_placeholder, original))
+        return _restore_replacements(formatter(protected, **kwargs), quote_replacements)
+
     result: List[str] = []
     last = 0
     i = 0
@@ -1952,7 +2082,7 @@ def _style_c_like_comments(
             result.append(text[last:i])
             end = _consume_line_comment_block(text, i, "///")
             line_num = text[:i].count("\n") + 1
-            result.append(_style_xml_doc_block(text[i:end], collector=collector, start_line=line_num))
+            result.append(style_comment(text[i:end], _style_xml_doc_block, collector=collector, start_line=line_num))
             i = end
             last = i
             continue
@@ -1961,7 +2091,7 @@ def _style_c_like_comments(
             result.append(text[last:i])
             end = _consume_line_comment_block(text, i, "//!")
             line_num = text[:i].count("\n") + 1
-            result.append(_style_doxygen_line_block(text[i:end], collector=collector, start_line=line_num))
+            result.append(style_comment(text[i:end], _style_doxygen_line_block, collector=collector, start_line=line_num))
             i = end
             last = i
             continue
@@ -1971,7 +2101,7 @@ def _style_c_like_comments(
             end = _consume_to_line_end(text, i)
             if collector is not None:
                 collector.set_line(text[:i].count("\n") + 1)
-            result.append(_style_general_line_comment(text[i:end], collector=collector))
+            result.append(style_comment(text[i:end], _style_general_line_comment, collector=collector))
             i = end
             last = i
             continue
@@ -1986,9 +2116,9 @@ def _style_c_like_comments(
             comment = text[i:end]
             line_num = text[:i].count("\n") + 1
             if comment.startswith("/**") or comment.startswith("/*!") or comment.startswith("/**<"):
-                result.append(_style_doxygen_block_comment(comment, collector=collector, start_line=line_num))
+                result.append(style_comment(comment, _style_doxygen_block_comment, collector=collector, start_line=line_num))
             else:
-                result.append(_style_general_block_comment(comment, collector=collector, start_line=line_num))
+                result.append(style_comment(comment, _style_general_block_comment, collector=collector, start_line=line_num))
             i = end
             last = i
             continue

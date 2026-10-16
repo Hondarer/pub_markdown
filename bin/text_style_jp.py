@@ -578,6 +578,9 @@ def run_tests() -> bool:
         ("エラーハンドリング", "エラー処理"),
         ("エラーハンド リング", "エラー処理"),
         ("エラー ハンド リング", "エラー処理"),
+        # カタカナ列の一部だけが分断されている場合は、その部分列だけを結合する
+        ("テキスト スタイ リング", "テキスト スタイリング"),
+        ("テキスト スタイ リング ガイド", "テキスト スタイリング ガイド"),
         # 正しい複合語分割は維持する
         ("テストログ", "テスト ログ"),
         ("ファイルパス", "ファイル パス"),
@@ -1435,6 +1438,7 @@ def run_tests() -> bool:
     source = (
         "TEST(sampleTest, valid_comments)\n"
         "{\n"
+        "    // Pre-Assert\n"
         "    ON_CALL(mock, Run()).WillByDefault(Return(0));\n"
         "    // [状態] - default\n"
         "    EXPECT_CALL(mock, Run())\n"
@@ -1465,6 +1469,7 @@ def run_tests() -> bool:
     source = (
         "TEST_P(sampleTest, action_comments)\n"
         "{\n"
+        "    // Pre-Assert\n"
         "    EXPECT_CALL(mock, Run()).WillRepeatedly(Return(1));\n"
         "    // [Pre-Assert確認_正常系] - called\n"
         "    EXPECT_CALL(mock, Stop()).Times(0); // [Pre-Assert確認_正常系] - not called\n"
@@ -1544,6 +1549,7 @@ def run_tests() -> bool:
     source = (
         "TEST(sampleTest, nested_assertion)\n"
         "{\n"
+        "    // Pre-Assert\n"
         "    EXPECT_CALL(mock, Run(_))\n"
         "        .WillOnce([](int value) { EXPECT_EQ(1, value); });\n"
         "    // [Pre-Assert確認_正常系] - receives 1\n"
@@ -1597,6 +1603,83 @@ def run_tests() -> bool:
     )
     status = "✓" if passed else "✗"
     print(f"\n{status} cpp dry-run Markdown フェンスと c モード除外")
+    if not passed:
+        all_passed = False
+
+    # C/C++ コメントの引用符保護と他モードの互換性。
+    quote_cases = [
+        ('cpp', '// "value={ 123 }"', '// "value={ 123 }"'),
+        ('c', '// "日本語ABC"', '// "日本語ABC"'),
+        ('cpp', r'// "a\"{ 123 }"', r'// "a\"{ 123 }"'),
+        ('cpp', "// '`' と '`'", "// '`' と '`'"),
+        ('c', r"// '\n' '\'' 'x'", r"// '\n' '\'' 'x'"),
+        ('cpp', '// "! MACRO"', '// "! MACRO"'),
+        ('cpp', '// [手順] - 対を成さない "}" だけの書式を展開する。',
+         '// [手順] - 対を成さない "}" だけの書式を展開する。'),
+        ('cpp', '// [確認_正常系] - 16 進の \'`\' に対する cplat_regex_match() の戻り値が 0 であること。',
+         '// [確認_正常系] - 16 進の \'`\' に対する cplat_regex_match() の戻り値が 0 であること。'),
+        ('cpp', '// "value={ 123 }" と `other`', '// "value={ 123 }" と `other`'),
+        ('cpp', '/* "日本語ABC" */', '/* "日本語ABC" */'),
+        ('c', '/** "日本語ABC" */', '/** "日本語ABC" */'),
+        ('cpp', '//! "日本語ABC"', '//! "日本語ABC"'),
+        ('cpp', '/// "日本語ABC"', '/// "日本語ABC"'),
+        ('cpp', "// don't 日本語ABC", "// don't 日本語 ABC"),
+        ('cpp', '// "unpaired 日本語ABC', '// "unpaired 日本語 ABC'),
+        ('cpp', '// "日本語ABC" 日本語ABC', '// "日本語ABC" 日本語 ABC'),
+        ('markdown', '"日本語ABC"', '"日本語 ABC"'),
+        ('python', '# "日本語ABC"', '# "日本語ABC"'),
+        ('csharp', '// "日本語ABC"', '// "日本語ABC"'),
+    ]
+    for mode, original, expected in quote_cases:
+        c = DiagnosticCollector()
+        result = style_by_mode(original + "\n", mode, collector=c)
+        passed = result == expected + "\n" and (original != expected or not c.findings)
+        print(f"{'✓' if passed else '✗'} 引用符保護 {mode}: {original!r} -> {result!r}")
+        if not passed:
+            all_passed = False
+
+    # 新規規則は既存の不足コメント診断と独立して確認する。
+    phase_cases = [
+        ('Act', 'EXPECT_EQ(1, n);', 'act-expect', 1),
+        ('Act_2', 'EXPECT_TRUE(n);', 'act-expect', 1),
+        ('Assert', 'EXPECT_EQ(1, n);', 'act-expect', 0),
+        ('Act', 'EXPECT_CALL(mock, Run());', 'act-expect', 0),
+        ('Act', 'ASSERT_TRUE(n);', 'act-expect', 0),
+        ('Assert_3', 'run(); // [手順] - run', 'assert-step', 1),
+        ('Act', 'run(); // [手順] - run', 'assert-step', 0),
+        ('Arrange', '// [Pre-Assert確認_正常系] - check', 'pre-assert-phase', 1),
+        ('Assert', '// [Pre-Assert手順] - run', 'pre-assert-phase', 1),
+        ('Pre-Assert_2', '// [Pre-Assert手順] - run', 'pre-assert-phase', 0),
+        ('Cleanup', 'EXPECT_CALL(mock, Run()).Times(1); // [Pre-Assert確認_正常系] - called', 'pre-assert-phase', 0),
+        ('Cleanup', 'run(); // [Pre-Assert手順] - run', 'pre-assert-phase', 1),
+        ('Arrange', 'ON_CALL(mock, Run()).WillByDefault([] {\nEXPECT_TRUE(ok); // [Pre-Assert確認_正常系] - ok\n});', 'pre-assert-phase', 0),
+        ('Arrange', 'EXPECT_CALL(mock, Run()).WillOnce([] {\nEXPECT_TRUE(ok); // [Pre-Assert確認_正常系] - ok\n}); // [Pre-Assert手順] - setup', 'pre-assert-phase', 1),
+        ('Assert', '// [状態確認] - n が 1 であること。(成功したことの確認)', 'state-check-expectation', 1),
+        ('Assert', '// [確認_正常系] - n が 1 であること。(成功したことの確認)', 'state-check-expectation', 0),
+        ('Arrange', '// [状態確認] - n が 1 であること。', 'state-check-expectation', 0),
+        ('Assert', '// [確認_正常系] - "`n`" と等しく、\'`\' であること。', 'backtick', 0),
+        ('Assert', '// 普通の `comment`', 'backtick', 0),
+    ]
+    for tag in ['状態', '状態確認', '手順', 'Pre-Assert手順', 'Pre-Assert確認_正常系', '確認_異常系']:
+        phase_cases.append(('Assert', f'// [{tag}] - `name`', 'backtick', 2))
+    for phase, statement, suffix, count in phase_cases:
+        original = f"TEST_F(sampleTest, phase_rules) {{\n// {phase}\n{statement}\n}}\n"
+        c = DiagnosticCollector()
+        style_by_mode(original, "cpp", collector=c)
+        findings = [f for f in c.findings if f.rule == 'test-comment-' + suffix]
+        passed = len(findings) == count and all(f.original == f.corrected for f in findings)
+        print(f"{'✓' if passed else '✗'} フェーズ診断 {phase} {suffix}: {len(findings)} / {count}")
+        if not passed:
+            all_passed = False
+
+    # サブ手順と本体外は新規規則の対象外。
+    original = ('// [サブ手順 名前=helper]\nvoid helper() {\n'
+                '// Assert\n// [手順] - `run`\n// [Pre-Assert手順] - run\n'
+                '}\n// [サブ手順終了]\n')
+    c = DiagnosticCollector()
+    style_by_mode(original, "cpp", collector=c)
+    passed = not c.findings
+    print(f"{'✓' if passed else '✗'} 新規規則のサブ手順除外")
     if not passed:
         all_passed = False
 
@@ -1689,6 +1772,39 @@ def run_tests() -> bool:
         print(f"  dry-run 出力: {dry_run_output!r}")
         print(f"  check 終了コード: {check_exit_code}")
         print(f"  更新後: {unchanged!r}")
+
+    # 新規の 5 診断があっても --in-place はソースを変更しない。
+    source = (
+        "TEST(sampleTest, diagnostic_only) {\n"
+        "// Act\n"
+        "EXPECT_TRUE(ok); // [確認_正常系] - ok\n"
+        "// Assert\n"
+        "run(); // [手順] - run\n"
+        "// [Pre-Assert手順] - run\n"
+        "// [状態] - `name`\n"
+        "// [状態確認] - ok であること。(成功したことの確認)\n"
+        "}\n"
+    )
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        input_path = os.path.join(tmp_dir, "diagnostic.cc")
+        with open(input_path, "w", encoding="utf-8") as handle:
+            handle.write(source)
+        with contextlib.redirect_stdout(io.StringIO()):
+            exit_code = main([input_path, "--mode", "cpp", "--in-place"])
+        with open(input_path, "r", encoding="utf-8") as handle:
+            unchanged = handle.read()
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    passed = exit_code == 0 and unchanged == source and {
+        f.rule for f in c.findings
+    } == {
+        'test-comment-act-expect', 'test-comment-assert-step',
+        'test-comment-pre-assert-phase', 'test-comment-backtick',
+        'test-comment-state-check-expectation',
+    }
+    print(f"{'✓' if passed else '✗'} CLI in-place 新規診断は自動修正しない")
+    if not passed:
+        all_passed = False
 
     # CLI in-place: 着手時メッセージを先に出力する
     original_cwd = os.getcwd()

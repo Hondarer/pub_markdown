@@ -1246,15 +1246,32 @@ def _join_katakana_split_by_no_space(text: str) -> str:
     連結形が replace の見出し語に一致する場合も結合する。「エラーハンド リング」の
     ように語の途中で分断されていると、見出し語「エラーハンドリング」に一致せず
     置換が働かないまま、さらに分割が進むため。
+
+    カタカナ列の一部だけが分断されている場合も結合する。「テキスト スタイ リング」
+    では列全体の連結形は辞書にないが、部分列「スタイ リング」の連結形は辞書にある。
+    各位置から最長の部分列を優先して照合し、一致した部分列だけを結合する。
     """
     if not _no_space_set and not _replace_from_set:
         return text
 
+    def _is_known(word: str) -> bool:
+        return word in _no_space_set or word in _replace_from_set
+
     def _replace(match: re.Match) -> str:
-        merged = match.group(0).replace(" ", "")
-        if merged in _no_space_set or merged in _replace_from_set:
-            return merged
-        return match.group(0)
+        tokens = match.group(0).split(" ")
+        joined: List[str] = []
+        start = 0
+        while start < len(tokens):
+            end = len(tokens)
+            while end - start >= 2 and not _is_known("".join(tokens[start:end])):
+                end -= 1
+            if end - start >= 2:
+                joined.append("".join(tokens[start:end]))
+                start = end
+            else:
+                joined.append(tokens[start])
+                start += 1
+        return " ".join(joined)
 
     return _KATAKANA_RUN_WITH_SPACES_RE.sub(_replace, text)
 
