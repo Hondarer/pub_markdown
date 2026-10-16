@@ -12,8 +12,11 @@ from text_style_jp_engine import DiagnosticCollector
 class CountCommentsTest(unittest.TestCase):
     def test_counted_comments_satisfy_required_comment_diagnostics(self):
         source = '''TEST_P(Suite, Case) {
+    // Pre-Assert
     EXPECT_CALL(mock, Run()).Times(3); // [Pre-Assert確認_正常系 回数=PARAM * (2+3)] - 呼ばれること。
     EXPECT_CALL(mock, Stop()).Times(0); // [Pre-Assert確認_異常系 回数=2*3+1] - 呼ばれないこと。
+
+    // Assert
     EXPECT_EQ(1, actual); // [確認_正常系 回数=PARAM*2*3] - 値が一致すること。
     ASSERT_FALSE(error); // [確認_異常系 回数=0] - エラーがないこと。
     ASSERT_NE(nullptr, state); // [状態確認] - 準備できること。
