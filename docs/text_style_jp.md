@@ -613,6 +613,7 @@ file.md
 | `space-after-number-bracket` | 数字/括弧間スペース挿入 |
 | `supplemental-bracket` | 補足括弧前スペース挿入 |
 | `dict-no-space-join` | no_space 語のスペース結合 |
+| `dict-no-space-boundary` | 隣接する no_space 語の境界へのスペース挿入 |
 | `dict-replace` | 辞書 replace ペア適用 |
 | `sudachi-split` | SudachiPy カタカナ分割 |
 | `dict-add-space` | 辞書 add_space ペア適用 |

@@ -581,6 +581,12 @@ def run_tests() -> bool:
         # カタカナ列の一部だけが分断されている場合は、その部分列だけを結合する
         ("テキスト スタイ リング", "テキスト スタイリング"),
         ("テキスト スタイ リング ガイド", "テキスト スタイリング ガイド"),
+        # 英語で 2 語の health check は、Microsoft の表記規則に準じて半角スペースで区切る
+        ("ヘルスチェック", "ヘルス チェック"),
+        ("ヘルスチェックスレッド", "ヘルス チェック スレッド"),
+        # 英語で 1 語の lifetime は、隣接する辞書語の境界で分割しない
+        ("ライフタイム満了", "ライフタイム満了"),
+        ("ライフ タイム", "ライフタイム"),
         # 正しい複合語分割は維持する
         ("テストログ", "テスト ログ"),
         ("ファイルパス", "ファイル パス"),
@@ -1108,6 +1114,19 @@ def run_tests() -> bool:
             all_passed = False
 
     # --- dry-run / DiagnosticCollector テスト ---
+
+    # 隣接する no_space 語の境界へのスペース挿入も dry-run で検出する
+    c = DiagnosticCollector()
+    c.set_line(1)
+    styled = style_text("ヘルスチェックを行う。", collector=c)
+    passed = styled == "ヘルス チェックを行う。" and any(
+        f.rule == "dict-no-space-boundary" and f.column == 4 and f.corrected == " "
+        for f in c.findings
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} dry-run no_space 語境界のスペース挿入: {[(f.rule, f.column) for f in c.findings]}")
+    if not passed:
+        all_passed = False
 
     # _record_step_changes: 変更なし → Finding なし
     c = DiagnosticCollector()

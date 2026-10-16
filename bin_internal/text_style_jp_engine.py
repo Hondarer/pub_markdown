@@ -1401,9 +1401,20 @@ def style_text(
     nosp_replacements = [
         (f"\x00NOSP{idx}\x00", word) for idx, word in enumerate(sorted_nosp)
     ]
+    before = protected
     protected = _protect_no_space_words(
         protected, nosp_replacements, separator=" " if _lexical_styling_enabled else ""
     )
+    if collector is not None:
+        # 退避は隣接する no_space 語の境界へ区切りのスペースを入れる。
+        # プレースホルダーのままでは差分を記録できないため、語を戻して比較する。
+        _record_step_changes(
+            before,
+            _restore_no_space_words(protected, nosp_replacements),
+            "dict-no-space-boundary",
+            collector,
+            message="隣接する no_space 語の境界にスペースを挿入",
+        )
 
     styled = style_prose(protected, collector=collector)
 
@@ -1413,7 +1424,16 @@ def style_text(
         if collector is not None:
             _record_step_changes(before, styled, "sudachi-split", collector, message="SudachiPy でカタカナを分割")
 
+        before = styled
         styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
+        if collector is not None:
+            _record_step_changes(
+                _restore_no_space_words(before, nosp_replacements),
+                styled,
+                "dict-no-space-boundary",
+                collector,
+                message="no_space 語の境界にスペースを補完",
+            )
 
         styled = _protect_no_space_words(styled, nosp_replacements)
         for from_word, to_word in _replace_pairs:
