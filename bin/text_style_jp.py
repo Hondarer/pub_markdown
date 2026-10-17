@@ -1714,6 +1714,16 @@ def run_tests() -> bool:
         ('Arrange', '// [状態確認] - n が 1 であること。', 'state-check-expectation', 0),
         ('Assert', '// [確認_正常系] - "`n`" と等しく、\'`\' であること。', 'backtick', 0),
         ('Assert', '// 普通の `comment`', 'backtick', 0),
+        ('Act', 'run_task(); // [手順] - run_task を呼び出す。', 'function-paren', 1),
+        ('Act', 'run_task(); // [手順] - run_task() を呼び出す。', 'function-paren', 0),
+        ('Act', 'run_task(); // [手順] - "run_task" と \'r\' を指定して run_task() を呼び出す。', 'function-paren', 0),
+        ('Act', 'mmap(); // [手順] - mmap.dat を開いて mmap() を呼び出す。', 'function-paren', 0),
+        ('Act', 'run_task(); // [手順] - obj.run_task と ns::run_task を読む。', 'function-paren', 0),
+        ('Act', 'int count = count_items(); // [手順] - count を数える。', 'function-paren', 0),
+        ('Act', 'RUN_ALL(); // [手順] - RUN_ALL を実行する。', 'function-paren', 0),
+        ('Act', 'ab(); // [手順] - ab を実行する。', 'function-paren', 0),
+        ('Act', 'run_task(); // 通常のコメントの run_task は対象外', 'function-paren', 0),
+        ('Assert', 'EXPECT_EQ(0, run_task()); // [確認_正常系] - run_task の戻り値が 0 であること。', 'function-paren', 1),
     ]
     for tag in ['状態', '状態確認', '手順', 'Pre-Assert手順', 'Pre-Assert確認_正常系', '確認_異常系']:
         phase_cases.append(('Assert', f'// [{tag}] - `name`', 'backtick', 2))
@@ -1828,7 +1838,7 @@ def run_tests() -> bool:
         print(f"  check 終了コード: {check_exit_code}")
         print(f"  更新後: {unchanged!r}")
 
-    # 新規の 5 診断があっても --in-place はソースを変更しない。
+    # 新規の 6 診断があっても --in-place はソースを変更しない。
     source = (
         "TEST(sampleTest, diagnostic_only) {\n"
         "// Act\n"
@@ -1855,7 +1865,7 @@ def run_tests() -> bool:
     } == {
         'test-comment-act-expect', 'test-comment-assert-step',
         'test-comment-pre-assert-phase', 'test-comment-backtick',
-        'test-comment-state-check-expectation',
+        'test-comment-state-check-expectation', 'test-comment-function-paren',
     }
     print(f"{'✓' if passed else '✗'} CLI in-place 新規診断は自動修正しない")
     if not passed:

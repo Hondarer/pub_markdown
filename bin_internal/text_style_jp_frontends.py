@@ -1367,6 +1367,75 @@ def _find_cpp_phase_comment_findings(
                                                   "[状態確認] に総合期待を付けない", collector)
 
 
+_CPP_IDENTIFIER_RE = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]*(?![A-Za-z0-9_])")
+_CPP_EVIDENCE_TAG_RE = re.compile(
+    r"\[(?:状態|状態確認|手順|Pre-Assert手順|(?:Pre-Assert確認|確認)_[^\]\r\n]+)\]"
+)
+_CPP_KEYWORDS = frozenset((
+    "alignas alignof asm auto bool break case catch char class const consteval constexpr "
+    "constinit const_cast continue decltype default delete do double dynamic_cast else enum "
+    "explicit export extern false float for friend goto if inline int long mutable namespace "
+    "new noexcept nullptr operator private protected public register reinterpret_cast "
+    "requires return short signed sizeof static static_assert static_cast struct switch "
+    "template this throw true try typedef typeid typename union unsigned using virtual void "
+    "volatile wchar_t while _Alignof _Generic _Static_assert defined"
+).split())
+
+
+def _find_cpp_function_paren_findings(
+    text: str,
+    masked: str,
+    comment_ranges: Sequence[Tuple[int, int]],
+    collector: "DiagnosticCollector",
+) -> None:
+    """エビデンス タグの説明文で () を付け忘れた関数名を診断する (自動修正なし)。
+
+    コード部分で呼び出しにだけ使われる識別子を関数名とみなす。
+    同じファイルで呼び出し以外にも現れる識別子 (変数、型、メンバー)、キーワード、
+    すべて大文字の識別子 (マクロ)、2 文字以下の識別子は対象外とする。
+    """
+    called = set()
+    not_called = set()
+    for match in _CPP_IDENTIFIER_RE.finditer(masked):
+        name = match.group()
+        following = masked[match.end():match.end() + 64].lstrip()
+        if following.startswith("("):
+            called.add(name)
+        else:
+            not_called.add(name)
+    function_names = {
+        name for name in called - not_called
+        if name not in _CPP_KEYWORDS and len(name) > 2 and not re.fullmatch(r"[A-Z0-9_]+", name)
+    }
+    if not function_names:
+        return
+
+    for first, last in comment_ranges:
+        comment = text[first:last]
+        # 引用した文字列と文字リテラルの中は関数名として扱わない。
+        visible = _CPP_COMMENT_QUOTE_RE.sub(lambda m: " " * len(m.group()), comment)
+        for tag in _CPP_EVIDENCE_TAG_RE.finditer(visible):
+            line_end = visible.find("\n", tag.end())
+            line_end = len(visible) if line_end < 0 else line_end
+            next_tag = _CPP_EVIDENCE_TAG_RE.search(visible, tag.end(), line_end)
+            description_end = next_tag.start() if next_tag else line_end
+            separator = visible.find(" - ", tag.end(), description_end)
+            if separator < 0:
+                continue
+            description_start = separator + 3
+            for word in _CPP_IDENTIFIER_RE.finditer(visible, description_start, description_end):
+                name = word.group()
+                if name not in function_names:
+                    continue
+                before = visible[description_start:word.start()]
+                after = visible[word.end():description_end]
+                if after.startswith(("(", ".", "::")) or before.endswith((".", "->", "::")):
+                    continue
+                _add_test_comment_finding(text, first + word.start(), name,
+                                          "test-comment-function-paren",
+                                          "関数名には () を付ける", collector)
+
+
 def _find_cpp_test_comment_findings(
     text: str,
     collector: "DiagnosticCollector",
@@ -1374,6 +1443,7 @@ def _find_cpp_test_comment_findings(
     """GoogleTest / Google Mock マクロの不足コメントを検出する。"""
     masked, comment_ranges = _mask_cpp_test_scan_text(text)
     _find_cpp_phase_comment_findings(text, masked, comment_ranges, collector)
+    _find_cpp_function_paren_findings(text, masked, comment_ranges, collector)
 
     bodies = _find_cpp_test_bodies(masked) + _find_cpp_subprocedure_bodies(text, comment_ranges)
     visited = set()
