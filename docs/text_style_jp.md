@@ -306,6 +306,24 @@ URL 末尾が日本語句読点 (`。`、`、`、`」` など) の場合、句�
 
 Table: URL 保護と周辺テキストの変換例
 
+#### リンク先の保護
+
+Markdown のリンク先はスタイリング対象外とします。相対パスやアンカーの英数字と日本語の境目に空白を入れると、リンクが壊れるためです。  
+保護するのは、インライン リンクと画像の `](` から空白または `)` の直前まで (`<...>` で囲んだリンク先は `>` まで) と、参照リンクの定義行の `[ラベル]: リンク先` です。  
+リンク テキスト、画像の代替テキスト、リンクのタイトル (`"..."`) はスタイリング対象です。HTML の `href` と `src` は対象外です。
+
+リンク先は URL より先に保護します。このため、`https://` で始まるリンク先の直後に日本語が続いても、URL の保護は `)` の手前で止まり、`)` の後の日本語はスタイリング対象になります。
+
+| 入力 | 出力 |
+|------|------|
+| `[b](./foo-bar手順.md)` | `[b](./foo-bar手順.md)` |
+| `x [a](#注入-pre-assert手順) y` | `x [a](#注入-pre-assert手順) y` |
+| `[r]: ./foo-bar手順.md` | `[r]: ./foo-bar手順.md` |
+| `[手順](./foo-bar手順.md "第3章")` | `[手順](./foo-bar手順.md "第 3 章")` |
+| `[公式](https://example.com/)から取得` | `[公式](https://example.com/) から取得` |
+
+Table: リンク先の保護と周辺テキストの変換例
+
 #### コード フェンス前後の空行
 
 Markdownlint の MD031 相当として、コード フェンスの前後に本文が続く場合は空行を 1 行挿入します。  
@@ -380,10 +398,19 @@ Table: 行末スペースの正規化例
 |------|-----------|
 | `ON_CALL` | `[状態]` |
 | `EXPECT_CALL` | `[Pre-Assert確認_正常系]` または `[Pre-Assert確認_異常系]` |
-| `WillOnce` / `WillRepeatedly` を伴う `EXPECT_CALL` | `[Pre-Assert手順]` も必要 |
+| `DoDefault()` 以外の動作を渡す `WillOnce` / `WillRepeatedly` を伴う `EXPECT_CALL` | `[Pre-Assert手順]` も必要 |
 | その他の `EXPECT_*` / `ASSERT_*` | `[状態確認]`、`[Pre-Assert確認_正常系]`、`[Pre-Assert確認_異常系]`、`[確認_正常系]`、`[確認_異常系]` のいずれか |
 
 Table: テスト マクロと必要なエビデンス タグの対応
+
+動作を注入しない `EXPECT_CALL` は、次の書き方を診断します。
+
+| 対象 | 診断 |
+|------|------|
+| `WillOnce` / `WillRepeatedly` がない `EXPECT_CALL` | `[Pre-Assert手順]` を書かない |
+| `WillOnce` / `WillRepeatedly` に `DoDefault()` だけを渡す `EXPECT_CALL` | 動作の指定をやめ、`.Times()` で回数を書く |
+
+Table: 動作を注入しない EXPECT_CALL の診断
 
 タグは対象マクロの文内、文末と同じ行、または空行やコードを挟まない直後のコメント行に記載します。フェーズ構造コメント (`// Arrange`、`// Pre-Assert`、`// Act`、`// Assert`、`// Cleanup`) に到達した場合は、そこで対象マクロとの関連付けを終了します。
 
@@ -633,7 +660,9 @@ file.md
 | `list-indent` | リスト ネスト字下げを depth × 4 スペースに正規化 (Markdown) |
 | `test-comment-on-call-state` | `ON_CALL` の `[状態]` コメント不足を診断 (C++、自動修正なし) |
 | `test-comment-expect-call-check` | `EXPECT_CALL` の `[Pre-Assert確認_*]` コメント不足を診断 (C++、自動修正なし) |
-| `test-comment-expect-call-step` | `WillOnce` / `WillRepeatedly` に対応する `[Pre-Assert手順]` コメント不足を診断 (C++、自動修正なし) |
+| `test-comment-expect-call-step` | `DoDefault()` 以外の動作を渡す `WillOnce` / `WillRepeatedly` に対応する `[Pre-Assert手順]` コメント不足を診断 (C++、自動修正なし) |
+| `test-comment-expect-call-step-without-action` | `WillOnce` / `WillRepeatedly` がない `EXPECT_CALL` の `[Pre-Assert手順]` コメントを診断 (C++、自動修正なし) |
+| `test-comment-expect-call-default-action` | `WillOnce` / `WillRepeatedly` に `DoDefault()` だけを渡す `EXPECT_CALL` を診断 (`.Times()` で回数を書く。C++、自動修正なし) |
 | `test-comment-assertion-check` | `EXPECT_*` / `ASSERT_*` の確認コメント不足を診断 (C++、自動修正なし) |
 | `test-comment-act-expect` | Act フェーズの `EXPECT_*` を診断 (`EXPECT_CALL` を除く。C++、自動修正なし) |
 | `test-comment-assert-step` | Assert フェーズの `[手順]` を診断 (C++、自動修正なし) |
@@ -677,7 +706,7 @@ styled = style_prose("第3章")  # "第 3 章"
 スタイリングは次の順序で適用されます。
 
 1. 入力全体の NBSP (U+00A0) を半角スペースへ置換
-2. コード フェンス・インライン コード・URL を保護 (変換対象外化)
+2. コード フェンス・インライン コード・リンク先・URL を保護 (変換対象外化)
 3. カタカナ列に挟まれた半角スペースを除去 (連結形が `no_space` または `replace` の見出し語に一致する部分列のみ)
 4. `replace` を先行適用 (Sudachi 分割や `no_space` 保護で連続性が失われる前に逆方向 ー 削除や順方向 ー 付与を処理)
 5. `no_space` 語をプレースホルダー化

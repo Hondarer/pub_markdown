@@ -119,6 +119,16 @@ def run_tests() -> bool:
         ("https://example.com/abc日本語終端", "https://example.com/abc日本語終端"),
         ("[テキスト](https://example.com/日本語パス)", "[テキスト](https://example.com/日本語パス)"),
         ("参照先 https://example.com/doc。次の章", "参照先 https://example.com/doc。次の章"),
+        # リンク先は整形せず、リンク テキストとタイトルは整形する
+        ("x [a](#注入-pre-assert手順) y", "x [a](#注入-pre-assert手順) y"),
+        ("[b](./foo-bar手順.md)", "[b](./foo-bar手順.md)"),
+        ("[r]: ./foo-bar手順.md", "[r]: ./foo-bar手順.md"),
+        ("![構成図](images/構成abc図.png)", "![構成図](images/構成abc図.png)"),
+        ("[第3章](<./第3章 概要.md>)", "[第 3 章](<./第3章 概要.md>)"),
+        ('[手順](./foo-bar手順.md "第3章")', '[手順](./foo-bar手順.md "第 3 章")'),
+        # URL の保護がリンク先の ) を越えて後続の文字列を取り込まない
+        ("[公式](https://example.com/)から取得", "[公式](https://example.com/) から取得"),
+        ("[a](https://example.com/a)、[第2版](https://example.com/b)", "[a](https://example.com/a)、[第 2 版](https://example.com/b)"),
         ("ビルド・テスト", "ビルド・テスト"),
         ("ブル", "ブルー"),
         ("(ブル)", "(ブルー)"),
@@ -1543,6 +1553,44 @@ def run_tests() -> bool:
         f"\n{status} cpp dry-run EXPECT_CALL 動作コメント判定: "
         f"{[(f.line, f.rule) for f in test_comment_findings]}"
     )
+    if not passed:
+        all_passed = False
+
+    # cpp dry-run: 動作を注入しない EXPECT_CALL は、手順コメントと DoDefault() だけの指定を指摘する
+    source = (
+        "TEST(sampleTest, default_action_comments)\n"
+        "{\n"
+        "    // Pre-Assert\n"
+        "    EXPECT_CALL(mock, A()).Times(1); // [Pre-Assert確認_正常系] - a\n"
+        "    EXPECT_CALL(mock, B()).Times(1); // [Pre-Assert確認_正常系] - b\n"
+        "                                     // [Pre-Assert手順] - b\n"
+        "    EXPECT_CALL(mock, C()).WillOnce(Return(0)); // [Pre-Assert確認_正常系] - c\n"
+        "                                                // [Pre-Assert手順] - c\n"
+        "    EXPECT_CALL(mock, D()).WillOnce(Return(0)); // [Pre-Assert確認_正常系] - d\n"
+        "    EXPECT_CALL(mock, E()).WillOnce(DoDefault()); // [Pre-Assert確認_正常系] - e\n"
+        "    EXPECT_CALL(mock, F())\n"
+        "        .WillOnce(::testing::DoDefault())\n"
+        "        .WillRepeatedly(testing::DoDefault()); // [Pre-Assert確認_正常系] - f\n"
+        "                                               // [Pre-Assert手順] - f\n"
+        "    EXPECT_CALL(mock, G())\n"
+        "        .WillOnce(Return(-1))\n"
+        "        .WillRepeatedly(DoDefault()); // [Pre-Assert確認_異常系] - g\n"
+        "                                      // [Pre-Assert手順] - g\n"
+        "}\n"
+    )
+    c = DiagnosticCollector()
+    style_by_mode(source, "cpp", collector=c)
+    test_comment_findings = [
+        (f.line, f.rule) for f in c.findings if f.rule.startswith("test-comment-")
+    ]
+    passed = test_comment_findings == [
+        (5, "test-comment-expect-call-step-without-action"),
+        (9, "test-comment-expect-call-step"),
+        (10, "test-comment-expect-call-default-action"),
+        (11, "test-comment-expect-call-default-action"),
+    ]
+    status = "✓" if passed else "✗"
+    print(f"\n{status} cpp dry-run 動作を注入しない EXPECT_CALL 判定: {test_comment_findings}")
     if not passed:
         all_passed = False
 

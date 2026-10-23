@@ -148,6 +148,8 @@ _TEST_ASSERTION_CHECK_TAG_RE = re.compile(
 _TEST_EXPECT_CALL_ACTION_RE = re.compile(
     r"\.\s*Will(?:Once|Repeatedly)\s*\("
 )
+# 既定の動作だけを渡す動作の指定。回数の期待と同じ意味のため、.Times() で書く。
+_TEST_DEFAULT_ACTION_RE = re.compile(r"(?:(?:::)?testing\s*::\s*)?DoDefault\s*\(\s*\)")
 
 _FENCE_LANG_TO_SOURCE_MODE = {
     "c": "c", "h": "c",
@@ -159,8 +161,17 @@ _FENCE_LANG_TO_SOURCE_MODE = {
     "make": "make", "makefile": "make", "mk": "make",
 }
 
+# Markdown のリンク先。相対パスやアンカーの英数字と日本語の境目に空白を入れると
+# リンクが壊れる。URL の保護 (https?://\S+) より先に退避し、URL の保護が `)` を
+# 越えて後続の文字列まで取り込まないようにする。タイトルとリンク テキストは整形する。
+_MARKDOWN_LINK_DESTINATION_PATTERN = re.compile(r"(?<=\]\()(?:<[^>\n]*>|[^)\s]+)")
+# 参照リンクの定義行。ラベルは表示されない識別子のため、リンク先と合わせて退避する。
+_MARKDOWN_LINK_DEFINITION_DESTINATION_PATTERN = re.compile(r"^[ ]{0,3}\[[^\]\n]+\]:[ \t]+\S+")
+
 _MARKDOWN_PROTECTED_PATTERNS = [
     _BACKTICK_PATTERN,
+    _MARKDOWN_LINK_DESTINATION_PATTERN,
+    _MARKDOWN_LINK_DEFINITION_DESTINATION_PATTERN,
     _ADMONITION_MARKER_PATTERN,
     _TASK_LIST_MARKER_PATTERN,
     _DOXYGEN_COMMAND_PLACEHOLDER_PATTERN,
@@ -1091,6 +1102,17 @@ def _find_cpp_test_bodies(masked: str) -> List[Tuple[int, int]]:
     return bodies
 
 
+def _find_cpp_expect_call_actions(statement: str) -> List[str]:
+    """EXPECT_CALL の文から WillOnce / WillRepeatedly の引数を返す。"""
+    actions: List[str] = []
+    for match in _TEST_EXPECT_CALL_ACTION_RE.finditer(statement):
+        opening_paren = match.end() - 1
+        closing_paren = _find_matching_delimiter(statement, opening_paren, "(", ")")
+        if closing_paren is not None:
+            actions.append(statement[opening_paren + 1:closing_paren].strip())
+    return actions
+
+
 def _find_cpp_statement_end(
     masked: str,
     start: int,
@@ -1502,17 +1524,37 @@ def _find_cpp_test_comment_findings(
                         "EXPECT_CALL には [Pre-Assert確認_*] コメントが必要",
                         collector,
                     )
-                statement = masked[match.start():statement_end]
-                if (
-                    _TEST_EXPECT_CALL_ACTION_RE.search(statement) is not None
-                    and _TEST_EXPECT_CALL_STEP_TAG_RE.search(comments) is None
+                actions = _find_cpp_expect_call_actions(
+                    masked[match.start():statement_end]
+                )
+                has_step = _TEST_EXPECT_CALL_STEP_TAG_RE.search(comments) is not None
+                if actions and all(
+                    _TEST_DEFAULT_ACTION_RE.fullmatch(action) for action in actions
                 ):
+                    _add_test_comment_finding(
+                        text,
+                        match.start(),
+                        macro_name,
+                        "test-comment-expect-call-default-action",
+                        "DoDefault() だけを指定する EXPECT_CALL は .Times() で回数を書く",
+                        collector,
+                    )
+                elif actions and not has_step:
                     _add_test_comment_finding(
                         text,
                         match.start(),
                         macro_name,
                         "test-comment-expect-call-step",
                         "WillOnce / WillRepeatedly には [Pre-Assert手順] コメントが必要",
+                        collector,
+                    )
+                elif not actions and has_step:
+                    _add_test_comment_finding(
+                        text,
+                        match.start(),
+                        macro_name,
+                        "test-comment-expect-call-step-without-action",
+                        "動作を指定しない EXPECT_CALL に [Pre-Assert手順] コメントは不要",
                         collector,
                     )
             elif _TEST_ASSERTION_CHECK_TAG_RE.search(comments) is None:

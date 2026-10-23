@@ -1064,7 +1064,7 @@ URL: [公式紹介](https://www.ipa.go.jp/archive/digital/iot-en-ci/jyouryuu/hik
 
 発行主体: デジタル庁。資料: 地方公共団体情報システム共通機能標準仕様書 第 2.8 版。公開日: 2026-09-30。
 
-URL: [共通機能の標準仕様の掲載ページ](https://www.digital.go.jp/policies/local_governments/common-feature-specification)、[第2.8版 本文 PDF](https://www.digital.go.jp/assets/contents/node/basic_page/field_ref_resources/4d056a04-6eba-4109-9850-a786d3e71971/38502158/20260930_policies_local_governments_common_02.pdf)。
+URL: [共通機能の標準仕様の掲載ページ](https://www.digital.go.jp/policies/local_governments/common-feature-specification)、[第 2.8 版 本文 PDF](https://www.digital.go.jp/assets/contents/node/basic_page/field_ref_resources/4d056a04-6eba-4109-9850-a786d3e71971/38502158/20260930_policies_local_governments_common_02.pdf)。
 
 参照箇所: 本文目次、第 1 章の対象範囲、第 2 章の共通機能、掲載ページの機能要件・項目定義書・API 仕様書・詳細技術仕様書の一覧。別紙 Excel の全セルを検証したものではありません。
 
