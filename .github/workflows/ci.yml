@@ -11,6 +11,10 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  # 埋め込み版 Python (._pth) と同じく、スクリプトのディレクトリを sys.path に入れずに実行する。
+  PYTHONSAFEPATH: "1"
+
 jobs:
   publish-docs:
     runs-on: ubuntu-latest

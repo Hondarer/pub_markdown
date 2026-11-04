@@ -4,6 +4,10 @@
 import os
 import re
 from typing import Callable, List, Optional, Sequence, Tuple
+import sys
+
+# 埋め込み版 Python (._pth) はスクリプトのディレクトリを sys.path に入れないため、明示的に追加する。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from text_style_jp_engine import (
     DiagnosticCollector,

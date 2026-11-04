@@ -20,3 +20,6 @@ Pandoc による静的発行と、MkDocs による動的発行を提供します
 テンプレート内のリテラル `$` は Pandoc 用のエスケープが必要です。  
 該当する変更や Windows の実行障害では、[保守と検証](docs/maintenance-verification.md) の該当節を参照してください。  
 局所発行のコマンドと再生成の条件も同文書に記載されています。
+
+同じディレクトリのモジュールを import する Python は、import より前に `sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))` を置いてください。  
+埋め込み版 Python (`._pth`) はスクリプトのディレクトリを `sys.path` に入れないためです。

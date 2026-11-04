@@ -18,6 +18,10 @@ Worker はページと同じレンダラー プロセスで動くため、その
 import json
 import logging
 import os
+import sys
+
+# 埋め込み版 Python (._pth) はスクリプトのディレクトリを sys.path に入れないため、明示的に追加する。
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import livedocs_progress as progress_state
 
