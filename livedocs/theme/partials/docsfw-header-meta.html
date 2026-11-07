@@ -5,7 +5,7 @@
   (styles/html/html-template.html の $author$ と $date$) と同じ文字列とする。
 
   発行日時は「RFC2822 日時 + 短縮 SHA」の 1 文字列で、未コミット差分があると
-  SHA の末尾に + が付く。日時とハッシュは静的発行でも分かれていないため、
+  SHA の末尾に * が付く。日時とハッシュは静的発行でも分かれていないため、
   ここでも分割しない。
 -#}
 {% set publish_author = page.meta["author"] if page and page.meta else none %}

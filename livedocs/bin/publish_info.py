@@ -73,10 +73,10 @@ def build_date(real_path, facts):
     """``PublishFacts`` から発行日時と最終コミット ID の文字列を組み立てる。
 
     ``get_file_date.sh`` と同じ 3 分岐です。日時とコミット ID は 1 つの文字列に
-    連結し、未コミット差分がある場合はコミット ID の末尾へ ``+`` を付けます。
+    連結し、未コミット差分がある場合はコミット ID の末尾へ ``*`` を付けます。
 
     - 追跡済み・差分なし: ``<コミッター日時> <短縮 SHA>``
-    - 追跡済み・差分あり: ``<ファイル mtime> <短縮 SHA>+``
+    - 追跡済み・差分あり: ``<ファイル mtime> <短縮 SHA>*``
     - 未追跡 / Git 管理外: ``<ファイル mtime>``
     """
     if not facts.tracked or not facts.short_sha:
@@ -86,7 +86,7 @@ def build_date(real_path, facts):
         mtime = file_mtime_rfc2822(real_path)
         if not mtime:
             return ""
-        return "{} {}+".format(mtime, facts.short_sha)
+        return "{} {}*".format(mtime, facts.short_sha)
 
     if not facts.committer_date:
         return file_mtime_rfc2822(real_path)

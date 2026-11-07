@@ -102,12 +102,12 @@ class BuildDateTest(unittest.TestCase):
             build_date(self.path, facts), "Sat, 06 Sep 2026 12:34:56 +0900 5927f1d"
         )
 
-    def test_tracked_and_dirty_uses_mtime_and_marks_plus(self):
+    def test_tracked_and_dirty_uses_mtime_and_marks_asterisk(self):
         facts = PublishFacts(
             tracked=True, dirty=True,
             committer_date="Sat, 06 Sep 2026 12:34:56 +0900", short_sha="5927f1d",
         )
-        self.assertEqual(build_date(self.path, facts), "{} 5927f1d+".format(self.mtime))
+        self.assertEqual(build_date(self.path, facts), "{} 5927f1d*".format(self.mtime))
 
     def test_untracked_uses_mtime_without_sha(self):
         self.assertEqual(build_date(self.path, PublishFacts()), self.mtime)
