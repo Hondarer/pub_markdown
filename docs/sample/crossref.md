@@ -19,7 +19,7 @@ sequenceDiagram
     John-->>Alice: 図として採番されます
 ```
 
-CodeBlock: Mermaid の図 {#fig:crossref_mermaid}
+Figure: Mermaid の図 {#fig:crossref_mermaid}
 
 ## コード ブロック
 

@@ -979,6 +979,78 @@ class ConvertCaptionsTest(unittest.TestCase):
         self.assertNotIn("<figure", result)
         self.assertIn("{: .docsfw-caption }", result)
 
+    def test_wraps_diagram_fence_with_figure_prefix(self):
+        source = (
+            "```mermaid\n"
+            "sequenceDiagram\n"
+            "```\n"
+            "\n"
+            "Figure: Mermaid の図 {#fig:flow}\n"
+        )
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertIn(
+            '<figure class="docsfw-figure docsfw-diagram-source-host" id="fig:flow" markdown="1">',
+            result,
+        )
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">Mermaid の図</figcaption>',
+            result,
+        )
+
+    def test_wraps_image_with_figure_caption_and_avoids_double_figure(self):
+        source = (
+            "![構成図の概要](images/arch.png)\n"
+            "\n"
+            "Figure: システム構成 {#fig:arch}\n"
+        )
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            staged = convert_implicit_figures(convert_captions(source))
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertEqual(staged.count("<figure"), 1)
+        self.assertIn('<figure class="docsfw-figure" id="fig:arch" markdown="1">', staged)
+        self.assertIn("![構成図の概要](images/arch.png)", staged)
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">システム構成</figcaption>',
+            staged,
+        )
+
+    def test_fills_empty_image_alt_from_figure_caption(self):
+        source = "![](images/empty.png)\n\nFigure: 空代替の図 {#fig:empty}\n"
+        staged = convert_implicit_figures(convert_captions(source))
+        self.assertEqual(staged.count("<figure"), 1)
+        self.assertIn("![空代替の図](images/empty.png)", staged)
+
+    def test_image_label_conflict_warns_and_prefers_figure_line(self):
+        source = "![代替](x.png){#fig:a}\n\nFigure: 題名 {#fig:b}\n"
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertIn("競合しています", stderr.getvalue())
+        self.assertIn('id="fig:b"', result)
+        self.assertNotIn("fig:a", result)
+
+    def test_image_with_codeblock_line_remains_normal_paragraph(self):
+        source = "![代替](x.png)\n\nCodeBlock: 通常段落\n"
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertEqual(stderr.getvalue(), "")
+        self.assertNotIn("<figure", result)
+        self.assertIn("通常段落\n{: .docsfw-caption }", result)
+
+    def test_normal_codeblock_with_figure_and_wrong_label_prefix_warns(self):
+        source = "```c\nint x = 0;\n```\n\nFigure: C コード {#lst:c}\n"
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertIn("図以外のコード ブロックに対して 'Figure:' が使われています", stderr.getvalue())
+        self.assertIn("'Figure:' 行に図以外のラベル接頭辞 '{#lst:c}' が指定されています", stderr.getvalue())
+        self.assertIn("{: #lst:c .docsfw-caption }", result)
+
 
 class ConvertImplicitFiguresTest(unittest.TestCase):
     def test_converts_lone_image_paragraph(self):

@@ -113,15 +113,39 @@ _LINK_TARGET_PARTS_RE = re.compile(
     r"^[ \t]*(?:<([^<>\n]*)>|(.*?))((?:[ \t]+(?:\"[^\"\n]*\"|'[^'\n]*'))?)[ \t]*$"
 )
 # 第 1 グループは行頭の字下げ。Table: は箇条書き内の表と同じ桁をキャプションにする。
-# CodeBlock: の字下げは convert_captions 側で除外する。
-_CAPTION_RE = re.compile(r"^([ \t]*)(Table|CodeBlock):[ \t]*(.*)$")
+# CodeBlock: / Figure: の字下げは convert_captions 側で除外する。
+_CAPTION_RE = re.compile(r"^([ \t]*)(Table|CodeBlock|Figure):[ \t]*(.*)$")
 _TABLE_SEPARATOR_RE = re.compile(
     r"^(?=[^\n]*\|)[ \t]*\|?[ \t]*:?-+:?[ \t]*"
     r"(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$"
 )
+
+
+def _load_diagram_languages():
+    """図と判定するフェンス言語の一覧を diagram-languages.txt から読み込む。"""
+    path = os.path.normpath(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "bin_internal", "diagram-languages.txt")
+    )
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            langs = []
+            for raw in fh:
+                stripped = raw.split("#", 1)[0].strip()
+                if stripped:
+                    langs.append(stripped)
+    except OSError as exc:
+        raise RuntimeError(f"diagram-languages.txt を開けません ({path}): {exc}") from exc
+    if not langs:
+        raise RuntimeError(f"diagram-languages.txt に言語が定義されていません ({path})")
+    return tuple(langs)
+
+
+DIAGRAM_LANGUAGES = _load_diagram_languages()
 # figure で包む対象のフェンス。字下げされたフェンス (リスト内など) は
 # md_in_html が生の HTML として扱えないため、行頭のものだけを対象にする。
-_DIAGRAM_FENCE_RE = re.compile(r"^(?:```+|~~~+)[ \t]*(plantuml|mermaid)\b")
+_DIAGRAM_FENCE_RE = re.compile(
+    r"^(?:```+|~~~+)[ \t]*(" + "|".join(re.escape(lang) for lang in DIAGRAM_LANGUAGES) + r")\b"
+)
 # 段落が画像 1 個だけで構成される行。Pandoc の implicit_figures と同じ条件。
 _IMAGE_ONLY_RE = re.compile(
     r"^!\[((?:[^\[\]]|\[[^\]]*\])*)\]"
@@ -768,15 +792,31 @@ def _indent_lines(lines, indent):
     return [(indent + line) if line else line for line in lines]
 
 
+def _check_caption_label_prefix(caption_kind, label, after_diagram=False):
+    """キャプション種別とラベル接頭辞の不一致があれば標準エラーへ警告する。"""
+    if not label or ":" not in label:
+        return
+    lprefix = label.split(":", 1)[0]
+    if caption_kind == "Figure" and lprefix != "fig":
+        sys.stderr.write(
+            f"[stage_livedocs] 警告: 'Figure:' 行に図以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
+        )
+    elif caption_kind == "CodeBlock" and lprefix != "lst" and not (after_diagram and lprefix == "fig"):
+        sys.stderr.write(
+            f"[stage_livedocs] 警告: 'CodeBlock:' 行にリスト以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
+        )
+
+
 def convert_captions(text):
-    """``Table:`` / ``CodeBlock:`` キャプションを mkdocs 向けの記法へ変換する。
+    """``Table:`` / ``CodeBlock:`` / ``Figure:`` キャプションを mkdocs 向けの記法へ変換する。
 
-    docsfw は Pandoc のキャプション記法として扱いますが、mkdocs では次のように
-    表現します。
+    docsfw のキャプション記法を mkdocs では次のように表現します。
 
-    - PlantUML / Mermaid フェンスの直後に置かれた行頭の ``CodeBlock:`` は、
-      フェンスとともに ``md_in_html`` の ``figure`` へ包みます。pandoc 発行版が
-      図に ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - PlantUML / Mermaid フェンスの直後に置かれた行頭の ``Figure:`` (および互換の
+      ``CodeBlock:``) は、フェンスとともに ``md_in_html`` の ``figure`` へ包みます。
+      pandoc 発行版が図に ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - 画像 1 個だけの段落の直後に置かれた行頭の ``Figure:`` も、画像とともに
+      ``<figure>`` へ包みます (``CodeBlock:`` は通常の段落として残します)。
     - 直前の表と字下げの幅が一致する ``Table:`` は、その字下げを保ったまま表の
       前へ移して ``.docsfw-table-caption`` クラスを付けます。箇条書きの項目内も
       同じです。
@@ -793,10 +833,15 @@ def convert_captions(text):
     index = 0
     # 直前に閉じた図フェンスの ``(out 上の開始位置, 終了位置, 言語)``。
     diagram_block = None
+    # 直前に閉じた図以外のコード フェンスの out 上の終了位置。
+    non_diagram_fence_end = None
     fence_start = None
     fence_lang = None
+    fence_is_non_diagram = False
     fence_content = []
     internal_caption = ""
+    # 直前に閉じた画像 1 個だけの行 ``(out 上の行位置, re.Match)``。
+    image_block = None
     # 直前に閉じた Markdown 表の ``(out 上の開始位置, 終了位置, 先頭の字下げ)``。
     table_block = None
     block_start = None
@@ -808,6 +853,7 @@ def convert_captions(text):
         fence_match = _FENCE_RE.match(line)
         if fence_match:
             table_block = None
+            image_block = None
             block_start = None
             block_indent = ""
             block_has_table_separator = False
@@ -821,13 +867,18 @@ def convert_captions(text):
                 diagram_match = _DIAGRAM_FENCE_RE.match(line)
                 fence_start = len(out) if diagram_match else None
                 fence_lang = diagram_match.group(1) if diagram_match else None
+                fence_is_non_diagram = diagram_match is None
                 fence_content = []
                 diagram_block = None
+                non_diagram_fence_end = None
             elif fence == marker:
                 fence = None
                 if fence_start is not None:
                     diagram_block = (fence_start, len(out) + 1, fence_lang)
                     internal_caption = _plantuml_caption(fence_content) if fence_lang == "plantuml" else ""
+                elif fence_is_non_diagram:
+                    non_diagram_fence_end = len(out) + 1
+                fence_is_non_diagram = False
             out.append(line)
             index += 1
             continue
@@ -840,11 +891,11 @@ def convert_captions(text):
             continue
 
         caption_match = _CAPTION_RE.match(line)
-        # 字下げした CodeBlock: はキャプションにしない。字下げした生の HTML を
-        # md_in_html が扱えないため、図を figure へ包むのは行頭のフェンスに限る。
+        # 字下げした CodeBlock: / Figure: はキャプションにしない。字下げした生の HTML を
+        # md_in_html が扱えないため、図を figure へ包むのは行頭のフェンスと画像に限る。
         if (
             caption_match
-            and caption_match.group(2) == "CodeBlock"
+            and caption_match.group(2) in ("CodeBlock", "Figure")
             and caption_match.group(1)
         ):
             caption_match = None
@@ -859,8 +910,9 @@ def convert_captions(text):
                 index += 1
 
             label, paragraph = _split_caption_label(paragraph)
+            _check_caption_label_prefix(caption_kind, label, _is_after_diagram(out, diagram_block))
 
-            if caption_kind == "CodeBlock" and _is_after_diagram(out, diagram_block):
+            if caption_kind in ("CodeBlock", "Figure") and _is_after_diagram(out, diagram_block):
                 block_start, block_end, _lang = diagram_block
                 figure = [_figure_open_tag(label, True), ""]
                 figure.extend(out[block_start:block_end])
@@ -874,8 +926,44 @@ def convert_captions(text):
                 if index < len(lines) and lines[index].strip():
                     out.append("")
                 diagram_block = None
+                non_diagram_fence_end = None
+                image_block = None
                 internal_caption = ""
                 continue
+
+            if caption_kind == "Figure" and _is_after_image(out, image_block):
+                img_pos, img_match = image_block
+                alt_raw = img_match.group(1)
+                target = img_match.group(2)
+                img_label, rest_attrs = _split_image_attrs(img_match.group(3))
+                final_label = label or img_label
+                if label and img_label and label != img_label:
+                    sys.stderr.write(
+                        f"[stage_livedocs] 警告: 画像の属性ラベル '{{#{img_label}}}' と "
+                        f"'Figure:' 行のラベル '{{#{label}}}' が競合しています。'Figure:' 行のラベルを採用します。\n"
+                    )
+                if not alt_raw.strip():
+                    alt_raw = " ".join(part.strip() for part in paragraph if part.strip())
+                rebuilt_image = "![{}]({}){}".format(alt_raw, target, rest_attrs)
+                figure = [_figure_open_tag(final_label, False), "", rebuilt_image, ""]
+                figure.extend(_figcaption_lines(paragraph))
+                figure.extend(["", "</figure>"])
+                if img_pos > 0 and out[img_pos - 1].strip():
+                    figure.insert(0, "")
+                out[img_pos:] = figure
+                if index < len(lines) and lines[index].strip():
+                    out.append("")
+                diagram_block = None
+                non_diagram_fence_end = None
+                image_block = None
+                internal_caption = ""
+                continue
+
+            if caption_kind == "Figure" and _is_after_non_diagram(out, non_diagram_fence_end):
+                sys.stderr.write(
+                    "[stage_livedocs] 警告: 図以外のコード ブロックに対して 'Figure:' が使われています。"
+                    "通常コード ブロックには 'CodeBlock:' を使用してください。\n"
+                )
 
             is_table_caption = caption_kind == "Table"
             attrs = [".docsfw-caption"]
@@ -895,6 +983,8 @@ def convert_captions(text):
             if not moved_before_table:
                 out.extend(_indent_lines(paragraph, caption_indent))
             diagram_block = None
+            non_diagram_fence_end = None
+            image_block = None
             table_block = None
             block_start = None
             block_indent = ""
@@ -907,6 +997,8 @@ def convert_captions(text):
             internal_caption = ""
         elif line.strip():
             diagram_block = None
+            non_diagram_fence_end = None
+            image_block = None
             internal_caption = ""
 
         if line.strip():
@@ -917,6 +1009,11 @@ def convert_captions(text):
                 block_has_table_separator = False
             if _TABLE_SEPARATOR_RE.match(line):
                 block_has_table_separator = True
+            at_para_end = index + 1 >= len(lines) or not lines[index + 1].strip()
+            if at_paragraph_start and at_para_end:
+                img_match = _IMAGE_ONLY_RE.match(line)
+                if img_match:
+                    image_block = (len(out), img_match)
         elif block_start is not None:
             table_block = (
                 (block_start, len(out), block_indent) if block_has_table_separator else None
@@ -942,12 +1039,32 @@ def _is_after_diagram(out, diagram_block):
     return bool(tail) and not any(entry.strip() for entry in tail)
 
 
+def _is_after_non_diagram(out, fence_end):
+    """キャプションの直前が図以外のコード フェンスだけであるかを判定する。"""
+    if fence_end is None:
+        return False
+    tail = out[fence_end:]
+    return bool(tail) and not any(entry.strip() for entry in tail)
+
+
+def _is_after_image(out, image_block):
+    """キャプションの直前が画像 1 個だけの行であるかを判定する。"""
+    if image_block is None:
+        return False
+    img_pos, _match = image_block
+    tail = out[img_pos + 1:]
+    return bool(tail) and not any(entry.strip() for entry in tail)
+
+
 def convert_implicit_figures(text):
     """画像 1 個だけの段落を ``figure`` へ変換する。
 
     Pandoc の ``implicit_figures`` に相当します。Python-Markdown には同等の
     機能が無いため、``md_in_html`` の ``figure`` としてステージング時に組み
     立てます。代替テキストが空の画像は、pandoc 発行版と同じく変換しません。
+
+    ``convert_captions()`` がすでに ``<figure>`` で包んだブロックの内部は
+    二重化を防ぐためスキップします。
 
     画像を Markdown 記法のまま ``figure`` の内側へ置くのは、mkdocs の相対パス
     解決を効かせるためです。生の ``<img>`` を出力すると、``use_directory_urls``
@@ -956,6 +1073,7 @@ def convert_implicit_figures(text):
     lines = text.split("\n")
     out = []
     fence = None
+    in_figure = False
     index = 0
 
     while index < len(lines):
@@ -972,6 +1090,19 @@ def convert_implicit_figures(text):
             continue
 
         if fence is not None:
+            out.append(line)
+            index += 1
+            continue
+
+        stripped = line.strip()
+        if not in_figure and stripped.startswith("<figure"):
+            in_figure = True
+            out.append(line)
+            index += 1
+            continue
+        if in_figure:
+            if stripped == "</figure>":
+                in_figure = False
             out.append(line)
             index += 1
             continue

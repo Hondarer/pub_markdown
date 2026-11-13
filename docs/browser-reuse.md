@@ -63,7 +63,7 @@ flowchart TD
     P2 --> STOP([終了])
 ```
 
-CodeBlock: 共有ブラウザーの処理フロー
+Figure: 共有ブラウザーの処理フロー
 
 ### コンポーネント間の接続
 
@@ -97,7 +97,7 @@ flowchart TD
     mmdc ==>|"puppeteer.connect()<br>(ページ単位で操作)"| chrome
 ```
 
-CodeBlock: コンポーネント間の接続
+Figure: コンポーネント間の接続
 
 ## 技術仕様
 

@@ -1,6 +1,6 @@
 # Mermaid キャプションのサンプル
 
-Mermaid のキャプションは、コード ブロックの直後に `CodeBlock:` 行を配置して指定します。  
+Mermaid のキャプションは、コード ブロックの直後に `Figure:` 行を配置して指定します。  
 フェンスには言語名だけを記述するため、GitHub などの Web 表示でも図がそのまま描画されます。
 
 ## キャプションあり
@@ -11,7 +11,7 @@ sequenceDiagram
     John-->>Alice: いいね!
 ```
 
-CodeBlock: Mermaid のキャプション
+Figure: Mermaid のキャプション
 
 ## ラベル付き (相互参照)
 
@@ -23,7 +23,7 @@ sequenceDiagram
     John-->>Alice: 採番されます
 ```
 
-CodeBlock: ラベル付きの Mermaid {#fig:mermaid-caption-label}
+Figure: ラベル付きの Mermaid {#fig:mermaid-caption-label}
 
 ## 複数行のキャプション
 
@@ -35,7 +35,7 @@ sequenceDiagram
     John-->>Alice: 2 行目があります
 ```
 
-CodeBlock: 1 行目のキャプション  
+Figure: 1 行目のキャプション  
 2 行目のキャプション
 
 ## キャプションなし

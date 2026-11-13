@@ -252,7 +252,7 @@ sequenceDiagram
     John-->>Alice: いいね!
 ```
 
-CodeBlock: Mermaid のキャプション
+Figure: Mermaid のキャプション
 
 ## コード ブロックのキャプション
 

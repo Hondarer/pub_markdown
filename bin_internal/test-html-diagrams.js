@@ -84,14 +84,14 @@ int main(void) {
 flowchart LR
   A[開始] --> B[完了]
 \`\`\`
-CodeBlock: Mermaid の図 {#fig:flow}
+Figure: Mermaid の図 {#fig:flow}
 
 \`\`\`plantuml
 @startuml
 Alice -> Bob : Hello
 @enduml
 \`\`\`
-CodeBlock: シーケンスの図 {#fig:sequence}
+Figure: シーケンスの図 {#fig:sequence}
 
 \`\`\`plantuml
 @startuml

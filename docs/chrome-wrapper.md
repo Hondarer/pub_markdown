@@ -57,7 +57,7 @@ flowchart TD
     S8 --> STOP([終了])
 ```
 
-CodeBlock: 処理フロー
+Figure: 処理フロー
 
 ## 技術仕様
 

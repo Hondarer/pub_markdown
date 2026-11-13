@@ -12,7 +12,7 @@ flowchart LR
     Fix --> Check
 ```
 
-CodeBlock: Flowchart のサンプル
+Figure: Flowchart のサンプル
 
 ## Sequence
 
@@ -24,7 +24,7 @@ sequenceDiagram
     App-->>User: レスポンス
 ```
 
-CodeBlock: Sequence のサンプル
+Figure: Sequence のサンプル
 
 ## Class
 
@@ -40,7 +40,7 @@ classDiagram
     Renderer --> Document
 ```
 
-CodeBlock: Class のサンプル
+Figure: Class のサンプル
 
 ## State
 
@@ -53,7 +53,7 @@ stateDiagram-v2
     Published --> [*]
 ```
 
-CodeBlock: State のサンプル
+Figure: State のサンプル
 
 ## ER
 
@@ -71,7 +71,7 @@ erDiagram
     }
 ```
 
-CodeBlock: ER のサンプル
+Figure: ER のサンプル
 
 ## User Journey
 
@@ -86,7 +86,7 @@ journey
       成果物を確認する: 5: Publisher
 ```
 
-CodeBlock: User Journey のサンプル
+Figure: User Journey のサンプル
 
 ## Gantt
 
@@ -100,7 +100,7 @@ gantt
     確認      :2d
 ```
 
-CodeBlock: Gantt のサンプル
+Figure: Gantt のサンプル
 
 ## Pie
 
@@ -111,7 +111,7 @@ pie title 作業割合
     "確認" : 20
 ```
 
-CodeBlock: Pie のサンプル
+Figure: Pie のサンプル
 
 ## Quadrant
 
@@ -125,7 +125,7 @@ quadrantChart
     TaskC: [0.45, 0.35]
 ```
 
-CodeBlock: Quadrant のサンプル
+Figure: Quadrant のサンプル
 
 ## Requirement
 
@@ -145,7 +145,7 @@ requirementDiagram
     cli - satisfies -> req_publish
 ```
 
-CodeBlock: Requirement のサンプル
+Figure: Requirement のサンプル
 
 ## GitGraph
 
@@ -159,7 +159,7 @@ gitGraph
     merge feature
 ```
 
-CodeBlock: GitGraph のサンプル
+Figure: GitGraph のサンプル
 
 <!--
 ## C4
@@ -172,7 +172,7 @@ C4Context
     Rel(user, pub, "Markdown を発行")
 ```
 
-CodeBlock: C4 のサンプル
+Figure: C4 のサンプル
 -->
 
 ## Mindmap
@@ -188,7 +188,7 @@ mindmap
       docx
 ```
 
-CodeBlock: Mindmap のサンプル
+Figure: Mindmap のサンプル
 
 ## Timeline
 
@@ -200,7 +200,7 @@ timeline
     出力 : HTML と docx を生成
 ```
 
-CodeBlock: Timeline のサンプル
+Figure: Timeline のサンプル
 
 <!--
 ## ZenUML
@@ -214,7 +214,7 @@ zenuml
     }
 ```
 
-CodeBlock: ZenUML のサンプル
+Figure: ZenUML のサンプル
 -->
 
 ## Sankey
@@ -226,7 +226,7 @@ sankey-beta
     Mermaid,SVG,30
 ```
 
-CodeBlock: Sankey のサンプル
+Figure: Sankey のサンプル
 
 ## XY Chart
 
@@ -238,7 +238,7 @@ xychart-beta
     bar [3, 5, 7, 6, 8]
 ```
 
-CodeBlock: XY Chart のサンプル
+Figure: XY Chart のサンプル
 
 ## Block
 
@@ -250,7 +250,7 @@ block-beta
     B --> C
 ```
 
-CodeBlock: Block のサンプル
+Figure: Block のサンプル
 
 ## Packet
 
@@ -262,7 +262,7 @@ packet-beta
     32-63: "Sequence Number"
 ```
 
-CodeBlock: Packet のサンプル
+Figure: Packet のサンプル
 
 ## Kanban
 
@@ -276,7 +276,7 @@ kanban
         task3[レビュー済み]
 ```
 
-CodeBlock: Kanban のサンプル
+Figure: Kanban のサンプル
 
 ## Architecture
 
@@ -290,7 +290,7 @@ architecture-beta
     docs:R --> L:store
 ```
 
-CodeBlock: Architecture のサンプル
+Figure: Architecture のサンプル
 
 ## Radar
 
@@ -303,7 +303,7 @@ radar-beta
     min 0
 ```
 
-CodeBlock: Radar のサンプル
+Figure: Radar のサンプル
 
 ## Treemap
 
@@ -315,7 +315,7 @@ treemap
     "SVG": 10
 ```
 
-CodeBlock: Treemap のサンプル
+Figure: Treemap のサンプル
 
 ## Venn
 
@@ -329,7 +329,7 @@ venn-beta
     union docx,Markdown: 15
 ```
 
-CodeBlock: Venn のサンプル
+Figure: Venn のサンプル
 
 ## Ishikawa
 
@@ -348,7 +348,7 @@ ishikawa
             "docx"
 ```
 
-CodeBlock: Ishikawa のサンプル
+Figure: Ishikawa のサンプル
 
 ## Wardley
 
@@ -364,7 +364,7 @@ wardley-beta
     Pandoc -> Output
 ```
 
-CodeBlock: Wardley のサンプル
+Figure: Wardley のサンプル
 
 ## TreeView
 
@@ -377,4 +377,4 @@ treeView-beta
       "README.md"
 ```
 
-CodeBlock: TreeView のサンプル
+Figure: TreeView のサンプル
