@@ -44,22 +44,21 @@ rsvg-convert.js     # メインの Node.js スクリプト
 
 ### 処理フロー
 
-```plantuml
-@startuml 処理フロー
-    caption 処理フロー
-    start
-        :STDIN: SVG Text;
-        :オプション解析;
-        :Puppeteer 起動;
-        :仮 viewport 設定\n4096x4096;
-        :SVG を HTML に埋め込み;
-        :サイズ決定ロジック実行;
-        :最適 viewport 再設定;
-        :高解像度スクリーンショット;
-        :STDOUT: PNG Binary;
-    stop
-@enduml
+```mermaid
+flowchart TD
+    START([開始]) --> S1["STDIN: SVG Text"]
+    S1 --> S2["オプション解析"]
+    S2 --> S3["Puppeteer 起動"]
+    S3 --> S4["仮 viewport 設定<br>4096x4096"]
+    S4 --> S5["SVG を HTML に埋め込み"]
+    S5 --> S6["サイズ決定ロジック実行"]
+    S6 --> S7["最適 viewport 再設定"]
+    S7 --> S8["高解像度スクリーンショット"]
+    S8 --> S9["STDOUT: PNG Binary"]
+    S9 --> STOP([終了])
 ```
+
+CodeBlock: 処理フロー
 
 ## 技術仕様
 

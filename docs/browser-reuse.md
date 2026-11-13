@@ -29,76 +29,75 @@ pub_markdown_core.sh    # メイン ビルド スクリプト (ライフサイ�
 
 ### 処理フロー
 
-```plantuml
-@startuml 共有ブラウザーの処理フロー
-    caption 共有ブラウザーの処理フロー
-    start
-        :pub_markdown_core.sh 開始;
+```mermaid
+flowchart TD
+    START([開始]) --> P1["pub_markdown_core.sh 開始"]
 
-        partition "ブラウザー サーバー起動" {
-            :browser-server.js をバックグラウンドで起動;
-            :Chromium ブラウザーを起動;
-            :WebSocket エンドポイントをファイルに書き出し;
-            :PUB_MARKDOWN_BROWSER_WS_FILE 環境変数をエクスポート;
-        }
+    subgraph SUB1["ブラウザー サーバー起動"]
+        direction TB
+        S1["browser-server.js をバックグラウンドで起動"]
+        S2["Chromium ブラウザーを起動"]
+        S3["WebSocket エンドポイントをファイルに書き出し"]
+        S4["PUB_MARKDOWN_BROWSER_WS_FILE 環境変数をエクスポート"]
+        S1 --> S2 --> S3 --> S4
+    end
 
-        partition "ビルド処理" {
-            :Pandoc による変換処理;
-            note right
-                各フィルターが共有ブラウザーに接続:
-                ・rsvg-convert.js → puppeteer.connect()
-                ・mmdc-reuse.js → puppeteer.connect()
-                接続失敗時は puppeteer.launch() にフォールバック
-            end note
-        }
+    subgraph SUB2["ビルド処理"]
+        direction LR
+        B1["Pandoc による変換処理"]
+        NOTE["各フィルターが共有ブラウザーに接続:<br>・rsvg-convert.js → puppeteer.connect()<br>・mmdc-reuse.js → puppeteer.connect()<br>接続失敗時は puppeteer.launch() にフォールバック"]
+        B1 -.- NOTE
+    end
 
-        partition "ブラウザー サーバー停止" {
-            :browser-server.js に SIGTERM 送信;
-            :ブラウザーを閉じて WS エンドポイントファイルを削除;
-        }
+    subgraph SUB3["ブラウザー サーバー停止"]
+        direction TB
+        T1["browser-server.js に SIGTERM 送信"]
+        T2["ブラウザーを閉じて WS エンドポイントファイルを削除"]
+        T1 --> T2
+    end
 
-        :pub_markdown_core.sh 終了;
-    stop
-@enduml
+    P1 --> SUB1
+    SUB1 --> SUB2
+    SUB2 --> SUB3
+    SUB3 --> P2["pub_markdown_core.sh 終了"]
+    P2 --> STOP([終了])
 ```
+
+CodeBlock: 共有ブラウザーの処理フロー
 
 ### コンポーネント間の接続
 
-```plantuml
-@startuml コンポーネント図
-    caption コンポーネント間の接続
+```mermaid
+flowchart TD
+    core["pub_markdown_core.sh"]
 
-    rectangle "pub_markdown_core.sh" as core {
-    }
+    subgraph SERVER_SIDE["共有ブラウザー サーバー"]
+        direction LR
+        server["browser-server.js"]
+        wsfile["WS エンドポイント<br>ファイル"]
+        chrome@{ shape: cloud, label: "Chromium" }
+        server -->|"ws://... を書き出し"| wsfile
+        server -->|"puppeteer.launch()"| chrome
+    end
 
-    rectangle "browser-server.js" as server {
-    }
+    subgraph FILTERS["Pandoc フィルタ (クライアント)"]
+        direction LR
+        rsvg["rsvg-convert.js"]
+        mmdc["mmdc-reuse.js"]
+    end
 
-    cloud "Chromium" as chrome {
-    }
+    core -->|"バックグラウンド起動<br>(node browser-server.js &)"| server
+    core -->|"Pandoc フィルタ経由"| rsvg
+    core -->|"Pandoc フィルタ経由"| mmdc
 
-    rectangle "rsvg-convert.js" as rsvg {
-    }
+    rsvg -.->|"エンドポイント読み取り"| wsfile
+    mmdc -.->|"エンドポイント読み取り"| wsfile
 
-    rectangle "mmdc-reuse.js" as mmdc {
-    }
-
-    file "WS エンドポイント\nファイル" as wsfile
-
-    core -down-> server : バックグラウンド起動\n(node browser-server.js &)
-    server -down-> chrome : puppeteer.launch()
-    server -right-> wsfile : ws://... を書き出し
-
-    rsvg -up-> wsfile : エンドポイント読み取り
-    rsvg -up-> chrome : puppeteer.connect()\n(ページ単位で操作)
-
-    mmdc -up-> wsfile : エンドポイント読み取り
-    mmdc -up-> chrome : puppeteer.connect()\n(ページ単位で操作)
-
-    core -down-> rsvg : Pandoc フィルタ経由
-    core -down-> mmdc : Pandoc フィルタ経由
-@enduml
+    rsvg ==>|"puppeteer.connect()<br>(ページ単位で操作)"| chrome
+    mmdc ==>|"puppeteer.connect()<br>(ページ単位で操作)"| chrome
 ```
+
+CodeBlock: コンポーネント間の接続
 
 ## 技術仕様
 

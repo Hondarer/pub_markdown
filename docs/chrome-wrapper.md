@@ -34,29 +34,30 @@ prepare_puppeteer_env.sh    # 環境設定用スクリプト
 
 ### 処理フロー
 
-```plantuml
-@startuml 処理フロー
-    caption 処理フロー
-    start
-        :環境変数の保存と設定;
-        :Puppeteer が chrome-wrapper.sh を起動;
-        :元の PUPPETEER_EXECUTABLE_PATH を復元;
-        :Chromium 実行可能ファイルパスを取得;
-        :FIFO (名前付きパイプ) を作成;
-        :Chromium プロセスを起動;
-        :stderr 出力を監視;
-        if (DevTools WebSocket 行を検出?) then (Yes)
-            :ポート番号を抽出;
-            :ポートの LISTEN 状態を確認;
-            :DevTools API の応答性を確認;
-            :バッファーされた出力を Puppeteer に送信;
-        else (No)
-            :出力をバッファーに蓄積;
-        endif
-        :通常の stderr 出力を転送;
-    stop
-@enduml
+```mermaid
+flowchart TD
+    START([開始]) --> S1["環境変数の保存と設定"]
+    S1 --> S2["Puppeteer が chrome-wrapper.sh を起動"]
+    S2 --> S3["元の PUPPETEER_EXECUTABLE_PATH を復元"]
+    S3 --> S4["Chromium 実行可能ファイルパスを取得"]
+    S4 --> S5["FIFO (名前付きパイプ) を作成"]
+    S5 --> S6["Chromium プロセスを起動"]
+    S6 --> S7["stderr 出力を監視"]
+    S7 --> COND{"DevTools WebSocket 行を検出?"}
+
+    COND -- Yes --> Y1["ポート番号を抽出"]
+    Y1 --> Y2["ポートの LISTEN 状態を確認"]
+    Y2 --> Y3["DevTools API の応答性を確認"]
+    Y3 --> Y4["バッファーされた出力を Puppeteer に送信"]
+    Y4 --> S8["通常の stderr 出力を転送"]
+
+    COND -- No --> N1["出力をバッファーに蓄積"]
+    N1 --> S8
+
+    S8 --> STOP([終了])
 ```
+
+CodeBlock: 処理フロー
 
 ## 技術仕様
 
