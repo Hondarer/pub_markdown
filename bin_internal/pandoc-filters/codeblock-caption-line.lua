@@ -18,8 +18,8 @@
 -- 採番と相互参照に用いる。
 --
 -- 図と判定する言語の一覧は ../diagram-languages.txt から読み込む。
---   - 図フェンス (plantuml / mermaid): "Figure:" を正とし、"CodeBlock:" も互換で受け付ける。
---   - 通常のコード ブロック: "CodeBlock:" を正とし、"Figure:" は警告のうえで受け付ける。
+--   - 図フェンス (plantuml / mermaid): "Figure:" のみ受け付ける ("CodeBlock:" は警告して通常の段落として残す)。
+--   - 通常のコード ブロック: "CodeBlock:" のみ受け付ける ("Figure:" は警告して通常の段落として残す)。
 --   - 画像 1 個だけの段落: "Figure:" のみ受け付ける ("CodeBlock:" は通常の段落として残す)。
 --   - キャプション行種別とラベル接頭辞の不一致 (Figure: と lst: 等) や、
 --     画像属性ラベルと Figure: 行ラベルの重複時は警告を出力する。
@@ -185,7 +185,7 @@ local function is_diagram_codeblock(code_block)
 end
 
 --- キャプション行種別とラベル接頭辞の整合性を確認し、不一致なら警告する。
-local function check_label_prefix(kind, label, allow_fig_on_codeblock)
+local function check_label_prefix(kind, label)
     if not label then
         return
     end
@@ -195,24 +195,30 @@ local function check_label_prefix(kind, label, allow_fig_on_codeblock)
     end
     if kind == "Figure" and lprefix ~= "fig" then
         warn("'Figure:' 行に図以外のラベル接頭辞 '{#%s}' が指定されています。", label)
-    elseif kind == "CodeBlock" and lprefix ~= "lst" and not (allow_fig_on_codeblock and lprefix == "fig") then
+    elseif kind == "CodeBlock" and lprefix ~= "lst" then
         warn("'CodeBlock:' 行にリスト以外のラベル接頭辞 '{#%s}' が指定されています。", label)
     end
 end
 
 --- コードブロックへキャプションとラベルを設定する。
 local function apply_to_codeblock(code_block, kind, body)
+    local is_diagram = is_diagram_codeblock(code_block)
+    if kind == "Figure" and not is_diagram then
+        warn("図以外のコード ブロックに対して 'Figure:' が使われています。通常コード ブロックには 'CodeBlock:' を使用してください。")
+        return false
+    end
+    if kind == "CodeBlock" and is_diagram then
+        warn("図のコード ブロックに対して 'CodeBlock:' が使われています。図には 'Figure:' を使用してください。")
+        return false
+    end
+
     local caption, label = split_label(body)
     if caption == "" then
         -- ラベルのみの記載はキャプションとして扱わない
         return false
     end
 
-    local is_diagram = is_diagram_codeblock(code_block)
-    if kind == "Figure" and not is_diagram then
-        warn("図以外のコード ブロックに対して 'Figure:' が使われています。通常コード ブロックには 'CodeBlock:' を使用してください。")
-    end
-    check_label_prefix(kind, label, is_diagram)
+    check_label_prefix(kind, label)
 
     if code_block.attributes["caption"] then
         warn_obsolete_attribute(code_block.attributes["caption"])

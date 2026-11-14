@@ -40,8 +40,8 @@ class PlantUmlCaptionPriorityTest(unittest.TestCase):
             for caption in re.findall(r"<figcaption>(.*?)</figcaption>", result.stdout, re.S)
         ]
 
-    def test_codeblock_line_overrides_source_caption(self):
-        markdown = plantuml_block(True) + "\n\nCodeBlock: 行のキャプション\n"
+    def test_figure_line_overrides_source_caption(self):
+        markdown = plantuml_block(True) + "\n\nFigure: 行のキャプション\n"
         self.assertEqual(self.figcaptions(markdown), ["行のキャプション"])
 
     def test_source_caption_overrides_start_title(self):

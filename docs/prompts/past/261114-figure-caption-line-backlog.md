@@ -20,7 +20,7 @@
 
 | 課題 ID | 題名 | 区分 | 優先度 / 影響度 | 状態 |
 | --- | --- | --- | --- | --- |
-| BL-001 | 図とコード ブロックのキャプション行互換処理の廃止 (`Table:` / `Figure:` / `CodeBlock:` の単一定義化) | 検討時見送り | 中 | 未着手 |
+| BL-001 | 図とコード ブロックのキャプション行互換処理の廃止 (`Table:` / `Figure:` / `CodeBlock:` の単一定義化) | 検討時見送り | 中 | 対応済み |
 
 ## BL-001 図とコード ブロックのキャプション行互換処理の廃止
 
@@ -33,7 +33,7 @@
 
 - **摘出契機**: 最終仕様 (`261114-figure-caption-line-design.md`) の確認時 (ユーザー指摘)
 - **今回の見送り理由**: `Figure:` 導入直後の段階では、既存の検討記録 (`docs/prompts/` 配下) 等に残る図フェンス直後の `CodeBlock:` 記述の出力を保つ必要があるため、段階的移行として互換処理を残した。
-- **継続作業での経緯と対処**: 未着手
+- **継続作業での経緯と対処**: 2026-11-14 の継続案件「図とコード ブロックのキャプション行互換処理の廃止」([261114-caption-line-single-definition-discussion.md](261114-caption-line-single-definition-discussion.md)、[261114-caption-line-single-definition-design.md](261114-caption-line-single-definition-design.md)) にて対応済み。`codeblock-caption-line.lua` および `stage_livedocs.py` から図フェンス直後の `CodeBlock:` 受け付けと通常コード ブロック直後の `Figure:` 採用を削除し、対象外組み合わせは警告を出力して通常の段落として出力する単一定義へ移行した。また、`docs/prompts/` 配下に残存していた図フェンス直後の `CodeBlock:` 2 箇所を `Figure:` へ書き換え、正本文書 (`codeblock-caption.md`) および単体テストを更新した。
 
 ### 影響範囲とリスク
 

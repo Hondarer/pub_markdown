@@ -43,22 +43,30 @@ class FigureCaptionLineTest(unittest.TestCase):
         self.assertIn('"caption"', res.stdout)
         self.assertIn("Sequence diagram", res.stdout)
 
-    def test_diagram_fence_keeps_codeblock_compatibility_without_warning(self):
+    def test_diagram_fence_with_codeblock_warns_and_leaves_normal_paragraph(self):
         md = "```plantuml\n@startuml\nA -> B\n@enduml\n```\n\nCodeBlock: Compat diagram {#fig:compat}\n"
-        res = run_pandoc(md, output_format="native")
+        res = run_pandoc(md, output_format="html")
         self.assertEqual(res.returncode, 0, res.stderr)
-        self.assertEqual(res.stderr, "")
-        self.assertIn('"fig:compat"', res.stdout)
-        self.assertIn("Compat diagram", res.stdout)
+        self.assertIn("図のコード ブロックに対して 'CodeBlock:' が使われています", res.stderr)
+        self.assertNotIn("ラベル接頭辞", res.stderr)
+        self.assertIn("<p>CodeBlock: Compat diagram {#fig:compat}</p>", res.stdout)
+        self.assertNotIn("<figcaption>", res.stdout)
 
-    def test_normal_codeblock_with_figure_warns_and_applies_caption(self):
+    def test_normal_codeblock_with_figure_warns_and_leaves_normal_paragraph(self):
         md = "```c\nint x = 0;\n```\n\nFigure: C code {#lst:c}\n"
-        res = run_pandoc(md, output_format="native", extra_filters=(CODEBLOCK_CAPTION,))
+        res = run_pandoc(md, output_format="html", extra_filters=(CODEBLOCK_CAPTION,))
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertIn("図以外のコード ブロックに対して 'Figure:' が使われています", res.stderr)
-        self.assertIn("'Figure:' 行に図以外のラベル接頭辞 '{#lst:c}' が指定されています", res.stderr)
-        self.assertIn('"lst:c"', res.stdout)
-        self.assertIn("C code", res.stdout)
+        self.assertNotIn("ラベル接頭辞", res.stderr)
+        self.assertIn("<p>Figure: C code {#lst:c}</p>", res.stdout)
+        self.assertNotIn("Source Code Caption", res.stdout)
+
+    def test_diagram_fence_with_lst_label_warns(self):
+        md = "```mermaid\nsequenceDiagram\n    Alice->>John: Hello\n```\n\nFigure: Sequence {#lst:wrong}\n"
+        res = run_pandoc(md, output_format="native")
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertIn("'Figure:' 行に図以外のラベル接頭辞 '{#lst:wrong}' が指定されています", res.stderr)
+        self.assertIn('"lst:wrong"', res.stdout)
 
     def test_normal_codeblock_with_fig_label_warns(self):
         md = "```c\nint x = 0;\n```\n\nCodeBlock: C コード {#fig:wrong}\n"

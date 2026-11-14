@@ -524,7 +524,7 @@ class ConvertCaptionsTest(unittest.TestCase):
             "sequenceDiagram\n"
             "```\n"
             "\n"
-            "CodeBlock: Mermaid のキャプション\n"
+            "Figure: Mermaid のキャプション\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -547,7 +547,7 @@ class ConvertCaptionsTest(unittest.TestCase):
             "@enduml\n"
             "```\n"
             "\n"
-            "CodeBlock: ラベル付き {#fig:sample}\n"
+            "Figure: ラベル付き {#fig:sample}\n"
         )
         result = convert_captions(source)
         self.assertIn(
@@ -565,7 +565,7 @@ class ConvertCaptionsTest(unittest.TestCase):
             "sequenceDiagram\n"
             "```\n"
             "\n"
-            "CodeBlock: 1 行目\n"
+            "Figure: 1 行目\n"
             "2 行目\n"
         )
         self.assertIn(
@@ -936,7 +936,7 @@ class ConvertCaptionsTest(unittest.TestCase):
             "@enduml\n"
             "```\n"
             "\n"
-            "CodeBlock: 外部の見出し\n"
+            "Figure: 外部の見出し\n"
         )
         result = convert_captions(source)
         self.assertIn(
@@ -1042,14 +1042,42 @@ class ConvertCaptionsTest(unittest.TestCase):
         self.assertNotIn("<figure", result)
         self.assertIn("通常段落\n{: .docsfw-caption }", result)
 
-    def test_normal_codeblock_with_figure_and_wrong_label_prefix_warns(self):
+    def test_normal_codeblock_with_figure_warns_and_remains_normal_paragraph(self):
         source = "```c\nint x = 0;\n```\n\nFigure: C コード {#lst:c}\n"
         stderr = io.StringIO()
         with patch("sys.stderr", stderr):
             result = convert_captions(source)
         self.assertIn("図以外のコード ブロックに対して 'Figure:' が使われています", stderr.getvalue())
-        self.assertIn("'Figure:' 行に図以外のラベル接頭辞 '{#lst:c}' が指定されています", stderr.getvalue())
-        self.assertIn("{: #lst:c .docsfw-caption }", result)
+        self.assertNotIn("ラベル接頭辞", stderr.getvalue())
+        self.assertNotIn("<figure", result)
+        self.assertNotIn(".docsfw-caption", result)
+        self.assertIn("Figure: C コード {#lst:c}\n", result)
+
+    def test_diagram_fence_with_codeblock_warns_and_remains_normal_paragraph(self):
+        source = (
+            "```plantuml\n"
+            "@startuml\n"
+            "caption 内部の見出し\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "CodeBlock: 無効なキャプション {#fig:x}\n"
+        )
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertIn("図のコード ブロックに対して 'CodeBlock:' が使われています", stderr.getvalue())
+        self.assertNotIn("ラベル接頭辞", stderr.getvalue())
+        self.assertIn('<figcaption class="docsfw-caption" markdown="span">内部の見出し</figcaption>', result)
+        self.assertIn("CodeBlock: 無効なキャプション {#fig:x}\n", result)
+
+    def test_diagram_fence_with_lst_label_warns_and_applies(self):
+        source = "```mermaid\nsequenceDiagram\n```\n\nFigure: 配列図 {#lst:wrong}\n"
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            result = convert_captions(source)
+        self.assertIn("'Figure:' 行に図以外のラベル接頭辞 '{#lst:wrong}' が指定されています", stderr.getvalue())
+        self.assertIn('id="lst:wrong"', result)
 
 
 class ConvertImplicitFiguresTest(unittest.TestCase):

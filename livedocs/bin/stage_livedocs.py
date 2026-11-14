@@ -792,7 +792,7 @@ def _indent_lines(lines, indent):
     return [(indent + line) if line else line for line in lines]
 
 
-def _check_caption_label_prefix(caption_kind, label, after_diagram=False):
+def _check_caption_label_prefix(caption_kind, label):
     """キャプション種別とラベル接頭辞の不一致があれば標準エラーへ警告する。"""
     if not label or ":" not in label:
         return
@@ -801,7 +801,7 @@ def _check_caption_label_prefix(caption_kind, label, after_diagram=False):
         sys.stderr.write(
             f"[stage_livedocs] 警告: 'Figure:' 行に図以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
         )
-    elif caption_kind == "CodeBlock" and lprefix != "lst" and not (after_diagram and lprefix == "fig"):
+    elif caption_kind == "CodeBlock" and lprefix != "lst":
         sys.stderr.write(
             f"[stage_livedocs] 警告: 'CodeBlock:' 行にリスト以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
         )
@@ -812,9 +812,12 @@ def convert_captions(text):
 
     docsfw のキャプション記法を mkdocs では次のように表現します。
 
-    - PlantUML / Mermaid フェンスの直後に置かれた行頭の ``Figure:`` (および互換の
-      ``CodeBlock:``) は、フェンスとともに ``md_in_html`` の ``figure`` へ包みます。
-      pandoc 発行版が図に ``<figure>`` と枠を与えるのと同じ見た目になります。
+    - PlantUML / Mermaid フェンスの直後に置かれた行頭の ``Figure:`` は、フェンスと
+      ともに ``md_in_html`` の ``figure`` へ包みます (``CodeBlock:`` は警告を出して
+      通常の段落として残します)。pandoc 発行版が図に ``<figure>`` と枠を与えるのと
+      同じ見た目になります。
+    - 通常のコード ブロックの直後に置かれた行頭の ``Figure:`` は警告を出して通常の
+      段落として残します。
     - 画像 1 個だけの段落の直後に置かれた行頭の ``Figure:`` も、画像とともに
       ``<figure>`` へ包みます (``CodeBlock:`` は通常の段落として残します)。
     - 直前の表と字下げの幅が一致する ``Table:`` は、その字下げを保ったまま表の
@@ -901,6 +904,7 @@ def convert_captions(text):
             caption_match = None
         at_paragraph_start = not out or not out[-1].strip()
         if caption_match and at_paragraph_start:
+            para_start_index = index
             caption_indent = caption_match.group(1)
             caption_kind = caption_match.group(2)
             paragraph = [caption_match.group(3).strip()]
@@ -909,10 +913,46 @@ def convert_captions(text):
                 paragraph.append(_dedent_line(lines[index], caption_indent))
                 index += 1
 
-            label, paragraph = _split_caption_label(paragraph)
-            _check_caption_label_prefix(caption_kind, label, _is_after_diagram(out, diagram_block))
+            is_after_diagram = _is_after_diagram(out, diagram_block)
+            is_after_non_diagram = _is_after_non_diagram(out, non_diagram_fence_end)
+            if caption_kind == "CodeBlock" and is_after_diagram:
+                sys.stderr.write(
+                    "[stage_livedocs] 警告: 図のコード ブロックに対して 'CodeBlock:' が使われています。"
+                    "図には 'Figure:' を使用してください。\n"
+                )
+                if internal_caption:
+                    _wrap_diagram_with_caption(out, diagram_block, internal_caption)
+                out.extend(lines[para_start_index:index])
+                diagram_block = None
+                non_diagram_fence_end = None
+                image_block = None
+                internal_caption = ""
+                table_block = None
+                block_start = None
+                block_indent = ""
+                block_has_table_separator = False
+                continue
 
-            if caption_kind in ("CodeBlock", "Figure") and _is_after_diagram(out, diagram_block):
+            if caption_kind == "Figure" and is_after_non_diagram:
+                sys.stderr.write(
+                    "[stage_livedocs] 警告: 図以外のコード ブロックに対して 'Figure:' が使われています。"
+                    "通常コード ブロックには 'CodeBlock:' を使用してください。\n"
+                )
+                out.extend(lines[para_start_index:index])
+                diagram_block = None
+                non_diagram_fence_end = None
+                image_block = None
+                internal_caption = ""
+                table_block = None
+                block_start = None
+                block_indent = ""
+                block_has_table_separator = False
+                continue
+
+            label, paragraph = _split_caption_label(paragraph)
+            _check_caption_label_prefix(caption_kind, label)
+
+            if caption_kind == "Figure" and is_after_diagram:
                 block_start, block_end, _lang = diagram_block
                 figure = [_figure_open_tag(label, True), ""]
                 figure.extend(out[block_start:block_end])
@@ -958,12 +998,6 @@ def convert_captions(text):
                 image_block = None
                 internal_caption = ""
                 continue
-
-            if caption_kind == "Figure" and _is_after_non_diagram(out, non_diagram_fence_end):
-                sys.stderr.write(
-                    "[stage_livedocs] 警告: 図以外のコード ブロックに対して 'Figure:' が使われています。"
-                    "通常コード ブロックには 'CodeBlock:' を使用してください。\n"
-                )
 
             is_table_caption = caption_kind == "Table"
             attrs = [".docsfw-caption"]
