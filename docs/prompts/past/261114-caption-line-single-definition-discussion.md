@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 検討用 Markdown (discussion)
-最終更新エージェント: agy / セッション ID: 215c7a4f-c55d-4c1c-a095-71dd0f86f212
+最終更新エージェント: codex (Sol、移動先リンクの更新)
 下流文書: `261114-caption-line-single-definition-design.md` (最終仕様)、`261114-caption-line-single-definition-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。ユーザーが編集した最新版を読み直し、作業 WBS の `← **CURRENT**` の項目から再開します。最終更新エージェントのセッション情報が参照可能であれば再開時のコンテキストとして利用し、別エージェントからの引き継ぎや担当変更によりセッションが見つからない場合も異常とせず、文書の記載から継続してください。`← **CURRENT**` の項目は処理が中止された項目である場合があり、どこまで進んでいたかは文書だけでは分かりません。対象成果物の内容を確認して実施済みの範囲を特定してから、作業を再開してください。`← **CURRENT**` がなく、作業 WBS がすべて完了 (✅) であれば、この案件の合意フローは完了しています。
 -->
@@ -75,7 +75,7 @@
 
 1. 引き継ぎ元課題 [BL-001](261114-figure-caption-line-backlog.md#bl-001-図とコード-ブロックのキャプション行互換処理の廃止) に基づき、`Table:` (表のみ)、`Figure:` (図フェンスおよび画像のみ)、`CodeBlock:` (通常のコード ブロックのみ) の単一定義化を行う。
 2. 図フェンス直後の `CodeBlock:` 行および通常コード ブロック直後の `Figure:` 行は、キャプションとして採用せず通常の段落として出力し、標準エラー出力へ警告を出す ([Q-001](#q-001-対象外組み合わせの扱いと警告方針))。
-3. `docs/prompts/` 配下の過去検討記録に残る図フェンス直後の `CodeBlock:` 行 (2 箇所: [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295)、[261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/current/261109-porter-path-priority-timestamp-auth-design.md#L134)) は `Figure:` へ書き換える ([Q-002](#q-002-過去検討記録に残る図フェンス直後の-codeblock-行の扱い))。
+3. `docs/prompts/` 配下の過去検討記録に残る図フェンス直後の `CodeBlock:` 行 (2 箇所: [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295)、[261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/past/261109-porter-path-priority-timestamp-auth-design.md#L134)) は `Figure:` へ書き換える ([Q-002](#q-002-過去検討記録に残る図フェンス直後の-codeblock-行の扱い))。
 4. 図フェンス直後の `CodeBlock:` に関するラベル接頭辞不一致の互換例外は削除し、正しいブロックとの組み合わせでラベル接頭辞が不一致の場合は現行どおり警告を出したうえでキャプションとラベルを採用する ([Q-003](#q-003-ラベル接頭辞不一致の警告仕様の扱い))。
 
 ## 観点別の確認
@@ -159,7 +159,7 @@
 
 - **経緯と背景**: `Figure:` 導入時に `docs/prompts/` 以外の既存文書はすべて `Figure:` へ書き換えられました。リポジトリ全体を検索したところ、`docs/prompts/` 配下 (本件の説明・検討記録である `261114-figure-caption-line-*` を除く) に残っている図フェンス直後の `CodeBlock:` 行は以下の **2 箇所のみ** でした。
     1. [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295) (`mermaid` フェンス直後の `CodeBlock:`)
-    2. [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/current/261109-porter-path-priority-timestamp-auth-design.md#L134) (`mermaid` フェンス直後の `CodeBlock:`)
+    2. [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/past/261109-porter-path-priority-timestamp-auth-design.md#L134) (`mermaid` フェンス直後の `CodeBlock:`)
 - **判断の影響**: [Q-001](#q-001-対象外組み合わせの扱いと警告方針) で図フェンス直後の `CodeBlock:` をキャプションとして採用しない方針にした場合、上記 2 箇所をそのまま残すと、これらを発行した際に図のキャプションが付かなくなります (案 A の場合は警告も出ます)。
 
 **Answer**
@@ -262,7 +262,7 @@
     - [codeblock-caption-line.lua](../../../bin_internal/pandoc-filters/codeblock-caption-line.lua): 図フェンス直後の `CodeBlock:` と通常コード ブロック直後の `Figure:` を警告出力＋不採用 (通常段落として出力) に変更し、`check_label_prefix` の互換例外を削除。
     - [stage_livedocs.py](../../../livedocs/bin/stage_livedocs.py): 同様に図フェンス直後の `CodeBlock:` と通常コード ブロック直後の `Figure:` を警告出力＋通常段落出力へ変更し、`_check_caption_label_prefix` の互換例外を削除。
 - **過去検討記録の書き換え**:
-    - [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295) および [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/current/261109-porter-path-priority-timestamp-auth-design.md#L134) の図フェンス直後の `CodeBlock:` を `Figure:` へ更新。
+    - [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295) および [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/past/261109-porter-path-priority-timestamp-auth-design.md#L134) の図フェンス直後の `CodeBlock:` を `Figure:` へ更新。
 - **正本文書と過去残課題一覧の更新**:
     - [codeblock-caption.md](../../codeblock-caption.md): 互換記述を削除し、対象外の組み合わせと警告仕様へ更新。
     - [261114-figure-caption-line-backlog.md](261114-figure-caption-line-backlog.md): `BL-001` の状態を「対応済み」へ更新し、継続作業の経緯と対処を追記。新たな残課題はなし。

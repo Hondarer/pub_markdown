@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 最終仕様 (design)
-最終更新エージェント: agy / セッション ID: 215c7a4f-c55d-4c1c-a095-71dd0f86f212
+最終更新エージェント: codex (Sol、移動先リンクの更新)
 上流文書: `261114-caption-line-single-definition-discussion.md` (検討用 Markdown)。削除されている場合があります。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。上流文書が存在する場合は、上流文書の再開手順に従って進行位置を確認し、判断の経緯を上流文書の Q&A で確認します。存在しない場合は、この文書を単体の最終仕様として扱います。最終更新エージェントのセッション情報が参照可能であれば再開時のコンテキストとして利用し、別エージェントからの引き継ぎや担当変更によりセッションが見つからない場合も異常とせず、文書の記載から継続してください。
 -->
@@ -72,7 +72,7 @@ Markdown におけるキャプション行 (`Table:` / `Figure:` / `CodeBlock:`)
 リポジトリ内の `docs/prompts/` 配下 (本件関連文書 `261114-figure-caption-line-*` および `261114-caption-line-single-definition-*` を除く) に残っている図フェンス直後の `CodeBlock:` 行 (2 箇所) を `Figure:` へ書き換える。
 
 - [cplat-account-session-discussion.md](../../../../../app/cplat/docs/prompts/current/cplat-account-session-discussion.md#L295)
-- [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/current/261109-porter-path-priority-timestamp-auth-design.md#L134)
+- [261109-porter-path-priority-timestamp-auth-design.md](../../../../../app/porter/docs/prompts/past/261109-porter-path-priority-timestamp-auth-design.md#L134)
 
 ### テストの更新
 
