@@ -220,20 +220,21 @@ class ResolverTest(unittest.TestCase):
             "import os, sys; print(sys.executable); print(os.environ['BIN_TEST_PYTHON']); raise SystemExit(7)\n",
             encoding="utf-8",
         )
-        environment = dict(os.environ, PYTHONPATH=str(self.root))
+        # 子 Python の標準入出力を親の encoding="utf-8" と一致させるため PYTHONIOENCODING を固定する。
+        environment = dict(os.environ, PYTHONPATH=str(self.root), PYTHONIOENCODING="utf-8")
         command = [sys.executable, str(BIN / "resolve_python_components.py"), "--venv", str(self.venv)]
         result = subprocess.run(command + ["--ensure", "--print-python"], env=environment,
-                                capture_output=True, text=True, check=False)
+                                capture_output=True, text=True, encoding="utf-8", check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
         selected = result.stdout.strip()
         self.assertEqual(Path(selected), Path(sys.executable))
         self.assertFalse(self.venv.exists())
         result = subprocess.run(command + ["--run", "selected_fixture"], env=environment,
-                                capture_output=True, text=True, check=False)
+                                capture_output=True, text=True, encoding="utf-8", check=False)
         self.assertEqual(result.returncode, 7, result.stderr)
         self.assertEqual(result.stdout.splitlines(), [selected, selected])
         result = subprocess.run(command + ["--run-script", str(self.root / "selected_fixture.py")],
-                                env=environment, capture_output=True, text=True, check=False)
+                                env=environment, capture_output=True, text=True, encoding="utf-8", check=False)
         self.assertEqual(result.returncode, 7, result.stderr)
         self.assertEqual(result.stdout.splitlines(), [selected, selected])
 

@@ -21,7 +21,10 @@ class StopServeTest(unittest.TestCase):
         # 実際に配信せず、コマンドラインと子孫の停止だけを検証する。
         command = [BASH, "-c", '"$@" & wait', "fixture", sys.executable, "-c",
                    "import time; print('ready', flush=True); time.sleep(120)"] + arguments
-        server = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        # 子 Python の標準出力を親の encoding="utf-8" と一致させるため PYTHONIOENCODING を固定する。
+        server = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                  text=True, encoding="utf-8",
+                                  env=dict(os.environ, PYTHONIOENCODING="utf-8"),
                                   start_new_session=os.name != "nt",
                                   creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
         self.addCleanup(self.cleanup_server, server)
@@ -42,7 +45,7 @@ class StopServeTest(unittest.TestCase):
 
     def stop(self, *arguments):
         result = subprocess.run([BASH, str(STOP)] + list(arguments), capture_output=True,
-                                text=True, timeout=30, check=False)
+                                text=True, encoding="utf-8", timeout=30, check=False)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_stops_only_matching_mkdocs_serve_configuration(self):

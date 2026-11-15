@@ -122,6 +122,7 @@ def resolve_node_components():
         ["node", RESOLVE_SCRIPT, "--ensure"],
         stdout=subprocess.PIPE,
         text=True,
+        encoding="utf-8",
         check=False,
     )
     if result.returncode != 0:

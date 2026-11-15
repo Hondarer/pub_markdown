@@ -37,7 +37,7 @@ DOCSFW_BIN_INTERNAL = os.path.abspath(
 
 def _git(repo, *args):
     subprocess.run(["git", "-C", repo] + list(args), check=True,
-                   capture_output=True, text=True)
+                   capture_output=True, text=True, encoding="utf-8")
 
 
 class FormatAuthorTest(unittest.TestCase):
