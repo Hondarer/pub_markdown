@@ -31,6 +31,15 @@ _KATAKANA_RUN_WITH_SPACES_RE = re.compile(r"[ァ-ヺー]+(?: [ァ-ヺー]+)+")
 _no_space_set: set = set()
 _replace_from_set: set = set()
 
+_cached_add_space_snapshot: Optional[List[Tuple[str, str]]] = None
+_cached_add_space_entries: List[Tuple[str, str, str]] = []
+_cached_add_space_patterns: dict = {}
+_cached_nosp_snapshot: Optional[List[str]] = None
+_cached_nosp_replacements: List[Tuple[str, str]] = []
+_cached_nosp_katakana_map: dict = {}
+_cached_nosp_katakana_max_len: int = 0
+_cached_nosp_non_katakana: List[Tuple[str, str]] = []
+
 
 class CharType(Enum):
     """Character category."""
@@ -952,7 +961,7 @@ def _replace_skip_existing(
     collector: Optional["DiagnosticCollector"] = None,
     source: str = "",
 ) -> str:
-    if from_word == to_word:
+    if from_word == to_word or not from_word or from_word not in text:
         return text
 
     require_boundary = _is_full_katakana_text(from_word) and _is_full_katakana_text(to_word)
@@ -1007,16 +1016,29 @@ def _replace_skip_existing(
     return "".join(result)
 
 
+def _get_add_space_entries() -> List[Tuple[str, str, str]]:
+    """_add_space_pairs のソート済みリストと空白除去キーをキャッシュして返す。"""
+    global _cached_add_space_snapshot, _cached_add_space_entries
+    if _cached_add_space_snapshot != _add_space_pairs:
+        pairs = sorted(
+            _add_space_pairs,
+            key=lambda pair: len(pair[0].replace(" ", "")),
+            reverse=True,
+        )
+        _cached_add_space_entries = [
+            (from_word, to_word, from_word.replace(" ", ""))
+            for from_word, to_word in pairs
+        ]
+        _cached_add_space_snapshot = list(_add_space_pairs)
+    return _cached_add_space_entries
+
+
 def _apply_add_space_pairs(
     text: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
     text_without_spaces = text.replace(" ", "")
-    pairs = sorted(
-        _add_space_pairs,
-        key=lambda pair: len(pair[0].replace(" ", "")),
-        reverse=True,
-    )
+    entries = _get_add_space_entries()
     candidates = []
 
     def _has_word_boundary(from_word: str, start: int, end: int) -> bool:
@@ -1039,11 +1061,13 @@ def _apply_add_space_pairs(
                 return False
         return True
 
-    for priority, (from_word, to_word) in enumerate(pairs):
-        compact_from = from_word.replace(" ", "")
+    for priority, (from_word, to_word, compact_from) in enumerate(entries):
         if compact_from not in text_without_spaces:
             continue
-        pattern = re.compile(" *".join(re.escape(char) for char in compact_from))
+        pattern = _cached_add_space_patterns.get(compact_from)
+        if pattern is None:
+            pattern = re.compile(" *".join(re.escape(char) for char in compact_from))
+            _cached_add_space_patterns[compact_from] = pattern
 
         for match in pattern.finditer(text):
             if not _has_word_boundary(compact_from, match.start(), match.end()):
@@ -1211,6 +1235,34 @@ def _protect_katakana_run(run: str, mapping: dict, max_len: int, separator: str)
     return separator.join(segments)
 
 
+def _get_nosp_cache() -> Tuple[List[Tuple[str, str]], dict, int, List[Tuple[str, str]]]:
+    """_no_space_words のソート済み退避マップとカタカナ/非カタカナ分類をキャッシュする。"""
+    global _cached_nosp_snapshot, _cached_nosp_replacements
+    global _cached_nosp_katakana_map, _cached_nosp_katakana_max_len, _cached_nosp_non_katakana
+    if _cached_nosp_snapshot != _no_space_words:
+        sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
+        replacements = [(f"\x00NOSP{idx}\x00", word) for idx, word in enumerate(sorted_nosp)]
+        katakana_map = {}
+        non_katakana: List[Tuple[str, str]] = []
+        for placeholder, word in replacements:
+            if _KATAKANA_RUN_RE.fullmatch(word):
+                katakana_map[word] = placeholder
+            else:
+                non_katakana.append((placeholder, word))
+        max_len = max((len(word) for word in katakana_map), default=0)
+        _cached_nosp_snapshot = list(_no_space_words)
+        _cached_nosp_replacements = replacements
+        _cached_nosp_katakana_map = katakana_map
+        _cached_nosp_katakana_max_len = max_len
+        _cached_nosp_non_katakana = non_katakana
+    return (
+        _cached_nosp_replacements,
+        _cached_nosp_katakana_map,
+        _cached_nosp_katakana_max_len,
+        _cached_nosp_non_katakana,
+    )
+
+
 def _protect_no_space_words(
     text: str, replacements: List[Tuple[str, str]], separator: str = " "
 ) -> str:
@@ -1219,16 +1271,25 @@ def _protect_no_space_words(
     カタカナだけで構成される語はカタカナ連続ごとに左から最長一致で退避する。
     それ以外 (英数字や空白を含む語) は従来どおり単純な部分一致で退避する。
     """
-    katakana_map = {}
-    protected = text
-    for placeholder, word in replacements:
-        if _KATAKANA_RUN_RE.fullmatch(word):
-            katakana_map[word] = placeholder
-        else:
-            protected = protected.replace(word, placeholder)
+    if replacements is _cached_nosp_replacements:
+        katakana_map = _cached_nosp_katakana_map
+        max_len = _cached_nosp_katakana_max_len
+        non_katakana = _cached_nosp_non_katakana
+        protected = text
+        for placeholder, word in non_katakana:
+            if word in protected:
+                protected = protected.replace(word, placeholder)
+    else:
+        katakana_map = {}
+        protected = text
+        for placeholder, word in replacements:
+            if _KATAKANA_RUN_RE.fullmatch(word):
+                katakana_map[word] = placeholder
+            elif word in protected:
+                protected = protected.replace(word, placeholder)
+        max_len = max((len(word) for word in katakana_map), default=0)
     if not katakana_map:
         return protected
-    max_len = max(len(word) for word in katakana_map)
     return _KATAKANA_RUN_RE.sub(
         lambda m: _protect_katakana_run(m.group(0), katakana_map, max_len, separator),
         protected,
@@ -1237,9 +1298,12 @@ def _protect_no_space_words(
 
 def _restore_no_space_words(text: str, replacements: List[Tuple[str, str]]) -> str:
     """no_space 語のプレースホルダーを、境界スペースを補わずに復元する。"""
+    if "\x00NOSP" not in text:
+        return text
     restored = text
     for placeholder, word in replacements:
-        restored = restored.replace(placeholder, word)
+        if placeholder in restored:
+            restored = restored.replace(placeholder, word)
     return restored
 
 
@@ -1257,6 +1321,8 @@ def _restore_nosp_with_boundaries(text: str, replacements: List[Tuple[str, str]]
     構成しないため、境界判定では除外する (例: 「カテゴリ」+「ー」を「カテゴリ ー」に
     分離しない、「ビルド」+「・」を「ビルド ・」に分離しない)。
     """
+    if "\x00NOSP" not in text:
+        return text
     restored = text
     for placeholder, original in replacements:
         while placeholder in restored:
@@ -1498,10 +1564,7 @@ def style_text(
     # no_space 語の退避は語彙の置換とは別の役割を持つ。style_prose の全半角境界
     # スペース挿入から語を守るため、フェンス内でも必ず退避する。
     # ただしフェンス内では語境界の分割を行わないため、区切りのスペースは入れない。
-    sorted_nosp = sorted(_no_space_words, key=len, reverse=True)
-    nosp_replacements = [
-        (f"\x00NOSP{idx}\x00", word) for idx, word in enumerate(sorted_nosp)
-    ]
+    nosp_replacements, _, _, _ = _get_nosp_cache()
     before = protected
     protected = _protect_no_space_words(
         protected, nosp_replacements, separator=" " if _lexical_styling_enabled else ""
