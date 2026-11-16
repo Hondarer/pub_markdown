@@ -1956,6 +1956,41 @@ def run_tests() -> bool:
         print(f"  出力: {output!r}")
         print(f"  更新後: {updated!r}")
 
+    # CLI in-place / --output: 元の改行コード (LF / CRLF) を保持する
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        lf_path = os.path.join(tmp_dir, "lf.md")
+        crlf_path = os.path.join(tmp_dir, "crlf.md")
+        out_lf_path = os.path.join(tmp_dir, "out_lf.md")
+        with open(lf_path, "w", encoding="utf-8", newline="") as handle:
+            handle.write("# 見出し\n\n日本語ABC。\n")
+        with open(crlf_path, "w", encoding="utf-8", newline="") as handle:
+            handle.write("# 見出し\r\n\r\n日本語ABC。\r\n")
+        with contextlib.redirect_stdout(io.StringIO()):
+            lf_exit = main([lf_path, "--mode", "markdown", "--in-place"])
+            crlf_exit = main([crlf_path, "--mode", "markdown", "--in-place"])
+            out_exit = main([lf_path, "--mode", "markdown", "--output", out_lf_path])
+        with open(lf_path, "r", encoding="utf-8", newline="") as handle:
+            lf_updated = handle.read()
+        with open(crlf_path, "r", encoding="utf-8", newline="") as handle:
+            crlf_updated = handle.read()
+        with open(out_lf_path, "r", encoding="utf-8", newline="") as handle:
+            out_lf_written = handle.read()
+    passed = (
+        lf_exit == 0
+        and crlf_exit == 0
+        and out_exit == 0
+        and lf_updated == "# 見出し\n\n日本語 ABC。\n"
+        and crlf_updated == "# 見出し\r\n\r\n日本語 ABC。\r\n"
+        and out_lf_written == "# 見出し\n\n日本語 ABC。\n"
+    )
+    status = "✓" if passed else "✗"
+    print(f"\n{status} CLI in-place / output preserves line endings")
+    if not passed:
+        all_passed = False
+        print(f"  LF 更新後: {lf_updated!r}")
+        print(f"  CRLF 更新後: {crlf_updated!r}")
+        print(f"  --output LF: {out_lf_written!r}")
+
     print("\n" + "=" * 60)
     print("すべてのテストに合格しました" if all_passed else "一部のテストに失敗しました")
     return all_passed
@@ -2015,6 +2050,20 @@ def _resolve_mode(input_path: Optional[str], requested_mode: str, default_mode: 
     return detect_mode_from_path(input_path)
 
 
+def _detect_line_ending(text: str) -> str:
+    """テキスト内の主要な改行コード ("\\r\\n", "\\n", "\\r") を判定する。"""
+    crlf_count = text.count("\r\n")
+    lf_count = text.count("\n") - crlf_count
+    cr_count = text.count("\r") - crlf_count
+    if crlf_count == 0 and lf_count == 0 and cr_count == 0:
+        return "\n"
+    if lf_count >= crlf_count and lf_count >= cr_count:
+        return "\n"
+    if crlf_count >= cr_count:
+        return "\r\n"
+    return "\r"
+
+
 def main(
     argv: Optional[Sequence[str]] = None,
     default_mode: str = "auto",
@@ -2037,10 +2086,14 @@ def main(
         print(f"Processing: {args.input}", flush=True)
 
     if args.input:
-        with open(args.input, "r", encoding="utf-8") as handle:
-            text = handle.read()
+        with open(args.input, "r", encoding="utf-8", newline="") as handle:
+            raw_text = handle.read()
+        line_ending = _detect_line_ending(raw_text)
+        text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
     else:
-        text = sys.stdin.read()
+        raw_text = sys.stdin.read()
+        line_ending = "\n"
+        text = raw_text.replace("\r\n", "\n").replace("\r", "\n")
 
     requested_mode = getattr(args, "mode", "auto")
     mode = _resolve_mode(args.input, requested_mode, default_mode)
@@ -2064,7 +2117,7 @@ def main(
 
     if args.in_place:
         if text != styled:
-            with open(args.input, "w", encoding="utf-8") as handle:
+            with open(args.input, "w", encoding="utf-8", newline=line_ending) as handle:
                 handle.write(styled)
             print(f"Modified: {args.input}")
         else:
@@ -2072,7 +2125,7 @@ def main(
         return 0
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as handle:
+        with open(args.output, "w", encoding="utf-8", newline=line_ending) as handle:
             handle.write(styled)
         return 0
 
