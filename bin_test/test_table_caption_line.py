@@ -97,6 +97,27 @@ class TableCaptionLineTest(unittest.TestCase):
         self.assertNotIn("Table", res.stdout.replace('Str "Table:"', ""))
         self.assertIn("Para", res.stdout)
 
+    def test_caption_in_blockquote_attaches_to_the_following_table_only(self):
+        # 1 つ目の表にキャプションがなく、2 つ目の表の前に Table: がある。
+        # 前処理がなければ、Pandoc は Table: を 1 つ目の表のキャプションにする。
+        quoted = "> | a |\n> |---|\n> | 1 |\n"
+        quoted2 = "> | b |\n> |---|\n> | 2 |\n"
+        res = run_pandoc(f"{quoted}>\n> Table: Second\n>\n{quoted2}")
+        self.assert_ok(res)
+        self.assertEqual(res.stderr, "")
+        self.assertEqual(res.stdout.count("(Caption Nothing [ Plain"), 1)
+        self.assertEqual(res.stdout.count("(Caption Nothing [])"), 1)
+        self.assertLess(res.stdout.index('Str "1"'), res.stdout.index('Str "Second"'))
+        self.assertLess(res.stdout.index('Str "Second"'), res.stdout.index('Str "2"'))
+        self.assertNotIn('Str "Table:"', res.stdout)
+
+    def test_caption_in_blockquote_without_table_warns_and_stays_paragraph(self):
+        res = run_pandoc("> Table: Lonely\n>\n> text\n")
+        self.assert_ok(res)
+        self.assertIn(WARNING, res.stderr)
+        self.assertIn("t.md: 1 行目:", res.stderr)
+        self.assertNotIn("Caption", res.stdout)
+
     def test_label_becomes_table_identifier(self):
         res = run_pandoc(f"Table: Labeled {{#tbl:sample}}\n\n{TABLE}")
         self.assert_ok(res)

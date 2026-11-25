@@ -1200,6 +1200,63 @@ def run_tests() -> bool:
     if not passed:
         all_passed = False
 
+    # dry-run の桁: 入力ファイルの行の文字位置 (1 始まり、コード ポイント単位)
+    column_cases = [
+        ("markdown", "## 1. 見出しtext", "fullwidth-halfwidth-space", [(1, 10)]),
+        ("markdown", "本文は サーバ と https://example.com/a を参照text です", "dict-replace", [(1, 5)]),
+        ("markdown", "本文は サーバ と https://example.com/a を参照text です", "fullwidth-halfwidth-space", [(1, 36)]),
+        ("markdown", "https://example.com/x を ( c ) と書く text日本", "fullwidth-halfwidth-space", [(1, 39)]),
+        ("markdown", "`code` と注釈text です", "fullwidth-halfwidth-space", [(1, 11)]),
+        ("markdown", "- 親\n   - 子の項目text です", "list-indent", [(2, 1)]),
+        ("markdown", "- 親\n   - 子の項目text です", "fullwidth-halfwidth-space", [(2, 10)]),
+        ("markdown", "```python\nx = 1  # 注釈note です\n```", "fullwidth-halfwidth-space", [(2, 12)]),
+        ("cpp", "/**\n *  @brief  日本語text と ( x ) です\n */", "fullwidth-halfwidth-space", [(2, 16)]),
+        ("cpp", "int f(void); // 注釈note と ( y )", "fullwidth-halfwidth-space", [(1, 19)]),
+        ("cpp", 'int a; // "日本語ABC" と注釈note です', "fullwidth-halfwidth-space", [(1, 23)]),
+        ("csharp", "int x; /// 注釈note です", "fullwidth-halfwidth-space", [(1, 14)]),
+        ("python", "x = 1  # 注釈note です", "fullwidth-halfwidth-space", [(1, 12)]),
+        ("shell", "echo a  # 注釈note です", "fullwidth-halfwidth-space", [(1, 13)]),
+    ]
+    for mode, source, rule, expected in column_cases:
+        c = DiagnosticCollector()
+        style_by_mode(source, mode, collector=c)
+        actual = [(f.line, f.column) for f in c.findings if f.rule == rule]
+        passed = actual == expected
+        status = "✓" if passed else "✗"
+        print(f"\n{status} dry-run の桁 ({mode}, {rule}): {source!r} → {actual}")
+        if not passed:
+            all_passed = False
+            print(f"  期待値: {expected}")
+            print(f"  Finding: {[(f.line, f.column, f.original, f.corrected, f.rule) for f in c.findings]}")
+
+    # dry-run の桁: 複数の規則が同じ行に適用されても、桁が元の行の対象の位置を指す
+    position_cases = [
+        ("markdown", "本文は サーバ と https://example.com/a を ( 参照 ) text日本 と`code`注釈ABC 。"),
+        ("markdown", "> ## 2. 見出しの `code` とテキストtext ( a ) と ＡＢＣ を参照 。"),
+        ("markdown", "- [ ] 項目のサーバ と https://example.com/x ( 補足 ) text日本語 と**強調**です"),
+        ("cpp", "/**\n * @param[in] value 値のサーバ と ( x ) とtext日本 。\n */\nint g; // サーバ と \"引用ABC\" ( z ) と注釈note 。"),
+        ("csharp", "    /// <summary>サーバ と <c>code</c> の注釈text日本 ( a ) 。</summary>"),
+        ("python", "value = 1  # サーバ と ( b ) とtext日本 と注釈ABC 。"),
+    ]
+    for mode, source in position_cases:
+        c = DiagnosticCollector()
+        style_by_mode(source, mode, collector=c)
+        source_lines = source.split("\n")
+        mismatches = []
+        for f in c.findings:
+            line_text = source_lines[f.line - 1]
+            if f.original:
+                if line_text[f.column - 1:f.column - 1 + len(f.original)] != f.original:
+                    mismatches.append((f.line, f.column, f.original, f.rule))
+            elif not 1 <= f.column <= len(line_text) + 1:
+                mismatches.append((f.line, f.column, f.original, f.rule))
+        passed = bool(c.findings) and not mismatches
+        status = "✓" if passed else "✗"
+        print(f"\n{status} dry-run の桁と元の行の対応 ({mode}): {len(c.findings)} 件")
+        if not passed:
+            all_passed = False
+            print(f"  不一致: {mismatches}")
+
     # _record_step_changes: NUL を含む断片は除外される
     c = DiagnosticCollector()
     c.set_line(1)

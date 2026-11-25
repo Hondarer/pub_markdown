@@ -9,7 +9,7 @@ import re
 import unicodedata
 from enum import Enum, auto
 from itertools import product
-from typing import Callable, List, Match, Optional, Pattern, Sequence, Set, Tuple, Union
+from typing import Callable, Dict, List, Match, Optional, Pattern, Sequence, Set, Tuple, Union
 
 
 _URL_RE = re.compile(r"https?://\S+")
@@ -92,7 +92,7 @@ class Finding:
         message: str = "",
     ) -> None:
         self.line = line          # 1-based 行番号
-        self.column = column      # 1-based 列番号
+        self.column = column      # 1-based の桁 (入力ファイルの行の文字位置。DiagnosticCollector を参照)
         self.original = original  # 変更前テキスト断片
         self.corrected = corrected  # 変更後テキスト断片
         self.rule = rule          # ルール ID
@@ -100,17 +100,178 @@ class Finding:
         self.message = message    # ルールの説明
 
 
+class _PositionMap:
+    """処理中の文字列の位置から、元の行の位置への写像 (いずれも 0 始まり)。
+
+    生成時は恒等写像 (``offset`` だけずらす) で、長さを持たない。
+    ``advance()`` で初めて、処理前の文字列の長さに合わせて位置の列を持つ。
+    位置の列の末尾には、文字列の終端 (行末への挿入位置) の元の位置を置く。
+    """
+
+    def __init__(self, offset: int = 0, positions: Optional[List[int]] = None) -> None:
+        self._offset = offset
+        self._positions = positions
+
+    def copy(self) -> "_PositionMap":
+        positions = None if self._positions is None else list(self._positions)
+        return _PositionMap(self._offset, positions)
+
+    def _positions_for(self, length: int) -> List[int]:
+        """長さ ``length`` の文字列に対する位置の列 (終端を含む) を返す。"""
+        if self._positions is None:
+            return [index + self._offset for index in range(length + 1)]
+        positions = self._positions[:length + 1]
+        while len(positions) < length + 1:
+            positions.append(self.source_index(len(positions)))
+        return positions
+
+    def source_index(self, index: int) -> int:
+        """処理中の文字列の位置 ``index`` に対応する元の行の位置を返す。"""
+        if self._positions is None:
+            return index + self._offset
+        if index < 0:
+            return self._positions[0] + index
+        if index < len(self._positions):
+            return self._positions[index]
+        # 写像の範囲の外は、終端からの距離をそのまま足す。
+        return self._positions[-1] + index - (len(self._positions) - 1)
+
+    def advance(self, before: str, after: str) -> None:
+        """文字列が ``before`` から ``after`` へ変わったことを写像へ反映する。
+
+        一致する文字は元の位置を引き継ぐ。置換と挿入で生じた文字は、置き換えた範囲の
+        先頭 (挿入では挿入位置の直後の文字) の元の位置を受け継ぐ。削除した文字は除く。
+        """
+        if before == after:
+            return
+        old = self._positions_for(len(before))
+        new: List[int] = []
+        matcher = difflib.SequenceMatcher(None, before, after, autojunk=False)
+        for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+            if tag == "equal":
+                new.extend(old[i1:i2])
+            elif tag in ("replace", "insert"):
+                new.extend([old[i1]] * (j2 - j1))
+        new.append(old[len(before)])
+        self._positions = new
+
+    def sliced(self, start: int, end: Optional[int] = None) -> "_PositionMap":
+        """部分文字列 ``[start:end]`` に対する写像を返す。"""
+        if self._positions is None and end is None:
+            return _PositionMap(self._offset + start)
+        if end is None:
+            end = len(self._positions) - 1
+        positions = self._positions_for(end)
+        return _PositionMap(positions[start], positions[start:end + 1])
+
+
 class DiagnosticCollector:
-    """dry-run モードで Finding を収集する。"""
+    """dry-run モードで Finding を収集する。
+
+    Finding の桁 (``Finding.column``) は、入力ファイルの行の文字位置 (1 始まり) です。
+    Python の文字 (コード ポイント) 単位で数え、全角文字とタブも 1 と数えます。
+
+    - 挿入の桁は、元の行で挿入位置の直後にある文字の桁です。行末への挿入は、行の長さ + 1 です。
+    - 削除と置換の桁は、元の行で対象の範囲の先頭の桁です。
+    - 前の処理が挿入した文字に対する変更は、その挿入位置の桁です。
+    - コメントを解析するモードでは、ソースの行の文字位置です。
+
+    整形の各処理は、行の一部や、プレースホルダーへ退避した文字列を扱います。
+    このため、処理中の文字列の位置から元の行の位置への写像 (``_PositionMap``) を行ごとに持ち、
+    ``add()`` が受け取る桁 (処理中の文字列の位置) を元の行の桁へ変換します。
+
+    規約: 文字列を変えるすべての処理は、変換の前後を ``track()`` に渡して写像を更新します
+    (``_record_step_changes()`` は Finding の記録の後に自動で更新します)。
+    行の一部だけを整形する場合は、``set_line()`` の ``column_offset`` か ``focus()`` で、
+    処理する文字列の先頭が元の行の何文字目に当たるかを設定します。
+    """
 
     def __init__(self) -> None:
         self.findings: List[Finding] = []
         self._line: int = 0
+        self._map = _PositionMap()
+        self._line_maps: Dict[int, _PositionMap] = {}
         # 規則が行の並べ替えとして報告済みの行。unattributed-change の対象から外す。
         self.covered_lines: Set[int] = set()
 
-    def set_line(self, line: int) -> None:
+    def set_line(self, line: int, column_offset: int = 0) -> None:
+        """行を切り替え、写像を恒等写像 (``column_offset`` だけずらす) に戻す。
+
+        ``column_offset`` は、処理する文字列の先頭が元の行の何文字目から始まるか (0 始まり) です。
+        直前の行の写像は、行番号をキーとして保存します (``resume_line()`` で復元)。
+        """
+        self._save_line_map()
         self._line = line
+        self._map = _PositionMap(column_offset)
+
+    def set_line_source(self, line: int, source: str, working: str, column_offset: int = 0) -> None:
+        """行を切り替え、元の文字列 ``source`` と処理を始める文字列 ``working`` の差分から写像を作る。
+
+        行の処理の開始前に、引用符の退避などで文字列の長さが変わっている場合に使います。
+        """
+        self.set_line(line, column_offset)
+        self._map.advance(source, working)
+
+    def resume_line(self, line: int) -> None:
+        """保存した行の写像を復元して、その行の処理を続ける。"""
+        self._save_line_map()
+        self._line = line
+        saved = self._line_maps.get(line)
+        self._map = saved.copy() if saved is not None else _PositionMap()
+
+    def _save_line_map(self) -> None:
+        if self._line:
+            self._line_maps[self._line] = self._map
+
+    def track(self, before: str, after: str) -> None:
+        """現在の行の写像へ、処理中の文字列の ``before`` から ``after`` への変換を反映する。"""
+        self._map.advance(before, after)
+
+    def snapshot(self) -> _PositionMap:
+        """現在の写像の複製を返す。"""
+        return self._map.copy()
+
+    def focus(self, start: int, end: Optional[int] = None) -> _PositionMap:
+        """処理中の文字列を、その部分文字列 ``[start:end]`` へ切り替える。
+
+        戻り値は切り替え前の写像で、``unfocus()`` に渡して元の文字列へ戻します。
+        """
+        previous = self._map
+        self._map = previous.sliced(start, end)
+        return previous
+
+    def use_map(self, position_map: _PositionMap) -> None:
+        """現在の写像を ``position_map`` に置き換える (``focus()`` の前の写像へ戻す場合など)。"""
+        self._map = position_map
+
+    def unfocus(self, previous: _PositionMap, start: int, end: int, length: int, focused_length: int) -> None:
+        """``focus()`` の前の文字列 (長さ ``length``) へ戻す。
+
+        部分文字列 ``[start:end]`` は、整形の後の長さ ``focused_length`` の文字列に置き換わったものとします。
+        """
+        outer = previous._positions_for(length)
+        middle = self._map._positions_for(focused_length)[:focused_length]
+        self._map = _PositionMap(0, outer[:start] + middle + outer[end:])
+
+    def isolate_lines(self) -> Tuple[int, Dict[int, _PositionMap]]:
+        """入れ子の整形 (Markdown のフェンスの中のコメントなど) の前に、行の写像を退避する。
+
+        入れ子の整形は、行番号を 1 から数え直します。戻り値を ``restore_lines()`` に渡します。
+        """
+        self._save_line_map()
+        saved = (self._line, self._line_maps)
+        self._line_maps = {}
+        self._line = 0
+        return saved
+
+    def restore_lines(self, saved: Tuple[int, Dict[int, _PositionMap]], line_offset: int) -> None:
+        """``isolate_lines()`` で退避した行の写像を戻し、入れ子の行の写像を ``line_offset`` だけずらして加える。"""
+        self._save_line_map()
+        nested = self._line_maps
+        self._line, self._line_maps = saved
+        for line, position_map in nested.items():
+            self._line_maps[line + line_offset] = position_map
+        self._map = self._line_maps.get(self._line, _PositionMap()).copy()
 
     def add(
         self,
@@ -120,9 +281,17 @@ class DiagnosticCollector:
         rule: str,
         source: str = "",
         message: str = "",
+        position_map: Optional[_PositionMap] = None,
     ) -> None:
+        """Finding を記録する。
+
+        ``column`` は処理中の文字列の位置 (1 始まり) で、写像で元の行の桁へ変換します。
+        ``position_map`` を渡すと、現在の写像の代わりにその写像で変換します。
+        """
+        mapping = self._map if position_map is None else position_map
+        source_column = mapping.source_index(column - 1) + 1
         self.findings.append(
-            Finding(self._line, column, original, corrected, rule, source, message)
+            Finding(self._line, source_column, original, corrected, rule, source, message)
         )
 
 
@@ -133,8 +302,15 @@ def _record_step_changes(
     collector: "DiagnosticCollector",
     source: str = "",
     message: str = "",
+    track: bool = True,
+    position_map: Optional[_PositionMap] = None,
 ) -> None:
-    """before→after の差分を Finding として collector に追加する。"""
+    """before→after の差分を Finding として collector に追加する。
+
+    桁は ``before`` での位置で記録し、最後に ``collector.track(before, after)`` で写像を更新する。
+    ``before`` が処理中の文字列でない場合 (比較のために復元した文字列など) は、
+    ``track=False`` とし、``before`` の位置を元の行の位置へ写す ``position_map`` を渡す。
+    """
     if before == after:
         return
     matcher = difflib.SequenceMatcher(None, before, after, autojunk=False)
@@ -146,7 +322,9 @@ def _record_step_changes(
         # NUL 文字を含む断片はプレースホルダー由来のため除外する
         if "\x00" in original_fragment or "\x00" in corrected_fragment:
             continue
-        collector.add(i1 + 1, original_fragment, corrected_fragment, rule, source, message)
+        collector.add(i1 + 1, original_fragment, corrected_fragment, rule, source, message, position_map)
+    if track:
+        collector.track(before, after)
 
 
 def record_unattributed_line_changes(
@@ -972,8 +1150,6 @@ def _replace_skip_existing(
     i = 0
     flen = len(from_word)
     tlen = len(to_word)
-    # result 側での現在位置 (列番号計算に使う)
-    result_pos = 0
 
     while i < len(text):
         if flen >= tlen:
@@ -981,16 +1157,14 @@ def _replace_skip_existing(
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
             ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
                 if collector is not None and "\x00" not in from_word:
-                    collector.add(result_pos + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
+                    collector.add(i + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
                 result.append(to_word)
-                result_pos += len(to_word)
                 i += flen
                 continue
             if text[i:i + tlen] == to_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, tlen)
             ):
                 result.append(to_word)
-                result_pos += tlen
                 i += tlen
                 continue
         else:
@@ -998,24 +1172,24 @@ def _replace_skip_existing(
                 not require_boundary or _has_non_katakana_boundaries(text, i, tlen)
             ):
                 result.append(to_word)
-                result_pos += tlen
                 i += tlen
                 continue
             if text[i:i + flen] == from_word and (
                 not require_boundary or _has_non_katakana_boundaries(text, i, flen)
             ) and not (from_starts_with_kanji and _has_kanji_prev_char(text, i)):
                 if collector is not None and "\x00" not in from_word:
-                    collector.add(result_pos + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
+                    collector.add(i + 1, from_word, to_word, "dict-replace", source, "辞書 replace")
                 result.append(to_word)
-                result_pos += len(to_word)
                 i += flen
                 continue
 
         result.append(text[i])
-        result_pos += 1
         i += 1
 
-    return "".join(result)
+    replaced = "".join(result)
+    if collector is not None:
+        collector.track(text, replaced)
+    return replaced
 
 
 def _get_add_space_entries() -> List[Tuple[str, str, str]]:
@@ -1108,7 +1282,10 @@ def _apply_add_space_pairs(
             )
         pos = end
     result.append(text[pos:])
-    return "".join(result)
+    spaced = "".join(result)
+    if collector is not None:
+        collector.track(text, spaced)
+    return spaced
 
 
 def _protect_patterns(
@@ -1539,12 +1716,20 @@ def style_text(
 ) -> str:
     load_dictionaries()
 
+    def _track(before: str, after: str) -> None:
+        # プレースホルダーへの退避と復元も、桁の写像へ反映する。
+        if collector is not None:
+            collector.track(before, after)
+
     protected = text
     pattern_replacements: List[Tuple[str, str]] = []
     if protected_patterns:
         protected, pattern_replacements = _protect_patterns(protected, protected_patterns)
+        _track(text, protected)
 
+    before = protected
     protected, url_replacements = _protect_urls(protected)
+    _track(before, protected)
 
     if _lexical_styling_enabled:
         before = protected
@@ -1574,13 +1759,16 @@ def style_text(
     if collector is not None:
         # 退避は隣接する no_space 語の境界へ区切りのスペースを入れる。
         # プレースホルダーのままでは差分を記録できないため、語を戻して比較する。
+        # 桁は退避前の文字列 (処理中の文字列) の位置のため、現在の写像で変換できる。
         _record_step_changes(
             before,
             _restore_no_space_words(protected, nosp_replacements),
             "dict-no-space-boundary",
             collector,
             message="隣接する no_space 語の境界にスペースを挿入",
+            track=False,
         )
+        collector.track(before, protected)
 
     styled = style_prose(protected, collector=collector)
 
@@ -1593,36 +1781,53 @@ def style_text(
         before = styled
         styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
         if collector is not None:
+            # 比較に使う復元した文字列の位置を、退避の直前の写像で元の行の位置へ写す。
+            restored_before = _restore_no_space_words(before, nosp_replacements)
+            restored_map = collector.snapshot()
+            restored_map.advance(before, restored_before)
             _record_step_changes(
-                _restore_no_space_words(before, nosp_replacements),
+                restored_before,
                 styled,
                 "dict-no-space-boundary",
                 collector,
                 message="no_space 語の境界にスペースを補完",
+                track=False,
+                position_map=restored_map,
             )
+            collector.track(before, styled)
 
+        before = styled
         styled = _protect_no_space_words(styled, nosp_replacements)
+        _track(before, styled)
         for from_word, to_word in _replace_pairs:
             styled = _replace_skip_existing(
                 styled, from_word, to_word,
                 collector=collector,
                 source=_replace_sources.get(from_word, ""),
             )
+        before = styled
         styled = _restore_nosp_with_boundaries(styled, nosp_replacements)
+        _track(before, styled)
         styled = _apply_add_space_pairs(styled, collector=collector)
     else:
+        before = styled
         styled = _restore_no_space_words(styled, nosp_replacements)
+        _track(before, styled)
 
     before = styled
     styled = add_space_before_supplemental_bracket(styled)
     if collector is not None:
         _record_step_changes(before, styled, "supplemental-bracket", collector, message="補足括弧前にスペースを挿入")
 
+    before = styled
     styled = _restore_replacements(styled, url_replacements)
     styled = _restore_replacements(styled, pattern_replacements)
+    _track(before, styled)
 
     if postprocess is not None:
+        before = styled
         styled = postprocess(styled)
+        _track(before, styled)
 
     return styled
 

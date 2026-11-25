@@ -15,6 +15,18 @@ Pandoc の table_captions 拡張は表の前後どちらの Table: も受け付�
   書かれた文書を前置きへ移行するときにだけ使う。前置きで書かれた文書に適用
   すると、表に挟まれた Table: を前の表へ付け替えてしまう。
 
+Markdown のブロック引用 (行頭の ``>``) の中でも、引用の外と同じ規則で扱う。
+行頭の引用の記号を取り除いた内容で判定し、引用の深さ (``>`` の数) が同じ行だけを
+同じブロックとして扱う。``Table:`` 段落、間の空行、表の深さが異なる場合 (``>`` の
+ない遅延継続行を含む) は、キャプションとして扱わない。``> [!NOTE]`` などのアラート
+記法の行の直後に空行を挟まずに書いた ``> Table:`` は、段落の先頭ではないため対象外とする。
+
+字下げは、Markdown では ``Table:`` 段落と表の幅が一致する場合だけを組にする。C/C++ の
+Doxygen コメントでは、表が ``Table:`` 段落より深い場合も組にする (``@param`` の説明に
+合わせて深く字下げした表と、浅い ``Table:`` の組)。``Table:`` 段落のほうが深い場合は
+組にしない。Pandoc 向けの前処理 (``prepare_for_pandoc()``) は Markdown だけを扱うため、
+字下げの一致を要求する。
+
 フェンス付きコード ブロック、HTML コメント、Doxygen の ``@code`` などの中は
 対象外とする。Doxygen コメントの行頭の構造コマンド (``@par``、``@parblock``、
 ``@endparblock`` など) の行は、段落の区切りとして扱い、移動の対象に含めない。
@@ -24,6 +36,8 @@ import re
 from typing import List, Sequence, Tuple
 
 _FENCE_RE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
+# ブロック引用の接頭辞。``>`` と直後の空白 1 個の繰り返し (記号の前の 3 個までの空白を含む)。
+_BLOCKQUOTE_PREFIX_RE = re.compile(r"^(?: {0,3}>[ \t]?)+")
 _DOXY_FENCE_START_RE = re.compile(r"^\s*[@\\](code|verbatim|startuml|dot|msc)\b")
 _DOXY_FENCE_END_RE = re.compile(r"^\s*[@\\](endcode|endverbatim|enduml|enddot|endmsc)\b")
 _TABLE_SEPARATOR_RE = re.compile(
@@ -48,6 +62,14 @@ def _indent_width(text: str) -> int:
     return len(match.group(0).expandtabs(4)) if match else 0
 
 
+def _split_blockquote(line: str) -> Tuple[str, int]:
+    """行を (引用の接頭辞を除いた内容, 引用の深さ) に分ける。引用でなければ深さ 0。"""
+    match = _BLOCKQUOTE_PREFIX_RE.match(line)
+    if not match:
+        return line, 0
+    return line[match.end():], match.group(0).count(">")
+
+
 def _is_closing_fence(content: str, fence: str) -> bool:
     match = _FENCE_RE.match(content)
     if not match:
@@ -56,36 +78,44 @@ def _is_closing_fence(content: str, fence: str) -> bool:
     return marker[0] == fence[0] and len(marker) >= len(fence) and not content.strip()[len(marker):].strip()
 
 
-def _classify_markdown(lines: Sequence[str]) -> List[Tuple[str, str]]:
-    result: List[Tuple[str, str]] = []
+def _classify_markdown(lines: Sequence[str]) -> List[Tuple[str, str, int]]:
+    """各行を ``(種別, 引用の接頭辞を除いた内容, 引用の深さ)`` に分類する。"""
+    result: List[Tuple[str, str, int]] = []
     fence = None
+    fence_depth = 0
     in_html_comment = False
     for line in lines:
+        content, depth = _split_blockquote(line)
         if fence is not None:
-            result.append((_BARRIER, line))
-            if _is_closing_fence(line, fence):
-                fence = None
-            continue
+            if depth >= fence_depth:
+                result.append((_BARRIER, content, depth))
+                if depth == fence_depth and _is_closing_fence(content, fence):
+                    fence = None
+                continue
+            # 引用が終わった行は、引用の中のフェンスも暗黙に閉じる。
+            fence = None
         if in_html_comment:
-            result.append((_BARRIER, line))
-            if "-->" in line:
+            result.append((_BARRIER, content, depth))
+            if "-->" in content:
                 in_html_comment = False
             continue
-        match = _FENCE_RE.match(line)
+        match = _FENCE_RE.match(content)
         if match:
             fence = match.group(1)
-            result.append((_BARRIER, line))
+            fence_depth = depth
+            result.append((_BARRIER, content, depth))
             continue
-        if line.lstrip().startswith("<!--") and "-->" not in line:
+        if content.lstrip().startswith("<!--") and "-->" not in content:
             in_html_comment = True
-            result.append((_BARRIER, line))
+            result.append((_BARRIER, content, depth))
             continue
-        result.append((_TEXT if line.strip() else _BLANK, line))
+        result.append((_TEXT if content.strip() else _BLANK, content, depth))
     return result
 
 
-def _classify_doxygen(lines: Sequence[str]) -> List[Tuple[str, str]]:
-    result: List[Tuple[str, str]] = []
+def _classify_doxygen(lines: Sequence[str]) -> List[Tuple[str, str, int]]:
+    """各行を ``(種別, 内容, 0)`` に分類する。Doxygen コメントの引用の記号は扱わない。"""
+    result: List[Tuple[str, str, int]] = []
     in_comment = False
     fence = None
     doxy_fence = False
@@ -95,23 +125,23 @@ def _classify_doxygen(lines: Sequence[str]) -> List[Tuple[str, str]]:
                 rest = line.split("/**", 1)[-1].split("/*!", 1)[-1]
                 if "*/" not in rest:
                     in_comment = True
-            result.append((_BARRIER, line))
+            result.append((_BARRIER, line, 0))
             continue
         if "*/" in line:
             in_comment = False
             fence = None
             doxy_fence = False
-            result.append((_BARRIER, line))
+            result.append((_BARRIER, line, 0))
             continue
         match = _DOXY_LINE_RE.match(line)
         if not match:
-            result.append((_BARRIER, line))
+            result.append((_BARRIER, line, 0))
             continue
         content = match.group(2)
         if content.startswith(" "):
             content = content[1:]
         if fence is not None or doxy_fence:
-            result.append((_BARRIER, content))
+            result.append((_BARRIER, content, 0))
             if fence is not None and _is_closing_fence(content, fence):
                 fence = None
             if doxy_fence and _DOXY_FENCE_END_RE.match(content):
@@ -120,48 +150,72 @@ def _classify_doxygen(lines: Sequence[str]) -> List[Tuple[str, str]]:
         fence_match = _FENCE_RE.match(content)
         if fence_match:
             fence = fence_match.group(1)
-            result.append((_BARRIER, content))
+            result.append((_BARRIER, content, 0))
             continue
         if _DOXY_FENCE_START_RE.match(content):
             doxy_fence = True
-            result.append((_BARRIER, content))
+            result.append((_BARRIER, content, 0))
             continue
         command = _DOXY_COMMAND_RE.match(content)
         if command and command.group(1) not in _DOXY_INLINE_COMMANDS:
-            result.append((_BARRIER, content))
+            result.append((_BARRIER, content, 0))
             continue
-        result.append((_TEXT if content.strip() else _BLANK, content))
+        result.append((_TEXT if content.strip() else _BLANK, content, 0))
     return result
 
 
-def _segments(kinds: Sequence[Tuple[str, str]]) -> List[Tuple[str, int, int]]:
-    """同じ種別の連続した行を (種別, 開始, 終了) の区間にまとめる。"""
+def _segments(kinds: Sequence[Tuple[str, str, int]]) -> List[Tuple[str, int, int]]:
+    """種別と引用の深さが同じ連続した行を (種別, 開始, 終了) の区間にまとめる。"""
     names = {_TEXT: "block", _BLANK: "gap", _BARRIER: "barrier"}
     segments: List[Tuple[str, int, int]] = []
     index = 0
     while index < len(kinds):
-        kind = kinds[index][0]
+        kind, _content, depth = kinds[index]
         end = index
-        while end < len(kinds) and kinds[end][0] == kind:
+        while end < len(kinds) and kinds[end][0] == kind and kinds[end][2] == depth:
             end += 1
         segments.append((names[kind], index, end))
         index = end
     return segments
 
 
-def _is_table(kinds: Sequence[Tuple[str, str]], segment: Tuple[str, int, int]) -> bool:
+def _is_table(kinds: Sequence[Tuple[str, str, int]], segment: Tuple[str, int, int]) -> bool:
     return any(
         _TABLE_SEPARATOR_RE.match(kinds[i][1]) or _GRID_BORDER_RE.match(kinds[i][1])
         for i in range(segment[1], segment[2])
     )
 
 
-def _is_caption(kinds: Sequence[Tuple[str, str]], segment: Tuple[str, int, int]) -> bool:
+def _is_caption(kinds: Sequence[Tuple[str, str, int]], segment: Tuple[str, int, int]) -> bool:
     return bool(_CAPTION_RE.match(kinds[segment[1]][1]))
 
 
-def _same_indent(kinds: Sequence[Tuple[str, str]], left: Tuple[str, int, int], right: Tuple[str, int, int]) -> bool:
+def _same_depth(kinds: Sequence[Tuple[str, str, int]], left: Tuple[str, int, int], right: Tuple[str, int, int]) -> bool:
+    return kinds[left[1]][2] == kinds[right[1]][2]
+
+
+def _same_indent(kinds: Sequence[Tuple[str, str, int]], left: Tuple[str, int, int], right: Tuple[str, int, int]) -> bool:
     return _indent_width(kinds[left[1]][1]) == _indent_width(kinds[right[1]][1])
+
+
+def _caption_fits_table(
+    kinds: Sequence[Tuple[str, str, int]],
+    caption: Tuple[str, int, int],
+    table: Tuple[str, int, int],
+    mode: str,
+) -> bool:
+    """``Table:`` 段落と表を組として扱える字下げかを返す。
+
+    Markdown は字下げの幅が一致する場合だけ。C/C++ の Doxygen コメントは、表の字下げが
+    ``Table:`` 段落以上の場合も組にする。Doxygen は、``@param`` の説明や箇条書きの下で
+    深く字下げした表を、空行の後では説明や箇条書きの外の段落として出力し、後ろの浅い
+    ``Table:`` を表の直後に続けるため、前置きへ移した形でも表と ``Table:`` は隣り合う。
+    """
+    caption_indent = _indent_width(kinds[caption[1]][1])
+    table_indent = _indent_width(kinds[table[1]][1])
+    if mode == "markdown":
+        return caption_indent == table_indent
+    return table_indent >= caption_indent
 
 
 def relocate_table_captions(text: str, mode: str, migrate: bool = False) -> Tuple[str, List[Tuple[int, int, int]]]:
@@ -187,14 +241,16 @@ def relocate_table_captions(text: str, mode: str, migrate: bool = False) -> Tupl
         if (
             table[0] == "block" and gap[0] == "gap" and caption[0] == "block"
             and _is_table(kinds, table) and _is_caption(kinds, caption) and not _is_table(kinds, caption)
-            and _same_indent(kinds, table, caption)
+            and _same_depth(kinds, table, gap) and _same_depth(kinds, table, caption)
+            and _caption_fits_table(kinds, caption, table, mode)
         ):
             followed_by_table = False
             if k + 4 < len(order):
                 next_gap, following = segments[order[k + 3]], segments[order[k + 4]]
                 followed_by_table = (
                     next_gap[0] == "gap" and following[0] == "block"
-                    and _is_table(kinds, following) and _same_indent(kinds, caption, following)
+                    and _same_depth(kinds, caption, next_gap) and _same_depth(kinds, caption, following)
+                    and _is_table(kinds, following) and _caption_fits_table(kinds, caption, following, mode)
                 )
             if migrate or not followed_by_table:
                 order[k], order[k + 2] = order[k + 2], order[k]
@@ -245,7 +301,17 @@ def prepare_for_pandoc(text: str) -> Tuple[str, List[str]]:
         return 0 <= index < len(segments) and segments[index][0] == "gap"
 
     def adjacent_table(index: int, step: int) -> bool:
-        return is_gap(index + step) and is_block(index + 2 * step) and _is_table(kinds, segments[index + 2 * step])
+        return (
+            is_gap(index + step) and is_block(index + 2 * step)
+            and _same_depth(kinds, segments[index], segments[index + step])
+            and _same_depth(kinds, segments[index], segments[index + 2 * step])
+            and _is_table(kinds, segments[index + 2 * step])
+        )
+
+    def escape_caption(first: int) -> str:
+        """引用の接頭辞を保ち、内容の先頭の ``Table:`` をエスケープした行を返す。"""
+        prefix = lines[first][: len(lines[first]) - len(kinds[first][1])]
+        return prefix + kinds[first][1].replace("Table:", "Table\\:", 1)
 
     order = list(range(len(segments)))
     k = 0
@@ -259,7 +325,7 @@ def prepare_for_pandoc(text: str) -> Tuple[str, List[str]]:
         if _is_table(kinds, segment):
             # Table: 行の直後に空行なしで表を書くと、Pandoc は全体を 1 つの段落にする。
             if _is_caption(kinds, segment):
-                escaped[first] = lines[first].replace("Table:", "Table\\:", 1)
+                escaped[first] = escape_caption(first)
                 warnings.append(
                     f"{first + 1} 行目: 'Table:' 行の直後に表がありません。"
                     "表のキャプションは、空行を挟んで表の直前に記述してください。"
@@ -281,15 +347,17 @@ def prepare_for_pandoc(text: str) -> Tuple[str, List[str]]:
                 order[k], order[k + 2] = order[k + 2], order[k]
                 k += 3
                 continue
-            escaped[first] = lines[first].replace("Table:", "Table\\:", 1)
+            escaped[first] = escape_caption(first)
             warnings.append(
                 f"{first + 1} 行目: 'Table:' 行の直後に表がありません。"
                 "表のキャプションは、空行を挟んで表の直前に記述してください。"
             )
         else:
-            match = _PANDOC_ALT_CAPTION_RE.match(lines[first])
+            content = kinds[first][1]
+            prefix = lines[first][: len(lines[first]) - len(content)]
+            match = _PANDOC_ALT_CAPTION_RE.match(content)
             if match and (adjacent_table(index, 1) or adjacent_table(index, -1)):
-                escaped[first] = lines[first][: match.start(3)] + "\\:" + lines[first][match.end(3):]
+                escaped[first] = prefix + content[: match.start(3)] + "\\:" + content[match.end(3):]
         k += 1
 
     out: List[str] = []

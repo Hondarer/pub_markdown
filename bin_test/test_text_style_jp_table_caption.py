@@ -145,9 +145,44 @@ class DoxygenTest(TempFileCase):
         self.assertIn("table-caption-position", result.stdout)
         self.assertNotIn("unattributed-change", result.stdout)
 
+    def test_dry_run_reports_shallow_caption_after_deep_table(self):
+        deep = " *      | a |\n *      |---|\n *      | 1 |\n"
+        text = f"/**\n * @param x 説明\n *\n{deep} *\n *  Table: 後置き\n */\nint f(void);\n"
+        path = self.write("a.h", text)
+        result = run_cli("--mode", "cpp", "--dry-run", str(path))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("table-caption-position", result.stdout)
+        self.assertNotIn("unattributed-change", result.stdout)
+        out = self.in_place("b.h", text, "--mode", "cpp")
+        self.assertEqual(out, f"/**\n * @param x 説明\n *\n *  Table: 後置き\n *\n{deep} */\nint f(void);\n")
+
     def test_inside_code_command_not_moved(self):
         text = f"/**\n * @code\n{DOXY_TABLE} *\n * Table: 例\n * @endcode\n */\nint f(void);\n"
         self.assertEqual(self.in_place("a.h", text), text)
+
+
+class BlockquoteTest(TempFileCase):
+    QUOTED = "> | a |\n> |---|\n> | 1 |\n"
+
+    def test_in_place_moves_trailing_caption_before_quoted_table(self):
+        out = self.in_place("a.md", f"{self.QUOTED}>\n> Table: 後置き\n")
+        self.assertEqual(out, f"> Table: 後置き\n>\n{self.QUOTED}")
+
+    def test_dry_run_reports_rule_for_quoted_table(self):
+        path = self.write("a.md", f"{self.QUOTED}>\n> Table: 後置き\n")
+        result = run_cli("--dry-run", str(path))
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("table-caption-position", result.stdout)
+        self.assertNotIn("unattributed-change", result.stdout)
+
+    def test_leading_caption_in_quote_is_unchanged(self):
+        text = f"> Table: 前置き\n>\n{self.QUOTED}"
+        self.assertEqual(self.in_place("a.md", text), text)
+        self.assertEqual(run_cli("--check", str(self.tmp / "a.md")).returncode, 0)
+
+    def test_caption_with_different_depth_is_not_moved(self):
+        text = f"{self.QUOTED}>\n> > Table: 深さが違う\n"
+        self.assertEqual(self.in_place("a.md", text), text)
 
 
 class ModuleTest(unittest.TestCase):

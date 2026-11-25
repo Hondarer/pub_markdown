@@ -15,12 +15,39 @@ import urllib.request
 DOCSFW = Path(__file__).resolve().parents[1]
 WORKSPACE = DOCSFW.parents[1]
 
+# resolve_python_components は livedocs/bin にあり、このテストと同じディレクトリではないため、
+# sys.path へ追加して読み込む。
+sys.path.insert(0, str(DOCSFW / "livedocs" / "bin"))
+
+import resolve_python_components  # noqa: E402
+
+
+def packages_outside_compatible_range(python):
+    """``python`` が採用範囲 (requirements-compatible.txt) を満たさないパッケージ名の一覧を返す。
+
+    livedocs の Python の選択 (resolve_python_components.py) と同じ判定を使う。
+    """
+    compatible = resolve_python_components.load_requirements(
+        DOCSFW / "livedocs" / "requirements-compatible.txt"
+    )
+    state = resolve_python_components.probe(python)
+    return resolve_python_components.missing_packages(state, compatible)
+
 
 class LivedocsPathSpacesTest(unittest.TestCase):
     def test_make_livedocs(self):
         self.run_make_livedocs()
 
     def test_make_livedocs_with_complete_system_environment(self):
+        # 前提: テストを実行する Python が livedocs の採用範囲を満たし、システム環境だけで
+        # livedocs を実行できること。満たさない Python では venv が作られるため、スキップする。
+        # make bin-test は resolve_python_components.py --run-script で採用範囲を満たす
+        # Python を選んで起動するため、通常の経路ではスキップしない。
+        missing = packages_outside_compatible_range(sys.executable)
+        if missing:
+            self.skipTest(
+                "テストを実行する Python が livedocs の採用範囲を満たしません: " + ", ".join(missing)
+            )
         self.run_make_livedocs(system_python=sys.executable)
 
     def run_make_livedocs(self, system_python=None):

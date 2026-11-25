@@ -919,6 +919,144 @@ class ConvertCaptionsTest(unittest.TestCase):
         )
         self.assertEqual(collector.note_depths, [(1, 1)])
 
+    def test_converts_table_caption_inside_blockquote_keeping_prefix(self):
+        source = (
+            "> Table: 引用の中の表\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+            "> | 1 |\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "> 引用の中の表\n"
+            "> {: .docsfw-caption .docsfw-table-caption }\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+            "> | 1 |\n",
+        )
+
+    def test_converts_multiline_labeled_table_caption_inside_blockquote(self):
+        source = (
+            "> [!NOTE]\n"
+            ">\n"
+            "> Table: 一行目\n"
+            "> 二行目 {#tbl:q}\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+        )
+        self.assertEqual(
+            convert_captions(source),
+            "> [!NOTE]\n"
+            ">\n"
+            "> 一行目\n"
+            "> 二行目\n"
+            "> {: #tbl:q .docsfw-caption .docsfw-table-caption }\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n",
+        )
+
+    def test_warns_when_blockquote_table_caption_has_no_following_table(self):
+        source = "> Table: 孤立\n>\n> 本文\n"
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
+
+    def test_keeps_blockquote_caption_when_table_depth_differs(self):
+        source = (
+            "> Table: 深さが違う\n"
+            ">\n"
+            "> > | a |\n"
+            "> > |---|\n"
+        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
+
+    def test_keeps_blockquote_caption_with_lazy_continuation_line(self):
+        source = (
+            "> Table: 遅延継続\n"
+            "続きの行\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+        )
+        result, _stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+
+    def test_keeps_table_after_alert_marker_without_blank_line(self):
+        source = (
+            "> [!NOTE]\n"
+            "> Table: 空行なし\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+        )
+        self.assertEqual(convert_captions(source), source)
+
+    def test_skips_fences_inside_blockquote(self):
+        source = (
+            "> ```plantuml\n"
+            "> @startuml\n"
+            "> caption 内部\n"
+            "> Table: 図の中\n"
+            ">\n"
+            "> | a |\n"
+            "> |---|\n"
+            "> @enduml\n"
+            "> ```\n"
+            ">\n"
+            "> Figure: 引用の中の図\n"
+        )
+        self.assertEqual(convert_captions(source), source)
+
+    def test_keeps_codeblock_and_figure_captions_inside_blockquote(self):
+        source = "> CodeBlock: 引用の中\n>\n> Figure: 引用の中\n"
+        self.assertEqual(convert_captions(source), source)
+
+    def test_blockquote_and_alert_table_captions_render_before_their_tables(self):
+        import markdown
+        from html.parser import HTMLParser
+
+        table = "> | a |\n> |---|\n> | 1 |\n"
+        source = (
+            "> [!NOTE]\n"
+            ">\n"
+            "> Table: 注記の表 {#tbl:note}\n"
+            ">\n"
+            + table
+            + "\n"
+            "> Table: 引用の表\n"
+            ">\n"
+            + table
+        )
+        html = markdown.markdown(
+            convert_captions(source),
+            extensions=["tables", "attr_list", "github-callouts"],
+        )
+
+        class Collector(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.events = []
+
+            def handle_starttag(self, tag, attrs):
+                classes = dict(attrs).get("class", "").split()
+                if tag == "p" and "docsfw-table-caption" in classes:
+                    self.events.append("caption")
+                elif tag == "table":
+                    self.events.append("table")
+
+        collector = Collector()
+        collector.feed(html)
+        self.assertEqual(collector.events, ["caption", "table", "caption", "table"])
+        self.assertIn('id="tbl:note"', html)
+        self.assertIn('<div class="admonition note">', html)
+        self.assertIn("<blockquote>", html)
+
     def test_converts_labeled_table_caption_with_id_and_classes(self):
         source = (
             "Table: ラベル付き {#tbl:sample}\n"

@@ -115,6 +115,9 @@ _LINK_TARGET_PARTS_RE = re.compile(
 # 第 1 グループは行頭の字下げ。Table: は箇条書き内の表と同じ桁をキャプションにする。
 # CodeBlock: / Figure: の字下げは convert_captions 側で除外する。
 _CAPTION_RE = re.compile(r"^([ \t]*)(Table|CodeBlock|Figure):[ \t]*(.*)$")
+# ブロック引用の接頭辞。``>`` と直後の空白 1 個の繰り返し (記号の前の 3 個までの空白を含む)。
+# bin_internal/table_caption_position.py の ``_BLOCKQUOTE_PREFIX_RE`` と同じ規則。
+_BLOCKQUOTE_PREFIX_RE = re.compile(r"^(?: {0,3}>[ \t]?)+")
 _TABLE_SEPARATOR_RE = re.compile(
     r"^(?=[^\n]*\|)[ \t]*\|?[ \t]*:?-+:?[ \t]*"
     r"(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$"
@@ -787,26 +790,57 @@ def _dedent_line(line, indent):
     return line
 
 
-def _indent_lines(lines, indent):
-    """空行以外の行頭へ ``indent`` を付ける。"""
-    return [(indent + line) if line else line for line in lines]
+def _split_blockquote_prefix(line):
+    """行を ``(接頭辞, 内容, 引用の深さ)`` に分ける。
+
+    接頭辞は行頭の ``>`` と直後の空白の繰り返し、深さは ``>`` の数。引用でない行は
+    ``("", line, 0)``。
+    """
+    match = _BLOCKQUOTE_PREFIX_RE.match(line)
+    if not match:
+        return "", line, 0
+    return match.group(0), line[match.end():], match.group(0).count(">")
 
 
-def _is_followed_by_table(lines, index, indent):
+def _is_closing_fence_content(content, fence):
+    """``content`` が、``fence`` で開いたコード フェンスを閉じる行かを返す。"""
+    stripped = content.strip()
+    return bool(stripped) and set(stripped) == {fence[0]} and len(stripped) >= len(fence)
+
+
+def _is_blank_at_depth(line, depth):
+    """``line`` が、引用の深さ ``depth`` の空行 (接頭辞だけの行を含む) かを返す。
+
+    引用の外 (``depth`` が 0) では、空白だけの行が空行になる。引用の中では、同じ深さの
+    接頭辞だけの行だけが空行になり、``>`` のない空行は引用を終わらせるため含めない。
+    """
+    _prefix, content, line_depth = _split_blockquote_prefix(line)
+    return line_depth == depth and not content.strip()
+
+
+def _is_followed_by_table(lines, index, indent, depth=0):
     """``lines[index]`` 以降が、空行に続く ``indent`` と同じ字下げの表かを判定する。
 
     ``index`` は ``Table:`` 段落の直後の行を指す。``Table:`` 段落と表の間には
     空行を 1 行以上必要とし、表は区切り行を含むブロックとして判定する。
+    ``depth`` はブロック引用の深さで、空行と表は ``Table:`` 段落と同じ深さでなければ
+    ならない。字下げと区切り行は、引用の接頭辞を除いた内容で判定する。
     """
     start = index
-    while index < len(lines) and not lines[index].strip():
+    while index < len(lines) and _is_blank_at_depth(lines[index], depth):
         index += 1
-    if index == start or index >= len(lines) or _FENCE_RE.match(lines[index]):
+    if index == start or index >= len(lines):
         return False
-    if _indent_width(_leading_indent(lines[index])) != _indent_width(indent):
+    _prefix, content, line_depth = _split_blockquote_prefix(lines[index])
+    if line_depth != depth or _FENCE_RE.match(content):
         return False
-    while index < len(lines) and lines[index].strip():
-        if _TABLE_SEPARATOR_RE.match(lines[index]):
+    if _indent_width(_leading_indent(content)) != _indent_width(indent):
+        return False
+    while index < len(lines):
+        _prefix, content, line_depth = _split_blockquote_prefix(lines[index])
+        if line_depth != depth or not content.strip():
+            break
+        if _TABLE_SEPARATOR_RE.match(content):
             return True
         index += 1
     return False
@@ -849,6 +883,13 @@ def convert_captions(text):
       直後が表でない ``Table:`` は、警告を出して通常の段落として残します。
     - それ以外の ``CodeBlock:`` / ``Figure:`` は ``.docsfw-caption`` クラスを付けた
       段落として、その位置に残します。
+    - ブロック引用 (行頭の ``>``。``> [!NOTE]`` などのアラート記法を含む) の中の
+      ``Table:`` 段落も、引用の外と同じ規則で変換します。引用の接頭辞を除いた内容で
+      判定し、``Table:`` 段落、空行、表の引用の深さ (``>`` の数) が同じ場合だけ組に
+      します。変換後の各行には元の接頭辞を保ちます。段落の先頭は同じ深さの空行の直後
+      なので、``> [!NOTE]`` の直後に空行なしで書いた ``> Table:`` は変換しません。
+      引用の中のフェンスは読み飛ばし、図の判定の対象にしません。引用の中の
+      ``CodeBlock:`` / ``Figure:`` は変換しません。
 
     ``{#fig:xxx}`` などのラベルは id として残します。
 
@@ -870,9 +911,12 @@ def convert_captions(text):
     internal_caption = ""
     # 直前に閉じた画像 1 個だけの行 ``(out 上の行位置, re.Match)``。
     image_block = None
+    # ブロック引用の中で開いているフェンス ``(フェンスの記号列, 引用の深さ)``。
+    quote_fence = None
 
     while index < len(lines):
         line = lines[index]
+        quote_prefix, quote_content, quote_depth = _split_blockquote_prefix(line)
         fence_match = _FENCE_RE.match(line)
         if fence_match:
             image_block = None
@@ -909,24 +953,49 @@ def convert_captions(text):
             index += 1
             continue
 
-        caption_match = _CAPTION_RE.match(line)
+        if quote_fence is not None:
+            # ブロック引用の中のフェンスの中は、判定の対象外。引用が終わった行は暗黙に閉じる。
+            if quote_depth >= quote_fence[1]:
+                out.append(line)
+                if quote_depth == quote_fence[1] and _is_closing_fence_content(quote_content, quote_fence[0]):
+                    quote_fence = None
+                index += 1
+                continue
+            quote_fence = None
+        if quote_depth > 0:
+            quote_fence_match = _FENCE_RE.match(quote_content)
+            if quote_fence_match:
+                quote_fence = (quote_fence_match.group(1), quote_depth)
+
+        caption_match = _CAPTION_RE.match(quote_content)
         # 字下げした CodeBlock: / Figure: はキャプションにしない。字下げした生の HTML を
         # md_in_html が扱えないため、図を figure へ包むのは行頭のフェンスと画像に限る。
+        # ブロック引用の中は Table: だけを対象にする。
         if (
             caption_match
             and caption_match.group(2) in ("CodeBlock", "Figure")
-            and caption_match.group(1)
+            and (caption_match.group(1) or quote_depth > 0)
         ):
             caption_match = None
-        at_paragraph_start = not out or not out[-1].strip()
+        if quote_fence is not None:
+            caption_match = None
+        if quote_depth > 0:
+            at_paragraph_start = not out or not out[-1].strip() or _is_blank_at_depth(out[-1], quote_depth)
+        else:
+            at_paragraph_start = not out or not out[-1].strip()
         if caption_match and at_paragraph_start:
             para_start_index = index
             caption_indent = caption_match.group(1)
             caption_kind = caption_match.group(2)
             paragraph = [caption_match.group(3).strip()]
+            line_prefixes = [quote_prefix]
             index += 1
-            while index < len(lines) and lines[index].strip() and not _FENCE_RE.match(lines[index]):
-                paragraph.append(_dedent_line(lines[index], caption_indent))
+            while index < len(lines):
+                next_prefix, next_content, next_depth = _split_blockquote_prefix(lines[index])
+                if next_depth != quote_depth or not next_content.strip() or _FENCE_RE.match(next_content):
+                    break
+                paragraph.append(_dedent_line(next_content, caption_indent))
+                line_prefixes.append(next_prefix)
                 index += 1
 
             is_after_diagram = _is_after_diagram(out, diagram_block)
@@ -1013,7 +1082,7 @@ def convert_captions(text):
                 _wrap_diagram_with_caption(out, diagram_block, internal_caption)
                 diagram_block = None
                 internal_caption = ""
-            if is_table_caption and not _is_followed_by_table(lines, index, caption_indent):
+            if is_table_caption and not _is_followed_by_table(lines, index, caption_indent, quote_depth):
                 # 直後が表でない Table: はキャプションにせず、通常の段落として残す。
                 sys.stderr.write(
                     "[stage_livedocs] 警告: 'Table:' 行の直後に表がありません。"
@@ -1033,7 +1102,11 @@ def convert_captions(text):
             # attr_list はブロック要素に対して、属性だけの行を要求する。
             # 本文と属性行の間に空行を置くと、字下げを外した後に別ブロックになる。
             paragraph.append("{{: {} }}".format(" ".join(attrs)))
-            out.extend(_indent_lines(paragraph, caption_indent))
+            line_prefixes.append(line_prefixes[0])
+            out.extend(
+                (prefix + caption_indent + text) if text else prefix.rstrip()
+                for prefix, text in zip(line_prefixes, paragraph)
+            )
             diagram_block = None
             non_diagram_fence_end = None
             image_block = None

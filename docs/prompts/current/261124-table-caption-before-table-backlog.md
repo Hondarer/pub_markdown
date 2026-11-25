@@ -1,11 +1,12 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 残課題一覧 (backlog)
-最終更新日時: 2026-11-25 20:15:00 JST
-最終更新エージェント: claude code / セッション ID: session_01KJc53RaT4Cei9nCXSSZqH1
+最終更新日時: 2026-11-26 01:53:59 JST
+最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261124-table-caption-before-table-overview.md` (全体管理文書)、`261124-table-caption-before-table-design.md` (最終仕様)、`261124-table-caption-before-table-discussion.md` (検討用 Markdown)、`261124-table-caption-before-table-lightadr.md` (簡易 ADR)。いずれも削除されている場合があります。
 下流文書: この残課題一覧を対策する継続作業が開始された場合は、その全体管理文書・検討用 Markdown・最終仕様・残課題一覧のパスを追記します。
+継続作業 `261125-docsfw-table-caption-backlog` (BL-001 〜 BL-006): `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)、`261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)、`261125-docsfw-table-caption-backlog-lightadr.md` (簡易 ADR)、`261125-docsfw-table-caption-backlog-backlog.md` (残課題一覧)、`261125-docsfw-table-caption-backlog-design.md` (最終仕様)。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。「整理状態」が「随時追記中」であれば、案件の作業中です。このファイルの残課題を対策する場合は、新しい全体管理文書と検討用 Markdown から開始し、このファイルの記載を削除せずに状態と経緯を更新してください。
 -->
 
@@ -23,14 +24,14 @@
 
 | 課題 ID | 題名 | 区分 | 優先度 / 影響度 | 状態 |
 | --- | --- | --- | --- | --- |
-| BL-001 | text_style_jp.py の自己テスト「カスタムマッチャ」の失敗 | 作業中摘出 | 低 | 未着手 |
-| BL-002 | ブロック引用の中の Table: 段落の判定 | 作業中摘出 | 低 | 未着手 |
-| BL-003 | Doxygen コメントで字下げが表と異なる Table: 段落の検出 | 作業中摘出 | 低 | 未着手 |
-| BL-004 | test_livedocs_path_spaces の venv 判定のテストの失敗 | 作業中摘出 | 低 | 未着手 |
-| BL-005 | space-inside-brackets が URL の直後の閉じ括弧の前の空白を指摘する | 作業中摘出 | 低 | 未着手 |
-| BL-006 | --dry-run の指摘の桁が実際の変更位置と一致しない場合がある | 作業中摘出 | 低 | 未着手 |
+| BL-001 | text_style_jp.py の自己テスト「カスタム マッチャー」の失敗 | 作業中摘出 | 低 | 対応済み |
+| BL-002 | ブロック引用の中の Table: 段落の判定 | 作業中摘出 | 低 | 対応済み |
+| BL-003 | Doxygen コメントで字下げが表と異なる Table: 段落の検出 | 作業中摘出 | 低 | 対応済み |
+| BL-004 | test_livedocs_path_spaces の venv 判定のテストの失敗 | 作業中摘出 | 低 | 対応済み |
+| BL-005 | space-inside-brackets が URL の直後の閉じ括弧の前の空白を指摘する | 作業中摘出 | 低 | 対応済み |
+| BL-006 | --dry-run の指摘の桁が実際の変更位置と一致しない場合がある | 作業中摘出 | 低 | 対応済み |
 
-## BL-001 text_style_jp.py の自己テスト「カスタムマッチャ」の失敗
+## BL-001 text_style_jp.py の自己テスト「カスタム マッチャー」の失敗
 
 ### 概要と問題点
 
@@ -41,6 +42,7 @@
 
 - **摘出契機**: 表のキャプションの前置きの実装中に `--test` を実行して発見しました。変更前の HEAD (`framework/docsfw` v20261118.0.0) を作業用ディレクトリに取り出して実行しても、同じ 1 件が失敗します。
 - **今回の見送り理由**: 今回の変更とは無関係の既存の問題で、辞書 (`replace` / `add_space` と SudachiPy によるカタカナ分割) の判断を含むため、範囲外としました。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。原因は辞書の設定の干渉ではなく、SudachiPy (sudachidict-core 20261015) が `カスタムマッチャ` を未知語の 1 語として分割しないため、分割後の `replace` に届かないこと。`no_space` の `マッチャ` はエンジンが保護から外すため効果がありません。2026-11-25 に方針を合意 (簡易 ADR の LADR-002): `90_local-katakana.json` の `add_space` に `カスタム マッチャー` を追加し、自己テストの期待値は変えない。`no_space` の効果のない `マッチャ` は削除する。SudachiPy を無効にしても同じ結果になり、Sudachi 辞書の版に依存しないことを複製で確認済み。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成。2026-11-26 に `90_local-katakana.json` の `add_space` へ `カスタム マッチャー` を追加し、`no_space` の `マッチャ` を削除。`text_style_jp.py --test` が全件成功することを確認 (Windows 側の確認は別途)。
 
 ### 影響範囲とリスク
 
@@ -63,6 +65,7 @@
 
 - **摘出契機**: 前処理の実装中に、分類の対象を確認して判明しました。
 - **今回の見送り理由**: リポジトリ内にブロック引用の中の表キャプションの使用例がなく、移行の対象もないため、範囲外としました。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。ブロック引用の中で、1 つ目の表にキャプションがなく 2 つ目の表の前に `Table:` を書くと、Pandoc は 1 つ目の表へ付けることを再現。MkDocs は誤った付け替えはなく、キャプションのクラスが付かない表示の差だけ。2026-11-25 に方針を合意 (簡易 ADR の LADR-005): ブロック引用の中でも、引用の深さが同じ `Table:` 段落と表の組を引用の外と同じ規則で扱い、Pandoc の前処理、`text_style_jp.py`、MkDocs の `convert_captions()` のすべてを対応させる。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成。2026-11-26 に `table_caption_position.py` (引用の深さを加えた分類と区間)、`table-caption-preprocess.py` (`prepare_for_pandoc()` 経由)、`stage_livedocs.py` の `convert_captions()` を対応させ、4 つのテスト ファイルへテストを追加。Pandoc 前処理、`text_style_jp` の `table-caption-position`、MkDocs の変換のすべてで局所テストが成功。正本文書への反映は最終仕様の WBS 4.7 で行う。
 
 ### 影響範囲とリスク
 
@@ -85,6 +88,7 @@
 
 - **摘出契機**: 既存の記述の一括移行で、該当の 1 か所だけが変換されずに残ったことで判明しました。この 1 か所は手作業で表の直前へ移しました。
 - **今回の見送り理由**: 該当がリポジトリ内で 1 か所だけで、Doxygen の字下げの解釈を判定に取り入れる設計が別途必要なため、範囲外としました。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。表が `Table:` より深い Doxygen コメントが検出されないことを再現。Doxygen の XML では表と `Table:` が隣り合う。2026-11-25 に方針を合意 (簡易 ADR の LADR-006): C/C++ のモードに限り、表の字下げが `Table:` 段落より深い場合も組として扱う。Markdown のモードは変えない。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成。2026-11-26 に `table_caption_position.py` へ `_caption_fits_table()` を追加し、C/C++ のモードで表が `Table:` 段落以上に深い場合も組として扱うようにした。`test_table_caption_position.py` と `test_text_style_jp_table_caption.py` へテストを追加し、局所テストが成功。正本文書への反映は最終仕様の WBS 4.7 で行う。
 
 ### 影響範囲とリスク
 
@@ -107,6 +111,7 @@
 
 - **摘出契機**: 表のキャプションの前置きの変更後に、docsfw の `bin_test` を実行して発見しました。HEAD を作業用ディレクトリに取り出した複製でも失敗します。
 - **今回の見送り理由**: venv の作成の判定は表のキャプションと無関係で、範囲外としました。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。原因は、システム Python の pymdown-extensions 13.1 と watchdog 7.1.0 が採用範囲 (`<12.0.0`、`<7.0.0`) の外で、テストの前提が成り立たないこと。採用範囲を広げた複製ではテストが成功することを確認。2026-11-25 に方針を合意 (簡易 ADR の LADR-003): テストを実行する Python が採用範囲を満たさない場合はテストをスキップする。採用範囲は変えない。`make bin-test` の経路では採用範囲を満たす Python が選ばれるため、スキップは起きない。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成。2026-11-26 に `test_make_livedocs_with_complete_system_environment` の先頭で、`resolve_python_components.py` の判定により採用範囲を確認し、満たさない場合 (手元の `/usr/bin/python3` は pymdown-extensions と watchdog が範囲外) は不足するパッケージ名を示してスキップするようにした。採用範囲を満たす Python (`make livedocs-venv` の venv) では 2 件とも実行されて成功することを確認。
 
 ### 影響範囲とリスク
 
@@ -129,6 +134,7 @@
 
 - **摘出契機**: 移行前からある `--dry-run` の指摘を個別に判断した際に、`app/cplat/prod/include/cplat/net/socket.h` の 268 行と 270 行で検出しました。空白を削除すると、Doxygen が閉じ括弧まで URL として扱うおそれがあるため、この 2 件は据え置きました。
 - **今回の見送り理由**: 規則の実装の変更、または URL の書き方の規範の決定が必要で、表のキャプションの変更の範囲外のためです。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。Doxygen 1.17.0 は空白なしの `(see: URL)` でも閉じ括弧を URL に含めないことを確認。Pandoc 3.11 と MkDocs は裸の URL を自動リンクしない。2026-11-25 に方針を合意 (簡易 ADR の LADR-004): `socket.h` の 2 か所の空白を削除し、規則と正本文書は変えない。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成。2026-11-26 に `socket.h` の 2 か所の空白を削除し、`text_style_jp.py --dry-run` の指摘がなくなることと、Doxygen 1.17.0 の XML の `ulink url` に閉じ括弧が含まれないことを確認 (Doxygen 1.18.0 は Windows 側で確認)。
 
 ### 影響範囲とリスク
 
@@ -151,6 +157,7 @@
 
 - **摘出契機**: 移行前からある指摘の個別判断の作業中に報告されました。
 - **今回の見送り理由**: 桁の算出は表のキャプションの変更と無関係で、再現の条件の調査が必要なためです。
+- **継続作業での経緯と対処**: 継続作業 `261125-docsfw-table-caption-backlog` (全体管理文書 `261125-docsfw-table-caption-backlog-overview.md`) で検討中 (2026-11-25 開始)。桁が各整形ステップが処理した時点の文字列での位置であること、C/C++ のコメントのモードではコメント本文の位置であることを再現。2026-11-25 に方針を合意 (簡易 ADR の LADR-008): 桁を入力ファイルの行の文字位置 (1 始まり、コード ポイント単位) とし、コメントを解析するすべてのモードでもソースの行の位置にする。位置の写像を `DiagnosticCollector` に集約し、文字列を変えるすべての処理で更新する。整形の結果は変えない。 2026-11-25 に最終仕様 `261125-docsfw-table-caption-backlog-design.md` を作成し、対応中 (第 2 ゲートの承認待ち)。2026-11-26 に `text_style_jp_engine.py` の `_PositionMap` と `DiagnosticCollector` で桁を元の行の位置へ写像し、`text_style_jp_frontends.py` のすべてのコメント解析モードで本文の開始位置を渡すよう実装。`text_style_jp.py --test` に桁の自己テストを追加し、`docs/text_style_jp.md` に桁の定義を記載。整形の結果 (`-o` の出力) が変更前と一致することを確認。
 
 ### 影響範囲とリスク
 
