@@ -36,11 +36,11 @@ Body five.
 int x;
 ```
 
+Table: caption five
+
 | a | b |
 |---|---|
 | 1 | 2 |
-
-Table: caption five
 
 ![figure]({IMAGE.as_posix()})
 

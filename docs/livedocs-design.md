@@ -18,6 +18,8 @@ Pandoc、Lua フィルター 18 本、Node.js (Puppeteer、mermaid-cli、MiniSea
 この構成では、1 ページの見た目を確認するだけでもワークスペース全体のビルド コストがかかります。  
 c-modernization-kit ワークスペースにおける発行対象の実測値を次に示します。
 
+Table: ワークスペースにおける発行対象の実測値
+
 | 指標 | 実測値 |
 |---|---|
 | 発行対象 Markdown | 766 ファイル |
@@ -25,8 +27,6 @@ c-modernization-kit ワークスペースにおける発行対象の実測値を
 | PlantUML コード ブロック | 2757 出現 / 381 ファイル |
 | Mermaid コード ブロック | 38 出現 / 8 ファイル |
 | 出力バリアント | `ja` / `en` × 通常 / `-details` の 4 種類 |
-
-Table: ワークスペースにおける発行対象の実測値
 
 PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の SVG 生成と PNG 変換を使用します。  
 両方の HTML 発行系で図生成をブラウザー側へ移します。  
@@ -38,6 +38,8 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 静的発行は HTML と docx の正本であり続け、配布可能な成果物を必要とする用途はすべてこちらが担います。  
 動的発行は、配信を前提とすることで得られる短いビルド時間、保存に追従する再生成、Doxygen HTML との統合を担います。
 
+Table: 静的発行と動的発行の役割・成果物比較
+
 | | 静的発行 (`make docs`) | 動的発行 (`make livedocs` / `make servedocs`) |
 |---|---|---|
 | 成果物 | HTML + docx | HTML |
@@ -46,8 +48,6 @@ PlantUML は HTML ではブラウザーで描画し、docx 出力では従来の
 | PlantUML | HTML はブラウザー描画、docx はビルド時に画像化 | ブラウザー上でレンダリング |
 | 図の描画エンジン | HTML は動的発行と共通、DOCX は従来経路 | Pandoc HTML と共通 |
 | 変更の反映 | 再実行 | `mkdocs serve` 中は保存に追従 |
-
-Table: 静的発行と動的発行の役割・成果物比較
 
 ## docsfw ファンクション ポイントと対応方針
 
@@ -58,6 +58,8 @@ Table: 静的発行と動的発行の役割・成果物比較
 - **対象外**: 動的発行では実現しません。
 
 ### 入力と発行対象の決定
+
+Table: 入力と発行対象決定に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
@@ -70,9 +72,9 @@ Table: 静的発行と動的発行の役割・成果物比較
 | 7 | `pubpart.yaml` 等の `defaults:` | `:42-89`, `:116-161` | 対象外 | 当該ファイルの実在数 0 |
 | 8 | `publocal.yaml` の `order:` | `bin_internal/generate-nav-tree.py:110`、`livedocs/bin/stage_livedocs.py` の `generate_nav_files` | 維持 | ルート `.nav.yml` の `sort:` と、`order:` があるディレクトリの明示 `nav:` で同じ規則を再現する。本ワークスペースの発行対象に `publocal.yaml` は無い |
 
-Table: 入力と発行対象決定に関するファンクション ポイント一覧
-
 ### 前処理
+
+Table: 前処理に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
@@ -82,9 +84,9 @@ Table: 入力と発行対象決定に関するファンクション ポイント
 | 12 | `short-title` 系の解決 | `bin_internal/extract-short-title.sh` | 簡略 | `title:` フロント マターへ写す |
 | 13 | H1 除去と `--shift-heading-level-by=-1` | `:2691-2695` | 対象外 | MkDocs は H1 をページ見出しとして扱う。MkDocs は先頭要素の H1 だけをタイトルにするため、静的発行と同じく HTML コメントを除いた最初の H1 を `title:` へ写す |
 
-Table: 前処理に関するファンクション ポイント一覧
-
 ### 図の生成
+
+Table: 図の生成に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | docsfw の実装場所 | 対応 | 備考 |
 |---|---|---|---|---|
@@ -101,16 +103,16 @@ Table: 前処理に関するファンクション ポイント一覧
 | 24 | 画像リソースの事前コピー | `:2473-2492` | 維持 | ステージングで画像も配置 |
 | 58 | 図の操作と SVG のダウンロード | `styles/browser/docsfw-svg-download.js` | 共通 | PlantUML / Mermaid の表示切り替え・コピーと、ライト テーマ SVG の保存を行う |
 
-Table: 図の生成に関するファンクション ポイント一覧
-
 ### Markdown 記法の変換
+
+Table: Markdown 記法変換に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | 出現数 | 対応 | 備考 |
 |---|---|---|---|---|
 | 25 | GitHub アラート 6 種 | 616 | 維持 | `markdown-callouts`。`DEPRECATED` はステージングで変換 |
 | 26 | `+hard_line_breaks` | 371 ファイル | 維持 | `markdown.extensions.nl2br` |
 | 27 | 表 | 789 | 維持 | `tables` 拡張 |
-| 28 | `Table:` キャプション | 73 | 簡略 | ステージングでキャプション段落へ変換し、直前の表と字下げが一致するとき、その字下げを保って表の前へ挿入する。字下げが一致しないときは挿入しない。Pandoc がもう 1 つ受け付ける行頭のコロンだけの形式 (`: キャプション`) は対象外とし、`docs/sample/README.md` で非推奨と明記する |
+| 28 | `Table:` キャプション | 73 | 簡略 | ステージングで、空行を挟んで直後に同じ字下げの表が続く `Table:` 段落を、その位置のままキャプション段落へ変換する。条件を満たさない段落は警告を出して通常の段落として残す。行頭のコロンだけの形式 (`: キャプション`) はキャプションとして扱わない |
 | 29 | `CodeBlock:` キャプション | 68 | 簡略 | PlantUML / Mermaid フェンスの直後にある場合は、フェンスとともに `md_in_html` の `figure` へ包む。それ以外は `.docsfw-caption` の段落にする |
 | 30 | pandoc-crossref の採番と相互参照 | ラベル 22 / 参照 7 | 対象外 | ラベルは id として残す |
 | 31 | 数式 | 51 | 維持 | `pymdownx.arithmatex` と MathJax |
@@ -121,9 +123,9 @@ Table: 図の生成に関するファンクション ポイント一覧
 | 36 | docx 専用フィルター 8 本 | - | 対象外 | |
 | 57 | `implicit_figures` | 画像 12 | 維持 | 画像 1 個だけの段落を、ステージングで `md_in_html` の `figure` へ変換する |
 
-Table: Markdown 記法変換に関するファンクション ポイント一覧
-
 ### リンク解決
+
+Table: リンク解決に関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | 出現数 | 対応 | 備考 |
 |---|---|---|---|---|
@@ -133,9 +135,9 @@ Table: Markdown 記法変換に関するファンクション ポイント一覧
 | 40 | Git 単一ページ リンク | フロント マター 392 | 維持 | ステージングで blob URL を解決し、ヘッダーへ出す |
 | 41 | Doxygen 単一ページ リンク | フロント マター 523 | 維持 | `doxygen-page-url` を `/doxygen/` へ写し、Git リンクと並べてヘッダーへ出す |
 
-Table: リンク解決に関するファンクション ポイント一覧
-
 ### 出力とナビゲーション
+
+Table: 出力とナビゲーションに関するファンクション ポイント一覧
 
 | # | ファンクション ポイント | 対応 | 備考 |
 |---|---|---|---|
@@ -158,8 +160,6 @@ Table: リンク解決に関するファンクション ポイント一覧
 | 60 | 発行日時と最終コミット ID (`autoSetDate`) のヘッダー表示 | 維持 | 同上。日時とコミット ID は静的発行と同じ 1 文字列 |
 | 61 | 概要 (`abstract` / `abstract-title`) | 維持 | `livedocs_abstract_hook.py` がタイトル直後へ挿入する。詳細は後述 |
 | 62 | ページ トップへ戻る | 維持 | Material の `.md-top` に合わせ、Pandoc HTML は `#docsfw-top` を置く。詳細は [全文検索・全体ナビゲーション機能](search-and-nav.md) |
-
-Table: 出力とナビゲーションに関するファンクション ポイント一覧
 
 ### 発行と直交する機能
 
@@ -638,13 +638,13 @@ PlantUML 本体を TeaVM で JavaScript へコンパイルしたもので、Grap
 
 参考として、採用に至らなかった選択肢を残します。
 
+Table: PlantUML ブラウザー描画ライブラリの候補一覧
+
 | 選択肢 | 状態 |
 |---|---|
 | `plantuml-core` (CheerpJ 版) | 上流が discontinued。ネイティブ JavaScript ビルドへ移行済み |
 | `plantuml.js` | SVG 出力が未実装 (PNG のみ) |
 | PlantUML サーバーへの HTTP | 図ごとに通信が発生し、オフラインで動作しない |
-
-Table: PlantUML ブラウザー描画ライブラリの候補一覧
 
 `@plantuml/core` は MIT ライセンス版の PlantUML から構築されています。  
 docsfw が使用する GPL 版とは一部の図種やスプライトで結果が異なる可能性があります。  
@@ -665,13 +665,13 @@ Pandoc HTML と共用する `styles/browser/docsfw-diagrams.js` が描画しま�
 
 `figure` は 2 つの経路で組み立てます。
 
+Table: 動的発行における図キャプションの組み立て経路一覧
+
 | 経路 | 実装 | 対象 |
 |---|---|---|
 | ステージング | `bin/stage_livedocs.py` の `convert_captions` | PlantUML / Mermaid フェンスの直後にある `CodeBlock:` キャプション |
 | ステージング | 同 `convert_implicit_figures` | 画像 1 個だけの段落 (Pandoc の `implicit_figures` 相当) |
 | ブラウザー | `styles/browser/docsfw-diagrams.js` の `addCaption` | PlantUML ソース内の `caption` 行 |
-
-Table: 動的発行における図キャプションの組み立て経路一覧
 
 ステージングは `md_in_html` を使い、`figure` の内側を Markdown のまま残します。  
 生の `<img>` を出力すると、`use_directory_urls: true` の下で `index.md` 以外のページから画像の相対パスを解決できなくなるためです。  
@@ -854,6 +854,8 @@ Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (
 
 ### 色の対応
 
+Table: 静的発行と動的発行のテーマ カラー対応一覧
+
 | 用途 | pandoc (正) | 出典 | 動的発行 `default` | 動的発行 `slate` |
 |---|---|---|---|---|
 | 本文リンク | `#4183C4` | `styles/html/html-style.css` の `a` | `#4183C4` | `#6EA9DD` |
@@ -883,8 +885,6 @@ Material は `html { font-size: 125% }` (1rem = 20px) を基準にし、1600px (
 | `==mark==` | `#FFFF00` | `html-style.css` の `mark` | 同左 | Material 既定 |
 | 本文 | `#333333` | [見出し書式](heading-style.md) | 同左 | `rgba(255,255,255,.80)` |
 | 見出し | `#757575` | 同上 | 同左 | `--md-default-fg-color--light` |
-
-Table: 静的発行と動的発行のテーマ カラー対応一覧
 
 本文と見出しの 2 行だけは pandoc を正とせず、[見出し書式](heading-style.md) を正本とします。  
 表には、その正本が定めるライトでの値を載せています。
@@ -958,6 +958,8 @@ Material の admonition は `rem` と `em` で寸法を持ちます。
 1rem = 20px として px へ換算した固定値を両側へ置きます。  
 `assets/docsfw-pandoc-style.css` が見出しの書式で採っている方針と同じです。
 
+Table: Material スタイルと採用寸法値の対応一覧
+
 | 部位 | Material | 採用値 |
 |---|---|---|
 | ブロックの枠 | `.075rem solid` | `1.5px solid` |
@@ -970,8 +972,6 @@ Material の admonition は `rem` と `em` で寸法を持ちます。
 | 見出し帯の上端角丸 | `.1rem` | `2px` |
 | アイコンの寸法 | `1rem` 四方 | `20px` 四方 |
 | アイコンの位置 | `left: .6rem` / `top: .625em` | `left: 12px` / `top: 10px` |
-
-Table: Material スタイルと採用寸法値の対応一覧
 
 `details` と `summary` は Material の指定のままとします。  
 発行対象の Markdown に生の `<details>` は無く、`pymdownx.details` も有効にしていないため、admonition と同じ寸法へ寄せる必要がありません。
@@ -1004,14 +1004,14 @@ pandoc 側の本文全体は Bootstrap `template.css` の `p { margin: 0 0 10px 
 これがページ本体を含むすべてのスクロール領域へ効きます。  
 同じページを 1400x900 で描画して画素を計測すると、次の差がありました。
 
+Table: 調整前における静的発行と動的発行のスクロール バー寸法比較
+
 | | make docs | make servedocs |
 |---|---|---|
 | thumb の幅 | 12px | 6px |
 | thumb の色 | `#727272` | `#ADADAD` |
 | トラック | `#E5E5E5` (可視) | 透明 |
 | ページ本体 | 12px / `#E5E5E5` / `#727272` | 15px / `#FCFCFC` / `#8B8B8B` (ブラウザー既定) |
-
-Table: 調整前における静的発行と動的発行のスクロール バー寸法比較
 
 #### そろえた後の仕様
 
@@ -1056,12 +1056,12 @@ Material 側の指定は `@media (min-width: 60em)` の中にもありますが�
 濃さは 2 段です。  
 本文の `#333333` がいちばん濃く、見出しは `#757575` で本文より淡くなります。
 
+Table: 動的発行における見出しと本文の文字色仕様
+
 | 対象 | 動的発行の指定 | 白地での値 |
 |---|---|---|
 | 見出し (Markdown の H1 - H6) | `--md-default-fg-color--light` | `#757575` |
 | 本文 | `--md-typeset-color` (`--md-default-fg-color` を上書き) | `#333333` |
-
-Table: 動的発行における見出しと本文の文字色仕様
 
 本文の色は、`assets/docsfw-pandoc-style.css` で `--md-default-fg-color` を `rgba(0, 0, 0, 0.80)` に上書きして合わせます。Material 既定の `rgba(0, 0, 0, 0.87)` (白地で `#212121`) では濃すぎるためです。  
 pandoc 側は `styles/html/html-style.css` の `--docsfw-fg` を `#333333` とし、`body` の `color` に使います。
@@ -1125,14 +1125,14 @@ TOC 内の区切り (`.toc-navi + ul` の `border-top` と `hr.docsfw-toc-separa
 読んでいる位置を示す表現は Material を正とし、pandoc の `styles/html/docsfw-ui.css` を合わせます。  
 状態は次の 4 つです。
 
+Table: ページ内目次の表示状態とテーマ別カラー仕様
+
 | 状態 | 白地 (`default`) | ダーク (`slate`) | 由来 |
 |---|---|---|---|
 | 通常 (未通過) | `#333333` | `rgba(255,255,255,.80)` | Material の `--md-typeset-color` |
 | 通過済み | `#757575` | `rgba(255,255,255,.54)` | Material の `--md-default-fg-color--light` |
 | アクティブ | `#4183C4` | `#6EA9DD` | 「色の対応」の「ナビと目次の現在位置」 |
 | ホバーとフォーカス | `#346FA8` | `#8FBDE5` | 「色の対応」の「ナビと目次のホバー」。下線を引く |
-
-Table: ページ内目次の表示状態とテーマ別カラー仕様
 
 強調に太字は使いません。  
 太字は文字幅が変わるため、幅 315px の目次ではスクロール追従のたびに省略記号 (`text-overflow: ellipsis`) の出方が変わり、行の見え方が動きます。  
@@ -1178,6 +1178,8 @@ Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a
 
 ウインドウ幅は四段階で切り替わります。
 
+Table: ウィンドウ幅に応じたナビゲーション切り替えの段階定義
+
 | 段階 | 幅 |
 |---|---|
 | スマートフォン | 767px 以下 |
@@ -1185,8 +1187,6 @@ Bootstrap の `padding` とホバーの装飾は、`#docsfw-page-toc ul > li > a
 | 1 列表示・連続一覧のドロワー | 約 1220px から 1399px |
 | 中間 3 列 | 1400px から 1624px |
 | 3 列 (PC) | 1625px 以上 |
-
-Table: ウィンドウ幅に応じたナビゲーション切り替えの段階定義
 
 Pandoc HTML と MkDocs は、1625px 以上で左 360px、本文約 870px、右 315px の三列を 25px 間隔で表示します。  
 全体幅は 1595px です。
@@ -1401,6 +1401,8 @@ Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw
 ワークスペースのルート `makefile` に次のターゲットを置きます。  
 静的発行の `docs` ターゲットは変更しません。
 
+Table: ルート makefile の動的発行ターゲット一覧
+
 | ターゲット | 内容 |
 |---|---|
 | `servedocs` | 既存のこのワークスペースの `mkdocs serve` を止めてからステージングし、`mkdocs serve` を起動する。`LIVEDOCS_VARIANT` で言語と着地先の詳細度を選ぶ (既定 `ja`)。選んだ言語の通常版と詳細版を同時に配信する |
@@ -1409,8 +1411,6 @@ Pandoc HTML は Material の実行資産を読み込まず、`styles/html/docsfw
 | `livedocs-venv` | システム Python と既存 venv の依存を確認する。不足がある場合だけ、システム側を参照する venv に固定版で補完する |
 | `stopdocs` | このワークスペースの設定ファイルを指定した `mkdocs serve` を停止する |
 | `cleanlivedocs` | serve を停止してから `pages/livedocs/` を削除する |
-
-Table: ルート makefile の動的発行ターゲット一覧
 
 ルートの `make clean` は `cleandocs` を呼び、`cleandocs` と `cleanlivedocs` は削除の前に `stopdocs` を実行します。  
 `mkdocs serve` は `pages/livedocs` を監視し続けるため、Windows では削除対象が busy になり `rm -rf` が失敗します。  
@@ -1500,14 +1500,14 @@ Material は `base` を起点に索引を読み込み、検索結果の URL も 
 検索 Worker は索引の構築で数百 MB を使い、ページと同じレンダラー プロセスで動きます。  
 そのページから `target` 付きで開いた別ウインドウ (依存関係レポートなど) も同じプロセスに入るため、メモリ不足でクラッシュすることがありました。
 
+Table: LIVEDOCS_VARIANT の設定値と、同時に配信する版
+
 | `LIVEDOCS_VARIANT` | 言語 | 同時に配信する版 | `/` の着地 |
 |---|---|---|---|
 | `ja` (既定) | ja | 通常と詳細 | `/ja/` |
 | `ja-details` | ja | 通常と詳細 | `/ja-details/` |
 | `en` | en | 通常と詳細 | `/en/` |
 | `en-details` | en | 通常と詳細 | `/en-details/` |
-
-Table: LIVEDOCS_VARIANT の設定値と、同時に配信する版
 
 ```bash
 make servedocs
@@ -1536,14 +1536,14 @@ mkdocs-material の標準検索 (`lang: ja`) は lunr と TinySegmenter を使�
 
 実測した挙動 (`lang: ja` 使用時) を次に示します。
 
+Table: TinySegmenter による日本語検索結果の実測例
+
 | 検索語 | 結果 |
 |---|---|
 | 同期 | 294 件 |
 | ビルド | 130 件 |
 | モック | 23 件 |
 | 同期プリミティブ | 0 件 |
-
-Table: TinySegmenter による日本語検索結果の実測例
 
 2 文字程度の語やカタカナ語は引けますが、`同期プリミティブ` のような複合語は引けません。  
 また `同期` が `同梱` にも一致するなど、分かち書きの精度は docsfw の 2-gram より劣ります。
@@ -1584,6 +1584,8 @@ Markdown の H1 の扱いは、静的発行が `--shift-heading-level-by=-1`、M
 
 ### 本文とナビゲーション
 
+Table: 本文とナビゲーションにおける Pandoc と MkDocs の差異一覧
+
 | 項目 | Pandoc HTML | MkDocs | 扱い |
 |---|---|---|---|
 | 見出し内のリンク色 | Bootstrap の `h1 a { color: #333 }` | `.md-typeset a` の `#4183C4` | 一致させない。[見出し書式](heading-style.md) |
@@ -1593,19 +1595,17 @@ Markdown の H1 の扱いは、静的発行が `--shift-heading-level-by=-1`、M
 | フッター | なし | 「Made with Material for MkDocs」 | 静的発行に対応先がない |
 | 全文検索 | MiniSearch + CJK bigram | Material 標準 (lunr)。複合語の既知の弱点あり | 簡略。直前の節 |
 
-Table: 本文とナビゲーションにおける Pandoc と MkDocs の差異一覧
-
 ドロワーの板見出しは、戻る矢印とフォルダー名を分け、インデックス ページがあればフォルダー名を実リンクにします。  
 実装は Material のテンプレート上書きと Pandoc HTML の自前描画で異なりますが、操作はそろえています。
 
 ### 図
 
+Table: 動的発行における各種図の対応方針と制約
+
 | 項目 | 内容 |
 |---|---|
 | Salt | `@plantuml/core` が非対応。HTML では説明と元ソースを表示。画像が必要なら DOCX |
 | Gantt | ブラウザー側に Start / End / Duration の一覧が付き、面積比 1.80。詳細は次節 |
-
-Table: 動的発行における各種図の対応方針と制約
 
 描画待ち (`[aria-busy="true"]`) の縞模様と、描画失敗時 (`.docsfw-diagram--error`) の枠は、`styles/browser/docsfw-diagrams.css` で共用します。  
 Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だけ `align-self: stretch` で幅を本文いっぱいにします。
@@ -1616,13 +1616,13 @@ Pandoc HTML の `figure` は `display: flex` のため、描画待ちの間だ�
 
 結果は次のとおりです。
 
+Table: PlantUML 図種別の描画一致判定結果
+
 | 判定 | 図種 | 内容 |
 |---|---|---|
 | 一致 | Sequence, Use Case, Class, Object, Activity, Component, Deployment, State, Timing, Network, Mindmap, WBS, Work Breakdown, JSON, YAML, EBNF, Regex (17 図) | 面積比 0.77 〜 1.21。text 要素数は Class を除いて一致 |
 | 差あり | Gantt | ブラウザー側に Start / End / Duration の一覧が付き、面積比 1.80。PlantUML のバージョン差と考えられる |
 | 非対応 | Salt | `@startsalt` が「Diagram not supported by this release」となり、エラー図が返される |
-
-Table: PlantUML 図種別の描画一致判定結果
 
 面積比の 0.8 前後から 1.2 前後の差は、ブラウザーと Java AWT のフォント計測の違いによるものです。  
 図の内容そのものは一致します。
@@ -1662,6 +1662,8 @@ PlantUML の CLI とサーバーは `@start` より前の行を無視するた�
 
 旧実装との差は次のとおりです。
 
+Table: startuml からのキャプション抽出における新旧動作比較
+
 | 入力 | 旧 | 新 |
 |---|---|---|
 | `@startuml sequence-sample` | `sequence-sample` | 同じ |
@@ -1671,8 +1673,6 @@ PlantUML の CLI とサーバーは `@start` より前の行を無視するた�
 | `@startwbs wbs-sample` | 採用しない | `wbs-sample` |
 | `@startsalt` / `@startebnf` / `@startregex` の名前 | 採用しない | 採用する |
 | `@startuml ` (名前なし、末尾に空白) | 空白 1 文字を採用 | 採用しない |
-
-Table: startuml からのキャプション抽出における新旧動作比較
 
 最後の 1 件だけが採用されなくなります。  
 旧実装が空白 1 文字をキャプションとして拾っていたもので、本ワークスペースに該当行はありません。
@@ -1724,6 +1724,8 @@ make servedocs
 
 次のページを確認します。
 
+Table: 動的発行の表示確認対象ページと確認内容一覧
+
 | 確認対象 | ページ | 確認内容 |
 |---|---|---|
 | PlantUML の多量描画 | `app/example/docs/sequence.md` | 画面外の図も文書内の先頭から順に描画されること |
@@ -1741,8 +1743,6 @@ make servedocs
 | 日本語パス | `framework/docsfw/docs/sample/日本語を含むサブフォルダー/` | パス解決とナビゲーション表示 |
 | 検索 | 任意 | 日本語語句での検索 |
 
-Table: 動的発行の表示確認対象ページと確認内容一覧
-
 ### クロスプラットフォーム
 
 Windows の Git Bash と Python でも `make livedocs` が通ることを確認します。  
@@ -1758,6 +1758,8 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 
 ## 実装状況
 
+Table: 動的発行基盤の実装ステップと進捗状況一覧
+
 | ステップ | 内容 | 状態 |
 |---|---|---|
 | 0 | 設計ドキュメントの作成 | 完了 |
@@ -1770,8 +1772,6 @@ Windows の Git Bash と Python でも `make livedocs` が通ることを確認�
 | 7 | 配色の pandoc への一致 | 完了 |
 | 8 | Git 単一ページ リンクとヘッダーへの配置 | 完了 |
 | 9 | 発行者と発行日時のヘッダー表示 | 完了 |
-
-Table: 動的発行基盤の実装ステップと進捗状況一覧
 
 ### 実装で判明したこと
 

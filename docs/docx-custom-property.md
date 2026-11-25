@@ -170,6 +170,8 @@ Word では、次のフィールドで表示できます。
 
 この表の「フィールド指定例」は、`DOCPROPERTY` で指定する英語名です。Word の UI 表示名は、Word のバージョンや表示言語により異なる場合があります。例えば、`Keywords` は日本語 UI の「詳細」タブでは「タグ」、`Category` は「分類項目」と表示されます。
 
+Table: Word 組み込みプロパティと Pandoc メタデータの対応一覧
+
 | Pandoc メタデータ | フィールド指定例 | 用途 | 備考 |
 |---|---|---|---|
 | `title` | `{ DOCPROPERTY "Title" }` | タイトル | Pandoc から設定可能 |
@@ -197,8 +199,6 @@ Word では、次のフィールドで表示できます。
 | - | `{ DOCPROPERTY "Number of Paragraphs" }` | 段落数 | Word が管理 |
 | - | `{ DOCPROPERTY "Number of Notes" }` | ノート数 | Word の組み込み定義 |
 | - | `{ DOCPROPERTY "Number of Characters (with spaces)" }` | 空白を含む文字数 | Word が管理 |
-
-Table: Word 組み込みプロパティと Pandoc メタデータの対応一覧
 
 Microsoft の `WdBuiltInProperty` には、`Format`、`Number of Slides`、`Number of Hidden Slides`、`Number of Multimedia Clips`、`Hyperlink Base` も定義されています。ただし、Word の `WdBuiltInProperty` 一覧では `Not supported` とされているため、未定義エラーの回避を目的にした `DOCPROPERTY` では使用しません。
 

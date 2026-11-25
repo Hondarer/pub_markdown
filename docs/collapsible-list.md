@@ -79,6 +79,8 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 
 `open-level=N` 属性を指定すると、初回表示時に第 N 階層まで展開された状態になります。
 
+Table: open-level 属性値と初期展開動作の一覧
+
 | 値 | 動作 |
 |---|---|
 | `open-level=0` | すべて折りたたみ |
@@ -86,8 +88,6 @@ Pandoc の fenced div 記法を使用して、任意のリストに展開機能�
 | `open-level=2` | 2 階層目まで展開 |
 | `open-level=-1` | すべて展開 |
 | 指定なし | すべて折りたたみ (既定) |
-
-Table: open-level 属性値と初期展開動作の一覧
 
 **level の数え方**: 最上位の `<details>` 要素を level 1 とし、祖先 `<details>` の数 + 1 で深さを判定します。
 

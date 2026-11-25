@@ -7,7 +7,7 @@ import os
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -518,6 +518,13 @@ class RewriteLinksTest(unittest.TestCase):
 
 
 class ConvertCaptionsTest(unittest.TestCase):
+    @staticmethod
+    def _convert_with_stderr(source):
+        buffer = io.StringIO()
+        with redirect_stderr(buffer):
+            result = convert_captions(source)
+        return result, buffer.getvalue()
+
     def test_wraps_diagram_fence_and_caption_into_figure(self):
         source = (
             "```mermaid\n"
@@ -583,6 +590,10 @@ class ConvertCaptionsTest(unittest.TestCase):
             "CodeBlock: ソースのキャプション\n"
             "\n"
             "Table: 表のキャプション\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -594,16 +605,20 @@ class ConvertCaptionsTest(unittest.TestCase):
             "{: .docsfw-caption }\n"
             "\n"
             "表のキャプション\n"
-            "{: .docsfw-caption .docsfw-table-caption }\n",
+            "{: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n",
         )
 
-    def test_moves_table_caption_before_preceding_table(self):
+    def test_converts_table_caption_before_table_in_place(self):
         source = (
+            "Table: 表のキャプション\n"
+            "\n"
             "| 項目 | 値 |\n"
             "|---|---|\n"
             "| A | B |\n"
-            "\n"
-            "Table: 表のキャプション\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -612,19 +627,79 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n"
             "| 項目 | 値 |\n"
             "|---|---|\n"
-            "| A | B |\n"
-            "\n",
+            "| A | B |\n",
         )
 
-    def test_moves_indented_table_caption_with_the_same_indent(self):
+    def test_keeps_table_caption_after_table_as_paragraph_with_warning(self):
+        source = (
+            "| 項目 | 値 |\n"
+            "|---|---|\n"
+            "| A | B |\n"
+            "\n"
+            "Table: 後置きのキャプション\n"
+        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn(
+            "[stage_livedocs] 警告: 'Table:' 行の直後に表がありません。"
+            "表のキャプションは、空行を挟んで表の直前に記述してください。",
+            stderr,
+        )
+
+    def test_assigns_each_caption_to_the_following_table_when_tables_are_consecutive(self):
+        source = (
+            "Table: 1 つ目\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n"
+            "\n"
+            "Table: 2 つ目 {#tbl:second}\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| B |\n"
+        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(
+            result,
+            "1 つ目\n"
+            "{: .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n"
+            "\n"
+            "2 つ目\n"
+            "{: #tbl:second .docsfw-caption .docsfw-table-caption }\n"
+            "\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| B |\n",
+        )
+        self.assertEqual(stderr, "")
+
+    def test_keeps_table_caption_without_blank_line_as_paragraph_with_warning(self):
+        source = (
+            "Table: 空行なし\n"
+            "| 項目 |\n"
+            "|---|\n"
+            "| A |\n"
+        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertNotIn(".docsfw-table-caption", result)
+        self.assertNotIn(".docsfw-caption", result)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
+
+    def test_converts_indented_table_caption_with_the_same_indent(self):
         source = (
             "- 東地区\n"
+            "\n"
+            "    Table: 東地区の件数\n"
             "\n"
             "    | 項目 | 件数 |\n"
             "    |---|---|\n"
             "    | 完了 | 12 |\n"
-            "\n"
-            "    Table: 東地区の件数\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -635,20 +710,19 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n"
             "    | 項目 | 件数 |\n"
             "    |---|---|\n"
-            "    | 完了 | 12 |\n"
-            "\n",
+            "    | 完了 | 12 |\n",
         )
 
-    def test_moves_nested_table_caption_with_eight_space_indent(self):
+    def test_converts_nested_table_caption_with_eight_space_indent(self):
         source = (
             "- 親\n"
             "    - 子\n"
             "\n"
+            "        Table: ビルドの確認結果\n"
+            "\n"
             "        | 確認 | 結果 |\n"
             "        |---|---|\n"
             "        | コンパイル | 成功 |\n"
-            "\n"
-            "        Table: ビルドの確認結果\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -660,17 +734,16 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n"
             "        | 確認 | 結果 |\n"
             "        |---|---|\n"
-            "        | コンパイル | 成功 |\n"
-            "\n",
+            "        | コンパイル | 成功 |\n",
         )
 
-    def test_moves_labeled_indented_table_caption(self):
+    def test_converts_labeled_indented_table_caption(self):
         source = (
+            "    Table: ラベル付き {#tbl:sample}\n"
+            "\n"
             "    | 項目 |\n"
             "    |---|\n"
             "    | A |\n"
-            "\n"
-            "    Table: ラベル付き {#tbl:sample}\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -679,19 +752,18 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n"
             "    | 項目 |\n"
             "    |---|\n"
-            "    | A |\n"
-            "\n",
+            "    | A |\n",
         )
 
     def test_dedents_multiline_indented_table_caption(self):
         source = (
-            "    | 項目 |\n"
-            "    |---|\n"
-            "    | A |\n"
-            "\n"
             "    Table: 1 行目\n"
             "    2 行目\n"
             "        3 行目\n"
+            "\n"
+            "    | 項目 |\n"
+            "    |---|\n"
+            "    | A |\n"
         )
         self.assertEqual(
             convert_captions(source),
@@ -702,67 +774,61 @@ class ConvertCaptionsTest(unittest.TestCase):
             "\n"
             "    | 項目 |\n"
             "    |---|\n"
-            "    | A |\n"
-            "\n",
+            "    | A |\n",
         )
 
-    def test_moves_indented_caption_for_table_without_outer_pipes(self):
-        source = "    項目 | 値\n    ---|---\n    A | B\n\n    Table: 表のキャプション\n"
-        self.assertTrue(convert_captions(source).startswith(
+    def test_converts_indented_caption_for_table_without_outer_pipes(self):
+        source = "    Table: 表のキャプション\n\n    項目 | 値\n    ---|---\n    A | B\n"
+        self.assertEqual(
+            convert_captions(source),
             "    表のキャプション\n"
             "    {: .docsfw-caption .docsfw-table-caption }\n"
             "\n"
             "    項目 | 値\n"
-        ))
+            "    ---|---\n"
+            "    A | B\n",
+        )
 
     def test_treats_tab_and_four_spaces_as_the_same_indent(self):
         source = (
+            "\tTable: 同じ幅\n"
+            "\n"
             "    | 項目 |\n"
             "    |---|\n"
             "    | A |\n"
-            "\n"
-            "\tTable: 同じ幅\n"
         )
-        self.assertTrue(convert_captions(source).startswith(
-            "    同じ幅\n"
-            "    {: .docsfw-caption .docsfw-table-caption }\n"
+        result, stderr = self._convert_with_stderr(source)
+        self.assertTrue(result.startswith(
+            "\t同じ幅\n"
+            "\t{: .docsfw-caption .docsfw-table-caption }\n"
             "\n"
             "    | 項目 |\n"
         ))
+        self.assertEqual(stderr, "")
 
     def test_keeps_table_caption_when_indent_differs_from_table(self):
         source = (
-            "    | 項目 | 値 |\n"
-            "    |---|---|\n"
-            "    | A | B |\n"
-            "\n"
             "Table: 表のキャプション\n"
-        )
-        self.assertEqual(
-            convert_captions(source),
+            "\n"
             "    | 項目 | 値 |\n"
             "    |---|---|\n"
             "    | A | B |\n"
-            "\n"
-            "表のキャプション\n"
-            "{: .docsfw-caption .docsfw-table-caption }\n",
         )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
 
-    def test_keeps_deeper_table_caption_in_place(self):
+    def test_keeps_deeper_table_caption_as_paragraph_with_warning(self):
         source = (
+            "        Table: 深いキャプション\n"
+            "\n"
             "    | 項目 |\n"
             "    |---|\n"
             "    | A |\n"
-            "\n"
-            "        Table: 深いキャプション\n"
         )
-        result = convert_captions(source)
-        self.assertTrue(result.startswith("    | 項目 |\n"))
-        self.assertIn(
-            "\n        深いキャプション\n"
-            "        {: .docsfw-caption .docsfw-table-caption }\n",
-            result,
-        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
 
     def test_keeps_indented_codeblock_caption_as_text(self):
         source = (
@@ -781,22 +847,22 @@ class ConvertCaptionsTest(unittest.TestCase):
         source = (
             "- 東地区\n"
             "\n"
+            "    Table: 東地区の件数\n"
+            "\n"
             "    | 項目 | 件数 |\n"
             "    |---|---|\n"
             "    | 完了 | 12 |\n"
-            "\n"
-            "    Table: 東地区の件数\n"
             "\n"
             "    件数は 2026-03 時点の値です。\n"
             "\n"
             "- 出荷前の確認\n"
             "    - ビルド\n"
             "\n"
+            "        Table: ビルドの確認結果\n"
+            "\n"
             "        | 確認 | 結果 |\n"
             "        |---|---|\n"
             "        | コンパイル | 成功 |\n"
-            "\n"
-            "        Table: ビルドの確認結果\n"
         )
         html = markdown.markdown(
             convert_captions(source),
@@ -853,13 +919,13 @@ class ConvertCaptionsTest(unittest.TestCase):
         )
         self.assertEqual(collector.note_depths, [(1, 1)])
 
-    def test_moves_labeled_table_caption_with_id_and_classes(self):
+    def test_converts_labeled_table_caption_with_id_and_classes(self):
         source = (
+            "Table: ラベル付き {#tbl:sample}\n"
+            "\n"
             "| 項目 |\n"
             "|---|\n"
             "| A |\n"
-            "\n"
-            "Table: ラベル付き {#tbl:sample}\n"
         )
         result = convert_captions(source)
         self.assertTrue(result.startswith(
@@ -869,8 +935,8 @@ class ConvertCaptionsTest(unittest.TestCase):
             "| 項目 |\n"
         ))
 
-    def test_moves_caption_for_table_without_outer_pipes(self):
-        source = "項目 | 値\n---|---\nA | B\n\nTable: 表のキャプション\n"
+    def test_converts_caption_for_table_without_outer_pipes(self):
+        source = "Table: 表のキャプション\n\n項目 | 値\n---|---\nA | B\n"
         self.assertTrue(convert_captions(source).startswith(
             "表のキャプション\n"
             "{: .docsfw-caption .docsfw-table-caption }\n"
@@ -878,15 +944,11 @@ class ConvertCaptionsTest(unittest.TestCase):
             "項目 | 値\n"
         ))
 
-    def test_keeps_table_caption_when_preceding_block_is_not_table(self):
+    def test_keeps_table_caption_without_following_table_as_paragraph_with_warning(self):
         source = "通常の段落。\n\nTable: 表ではないキャプション\n"
-        self.assertEqual(
-            convert_captions(source),
-            "通常の段落。\n"
-            "\n"
-            "表ではないキャプション\n"
-            "{: .docsfw-caption .docsfw-table-caption }\n",
-        )
+        result, stderr = self._convert_with_stderr(source)
+        self.assertEqual(result, source)
+        self.assertIn("'Table:' 行の直後に表がありません", stderr)
 
     def test_keeps_codeblock_caption_below_table(self):
         source = "| 項目 |\n|---|\n| A |\n\nCodeBlock: コードのキャプション\n"
@@ -927,6 +989,29 @@ class ConvertCaptionsTest(unittest.TestCase):
             result,
         )
         self.assertEqual(result.count("<figure"), 1)
+
+    def test_wraps_plantuml_internal_caption_before_following_table_caption(self):
+        source = (
+            "```plantuml\n"
+            "@startuml\n"
+            "caption 図の見出し\n"
+            "Alice -> Bob\n"
+            "@enduml\n"
+            "```\n"
+            "\n"
+            "Table: 表の見出し\n"
+            "\n"
+            "| 項目 | 値 |\n"
+            "|---|---|\n"
+            "| A | B |\n"
+        )
+        result = convert_captions(source)
+        self.assertIn(
+            '<figcaption class="docsfw-caption" markdown="span">図の見出し</figcaption>',
+            result,
+        )
+        self.assertIn("表の見出し\n{: .docsfw-caption .docsfw-table-caption }", result)
+        self.assertLess(result.index("</figure>"), result.index("表の見出し"))
 
     def test_external_caption_takes_priority_over_plantuml_internal_caption(self):
         source = (

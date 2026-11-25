@@ -4,6 +4,8 @@
 
 Markdown admonition と Doxygen タグの対応は次のとおりです。
 
+Table: Markdown admonition と Doxygen タグの対応
+
 | Markdown admonition | Doxygen タグ |
 |---|---|
 | NOTE | `@note` |
@@ -12,8 +14,6 @@ Markdown admonition と Doxygen タグの対応は次のとおりです。
 | WARNING | `@warning` |
 | CAUTION | `@attention` |
 | DEPRECATED | `@deprecated` |
-
-Table: Markdown admonition と Doxygen タグの対応
 
 > [!NOTE]
 > これは補足情報です。

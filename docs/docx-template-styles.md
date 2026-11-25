@@ -8,6 +8,8 @@ Pandoc 標準の見出しスタイル (`Heading 1` 等) と構文ハイライト
 
 ## 独自スタイル一覧
 
+Table: docsfw 固有の docx カスタム スタイル一覧
+
 | styleId | Word 表示名 | 種別 | 用途 | 背景色 | 参照元 |
 |---|---|---|---|---|---|
 | `SourceCode` | Source Code | 段落 | コード ブロック (枠線あり) | なし | Pandoc docx writer |
@@ -20,8 +22,6 @@ Pandoc 標準の見出しスタイル (`Heading 1` 等) と構文ハイライト
 | `BlockTextWarning` | Block Text Warning | 段落 | admonition WARNING | `#FFFCE5` | `admonition.lua` |
 | `BlockTextCaution` | Block Text Caution | 段落 | admonition CAUTION | `#FFF6F5` | `admonition.lua` |
 | `BlockTextDeprecated` | Block Text Deprecated | 段落 | admonition DEPRECATED | `#F6F8FA` | `admonition.lua` |
-
-Table: docsfw 固有の docx カスタム スタイル一覧
 
 ## 見出しの段落番号
 
@@ -70,6 +70,8 @@ HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` 
 
 `admonition.lua` は GitHub-style alert 構文 (`> [!NOTE]` 等) を検出し、docx では `custom-style` 属性付き Div に変換します。各タイプと対応スタイルの関係は次のとおりです。
 
+Table: docx 用 admonition スタイルの定義詳細一覧
+
 | タイプ | custom-style 値 | styleId | 基底スタイル | 左罫線色 | 背景色 |
 |---|---|---|---|---|---|
 | NOTE | Block Text Note | `BlockTextNote` | Block Text | `#1F6FEB` | `#F0FAFF` |
@@ -78,8 +80,6 @@ HTML 出力では `inline-code-style.lua` は何も行わず、`html-style.css` 
 | WARNING | Block Text Warning | `BlockTextWarning` | Block Text | `#9A6700` | `#FFFCE5` |
 | CAUTION | Block Text Caution | `BlockTextCaution` | Block Text | `#DA3633` | `#FFF6F5` |
 | DEPRECATED | Block Text Deprecated | `BlockTextDeprecated` | Block Text | `#6A737D` | `#F6F8FA` |
-
-Table: docx 用 admonition スタイルの定義詳細一覧
 
 各スタイルは Block Text (`styleId=af3`) を基底 (`basedOn`) とします。  
 `af3` の実際の値はテンプレートによって異なります。`word/styles.xml` を確認してください。

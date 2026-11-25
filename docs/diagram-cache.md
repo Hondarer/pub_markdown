@@ -18,12 +18,12 @@ HTML 出力では、両フィルターがファイルを一切生成せずに早
 
 画像のファイル名は、図のソースのハッシュ値のみに基づいて決定されます。
 
+Table: フィルター別のキャッシュ ファイル命名規則とハッシュ対象
+
 | フィルター | ファイル名 | ハッシュの対象 |
 |---|---|---|
 | PlantUML | `puml_<sha1>.svg` / `puml_<sha1>.png` | 前処理後のテキストをエンコードした結果 |
 | Mermaid | `mermaid_<sha1>.svg` / `mermaid_<sha1>.png` | フェンス本文 |
-
-Table: フィルター別のキャッシュ ファイル命名規則とハッシュ対象
 
 言語や詳細度はファイル名に含まれません。同一の図はバリアントや実行回数を問わず 1 つのファイルに集約されます。
 
@@ -68,13 +68,13 @@ make cleandocs
 
 `pub_markdown_core.sh` が設定します。
 
+Table: 図キャッシュ制御の環境変数一覧
+
 | 変数 | 内容 |
 |---|---|
 | `DOCSFW_DIAGRAM_CACHE_DIR` | キャッシュのルート (絶対パス) |
 | `DOCSFW_DIAGRAM_CACHE_HITS_DIR` | 当該実行における参照記録の格納先ディレクトリ |
 | `PUB_MARKDOWN_DIAGRAM_CACHE_KEEP_DAYS` | 参照されない画像を保持する日数 (既定値: 7) |
-
-Table: 図キャッシュ制御の環境変数一覧
 
 `DOCSFW_DIAGRAM_CACHE_DIR` が未設定の場合、キャッシュは無効となり、フィルターは `--resource-path` の先頭ディレクトリへ画像を生成します。フィルターを単体で Pandoc に渡す場合はこの経路が適用されます。
 

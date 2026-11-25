@@ -1,8 +1,9 @@
 # コード ブロックと図のキャプション
 
 図やコード ブロックのキャプションは、ブロックの直後に空行を挟んで `Figure:` 行または `CodeBlock:` 行を記述して指定します。  
-[表の `Table:`](table-caption.md) と同じく、キャプションをフェンスや画像属性の外に出す記法です。  
-図とコード ブロックのキャプションはブロックの下に表示し、表のキャプションは表の上に表示します。
+キャプションをフェンスや画像属性の外に出す記法です。  
+図とコード ブロックのキャプションはブロックの後ろに置き、ブロックの下に表示します。  
+表のキャプション ([表の `Table:`](table-caption.md)) は表の前に置き、表の上に表示します。ソース上の位置と表示位置が一致します。
 
 ````text
 ```mermaid
@@ -25,14 +26,14 @@ Figure: システム構成 {#fig:arch}
 
 対象ブロックの種類に応じて、`Figure:` と `CodeBlock:` を使い分けます。
 
+Table: 対象ブロック種別に応じたキャプション記法とラベル接頭辞
+
 | 対象ブロックの種類 | 推奨記法 | キャプションの扱い | ラベルの接頭辞 |
 |---|---|---|---|
 | Mermaid | `Figure:` | 図のキャプション | `fig:` |
 | PlantUML | `Figure:` | 図のキャプション | `fig:` |
 | 画像 1 個だけの段落 | `Figure:` | 図のキャプション | `fig:` |
 | ソース コード全般 (`c`、`makefile`、`text` など、言語指定なしを含む) | `CodeBlock:` | コード ブロックのキャプション | `lst:` |
-
-Table: 対象ブロック種別に応じたキャプション記法とラベル接頭辞
 
 図と判定するコード ブロック言語の一覧は `bin_internal/diagram-languages.txt` で一元管理しています。新しい図言語を追加する場合は、この一覧へ言語名を追加してください。
 
@@ -60,7 +61,7 @@ Table: 対象ブロック種別に応じたキャプション記法とラベル�
 
 キャプションの正規化と描画を分離しています。
 
-1. `codeblock-caption-line.lua` が `Figure:` / `CodeBlock:` 段落を取り込み、直前のコード ブロックの `caption` 属性と identifier、または画像の `Figure` 要素へ畳み込みます。
+1. `codeblock-caption-line.lua` が `Figure:` / `CodeBlock:` 段落を取り込み、直前のコード ブロックの `caption` 属性と identifier、または画像の `Figure` 要素へ畳み込みます。`Table:` 段落は扱いません ([表のキャプション](table-caption.md) を参照)。
 2. 描画は種類ごとに分かれます。
     - Mermaid は `mermaid.lua` が処理します。HTML 出力では図を画像化せず、`div.docsfw-mermaid` 内に描画元を保持する Figure として出力します。それ以外の出力形式では画像化した Figure を出力します。
     - PlantUML は `plantuml.lua` が処理します。`caption` 属性がない場合は、PlantUML ソース内の `caption` 行や `@startuml` のタイトルをキャプションとして採用します。
@@ -97,6 +98,8 @@ pandoc-crossref はオプションであり、導入していない環境でも�
 
 pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。文書のフロント マターで上書きできます。
 
+Table: pandoc-crossref 採番用メタデータと日本語既定値
+
 | メタデータ | 既定値 | 用途 |
 |---|---|---|
 | `figureTitle` | 図 | 図のキャプションの接頭辞 |
@@ -106,18 +109,16 @@ pandoc-crossref のラベルは `set-meta.lua` が日本語に設定します。
 | `tblPrefix` | 表 | 本文中の表の参照の接頭辞 |
 | `lstPrefix` | リスト | 本文中のリストの参照の接頭辞 |
 
-Table: pandoc-crossref 採番用メタデータと日本語既定値
-
 ## 廃止した記法
 
 次の 2 つの記法は廃止しました。いずれも Pandoc 固有の拡張であり、GitHub などの Web 表示で言語の判定に失敗するためです。
+
+Table: 廃止されたコード ブロック記法と代替記法の一覧
 
 | 廃止した記法 | 置き換え |
 |---|---|
 | ` ```{.mermaid caption="キャプション"} ` | ` ```mermaid ` と `Figure: キャプション` |
 | ` ```text:Sample.txt ` | ` ```text ` と `CodeBlock: Sample.txt` |
-
-Table: 廃止されたコード ブロック記法と代替記法の一覧
 
 廃止した `caption` 属性が残っている場合は、標準エラー出力へ警告を出力したうえで属性を破棄します。キャプションは出力されません。  
 `Figure:` 行または `CodeBlock:` 行を併記している場合は、警告を出力したうえでキャプション行の値を採用します。

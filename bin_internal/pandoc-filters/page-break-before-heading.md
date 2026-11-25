@@ -53,6 +53,8 @@ page-break-before-heading:
 
 すべてのオプションは `page-break-before-heading:` 配下のネスト YAML で指定します。
 
+Table: page-break-before-heading の設定オプション一覧
+
 | オプション | 既定値 | 説明 |
 |-----------|-----------|------|
 | `enabled` | false | フィルターの有効フラグ |
@@ -64,8 +66,6 @@ page-break-before-heading:
 | `image-height-chars` | 300 | 画像高さ不明時のフォールバック文字数 |
 | `table-row-chars` | 80 | 表の 1 行あたりの推定文字数 |
 | `debug` | false | デバッグ情報を stderr に出力します。 |
-
-Table: page-break-before-heading の設定オプション一覧
 
 `heading-level-always` と `heading-level-to` は、`shift-heading-level-by` を設定した場合は **出力上のレベル** で指定します。設定しない場合は Markdown ソース上のレベルで指定します。
 
@@ -152,6 +152,8 @@ effective_level = raw_level + shift_heading_level_by
 
 ### 要素ごとの文字数換算
 
+Table: 要素ごとのページ高さ文字数換算仕様
+
 | 要素 | 換算方法 |
 |------|----------|
 | 段落 | テキスト文字数 + 20 (余白) |
@@ -161,8 +163,6 @@ effective_level = raw_level + shift_heading_level_by
 | 図 | 画像高さ推定値 + 30 (キャプション) |
 | リスト | 各項目の合計 + 20 |
 | 引用 | 内容の合計 + 30 |
-
-Table: 要素ごとのページ高さ文字数換算仕様
 
 ### 画像高さの推定
 
@@ -175,6 +175,8 @@ Table: 要素ごとのページ高さ文字数換算仕様
 
 ### 対応画像形式
 
+Table: 対応画像形式と寸法取得方法の一覧
+
 | 形式 | 取得方法 |
 |------|----------|
 | PNG | ファイル ヘッダー (IHDR チャンク) |
@@ -182,11 +184,11 @@ Table: 要素ごとのページ高さ文字数換算仕様
 | SVG | `height` 属性 → `viewBox` 属性 |
 | その他 | フォールバック値 |
 
-Table: 対応画像形式と寸法取得方法の一覧
-
 ### 対応単位
 
 Markdown 属性や SVG で指定可能な単位は次のとおりです。
+
+Table: 画像寸法の対応単位と変換仕様
 
 | 単位 | 変換 |
 |------|------|
@@ -196,8 +198,6 @@ Markdown 属性や SVG で指定可能な単位は次のとおりです。
 | mm | × 3.78 |
 | in | × 96 |
 | % | ページ高さの割合 |
-
-Table: 画像寸法の対応単位と変換仕様
 
 ## 制限事項
 

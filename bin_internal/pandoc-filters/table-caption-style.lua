@@ -1,7 +1,9 @@
 -- table-caption-style.lua
 --
--- 表のキャプションを table の外へ移し、本文幅で表示できるようにする。
--- pandoc-crossref が採番したキャプションもそのまま移動するため、この
+-- 表のキャプションを table の外へ出し、表の前に本文幅で表示できるようにする。
+-- Table: 段落は前処理 (table-caption-preprocess.py) が表の後ろへ並べ替え、
+-- Pandoc の table_captions 拡張が表のキャプションとして取り込む。
+-- pandoc-crossref が採番したキャプションもそのまま出すため、この
 -- フィルターは pandoc-crossref より後に適用する。
 
 function Table(elem)

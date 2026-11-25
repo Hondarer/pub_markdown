@@ -9,6 +9,8 @@ GitHub 形式の admonition (注意書きブロック) を Pandoc フィルタ�
 
 ## 対応タイプ
 
+Table: admonition フィルターの対応タイプと用途
+
 | タイプ | 用途 |
 |---|---|
 | NOTE | 補足情報 |
@@ -17,8 +19,6 @@ GitHub 形式の admonition (注意書きブロック) を Pandoc フィルタ�
 | WARNING | 注意が必要な情報 |
 | CAUTION | 危険や破壊的操作への警告 |
 | DEPRECATED | 非推奨の機能や代替案の情報 |
-
-Table: admonition フィルターの対応タイプと用途
 
 ## 技術的背景
 
@@ -61,6 +61,8 @@ CSS は `styles/html/html-style.css` に定義します。
 ブロック本体の背景はページ背景のままとし、見出し帯だけを基準色の 10% で塗ります。  
 アイコンは `mask-image` に SVG を与え、基準色で塗ります。
 
+Table: admonition タイプ別の HTML スタイル仕様
+
 | タイプ | クラス | 見出し | 基準色 (枠・アイコン・見出し文字) | 見出し帯 |
 |---|---|---|---|---|
 | NOTE | `note` | Note | #1f6feb (青) | #e9f1fd |
@@ -69,8 +71,6 @@ CSS は `styles/html/html-style.css` に定義します。
 | WARNING | `warning` | Warning | #9a6700 (黄) | #f5f0e6 |
 | CAUTION | `danger` | Caution | #da3633 (赤) | #fbebeb |
 | DEPRECATED | `deprecated` | Deprecated | #6a737d (灰) | #f0f1f2 |
-
-Table: admonition タイプ別の HTML スタイル仕様
 
 見出し帯の色は `color-mix()` で基準色から導き、表の値は非対応環境向けのフォールバックです。  
 寸法と、動的発行との一致のさせ方は [動的発行基盤](../../docs/livedocs-design.md) の「admonition の実装」を参照してください。
@@ -89,6 +89,8 @@ HTML は絵文字なし、docx は絵文字付きです。
 
 各スタイルは Block Text を基底 (`basedOn`) とします。
 
+Table: admonition タイプ別の docx 段落スタイル仕様
+
 | タイプ | custom-style 値 | styleId (Pandoc 生成) | 基底スタイル |
 |---|---|---|---|
 | NOTE | Block Text Note | BlockTextNote | Block Text |
@@ -97,8 +99,6 @@ HTML は絵文字なし、docx は絵文字付きです。
 | WARNING | Block Text Warning | BlockTextWarning | Block Text |
 | CAUTION | Block Text Caution | BlockTextCaution | Block Text |
 | DEPRECATED | Block Text Deprecated | BlockTextDeprecated | Block Text |
-
-Table: admonition タイプ別の docx 段落スタイル仕様
 
 スタイルの定義詳細 (styleId・背景色・左罫線色・styles.xml 追加例・`.dotx` 編集手順) は [docs/docx-template-styles.md](../../docs/docx-template-styles.md) を参照してください。
 

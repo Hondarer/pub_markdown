@@ -19,11 +19,11 @@ Under item.
 
 Body five.
 
+Table: caption five
+
 | a | b |
 |---|---|
 | 1 | 2 |
-
-Table: caption five
 
 ###### Level six
 

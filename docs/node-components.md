@@ -8,6 +8,8 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 管理対象の宣言は `bin_internal/package.json` です。  
 版の固定は `bin_internal/package-lock.json` が担います。
 
+Table: docsfw の必須 Node.js パッケージ一覧
+
 | パッケージ | 役割 | 検出 |
 |---|---|---|
 | `@mermaid-js/mermaid-cli` | Mermaid を SVG へ変換する `mmdc` | 実行ファイル |
@@ -18,8 +20,6 @@ docsfw が実行時に使用する npm パッケージと、その解決手順�
 | `sharp` | SVG スクリーンショットの再エンコード | モジュール |
 | `minisearch` | HTML 検索インデックスと UMD バンドル | モジュールと `dist/umd` のファイル |
 | `@plantuml/core` | Pandoc HTML と動的発行のブラウザー上 PlantUML | モジュール |
-
-Table: docsfw の必須 Node.js パッケージ一覧
 
 `mermaid` は `package.json` の直接依存ではありません。  
 `@mermaid-js/mermaid-cli` が解決できれば、その配下の `mermaid.min.js` を使用します。  
@@ -64,13 +64,13 @@ WSL から Windows 用のツリーを読み込むと、`Could not load the "shar
 
 ## オンデマンド導入
 
+Table: Node コンポーネントの状態に応じたオンデマンド導入動作
+
 | 状態 | 動作 |
 |---|---|
 | 必須パッケージがすべて揃っている | npm を実行しません |
 | 一部だけ欠けている | 欠けたトップレベルだけ `npm install --no-save <name>@<lockfile の version>` します |
 | 必須パッケージがすべて欠けている | `bin_internal/` で `npm ci` します |
-
-Table: Node コンポーネントの状態に応じたオンデマンド導入動作
 
 `npm ci` と部分インストールのあいだは `PUPPETEER_SKIP_DOWNLOAD=1` です。  
 Chrome 本体の取得は npm の処理とは独立しています。
@@ -81,19 +81,21 @@ Chrome の導入は静的発行だけが行います。動的発行は図をブ�
 
 ## ブラウザー
 
+Table: OS 別の静的発行用ブラウザー要件と動作
+
 | OS | 動作 |
 |---|---|
 | Windows | Microsoft Edge が必須です。存在しない場合はエラーで終了します。Puppeteer 用 Chrome はダウンロードしません |
 | Linux | `PUPPETEER_EXECUTABLE_PATH` が実行可能な Chrome を指すときはそれを使用します |
 | Linux | 外部 Chrome が存在しないときは、puppeteer モジュール解決のあと `npx puppeteer browsers install chrome` と `chrome-headless-shell` を実行します |
 
-Table: OS 別の静的発行用ブラウザー要件と動作
-
 npm パッケージがグローバルで揃っていても、Linux で外部 Chrome が存在しなければブラウザーの導入が実行されます。
 
 ## 呼び出し元
 
 後続の処理は解決済みパスのみを使用します。
+
+Table: Node コンポーネントの用途と環境変数の対応
 
 | 用途 | 環境変数 |
 |---|---|
@@ -104,8 +106,6 @@ npm パッケージがグローバルで揃っていても、Linux で外部 Chr
 | `@plantuml/core` | `DOCSFW_PLANTUML_CORE` |
 | puppeteer | `DOCSFW_PUPPETEER_ROOT` |
 
-Table: Node コンポーネントの用途と環境変数の対応
-
 グローバルから採用したパッケージは、名前とディレクトリの対を `DOCSFW_NODE_GLOBAL_PACKAGES` へ渡します。  
 `bin_internal/docsfw-prefer-global-modules.js` が子プロセスの解決先をそのディレクトリへ固定し、ローカル `node_modules` が残っていても採用したグローバルを使用します。
 
@@ -113,12 +113,12 @@ Table: Node コンポーネントの用途と環境変数の対応
 ES モジュールの裸の指定子は ES モジュール ローダーだけが解決し、`require` のフック、`NODE_PATH`、グローバルの `node_modules` のいずれも参照しません。  
 `import` を固定しないと、グローバルだけにパッケージがある環境で `.mjs` の読み込みが `ERR_MODULE_NOT_FOUND` になります。
 
+Table: モジュール解決経路ごとのパッケージ固定方法
+
 | 解決の経路 | 固定の方法 |
 |---|---|
 | `require` | `Module._resolveFilename` を差し替え、採用先を含む `node_modules` からパッケージ名のまま解決します |
 | `import` | `module.registerHooks()` の解決フックで、解決の起点を採用先の `node_modules` へ変更します |
-
-Table: モジュール解決経路ごとのパッケージ固定方法
 
 `module.registerHooks()` を持たない Node.js では、`module.register()` で `bin_internal/docsfw-prefer-global-modules.mjs` を登録します。  
 判定の規則は `bin_internal/docsfw-pinned-packages.js` に集約し、どちらの経路でも同じディレクトリを選びます。

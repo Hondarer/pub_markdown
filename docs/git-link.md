@@ -53,6 +53,8 @@ Source リンクは `source-file` を `target` に指定し、シングルペー
 
 ### provider の判定と URL 形式
 
+Table: Git プロバイダー別の判定条件と blob URL 形式一覧
+
 | provider | host の判定 | blob URL 形式 |
 |---|---|---|
 | github | `github.com` | `<base>/blob/<ref>/<path>` |
@@ -60,8 +62,6 @@ Source リンクは `source-file` を `target` に指定し、シングルペー
 | gitbucket | host に `gitbucket` を含む、または設定で指定 | `<base>/blob/<ref>/<path>` |
 | gitea | 設定で指定 | `<base>/blob/<ref>/<path>` |
 | git (汎用) | 上記いずれにも該当しません。 | `<base>/blob/<ref>/<path>` |
-
-Table: Git プロバイダー別の判定条件と blob URL 形式一覧
 
 GitHub / GitBucket / Gitea は同じ `/blob/` 形式で、GitLab のみ `/-/blob/` 形式です。  
 GitBucket がコンテキスト パス配下 (例: `https://host/gitbucket/owner/repo`) で運用されている場合も、remote URL がそのパスを含んでいれば正しく解決されます。
@@ -133,14 +133,14 @@ MkDocs による動的発行 (`make servedocs` / `make livedocs`) も、同じ b
 
 静的発行との違いを次に示します。
 
+Table: Git リンク解決の静的発行と動的発行における差異
+
 | | 静的発行 | 動的発行 |
 |---|---|---|
 | 解決の実装 | `bin_internal/get_file_git_url.sh` | `livedocs/bin/git_link.py` |
 | 解決の単位 | ファイルごとに `git log -1` | リポジトリごとに 1 パスで一括取得 |
 | Doxygen HTML へのフォールバック | あり | なし (Doxygen ボタンを別に持つため) |
 | ラベルの決定 | 読み込み後の JavaScript | テンプレート (言語が 1 つに固定されるため) |
-
-Table: Git リンク解決の静的発行と動的発行における差異
 
 詳細は [動的発行基盤](livedocs-design.md) の「Git 単一ページ リンク」を参照してください。
 

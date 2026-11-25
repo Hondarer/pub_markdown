@@ -2273,6 +2273,7 @@ while ((${#_pending_files[@]} > 0)); do
                     echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html"
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${openapi_md}" | \
+                        python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                         "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${logo_icon_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2310,6 +2311,7 @@ while ((${#_pending_files[@]} > 0)); do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_self_contain%.*}.html"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
+                            python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                             "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$openapi_md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_logo_icon_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2348,6 +2350,7 @@ while ((${#_pending_files[@]} > 0)); do
                         echo "  > ${pubRoot}/${langElement}${details_suffix}/${publish_file_docx%.*}.docx"
                         _pm_pandoc_stderr=$(mktemp)
                         echo "${openapi_md}" | \
+                            python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                             "$PANDOC" -s --shift-heading-level-by=-1 --eol=lf --metadata title="$openapi_md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
                                 --lua-filter="${SCRIPT_DIR}/pandoc-filters/set-meta.lua" \
@@ -2792,6 +2795,7 @@ while ((${#_pending_files[@]} > 0)); do
                 build_doxygen_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "${up_dir}docsfw-doxygen-icon.svg"
                 build_git_link_metadata_args "$file" "${workspaceFolder}/${pubRoot}/${langElement}${details_suffix}/${publish_file%.*}.html" "$up_dir"
                 echo "${md_body}" | \
+                    python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                     "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${logo_icon_metadata_args[@]}" "${ui_metadata_args[@]}" "${search_metadata_args[@]}" "${docx_link_metadata_args[@]}" "${docx_download_name_metadata_args[@]}" "${details_link_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" "${git_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                         "${defaults_metadata_file_args[@]}" \
                         --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -2833,6 +2837,7 @@ while ((${#_pending_files[@]} > 0)); do
                     # Markdown の最初にコメントがあると、レベル 1 のタイトルを取り除くことができない。md_body 生成時に awk でコード フェンス外のレベル 1 見出しを取り除いている。
                     _pm_pandoc_stderr=$(mktemp)
                     echo "${md_body}" | \
+                        python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                         "$PANDOC" -s "${html_toc_args[@]}" --shift-heading-level-by=-1 -N --eol=lf --metadata title="$md_title" --metadata "lang=${langElement}" --metadata "docsfw-site-name=${siteName}" --metadata "docsfw-variant=${langElement}${details_suffix}" "${navigation_link_metadata_args[@]}" "${self_contain_logo_icon_metadata_args[@]}" "${self_contain_ui_metadata_args[@]}" "${self_contain_search_metadata_args[@]}" "${doxygen_link_metadata_args[@]}" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \
@@ -2876,6 +2881,7 @@ while ((${#_pending_files[@]} > 0)); do
                     set_job_phase "DOCX 生成 lang=${langElement} details=${current_details}"
                     progress_log "DOCX 生成を開始しました file=${file#${workspaceFolder}/} lang=${langElement} details=${current_details}"
                     echo "${md_body}" | \
+                        python3 "${SCRIPT_DIR}/table-caption-preprocess.py" "${file#${workspaceFolder}/}" | \
                         "$PANDOC" -s --shift-heading-level-by=-1 --metadata shift-heading-level-by=-1 --eol=lf --metadata title="$md_title" -f markdown+hard_line_breaks${markExtension}${mathExtension} \
                             "${defaults_metadata_file_args[@]}" \
                             --lua-filter="${SCRIPT_DIR}/pandoc-filters/insert-toc.lua" \

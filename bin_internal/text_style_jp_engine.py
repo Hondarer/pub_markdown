@@ -9,7 +9,7 @@ import re
 import unicodedata
 from enum import Enum, auto
 from itertools import product
-from typing import Callable, List, Match, Optional, Pattern, Sequence, Tuple, Union
+from typing import Callable, List, Match, Optional, Pattern, Sequence, Set, Tuple, Union
 
 
 _URL_RE = re.compile(r"https?://\S+")
@@ -106,6 +106,8 @@ class DiagnosticCollector:
     def __init__(self) -> None:
         self.findings: List[Finding] = []
         self._line: int = 0
+        # 規則が行の並べ替えとして報告済みの行。unattributed-change の対象から外す。
+        self.covered_lines: Set[int] = set()
 
     def set_line(self, line: int) -> None:
         self._line = line
@@ -162,7 +164,7 @@ def record_unattributed_line_changes(
         return
     before_lines = before.split("\n")
     after_lines = after.split("\n")
-    reported_lines = {finding.line for finding in collector.findings}
+    reported_lines = {finding.line for finding in collector.findings} | collector.covered_lines
     matcher = difflib.SequenceMatcher(None, before_lines, after_lines, autojunk=False)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":

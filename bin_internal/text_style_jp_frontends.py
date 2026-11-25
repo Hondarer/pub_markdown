@@ -19,6 +19,7 @@ from text_style_jp_engine import (
     replace_nbsp_with_space,
     style_text,
 )
+from table_caption_position import SUPPORTED_MODES as _TABLE_CAPTION_MODES, relocate_table_captions
 
 
 _CPP_COMMENT_QUOTE_RE = re.compile(
@@ -1776,11 +1777,42 @@ def style_source_comments(
     raise ValueError(f"unsupported source comment mode: {language}")
 
 
+def apply_table_caption_position(
+    text: str,
+    mode: str,
+    collector: Optional["DiagnosticCollector"] = None,
+    migrate: bool = False,
+) -> str:
+    """表の後ろに置かれた Table: 段落を、直前の表の前へ移す。
+
+    ``migrate`` が False なら、直後が表でない Table: 段落だけを移す (既定の規則)。
+    True なら、表の直後の Table: 段落をすべて移す (後置きの文書を移行する規則)。
+    """
+    if mode not in _TABLE_CAPTION_MODES:
+        return text
+    moved_text, moves = relocate_table_captions(text, mode, migrate=migrate)
+    if collector is not None:
+        lines = text.split("\n")
+        for caption_start, table_start, caption_end in moves:
+            collector.set_line(caption_start)
+            collector.add(
+                1,
+                lines[caption_start - 1].strip(),
+                f"{table_start} 行目の表の直前へ移動",
+                "table-caption-position",
+                message="表のキャプションを表の直前へ移動",
+            )
+            # 並べ替えの差分は、表の 2 行前 (挿入位置の直前の行) からキャプションの直後の空行までに現れる。
+            collector.covered_lines.update(range(max(table_start - 2, 1), caption_end + 2))
+    return moved_text
+
+
 def style_by_mode(
     text: str,
     mode: str,
     collector: Optional["DiagnosticCollector"] = None,
 ) -> str:
+    text = apply_table_caption_position(text, mode, collector=collector)
     if mode == "markdown":
         return normalize_blank_lines(style_markdown(text, collector=collector))
     if mode in {"c", "cpp", "csharp", "python", "shell", "make"}:

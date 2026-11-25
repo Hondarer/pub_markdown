@@ -14,6 +14,8 @@
 MkDocs Material は `9.7.7` に固定します。  
 独自の `theme/partials/` がこの版のテンプレートを基にしているため、許容する版を広げる場合はテンプレートと関連テストを確認します。
 
+Table: 静的発行と動的発行の依存を採用する条件
+
 | 項目 | Pandoc の Node.js 依存 | MkDocs の Python 依存 |
 |---|---|---|
 | 探索順 | グローバル、ローカルの順 | システム Python、専用 venv の順 |
@@ -23,8 +25,6 @@ MkDocs Material は `9.7.7` に固定します。
 | 全部不足する場合 | `npm ci` | 固定版一覧から全依存を導入 |
 | 補完する版 | `package-lock.json` の固定版 | `requirements.txt` の固定版 |
 | 既存のローカル環境 | 依存を再確認して再利用 | 依存を再確認して再利用 |
-
-Table: 静的発行と動的発行の依存を採用する条件
 
 ## 不足分はシステム側を参照する venv へ導入する
 
@@ -56,14 +56,14 @@ MkDocs は選択した Python の `-m mkdocs` で実行します。
 システム Python に pip がない場合、pip キャッシュのパスは出力せず、`.venv` だけを対象とします。  
 Node.js 側は `node_modules` と npm キャッシュを対象とし、Linux では Puppeteer のブラウザー キャッシュも保持します。
 
+Table: 依存の充足状況に応じた CI のキャッシュ対象
+
 | 状態 | Pandoc の Node.js 依存のキャッシュ対象 | MkDocs の Python 依存のキャッシュ対象 |
 |---|---|---|
 | システム側に全依存が揃っている | パッケージ導入用には原則不要 | 原則不要 |
 | 一部不足・版が範囲外 | `bin_internal/node_modules/` と npm キャッシュ | `livedocs/.venv/` と pip キャッシュ |
 | 全部不足 | npm キャッシュ。`npm ci` は `node_modules/` を再作成する | `livedocs/.venv/` と pip キャッシュ |
 | 既存のローカル環境を再利用 | `bin_internal/node_modules/` | `livedocs/.venv/` |
-
-Table: 依存の充足状況に応じた CI のキャッシュ対象
 
 npm と pip のキャッシュ パスは、`npm config get cache` と `python -m pip cache dir` で取得します。  
 Puppeteer のブラウザー キャッシュは、npm パッケージが揃っている場合も別途必要になることがあります。

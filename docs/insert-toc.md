@@ -93,14 +93,14 @@ short-title: "CalcException.cs"
 
 言語別・詳細別のバリアントを持ちます (`<lang>` は `ja` / `en`)。
 
+Table: short-title フィールド名と適用条件一覧
+
 | フィールド名 | 適用条件 |
 |---|---|
 | `short-title` | 常に適用 (ベース) |
 | `short-title-<lang>` | 指定言語のビルド時 |
 | `short-title-details` | details=true のビルド時 |
 | `short-title-<lang>-details` | 指定言語 かつ details=true のビルド時 |
-
-Table: short-title フィールド名と適用条件一覧
 
 採用優先順位 (details=true、lang=ja の場合):  
 `short-title-ja-details` > `short-title-ja` > `short-title-details` > `short-title`

@@ -6,6 +6,8 @@ Unicode は各文字に「東アジア幅 (East Asian Width)」プロパティ (
 
 UAX #11 は各文字の表示幅を 6 種類のプロパティ値で定義しています。
 
+Table: Unicode East Asian Width の分類一覧
+
 | プロパティ値 | 略称 | 幅の扱い |
 |---|---|---|
 | Fullwidth | F | 常に全角 (2 セル) |
@@ -15,13 +17,13 @@ UAX #11 は各文字の表示幅を 6 種類のプロパティ値で定義して
 | Neutral | N | 文脈依存 (既定は半角) |
 | Ambiguous | A | 文脈依存 (CJK で全角、西洋で半角) |
 
-Table: Unicode East Asian Width の分類一覧
-
 問題になるのは Ambiguous (A) の文字群で、文脈が確定できない場合は半角として扱うことが規格上の既定とされています。
 
 ## 影響を受ける主な文字範囲
 
 次のコード ポイント範囲が Ambiguous に分類される代表例で、日本語フォントでは全角グリフが割り当てられていることが多いです。
+
+Table: Ambiguous に分類される主な文字範囲と具体例
 
 | コード ポイント範囲 | 文字の種類 | 例 |
 |---|---|---|
@@ -34,8 +36,6 @@ Table: Unicode East Asian Width の分類一覧
 | U+2500-U+257F | 罫線文字 (Box Drawing) | `─` `│` `┌` `┘` |
 | U+25A0-U+25FF | 幾何図形 | `■` `□` `●` `○` `▲` |
 | U+2600-U+26FF | その他記号 | `★` `☆` `♪` |
-
-Table: Ambiguous に分類される主な文字範囲と具体例
 
 罫線文字と幾何図形はテキスト UI やターミナルの表組みで頻繁に使われるため、実害が大きいです。
 
@@ -56,6 +56,8 @@ Table: Ambiguous に分類される主な文字範囲と具体例
 
 端末エミュレーターは `wcwidth()` / `wcswidth()` 相当のロジックで文字幅を判定します。Ambiguous 文字の扱いは実装によって異なります。
 
+Table: 端末エミュレーター別の Ambiguous 文字の扱いと設定可否
+
 | 環境 | Ambiguous の既定の扱い | 設定変更 |
 |---|---|---|
 | Windows Terminal | 半角 (1 セル) | 未対応 ([issue #10844](https://github.com/microsoft/terminal/issues/10844)) |
@@ -64,8 +66,6 @@ Table: Ambiguous に分類される主な文字範囲と具体例
 | iTerm2 (macOS) | 設定可 | 対応 |
 | Alacritty | 設定可 | [PR #1049](https://github.com/alacritty/alacritty/pull/1049) で対応 |
 | mlterm | 設定可 | 対応 |
-
-Table: 端末エミュレーター別の Ambiguous 文字の扱いと設定可否
 
 ## 発生する問題
 
@@ -89,12 +89,12 @@ Markdown ドキュメントを日本語環境で編集する場合も同じ注�
 
 ## まとめ
 
+Table: Ambiguous 文字幅問題へのレイヤー別対策一覧
+
 | 層 | 対策 | 備考 |
 |---|---|---|
 | アプリ | Ambiguous 文字を避け ASCII 記号を使用します。 | 最も確実 |
 | フォント | 半角グリフを持つ端末専用フォントを使用します。 | Illusion 等 |
 | コンソール | Ambiguous width 設定を Wide に変更します。 | 対応端末のみ |
-
-Table: Ambiguous 文字幅問題へのレイヤー別対策一覧
 
 フォントとコンソールの組み合わせによって挙動が変わるため、アプリ側で Ambiguous 文字に依存しない設計にしておくことが、クロスプラットフォームでの安定した表示に最も効果的です。

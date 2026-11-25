@@ -24,12 +24,12 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 ### 設定値
 
+Table: mergeSubfolderDocs の設定値に応じた動作
+
 | 設定値 | 動作 |
 |--------|------|
 | 空または未指定 | 機能無効 |
 | `alias=path` | 表示名と実パスを分離して使用 |
-
-Table: mergeSubfolderDocs の設定値に応じた動作
 
 `path` はワークスペース ルートからの相対パス、またはワークスペース配下を指す絶対パスで指定し、マージ対象ディレクトリそのものを指します。  
 `path` には `$DOCSFW_HOME/docs` や `${DOCSFW_HOME}/docs` のように、Shell 形式の環境変数を使用できます。未定義の環境変数を参照した場合はエラーです。  
@@ -40,14 +40,16 @@ Table: mergeSubfolderDocs の設定値に応じた動作
 
 ### 基本ルール
 
+Table: サブフォルダー統合における実パスと仮想パスの変換規則
+
 | 種類 | 実パス | 仮想パス |
 |------|--------|----------|
 | 追加ドキュメント サブフォルダー配下のドキュメント | `{configuredPath}/{path}` | `{mdRoot}/{alias}/{path}` |
 | メイン ドキュメント | `{mdRoot}/{path}` | `{mdRoot}/{path}` |
 
-Table: サブフォルダー統合における実パスと仮想パスの変換規則
-
 ### パス変換の具体例
+
+Table: makefw および testfw ドキュメントのパス変換具体例
 
 | ステップ | makefw の例 | testfw の例 |
 |----------|-------------|-------------|
@@ -56,9 +58,9 @@ Table: サブフォルダー統合における実パスと仮想パスの変換�
 | mdRoot からの相対 | `makefw/make-local.md` | `testfw/how-to-mock.md` |
 | HTML 出力 | `docs/ja/html/makefw/make-local.html` | `docs/ja/html/testfw/how-to-mock.html` |
 
-Table: makefw および testfw ドキュメントのパス変換具体例
-
 alias を使用する例:
+
+Table: エイリアスを使用したパス変換の具体例
 
 | ステップ | docsfw の例 |
 |----------|-------------|
@@ -67,13 +69,13 @@ alias を使用する例:
 | 仮想パス | `docs/docsfw/pipeline.md` |
 | HTML 出力 | `docs/ja/html/docsfw/pipeline.html` |
 
-Table: エイリアスを使用したパス変換の具体例
-
 ## relativeFile パラメーター
 
 ### 受け入れ可能なパス形式
 
 `mergeSubfolderDocs` が指定されている場合、`relativeFile` に次のパス形式を受け入れます。
+
+Table: relativeFile パラメーターで指定可能なパス形式と動作
 
 | パス形式 | 例 | 動作 |
 |----------|-----|------|
@@ -81,9 +83,9 @@ Table: エイリアスを使用したパス変換の具体例
 | 実パス (主) | `framework/makefw/docs/make-local.md` / `framework/docsfw/docs/pipeline.md` / `.claude/skills/create-mock/SKILL.md` | 実パスを内部で仮想パスに変換して処理 |
 | 仮想パス (拡張) | `docs/makefw/make-local.md` | 仮想パスを実パスに変換して処理 |
 
-Table: relativeFile パラメーターで指定可能なパス形式と動作
-
 ### ディレクトリ指定時の動作
+
+Table: ディレクトリ指定時のパスと処理対象
 
 | 指定パス | 処理対象 |
 |----------|----------|
@@ -94,8 +96,6 @@ Table: relativeFile パラメーターで指定可能なパス形式と動作
 | `framework/docsfw/docs` | `framework/docsfw/docs` 配下のみ (実パス指定) |
 | `docs/skills` | `.claude/skills` 配下のみ |
 | `.claude/skills` | `.claude/skills` 配下のみ (実パス指定) |
-
-Table: ディレクトリ指定時のパスと処理対象
 
 ## 目次生成
 
@@ -122,11 +122,11 @@ mergeSubfolderDocs: doxyfw=framework/doxyfw/docs makefw=framework/makefw/docs te
 
 この場合のパス変換:
 
+Table: ネストしたドキュメント ルートにおけるパス変換と出力例
+
 | 実パス | 仮想パス | HTML 出力 |
 |--------|----------|-----------|
 | `framework/testfw/gtest/docs/MANUAL_BUILD.md` | `docs/testfw/gtest/MANUAL_BUILD.md` | `docs/ja/html/testfw/gtest/MANUAL_BUILD.html` |
-
-Table: ネストしたドキュメント ルートにおけるパス変換と出力例
 
 ## 相対リンクの読み替え
 
@@ -135,11 +135,11 @@ Table: ネストしたドキュメント ルートにおけるパス変換と出
 
 例:
 
+Table: ドキュメント統合に伴う相対リンク読み替え例
+
 | 元文書の実パス | 元リンク | 仮想配置でのリンク |
 |---|---|---|
 | `.agents/skills/README.md` | `../../app/example/docs/skill-sync.md` | `../example/skill-sync.md` |
-
-Table: ドキュメント統合に伴う相対リンク読み替え例
 
 外部 URL とアンカーのみのリンクは、この処理による読み替え対象外です。  
 公開対象外ファイルへの相対リンクは、対象ファイルを追加せず、表示文字列と元のリンク先を残した非リンクの参照へ変換します。  

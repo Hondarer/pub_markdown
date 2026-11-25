@@ -19,6 +19,8 @@ Word の段落スタイルは `styles/docx/docx-template.dotx` が持ち、印�
 Markdown 上の見出しレベルを基準に、次を正本とします。  
 HTML のタグ名ではなく Markdown のレベルで定める点が重要です。理由は「見出しレベルの対応」で述べます。
 
+Table: 見出しレベル別のタイポグラフィ書式仕様
+
 | | font-size | font-weight | line-height | color |
 |---|---|---|---|---|
 | H1 (ページ見出し) | 19px | 700 | 40px | `#757575` |
@@ -29,8 +31,6 @@ HTML のタグ名ではなく Markdown のレベルで定める点が重要で�
 | H6 | 17px | 400 | 20px | `#757575` |
 | 本文 | 16px | 400 | 1.5 | `#333333` |
 | 本文のリスト項目 (`ul` / `ol` の `li`) | 16px | 400 | 1.6 | `#333333` |
-
-Table: 見出しレベル別のタイポグラフィ書式仕様
 
 見出しの余白は全レベルで `margin: 20px 0 10px` とします。  
 `letter-spacing` は全レベルで `normal`、`text-transform` は全レベルで `none` とします。
@@ -66,6 +66,8 @@ H1 から H4 が 19px、H5 と H6 が 17px です。
 pandoc は `--shift-heading-level-by=-1` を使用します。  
 Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H1>$title$</H1>` へ移り、残りの見出しは 1 段浅い HTML タグになります。
 
+Table: 静的発行における Markdown 見出しと HTML 要素の対応
+
 | Markdown | HTML |
 |---|---|
 | H1 | `.span9` または `.span12` 直下の `h1` (ページ見出し) |
@@ -74,8 +76,6 @@ Markdown の H1 はテンプレート (`styles/html/html-template.html`) の `<H
 | H4 | `h3` |
 | H5 | `h4` |
 | H6 | `h5` |
-
-Table: 静的発行における Markdown 見出しと HTML 要素の対応
 
 ページ見出しと Markdown の H2 は、どちらも `h1` として出力されます。  
 両者は書式が同じであるため、`h1` に対する 1 つの指定で十分です。
@@ -90,12 +90,12 @@ MkDocs は H1 をページ見出しとして本文に残すため、Markdown の
 書式は次の 2 か所で実装します。  
 片方だけを変更しないでください。
 
+Table: 出力形式別の見出しスタイル定義ファイル一覧
+
 | 出力 | ファイル |
 |---|---|
 | 静的発行 | `styles/html/html-style.css` |
 | 動的発行 | `livedocs/assets/docsfw-pandoc-style.css` |
-
-Table: 出力形式別の見出しスタイル定義ファイル一覧
 
 pandoc 側は、本文色を `body` に指定し、見出しは HTML タグを 1 段浅く読み替えて指定します。  
 `line-height` は CDN の Bootstrap `template.css` が同じ値を与えていますが、外部 CSS への暗黙の依存を残さないため明示します。  
@@ -172,6 +172,8 @@ docx 出力の実装は [docx テンプレートのスタイル定義](docx-temp
 どちらの出力も、見出しの末尾に `¶` のパーマリンクを表示します。  
 MkDocs は Material の `toc.permalink` が `<a class="headerlink">` を生成し、pandoc は `styles/html/docsfw-nav.js` が同じ構造を実行時に付与します。
 
+Table: 見出しパーマリンク アンカーの表示仕様
+
 | 項目 | 仕様 |
 |---|---|
 | 文字 | `¶` (`U+00B6`) |
@@ -181,8 +183,6 @@ MkDocs は Material の `toc.permalink` が `<a class="headerlink">` を生成�
 | 見出しのホバーと `:target` | `opacity: 1` で表示 |
 | 色 | `#ADADAD`。アンカー自体のホバーとフォーカスでリンクのホバー色 `#346FA8`、下線なし |
 | 印刷 | `display: none` |
-
-Table: 見出しパーマリンク アンカーの表示仕様
 
 `opacity` と色は瞬時に切り替えます。  
 Material は既定で `transition: color .25s, opacity 125ms` を持ちますが、静的発行に対応する指定がないため打ち消します。

@@ -38,9 +38,9 @@ CodeBlock: リストとして採番されるコード {#lst:crossref_listing}
 
 [@tbl:crossref_table] に例を示します。
 
+Table: 表のキャプション {#tbl:crossref_table}
+
 |No.|内容     |
 |--:|---------|
 |  1|てすと   |
 |  2|テスト   |
-
-Table: 表のキャプション {#tbl:crossref_table}

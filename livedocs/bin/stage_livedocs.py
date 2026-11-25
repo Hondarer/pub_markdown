@@ -792,12 +792,36 @@ def _indent_lines(lines, indent):
     return [(indent + line) if line else line for line in lines]
 
 
+def _is_followed_by_table(lines, index, indent):
+    """``lines[index]`` 以降が、空行に続く ``indent`` と同じ字下げの表かを判定する。
+
+    ``index`` は ``Table:`` 段落の直後の行を指す。``Table:`` 段落と表の間には
+    空行を 1 行以上必要とし、表は区切り行を含むブロックとして判定する。
+    """
+    start = index
+    while index < len(lines) and not lines[index].strip():
+        index += 1
+    if index == start or index >= len(lines) or _FENCE_RE.match(lines[index]):
+        return False
+    if _indent_width(_leading_indent(lines[index])) != _indent_width(indent):
+        return False
+    while index < len(lines) and lines[index].strip():
+        if _TABLE_SEPARATOR_RE.match(lines[index]):
+            return True
+        index += 1
+    return False
+
+
 def _check_caption_label_prefix(caption_kind, label):
     """キャプション種別とラベル接頭辞の不一致があれば標準エラーへ警告する。"""
     if not label or ":" not in label:
         return
     lprefix = label.split(":", 1)[0]
-    if caption_kind == "Figure" and lprefix != "fig":
+    if caption_kind == "Table" and lprefix != "tbl":
+        sys.stderr.write(
+            f"[stage_livedocs] 警告: 'Table:' 行に表以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
+        )
+    elif caption_kind == "Figure" and lprefix != "fig":
         sys.stderr.write(
             f"[stage_livedocs] 警告: 'Figure:' 行に図以外のラベル接頭辞 '{{#{label}}}' が指定されています。\n"
         )
@@ -820,10 +844,11 @@ def convert_captions(text):
       段落として残します。
     - 画像 1 個だけの段落の直後に置かれた行頭の ``Figure:`` も、画像とともに
       ``<figure>`` へ包みます (``CodeBlock:`` は通常の段落として残します)。
-    - 直前の表と字下げの幅が一致する ``Table:`` は、その字下げを保ったまま表の
-      前へ移して ``.docsfw-table-caption`` クラスを付けます。箇条書きの項目内も
-      同じです。
-    - それ以外は ``.docsfw-caption`` クラスを付けた段落として、その位置に残します。
+    - 空行を挟んで直後に同じ字下げの表が続く ``Table:`` は、その位置のまま
+      ``.docsfw-table-caption`` クラスを付けます。箇条書きの項目内も同じです。
+      直後が表でない ``Table:`` は、警告を出して通常の段落として残します。
+    - それ以外の ``CodeBlock:`` / ``Figure:`` は ``.docsfw-caption`` クラスを付けた
+      段落として、その位置に残します。
 
     ``{#fig:xxx}`` などのラベルは id として残します。
 
@@ -845,21 +870,12 @@ def convert_captions(text):
     internal_caption = ""
     # 直前に閉じた画像 1 個だけの行 ``(out 上の行位置, re.Match)``。
     image_block = None
-    # 直前に閉じた Markdown 表の ``(out 上の開始位置, 終了位置, 先頭の字下げ)``。
-    table_block = None
-    block_start = None
-    block_indent = ""
-    block_has_table_separator = False
 
     while index < len(lines):
         line = lines[index]
         fence_match = _FENCE_RE.match(line)
         if fence_match:
-            table_block = None
             image_block = None
-            block_start = None
-            block_indent = ""
-            block_has_table_separator = False
             marker = fence_match.group(1)[0]
             if fence is None:
                 if diagram_block is not None and internal_caption:
@@ -927,10 +943,6 @@ def convert_captions(text):
                 non_diagram_fence_end = None
                 image_block = None
                 internal_caption = ""
-                table_block = None
-                block_start = None
-                block_indent = ""
-                block_has_table_separator = False
                 continue
 
             if caption_kind == "Figure" and is_after_non_diagram:
@@ -943,10 +955,6 @@ def convert_captions(text):
                 non_diagram_fence_end = None
                 image_block = None
                 internal_caption = ""
-                table_block = None
-                block_start = None
-                block_indent = ""
-                block_has_table_separator = False
                 continue
 
             label, paragraph = _split_caption_label(paragraph)
@@ -1000,6 +1008,23 @@ def convert_captions(text):
                 continue
 
             is_table_caption = caption_kind == "Table"
+            if is_table_caption and diagram_block is not None and internal_caption:
+                # 表のキャプションは図に属さない。直前の図はソース内のキャプションで包む。
+                _wrap_diagram_with_caption(out, diagram_block, internal_caption)
+                diagram_block = None
+                internal_caption = ""
+            if is_table_caption and not _is_followed_by_table(lines, index, caption_indent):
+                # 直後が表でない Table: はキャプションにせず、通常の段落として残す。
+                sys.stderr.write(
+                    "[stage_livedocs] 警告: 'Table:' 行の直後に表がありません。"
+                    "表のキャプションは、空行を挟んで表の直前に記述してください。\n"
+                )
+                out.extend(lines[para_start_index:index])
+                diagram_block = None
+                non_diagram_fence_end = None
+                image_block = None
+                internal_caption = ""
+                continue
             attrs = [".docsfw-caption"]
             if is_table_caption:
                 attrs.append(".docsfw-table-caption")
@@ -1008,21 +1033,10 @@ def convert_captions(text):
             # attr_list はブロック要素に対して、属性だけの行を要求する。
             # 本文と属性行の間に空行を置くと、字下げを外した後に別ブロックになる。
             paragraph.append("{{: {} }}".format(" ".join(attrs)))
-            moved_before_table = False
-            if is_table_caption and table_block is not None:
-                block_start, _block_end, table_indent = table_block
-                if _indent_width(caption_indent) == _indent_width(table_indent):
-                    out[block_start:block_start] = _indent_lines(paragraph, table_indent) + [""]
-                    moved_before_table = True
-            if not moved_before_table:
-                out.extend(_indent_lines(paragraph, caption_indent))
+            out.extend(_indent_lines(paragraph, caption_indent))
             diagram_block = None
             non_diagram_fence_end = None
             image_block = None
-            table_block = None
-            block_start = None
-            block_indent = ""
-            block_has_table_separator = False
             continue
 
         if line.strip() and diagram_block is not None and internal_caption:
@@ -1036,25 +1050,11 @@ def convert_captions(text):
             internal_caption = ""
 
         if line.strip():
-            table_block = None
-            if block_start is None:
-                block_start = len(out)
-                block_indent = _leading_indent(line)
-                block_has_table_separator = False
-            if _TABLE_SEPARATOR_RE.match(line):
-                block_has_table_separator = True
             at_para_end = index + 1 >= len(lines) or not lines[index + 1].strip()
             if at_paragraph_start and at_para_end:
                 img_match = _IMAGE_ONLY_RE.match(line)
                 if img_match:
                     image_block = (len(out), img_match)
-        elif block_start is not None:
-            table_block = (
-                (block_start, len(out), block_indent) if block_has_table_separator else None
-            )
-            block_start = None
-            block_indent = ""
-            block_has_table_separator = False
         out.append(line)
         index += 1
 

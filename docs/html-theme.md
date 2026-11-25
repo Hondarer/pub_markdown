@@ -29,12 +29,12 @@ MkDocs の `vendor_assets.py` は MkDocs 用 SVG を `assets/` へ配置し、�
 
 ## HTML と DOCX の分岐
 
+Table: 出力形式別の図描画方式の対応一覧
+
 | 出力 | Mermaid | PlantUML |
 |---|---|---|
 | Pandoc HTML / MkDocs | ブラウザーで描画 | `@plantuml/core` でブラウザー描画 |
 | DOCX | 従来の Mermaid CLI と画像変換 | 従来のローカル CLI / サーバーと画像変換 |
-
-Table: 出力形式別の図描画方式の対応一覧
 
 HTML の Lua フィルターは、図ソースをエスケープして `div.docsfw-mermaid` または `div.docsfw-plantuml` に残します。  
 図番号、参照 ID、キャプションは Pandoc 側で確定し、ブラウザーでは図の内側だけを置換します。  

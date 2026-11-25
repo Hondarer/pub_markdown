@@ -103,11 +103,11 @@ Figure: コンポーネント間の接続
 
 ### 環境変数
 
+Table: ブラウザー再利用制御の環境変数一覧
+
 | 変数名 | 説明 |
 |---|---|
 | `PUB_MARKDOWN_BROWSER_WS_FILE` | WebSocket エンドポイントが書かれたファイルのパス |
-
-Table: ブラウザー再利用制御の環境変数一覧
 
 ### WebSocket エンドポイント ファイル
 
@@ -238,13 +238,13 @@ Linux または WSL で実行可能な外部ブラウザーが `PUPPETEER_EXECUT
 
 ### プラットフォーム別の動作
 
+Table: プラットフォーム別の使用ブラウザーとフォールバック動作
+
 | プラットフォーム | browser-server.js のブラウザー | フォールバック時のブラウザー |
 |---|---|---|
 | Linux | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
 | WSL | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium | chrome-wrapper.sh 経由の外部 Chrome または Puppeteer Chromium |
 | Windows (Git Bash) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) | Edge (`PUPPETEER_EXECUTABLE_PATH` 経由) |
-
-Table: プラットフォーム別の使用ブラウザーとフォールバック動作
 
 ## フォールバック機構
 

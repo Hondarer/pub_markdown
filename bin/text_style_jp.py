@@ -27,6 +27,7 @@ from text_style_jp_engine import (
     validate_text,
 )
 from text_style_jp_frontends import (
+    apply_table_caption_position,
     detect_mode_from_path,
     style_by_mode,
     style_markdown,
@@ -361,8 +362,8 @@ def run_tests() -> bool:
             "2. Windows の **既知パスの走査** (旧来互換): `c:\\*\\graphviz*\\bin\\dot.exe`",
         ),
         (
-            "表に続いて、`Table:` または `:` を記載して表のキャプションを指定する。",
-            "表に続いて、`Table:` または `:` を記載して表のキャプションを指定する。",
+            "表の前に、`Table:` を記載して表のキャプションを指定する。",
+            "表の前に、`Table:` を記載して表のキャプションを指定する。",
         ),
         (
             "この時点で $(CFLAGS) が展開される。",
@@ -399,6 +400,8 @@ def run_tests() -> bool:
         ("| 第3章 |", "| 第 3 章 |"),
         ("|---|---|\n| C | D |", "|---|---|\n| C | D |"),
         (
+            "Table: Markdown grid tables による表\n"
+            "\n"
             "+-----+-----------+\n"
             "|     | L2 and L3 |\n"
             "| L1  +-----+-----+\n"
@@ -411,9 +414,9 @@ def run_tests() -> bool:
             "|           | FFF |\n"
             "|   EEEEE   +-----+\n"
             "|           | GGG |\n"
-            "+-----------+-----+\n"
+            "+-----------+-----+",
+            "Table: Markdown grid tables による表\n"
             "\n"
-            "Table: Markdown pipe tables による表 2",
             "+-----+-----------+\n"
             "|     | L2 and L3 |\n"
             "| L1  +-----+-----+\n"
@@ -426,9 +429,7 @@ def run_tests() -> bool:
             "|           | FFF |\n"
             "|   EEEEE   +-----+\n"
             "|           | GGG |\n"
-            "+-----------+-----+\n"
-            "\n"
-            "Table: Markdown pipe tables による表 2",
+            "+-----------+-----+",
         ),
         ("1. first\n   continuation\n2. second", "1. first  \n   continuation\n2. second"),
         ("- item\n  detail\n- next", "- item  \n  detail\n- next"),
@@ -2030,6 +2031,15 @@ def _build_parser(prog: str, description: str, allow_mode_option: bool):
     parser.add_argument("--check", action="store_true", help="変更が必要かチェックのみ (変更が必要な場合は終了コード 1)")
     parser.add_argument("--dry-run", action="store_true", help="変更を適用せず、検出された変更をルール名付きで表示する")
     parser.add_argument("-i", "--in-place", action="store_true", help="入力ファイルを直接上書きする")
+    parser.add_argument(
+        "--migrate-table-caption",
+        action="store_true",
+        help=(
+            "表の直後の Table: 段落を、すべて直前の表のキャプションとして表の前へ移す。"
+            "後置きだけで書かれた文書の移行専用で、ほかの整形は行わない。"
+            "前置きで書かれた文書には使わない"
+        ),
+    )
     if allow_mode_option:
         parser.add_argument(
             "--mode",
@@ -2098,16 +2108,24 @@ def main(
     requested_mode = getattr(args, "mode", "auto")
     mode = _resolve_mode(args.input, requested_mode, default_mode)
 
+    if args.migrate_table_caption:
+        # 移行ではキャプションの移動だけを行い、ほかの整形規則は適用しない。
+        def transform(source, collector=None):
+            return apply_table_caption_position(source, mode, collector=collector, migrate=True)
+    else:
+        def transform(source, collector=None):
+            return style_by_mode(source, mode, collector=collector)
+
     if args.dry_run:
         collector = DiagnosticCollector()
-        styled = style_by_mode(text, mode, collector=collector)
+        styled = transform(text, collector=collector)
         record_unattributed_line_changes(text, styled, collector)
         if collector.findings:
             sys.stdout.write(_format_findings_stylish(args.input or "(stdin)", collector.findings))
             return 1
         return 0
 
-    styled = style_by_mode(text, mode)
+    styled = transform(text)
 
     if args.check:
         if text != styled:

@@ -40,6 +40,8 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 
 ### 静的発行と動的発行
 
+Table: 静的発行と動的発行の機能比較
+
 | | 静的発行 | 動的発行 |
 |---|---|---|
 | 実装 | `bin_internal/pub_markdown_core.sh` (Pandoc) | `livedocs/` (MkDocs) |
@@ -47,8 +49,6 @@ Pandoc による静的発行と、MkDocs による動的発行の 2 本の発行
 | 配布 | `file://` で単体動作 | Web サーバーからの配信が前提 |
 | バリアント | `ja` / `en` × 通常 / `-details` を同時に出力 | 言語は 1 つ選び、その通常版と詳細版を同時に配信する |
 | 図 | HTML はブラウザー描画、docx はビルド時に画像化 | ブラウザー上でレンダリング |
-
-Table: 静的発行と動的発行の機能比較
 
 動的発行の利用手順は [livedocs/README.md](livedocs/README.md)、設計は [動的発行基盤](docs/livedocs-design.md) を参照してください。
 

@@ -34,16 +34,16 @@ CodeBlock: codeblock 2
 
 ## 表の繰り返し (タイトルあり)
 
+Table: table 1
+
 | 項目 | 値 |
 | ---- | -- |
 | t1   | 10 |
 | t2   | 20 |
 
-Table: table 1
+Table: table 2
 
 | 項目 | 値 |
 | ---- | -- |
 | u1   | 30 |
 | u2   | 40 |
-
-Table: table 2

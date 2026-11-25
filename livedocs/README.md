@@ -95,6 +95,8 @@ make stopdocs
 
 ## 構成
 
+Table: livedocs スクリプトのファイル構成と役割
+
 | パス | 内容 |
 |---|---|
 | `bin/stage_livedocs.py` | 収集、前処理、リンク書き換え、書き出し |
@@ -121,17 +123,15 @@ make stopdocs
 | `requirements.txt` | 不足分を導入する Python 依存の固定版 |
 | `requirements-compatible.txt` | 既存 Python 環境から採用する版の範囲 |
 
-Table: livedocs スクリプトのファイル構成と役割
-
 生成物は `pages/livedocs/` に出力します。
+
+Table: livedocs の生成ファイルと内容
 
 | パス | 内容 |
 |---|---|
 | `pages/livedocs/mkdocs.yml` | `mkdocs.yml.in` から生成した設定 |
 | `pages/livedocs/src/` | ステージング済みの Markdown (`docs_dir`) |
 | `pages/livedocs/site/` | `mkdocs build` の出力 |
-
-Table: livedocs の生成ファイルと内容
 
 `pages/` はワークスペースの `.gitignore` で除外済みです。  
 `make cleandocs` は `pages/doxygen` 以外を削除するため、`pages/livedocs` も同時に削除されます。

@@ -379,15 +379,9 @@ Debug.WriteLine("日本");
 表には原則として内容を表すキャプションを付けます。  
 表題の付け方は [表のキャプション](../table-caption.md) を参照してください。  
 段落内で改行したキャプションの出力例は [表のキャプションのサンプル](table-caption.md) を参照してください。  
-表に続いて `Table:` を記述して表のキャプションを指定します。  
+表の直前に `Table:` 段落を記述して表のキャプションを指定します。  
 キャプションの末尾に `{#tbl:xxx}` を記述すると、pandoc-crossref による採番と相互参照の対象になります。  
 キャプションは、Pandoc による静的発行と MkDocs による動的発行のどちらでも表の上に表示されます。
-
-|No.|内容     |
-|--:|---------|
-|  1|てすと   |
-|  2|テスト   |
-|  3|Test     |
 
 Table: 表のキャプション (`Table: 表のキャプション`)
 
@@ -397,12 +391,9 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 |  2|テスト   |
 |  3|Test     |
 
-: 表のキャプション (`: 表のキャプション`)
-
-上記の行頭のコロンだけの形式 (`: キャプション`) については、Pandoc では表のキャプションとしてサポートされますが、MkDocs による動的発行では解釈されず、コロンを含む段落としてそのまま表示されるため、非推奨です。  
-表のキャプションには `Table:` を使用してください。
-
 セル内に改行を挿入する場合は、`<br />` を使用します。
+
+Table: セル内での改行を含む表
 
 |No.|ヘッダー 1 行目<br />ヘッダー 2 行目|
 |--:|---------|
@@ -410,10 +401,10 @@ Table: 表のキャプション (`Table: 表のキャプション`)
 |  2|テスト   |
 |  3|Test     |
 
-Table: セル内での改行を含む表
-
 次の形式 (Markdown pipe tables) については、Pandoc ではサポートされますが、MkDocs や [Markdown Preview Enhanced](https://marketplace.visualstudio.com/items?itemName=shd101wyy.markdown-preview-enhanced) プラグインでのプレビューは現時点で非サポートのため、非推奨です。  
 [Table: support grid tables](https://github.com/shd101wyy/vscode-markdown-preview-enhanced/issues/1571)
+
+Table: Markdown pipe tables による表 1
 
 +------------------+-------------+
 | Distance         | Time        |
@@ -424,7 +415,7 @@ Table: セル内での改行を含む表
 | 56               | 78          |
 +------------------+-------------+
 
-Table: Markdown pipe tables による表 1
+Table: Markdown pipe tables による表 2
 
 +-----+-----------+
 |     | L2 and L3 |
@@ -439,8 +430,6 @@ Table: Markdown pipe tables による表 1
 |   EEEEE   +-----+
 |           | GGG |
 +-----------+-----+
-
-Table: Markdown pipe tables による表 2
 
 箇条書きの項目の中に表を置くときは、表と同じ字下げで `Table:` を記述します。  
 例は [箇条書きの項目に入れる表](list-table.md) を参照してください。
