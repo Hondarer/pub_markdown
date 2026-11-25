@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 残課題一覧 (backlog)
-最終更新日時: 2026-11-24 09:12:23 JST
+最終更新日時: 2026-11-25 20:15:00 JST
 最終更新エージェント: claude code / セッション ID: session_01KJc53RaT4Cei9nCXSSZqH1
 稼働 OS: Linux (WSL)
 上流文書: `261124-table-caption-before-table-overview.md` (全体管理文書)、`261124-table-caption-before-table-design.md` (最終仕様)、`261124-table-caption-before-table-discussion.md` (検討用 Markdown)、`261124-table-caption-before-table-lightadr.md` (簡易 ADR)。いずれも削除されている場合があります。
@@ -27,6 +27,8 @@
 | BL-002 | ブロック引用の中の Table: 段落の判定 | 作業中摘出 | 低 | 未着手 |
 | BL-003 | Doxygen コメントで字下げが表と異なる Table: 段落の検出 | 作業中摘出 | 低 | 未着手 |
 | BL-004 | test_livedocs_path_spaces の venv 判定のテストの失敗 | 作業中摘出 | 低 | 未着手 |
+| BL-005 | space-inside-brackets が URL の直後の閉じ括弧の前の空白を指摘する | 作業中摘出 | 低 | 未着手 |
+| BL-006 | --dry-run の指摘の桁が実際の変更位置と一致しない場合がある | 作業中摘出 | 低 | 未着手 |
 
 ## BL-001 text_style_jp.py の自己テスト「カスタムマッチャ」の失敗
 
@@ -115,3 +117,47 @@
 
 - **恒久対応案**: システム環境の判定条件 (必要なパッケージの検出) と、この環境で不足しているものを調べ、判定かテストの前提のどちらを直すかを決めます。
 - **参考情報**: `framework/docsfw/bin_test/test_livedocs_path_spaces.py`、livedocs の venv 準備の処理。
+
+## BL-005 space-inside-brackets が URL の直後の閉じ括弧の前の空白を指摘する
+
+### 概要と問題点
+
+- **現状の事象**: `text_style_jp.py` の `space-inside-brackets` は、`(see: https://man7.org/linux/man-pages/man7/socket.7.html )` のように、URL と閉じ括弧の間に置いた空白を削除の対象として指摘します。
+- **本来あるべき姿**: URL の範囲を区切るための空白を誤検出しないこと、または URL を括弧で囲む書き方をリポジトリで 1 つに定め、規則と記述をそろえること。
+
+### 経緯と見送り理由
+
+- **摘出契機**: 移行前からある `--dry-run` の指摘を個別に判断した際に、`app/cplat/prod/include/cplat/net/socket.h` の 268 行と 270 行で検出しました。空白を削除すると、Doxygen が閉じ括弧まで URL として扱うおそれがあるため、この 2 件は据え置きました。
+- **今回の見送り理由**: 規則の実装の変更、または URL の書き方の規範の決定が必要で、表のキャプションの変更の範囲外のためです。
+
+### 影響範囲とリスク
+
+- **影響対象**: C/C++ のコメントと Markdown で、括弧の中の末尾に URL を書いた箇所。
+- **放置した場合のリスク**: 該当ファイルの `--dry-run` の指摘が常に残り、`--in-place` を適用すると URL の自動リンクが壊れる可能性があります。
+
+### 推奨される対応策
+
+- **恒久対応案**: `space-inside-brackets` で、直前の語が URL の場合を例外にします。あわせて、Doxygen と Pandoc の両方で、`(see: <URL>)` の形で閉じ括弧が URL に含まれないかを確認し、書き方を規範に定めます。
+- **参考情報**: `framework/docsfw/bin_internal/text_style_jp_engine.py`、`app/cplat/prod/include/cplat/net/socket.h`、AGENTS.md の `see: <URL>` の規則。
+
+## BL-006 --dry-run の指摘の桁が実際の変更位置と一致しない場合がある
+
+### 概要と問題点
+
+- **現状の事象**: 移行前からある指摘を判断したサブ エージェントから、`text_style_jp.py --dry-run` が示す `行:桁` の桁が、`--in-place` の実際の差分の位置と合わない場合があると報告されました。桁は空白の挿入位置を示しており、指摘の対象の語の位置とは異なる場合があります。文字単位でない可能性も指摘されています。
+- **本来あるべき姿**: 桁の意味 (文字単位か、挿入位置か) が文書に定義され、表示がその定義と一致すること。
+
+### 経緯と見送り理由
+
+- **摘出契機**: 移行前からある指摘の個別判断の作業中に報告されました。
+- **今回の見送り理由**: 桁の算出は表のキャプションの変更と無関係で、再現の条件の調査が必要なためです。
+
+### 影響範囲とリスク
+
+- **影響対象**: `--dry-run` と `--check` の出力を読む利用者とエージェント。
+- **放置した場合のリスク**: 指摘の箇所の特定に時間がかかり、判断を誤る可能性があります。
+
+### 推奨される対応策
+
+- **恒久対応案**: 全角文字と半角文字を含む行で、報告される桁と差分の位置を比べて再現条件を特定し、桁の単位を文字単位に統一するか、文書に定義を記載します。
+- **参考情報**: `framework/docsfw/bin_internal/text_style_jp_engine.py` の `DiagnosticCollector`、`framework/docsfw/docs/text_style_jp.md`。

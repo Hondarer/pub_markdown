@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 全体管理文書 (overview)
-最終更新日時: 2026-11-25 19:33:00 JST
+最終更新日時: 2026-11-25 20:15:00 JST
 最終更新エージェント: claude code / セッション ID: session_01KJc53RaT4Cei9nCXSSZqH1
 稼働 OS: Linux (WSL)
 下流文書: `261124-table-caption-before-table-discussion.md` (検討用 Markdown)、`261124-table-caption-before-table-lightadr.md` (簡易 ADR)、`261124-table-caption-before-table-design.md` (最終仕様)、`261124-table-caption-before-table-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
@@ -18,7 +18,7 @@
 
 検討用 Markdown の版: 4
 
-状態: 成果物の承認待ち
+状態: 完了 (第 3 ゲートを 2026-11-25 に承認)
 
 ## 作業 WBS と進捗管理
 
@@ -36,7 +36,7 @@
     - ✅ 3.1. `261124-table-caption-before-table-design.md` の作成
     - ✅ 3.2. 最終仕様における受入条件と整合性の確認
     - ✅ 3.3. 対話セッションにおける最終仕様の承認の受付 (第 2 ゲート)
-- ⚠️ 4. 承認された最終仕様に従った作業の実施
+- ✅ 4. 承認された最終仕様に従った作業の実施
     - ✅ 4.1. Pandoc 側の実装 (前処理 `bin_internal/table-caption-preprocess.py` の追加、`bin_internal/pub_markdown_core.sh` の Pandoc 呼び出しへの前処理の適用と `-table_captions` の取り消し、`codeblock-caption-line.lua` からの `Table:` の処理の削除)
     - ✅ 4.2. MkDocs 側の実装 (`livedocs/bin/stage_livedocs.py` の `convert_captions()`)
     - ✅ 4.3. `text_style_jp.py` による後置きの検出と修正 (`bin/text_style_jp.py`、`bin_internal/text_style_jp_frontends.py`)
@@ -45,13 +45,14 @@
     - ✅ 4.6. 正本文書の更新 (`docs/table-caption.md`、`docs/codeblock-caption.md`、`docs/sample/table-caption.md`、`docs/sample/list-table.md`、`docs/sample/README.md`、`app/general/docs/doxygen-comment-guideline.md`、`bin/text_style_jp.py` の自己テスト用の例)
     - ✅ 4.7. 既存の `Table:` の移行 (過去の検討記録を含むリポジトリ全体の Markdown と Doxygen コメント。framework の各サブモジュール、`app/general`、`app/cplat`、`app/porter` などの app)
     - ✅ 4.8. 局所テスト、発行結果の比較、`text_style_jp.py` による確認
-    - ⚠️ 4.9. 受入条件への適合確認 (受入条件 7 は、移行で書き換えた Markdown に移行前からある `text_style_jp.py --dry-run` の指摘 154 件が残るため未達。移行による増加は 0 件。扱いを第 3 ゲートで確認)
+    - ✅ 4.9. 受入条件への適合確認 (受入条件 7 は、移行前からある指摘をユーザーの指示で個別に判断して修正し、達成)
     - ✅ 4.10. 簡易 ADR の最終確認
     - ✅ 4.11. 残課題一覧の再構築と整理
     - ✅ 4.12. 親リポジトリとサブモジュールの pull で取り込んだ変更の `Table:` の再確認 (追加の依頼)
-- 🔄 5. 成果物の承認の受付 (第 3 ゲート)
-    - 🔄 5.1. 成果物・検証結果・残課題の提示 ← **CURRENT**
-    - ⏸️ 5.2. 対話セッションにおける成果物の承認の受付
+    - ✅ 4.13. 移行で書き換えたファイルに移行前からある `text_style_jp.py --dry-run` の指摘の個別判断と修正 (追加の依頼)
+- ✅ 5. 成果物の承認の受付 (第 3 ゲート)
+    - ✅ 5.1. 成果物・検証結果・残課題の提示
+    - ✅ 5.2. 対話セッションにおける成果物の承認の受付
 
 ## 対象と参照資料
 
@@ -121,6 +122,9 @@
 | 2026-11-24 09:12 | 作業の完了 | 作業 4 を終え、残課題一覧 (`261124-table-caption-before-table-backlog.md`) を整理。第 3 ゲートの承認を依頼 |
 | 2026-11-25 19:00 | 追加の依頼 | 第 3 ゲートの承認の前に、親リポジトリとサブモジュールの変更を pull して最新化し、変更があったファイルの `Table:` を再確認する依頼を受けた。作業 4.12 として実施 |
 | 2026-11-25 19:33 | 追加の依頼の完了 | pull と再確認を終え、Doxygen の構造コマンドの判定を修正。第 3 ゲートの承認を再度依頼 |
+| 2026-11-25 19:40 | 受入条件 7 の扱いの指示 | 移行前からある指摘を個別に判断して今回修正するよう指示を受けた。作業を一旦コミットし、作業 4.13 として実施 |
+| 2026-11-25 20:00 | 引用の扱いの決定 | 過去の検討記録のユーザー発言の引用も、すべて整形する方針がユーザーにより選ばれた |
+| 2026-11-25 20:15 | 第 3 ゲートの承認 | 対話で成果物が承認され、案件を完了。残課題 BL-005、BL-006 を起票 ([残課題一覧](261124-table-caption-before-table-backlog.md)) |
 
 ## 反映と検証の記録
 
@@ -159,6 +163,8 @@
 
 - pull 後の再確認 (作業 4.12): リポジトリ全体の Markdown と C/C++ の 357 ファイルで、既定の規則の移動対象 0 件、前処理の警告 0 件。作業 4.12 で書き換えた 39 ファイルの `--dry-run` の指摘 (キャプションの規則を除く) は HEAD 版と同じ 9 件で、増加 0 件。キャプションのテスト 44 件、docsfw `bin_test` 115 件が成功。`app/porter` の `make doxy` で、`@parblock` で囲んだ 6 か所のキャプションと表が同じ見出しの中に、キャプション、表の順で出力されることを確認。
 
+- 移行前からある指摘 (作業 4.13): 13 ファイル 165 件 (Markdown 154 件、C/C++ 11 件) を個別に判断。ユーザー発言の引用もすべて整形する方針で 163 件を修正。`app/cplat/prod/include/cplat/net/socket.h` の 268 行と 270 行の `space-inside-brackets` (`see:` の URL と閉じ括弧の間の空白) は、URL の範囲を区切る意図の記述として据え置き。
+
 ### 未完了項目
 
-- 受入条件 7 (変更した Markdown が `--dry-run` で指摘なし) は、移行前からある指摘 154 件のため未達。扱いをユーザーに確認する。
+- なし。
