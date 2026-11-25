@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 簡易 ADR (lightadr)
-最終更新日時: 2026-11-26 02:05:00 JST
+最終更新日時: 2026-11-26 04:05:00 JST
 最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)、`261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)。いずれも削除されている場合があります。
@@ -134,7 +134,7 @@ BL-001 〜 BL-006 の 6 件すべてを、この案件で対策します。
 ## LADR-005 ブロック引用の中の Table: 段落
 
 決定者: Tetsuo Honda  
-最終更新日: 2026-11-25
+最終更新日: 2026-11-26
 
 ### 背景と課題
 
@@ -145,6 +145,7 @@ BL-001 〜 BL-006 の 6 件すべてを、この案件で対策します。
 - ブロック引用の中で、1 つ目の表にキャプションがなく、2 つ目の表の前に `Table:` を書くと、Pandoc はキャプションを 1 つ目の表へ付けます。
 - MkDocs は、引用の中の `Table:` を通常の段落として表示します。誤った表への付け替えはありません。
 - Python-Markdown の `attr_list` は、引用の中の段落の直後の属性行を読み取ります。`github-callouts` の `> [!NOTE]` の中でも同じです。
+- 引用の深さで区間を分けるため、引用の外 (深さ 0) の `Table:` 段落の途中に `>` で始まる行があると、そこで段落が終わります。Pandoc もブロック引用で段落を終えるため、Pandoc の解釈と一致します (実装時の確認)。
 
 ### 決定
 

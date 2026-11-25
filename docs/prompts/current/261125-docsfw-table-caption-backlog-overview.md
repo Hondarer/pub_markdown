@@ -1,7 +1,7 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 全体管理文書 (overview)
-最終更新日時: 2026-11-26 02:05:00 JST
+最終更新日時: 2026-11-26 03:50:00 JST
 最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261124-table-caption-before-table-backlog.md` (残課題一覧。BL-001 〜 BL-006 を対策する継続作業)
@@ -41,7 +41,7 @@
     - ✅ 3.1. `261125-docsfw-table-caption-backlog-design.md` の作成 (対策元 backlog の確定方針・状態を随時反映)
     - ✅ 3.2. 最終仕様における受入条件と整合性の確認 (LADR-001 〜 LADR-008 との一致、Q-012 の Context の桁の誤記の訂正を反映)
     - ✅ 3.3. 対話セッションにおける最終仕様の承認の受付 (第 2 ゲート: 作業着手の合意。2026-11-25 21:48 頃の対話でのユーザーの指示により承認)
-- 🔄 4. 承認された最終仕様に従った作業の実施
+- ✅ 4. 承認された最終仕様に従った作業の実施
     - ✅ 4.1. BL-001: `framework/docsfw/.text_style_jp/90_local-katakana.json` の `add_space` への `カスタム マッチャー` の追加と、`no_space` の `マッチャ` の削除
     - ✅ 4.2. BL-002: `framework/docsfw/bin_internal/table_caption_position.py`、`framework/docsfw/bin_internal/table-caption-preprocess.py`、`framework/docsfw/livedocs/bin/stage_livedocs.py` の `convert_captions()` の引用の深さの扱い、テスト (`bin_test/test_table_caption_position.py`、`bin_test/test_table_caption_line.py`、`livedocs/bin_test/test_stage_livedocs.py`)
     - ✅ 4.3. BL-003: `framework/docsfw/bin_internal/table_caption_position.py` の `_same_indent()` と `relocate_table_captions()` の Doxygen モードの字下げの判定、テスト (`bin_test/test_table_caption_position.py`)
@@ -50,12 +50,12 @@
     - ✅ 4.6. BL-006: `framework/docsfw/bin_internal/text_style_jp_engine.py` と `framework/docsfw/bin_internal/text_style_jp_frontends.py` の桁の写像 (すべてのコメント解析モードを含む)、`framework/docsfw/bin/text_style_jp.py` の自己テスト、`framework/docsfw/docs/text_style_jp.md` の桁の定義
     - ✅ 4.7. 正本文書およびコード コメントへの永続的知見の反映 (`framework/docsfw/docs/table-caption.md`、`framework/docsfw/docs/text_style_jp.md`、各 docstring とテストのコメント。`python-components.md` は変更なし)
     - ✅ 4.8. 局所テストおよび機械的検証 (一時ディレクトリの livedocs の venv で `text_style_jp.py --test`、`framework/docsfw/bin_test`、`framework/docsfw/livedocs/bin_test`、Doxygen での URL、整形結果の不変の比較、変更した Markdown への `text_style_jp.py --dry-run`)
-    - 🔄 4.9. Windows 側の Claude Code セッションでの検証 (主エージェントがパッチを仲介。Sudachi 辞書の版と Doxygen 1.18.0 での URL の確認を含む) ← **CURRENT**
-    - ⏸️ 4.10. 受入条件への適合確認 (全作業の完了確認)
-    - ⏸️ 4.11. 簡易 ADR (`261125-docsfw-table-caption-backlog-lightadr.md`) の最終確認
-    - ⏸️ 4.12. 残課題一覧 (`261125-docsfw-table-caption-backlog-backlog.md`) の再構築と整理、および対策元 `261124-table-caption-before-table-backlog.md` の最終状態・転記先の確定
-- ⏸️ 5. 成果物の承認の受付 (第 3 ゲート)
-    - ⏸️ 5.1. 成果物・検証結果・残課題の提示
+    - ✅ 4.9. Windows 側の Claude Code セッションでの検証 (主エージェントがパッチを仲介。Sudachi 辞書の版と Doxygen 1.18.0 での URL の確認を含む) (依頼 5 で、docsfw d0fd02c と cplat f760bff8 での `text_style_jp.py --test`、docsfw と livedocs の `bin_test`、Doxygen 1.17.0 での URL がすべて成功。依頼 6 で Doxygen 1.18.0 (8e760943) の `ulink url` 6 件にも閉じ括弧なし)
+    - ✅ 4.10. 受入条件への適合確認 (全作業の完了確認) (最終仕様の「受入条件のまとめ」の 5 項目に適合。変更したファイルは「変更対象のファイル」の範囲内で、`table-caption-preprocess.py` は変更不要)
+    - ✅ 4.11. 簡易 ADR (`261125-docsfw-table-caption-backlog-lightadr.md`) の最終確認 (各決定が実装後の状態と一致することを確認。LADR-005 に、引用の外の段落の終わり方が Pandoc と一致する事実を追記)
+    - ✅ 4.12. 残課題一覧 (`261125-docsfw-table-caption-backlog-backlog.md`) の再構築と整理、および対策元 `261124-table-caption-before-table-backlog.md` の最終状態・転記先の確定 (この案件の残課題は BL-001、BL-002 の 2 件で整理済み。対策元の BL-001 〜 BL-006 はすべて対応済みで、転記なし)
+- 🔄 5. 成果物の承認の受付 (第 3 ゲート)
+    - 🔄 5.1. 成果物・検証結果・残課題の提示 ← **CURRENT**
     - ⏸️ 5.2. 対話セッションにおける成果物の承認の受付
 
 ## 対象と参照資料
@@ -134,6 +134,8 @@
 | 2026-11-26 01:44 | BL-006 の実施 | WBS 4.6 を完了。対策元 backlog の BL-006 を「対応済み」へ更新 |
 | 2026-11-26 01:47 | 正本文書への反映 | WBS 4.7 を完了 (`table-caption.md`、`text_style_jp.md`)。簡易 ADR の LADR-002 の見出しを、辞書の変更後の `text_style_jp.py --dry-run` の指摘がない表記に変更 (決定の内容は変更なし) |
 | 2026-11-26 01:54 | 局所テストと機械的検証 | WBS 4.8 を完了 (結果は「反映と検証の記録」)。Windows 側の検証 (WBS 4.9) を主エージェントへ依頼 |
+| 2026-11-26 03:50 | Windows 側の検証の結果の受領 | 依頼 5: `text_style_jp.py --test` 成功 (dry-run の桁 14 件、元の行の対応 6 件が ✓。SudachiPy 0.6.11、SudachiDict-core 20260723)、docsfw の `bin_test` 144 件成功 (スキップ 1 件、Linux 専用)、livedocs の `bin_test` 371 件成功、Doxygen 1.17.0 の `ulink url` 6 件に閉じ括弧なし。手元の Windows の Doxygen が 1.17.0 だったため、1.18.0 での確認を依頼 6 として追加 |
+| 2026-11-26 04:08 | 作業の完了 | WBS 4.9 〜 4.12 を完了 (依頼 6 で Doxygen 1.18.0 の URL を確認、受入条件に適合、簡易 ADR の最終確認、残課題一覧の整理)。第 3 ゲートの成果物の提示へ |
 
 ## 反映と検証の記録
 

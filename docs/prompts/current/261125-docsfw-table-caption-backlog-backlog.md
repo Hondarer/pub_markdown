@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 残課題一覧 (backlog)
-最終更新日時: 2026-11-25 21:01:30 JST
-最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
+最終更新日時: 2026-11-26 04:08:00 JST
+最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)、`261125-docsfw-table-caption-backlog-design.md` (最終仕様)、`261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)、`261125-docsfw-table-caption-backlog-lightadr.md` (簡易 ADR)。いずれも削除されている場合があります。
 下流文書: この残課題一覧を対策する継続作業が開始された場合は、その全体管理文書・検討用 Markdown・最終仕様・残課題一覧のパスを追記します。未作成の場合や、削除されている場合があります。
@@ -17,7 +17,7 @@
 
 案件名: `261125-docsfw-table-caption-backlog`  
 作成日: `2026-11-25`  
-整理状態: 随時追記中
+整理状態: 整理済み
 
 この文書は、見送る決定がなされた問題点や、作業中に潜在的な問題や別問題として判明したものの、今回は対策しなかった最終的な残渣 (残課題) を記録したものです。作業期間中は気付いた時点で随時追記し、設計および実装・検証作業がすべて完了した後に、再構築して整理します。
 
