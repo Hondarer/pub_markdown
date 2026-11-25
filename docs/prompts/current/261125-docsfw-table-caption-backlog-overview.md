@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 全体管理文書 (overview)
-最終更新日時: 2026-11-26 01:54:37 JST
-最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
+最終更新日時: 2026-11-26 02:05:00 JST
+最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261124-table-caption-before-table-backlog.md` (残課題一覧。BL-001 〜 BL-006 を対策する継続作業)
 下流文書: `261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)、`261125-docsfw-table-caption-backlog-lightadr.md` (簡易 ADR)、`261125-docsfw-table-caption-backlog-design.md` (最終仕様)、`261125-docsfw-table-caption-backlog-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
@@ -84,7 +84,7 @@
 | 範囲・境界 | 確認済み | BL-001 〜 BL-005 は確認済み ([Q-001](261125-docsfw-table-caption-backlog-discussion.md#q-001-対策する残課題の範囲)、[Q-003](261125-docsfw-table-caption-backlog-discussion.md#q-003-no_space-と-replace-の両方にある語の扱い))。BL-006 の変更範囲とコメントのモードの対象も確認済み ([Q-011](261125-docsfw-table-caption-backlog-discussion.md#q-011-桁の写像の変更範囲を踏まえた-q-006-の再確認)、[Q-012](261125-docsfw-table-caption-backlog-discussion.md#q-012-コメントの桁の基準を-cc-以外のモードにも適用するか))。範囲外の気付き 2 件は残課題一覧 `261125-docsfw-table-caption-backlog-backlog.md` へ記録 |
 | 入力・根拠 | 確認済み | 各課題を手元で再現または検証。Doxygen と Pandoc の URL の扱いは [Q-005](261125-docsfw-table-caption-backlog-discussion.md#q-005-url-の直後の閉じ括弧の前の空白の扱い) の Context と Assessment。CI コンテナーの版 (Doxygen 1.17.0、SudachiPy は初回実行時に最新版を導入) は `/home/user/oracle-linux-container` の `src/Dockerfile` と CI の run 45552671556 のログで確認 |
 | 整合性・依存関係 | 確認済み | [Q-008](261125-docsfw-table-caption-backlog-discussion.md#q-008-ブロック引用の中の-table-段落の扱い) (Pandoc と MkDocs の対称性) と [Q-009](261125-docsfw-table-caption-backlog-discussion.md#q-009-doxygen-コメントで字下げが異なる-table-段落の扱い) は確認済み。`app/cplat/AGENTS.md` の同期規則は、コメントだけの変更のため対象外。BL-006 は [Q-011](261125-docsfw-table-caption-backlog-discussion.md#q-011-桁の写像の変更範囲を踏まえた-q-006-の再確認) で前提を訂正したうえで合意 |
-| 実現性・例外 | 確認済み | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタムマッチャの失敗の直し方) (Sudachi 辞書の版に依存しないことを確認)、[Q-004](261125-docsfw-table-caption-backlog-discussion.md#q-004-test_livedocs_path_spaces-の失敗の直し方) (`make bin-test` の経路ではスキップしないことを確認) は確認済み。[Q-006](261125-docsfw-table-caption-backlog-discussion.md#q-006-dry-run-の桁の定義) は [Q-011](261125-docsfw-table-caption-backlog-discussion.md#q-011-桁の写像の変更範囲を踏まえた-q-006-の再確認) で再確認し確定 |
+| 実現性・例外 | 確認済み | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタム-マッチャーの失敗の直し方) (Sudachi 辞書の版に依存しないことを確認)、[Q-004](261125-docsfw-table-caption-backlog-discussion.md#q-004-test_livedocs_path_spaces-の失敗の直し方) (`make bin-test` の経路ではスキップしないことを確認) は確認済み。[Q-006](261125-docsfw-table-caption-backlog-discussion.md#q-006-dry-run-の桁の定義) は [Q-011](261125-docsfw-table-caption-backlog-discussion.md#q-011-桁の写像の変更範囲を踏まえた-q-006-の再確認) で再確認し確定 |
 | 受入条件・検証 | 確認済み | 検証の範囲は [Q-010](261125-docsfw-table-caption-backlog-discussion.md#q-010-検証の範囲-windows-側の検証の要否)。受入条件と検証手順は最終仕様に記載。手元の livedocs の venv は `make livedocs-venv` (`--ensure`) で固定版を補える (セッションの一時ディレクトリの venv で確認) |
 
 ## 質問一覧
@@ -92,7 +92,7 @@
 | Q-ID | 論点 | 状態 | 依存・関連 | 反映先の決定 |
 | --- | --- | --- | --- | --- |
 | [Q-001](261125-docsfw-table-caption-backlog-discussion.md#q-001-対策する残課題の範囲) | 対策する残課題の範囲 | 解決済み | なし | LADR-001 |
-| [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタムマッチャの失敗の直し方) | 自己テスト「カスタム マッチャー」の失敗の直し方 | 解決済み | Q-001 (BL-001) | LADR-002 |
+| [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタム-マッチャーの失敗の直し方) | 自己テスト「カスタム マッチャー」の失敗の直し方 | 解決済み | Q-001 (BL-001) | LADR-002 |
 | [Q-003](261125-docsfw-table-caption-backlog-discussion.md#q-003-no_space-と-replace-の両方にある語の扱い) | no_space と replace の両方にある語の扱い | 解決済み | Q-001、Q-002 | LADR-002 |
 | [Q-004](261125-docsfw-table-caption-backlog-discussion.md#q-004-test_livedocs_path_spaces-の失敗の直し方) | test_livedocs_path_spaces の失敗の直し方 | 解決済み | Q-001 (BL-004)、Q-010 | LADR-003 |
 | [Q-005](261125-docsfw-table-caption-backlog-discussion.md#q-005-url-の直後の閉じ括弧の前の空白の扱い) | URL の直後の閉じ括弧の前の空白の扱い | 解決済み | Q-001 (BL-005) | LADR-004 |
@@ -158,6 +158,6 @@
 | 局所テスト | `text_style_jp.py --test`、`framework/docsfw/bin_test` (144 件)、`framework/docsfw/livedocs/bin_test` (371 件) | すべて成功 |
 | BL-004 | `/usr/bin/python3` での `test_make_livedocs_with_complete_system_environment` | スキップ (理由に pymdown-extensions、watchdog)。最終仕様の `-m unittest -v test_livedocs_path_spaces.…` の形は、`PYTHONSAFEPATH=1` では作業ディレクトリのモジュールを読み込めず ImportError になるため、`-m unittest discover -p 'test_livedocs_path_spaces.py' -k test_make_livedocs_with_complete_system_environment` で実行 |
 | BL-005 | `socket.h` の `--dry-run` と Doxygen 1.17.0 の XML | 指摘なし。`ulink url` の 6 件はいずれも閉じ括弧を含まない |
-| 案件の文書 | `--dry-run` | 最終仕様 (23 行、55 行) と検討用 Markdown の Q-002 の見出し (74 行) に、`カスタムマッチャ` の `dict-add-space` の指摘が残る。最終仕様は承認済みの版のため、検討用 Markdown は過去の Q の本文のため変更しない |
+| 案件の文書 | `--dry-run` | 最終仕様 (23 行、55 行) と検討用 Markdown の Q-002 の見出し (74 行) の括弧で囲んだ表記を、ユーザーの指示 (2026-11-26 の対話「文脈が変化しないのであれば置換してしまってよい」) により「カスタム マッチャー」へ置き換え、指摘なし。変換前の入力を示すコード表記の `カスタムマッチャ` は、意味が変わるため変えない |
 
 Windows 側の検証 (WBS 4.9) は未実施です。

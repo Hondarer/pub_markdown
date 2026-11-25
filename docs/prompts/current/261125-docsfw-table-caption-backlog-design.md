@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 最終仕様 (design)
-最終更新日時: 2026-11-25 21:10:08 JST
-最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
+最終更新日時: 2026-11-26 02:05:00 JST
+最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)、`261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)、`261125-docsfw-table-caption-backlog-lightadr.md` (簡易 ADR)。対策元は `261124-table-caption-before-table-backlog.md` (残課題一覧の BL-001 〜 BL-006)。いずれも削除されている場合があります。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。上流文書の全体管理文書が存在する場合は、その再開手順に従って進行位置を確認し、決定事項を簡易 ADR で、判断の経緯を検討用 Markdown の Q&A で確認します。存在しない場合は、この文書を単体の最終仕様として扱います。最終更新エージェントのセッション情報や稼働 OS・最終更新日時が参照可能であれば再開時のコンテキストや環境差分の把握に利用し、別エージェントや別環境・別 OS からの引き継ぎ、担当変更によりセッションが見つからない場合も異常とせず、文書の記載から継続してください。
@@ -20,7 +20,7 @@ Table: 対策する課題と変更の要点
 
 | 課題 | 内容 | 変更の要点 |
 | --- | --- | --- |
-| BL-001 | `text_style_jp.py --test` の「カスタムマッチャ」の失敗 | 辞書の `add_space` に 1 語を追加し、効果のない `no_space` の 1 語を削除 |
+| BL-001 | `text_style_jp.py --test` の「カスタム マッチャー」の失敗 | 辞書の `add_space` に 1 語を追加し、効果のない `no_space` の 1 語を削除 |
 | BL-002 | ブロック引用の中の `Table:` 段落 | 引用の深さを取り除いて判定し、Pandoc の前処理、`text_style_jp`、MkDocs の変換をそろえる |
 | BL-003 | Doxygen コメントで表が `Table:` より深い場合の検出 | C/C++ のモードで、表が深い場合も組として扱う |
 | BL-004 | `test_livedocs_path_spaces` の前提の不成立 | 採用範囲を満たさない Python ではテストをスキップ |
@@ -52,7 +52,7 @@ Table: 変更対象のファイルと課題の対応
 
 `framework/docsfw/bin_internal/table-caption-preprocess.py` は `prepare_for_pandoc()` を呼ぶだけのため、変更しません。
 
-## BL-001 自己テスト「カスタムマッチャ」
+## BL-001 自己テスト「カスタム マッチャー」
 
 ### 辞書の変更
 

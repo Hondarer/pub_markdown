@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 簡易 ADR (lightadr)
-最終更新日時: 2026-11-26 01:53:59 JST
-最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
+最終更新日時: 2026-11-26 02:05:00 JST
+最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)、`261125-docsfw-table-caption-backlog-discussion.md` (検討用 Markdown)。いずれも削除されている場合があります。
 再開手順: このファイルを開いたエージェントは、作業の前に agree-before-implement スキルを読み込んでください。上流文書の全体管理文書が存在する場合は、その再開手順に従って進行位置を確認します。存在しない場合は、この文書を単体の決定事項の記録として扱います。この文書は正式な ADR ではありません。正式な ADR への転記はユーザーが必要時に行うため、エージェントは依頼なしに転記や正式な ADR の作成・更新を行わないでください。最終更新エージェントのセッション情報や稼働 OS・最終更新日時が参照可能であれば再開時のコンテキストや環境差分の把握に利用し、別エージェントや別環境・別 OS からの引き継ぎ、担当変更によりセッションが見つからない場合も異常とせず、文書の記載から継続してください。
@@ -20,7 +20,7 @@
 | 決定 ID | 題名 | 最終更新日 | 源泉 |
 | --- | --- | --- | --- |
 | [LADR-001](#ladr-001-対策する残課題の範囲) | 対策する残課題の範囲 | 2026-11-25 | [Q-001](261125-docsfw-table-caption-backlog-discussion.md#q-001-対策する残課題の範囲) |
-| [LADR-002](#ladr-002-自己テストのカスタム-マッチャーの変換の失敗の直し方と辞書の整理) | 自己テストの「カスタム マッチャー」の変換の失敗の直し方と辞書の整理 | 2026-11-25 | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタムマッチャの失敗の直し方)、[Q-003](261125-docsfw-table-caption-backlog-discussion.md#q-003-no_space-と-replace-の両方にある語の扱い) |
+| [LADR-002](#ladr-002-自己テストのカスタム-マッチャーの変換の失敗の直し方と辞書の整理) | 自己テストの「カスタム マッチャー」の変換の失敗の直し方と辞書の整理 | 2026-11-25 | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタム-マッチャーの失敗の直し方)、[Q-003](261125-docsfw-table-caption-backlog-discussion.md#q-003-no_space-と-replace-の両方にある語の扱い) |
 | [LADR-003](#ladr-003-test_livedocs_path_spaces-の前提の確認) | test_livedocs_path_spaces の前提の確認 | 2026-11-25 | [Q-004](261125-docsfw-table-caption-backlog-discussion.md#q-004-test_livedocs_path_spaces-の失敗の直し方) |
 | [LADR-004](#ladr-004-url-の直後の閉じ括弧の前の空白) | URL の直後の閉じ括弧の前の空白 | 2026-11-25 | [Q-005](261125-docsfw-table-caption-backlog-discussion.md#q-005-url-の直後の閉じ括弧の前の空白の扱い) |
 | [LADR-005](#ladr-005-ブロック引用の中の-table-段落) | ブロック引用の中の Table: 段落 | 2026-11-25 | [Q-008](261125-docsfw-table-caption-backlog-discussion.md#q-008-ブロック引用の中の-table-段落の扱い) |
@@ -77,7 +77,7 @@ BL-001 〜 BL-006 の 6 件すべてを、この案件で対策します。
 
 | 日時 (JST) | 源泉 | ユーザーの選択 | ユーザーのコメント | 決定への反映 |
 | --- | --- | --- | --- | --- |
-| 2026-11-25 20:43 | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタムマッチャの失敗の直し方) | A: `add_space` に `カスタム マッチャー` を追加し、テストの期待値は変えない | なし | 新規に決定 |
+| 2026-11-25 20:43 | [Q-002](261125-docsfw-table-caption-backlog-discussion.md#q-002-自己テストカスタム-マッチャーの失敗の直し方) | A: `add_space` に `カスタム マッチャー` を追加し、テストの期待値は変えない | なし | 新規に決定 |
 | 2026-11-25 20:43 | [Q-003](261125-docsfw-table-caption-backlog-discussion.md#q-003-no_space-と-replace-の両方にある語の扱い) | A: `no_space` の `マッチャ` を削除する | なし | 決定を補足 (辞書の整理を追加) |
 
 ## LADR-003 test_livedocs_path_spaces の前提の確認

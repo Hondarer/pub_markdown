@@ -1,8 +1,8 @@
 <!--
 生成元: agree-before-implement スキル
 文書種別: 検討用 Markdown (discussion)
-最終更新日時: 2026-11-25 21:04:37 JST
-最終更新エージェント: claude code (opus サブエージェント、主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
+最終更新日時: 2026-11-26 02:05:00 JST
+最終更新エージェント: claude code (主セッション session_01KJc53UFydnbt2gLXTJC1ZC)
 稼働 OS: Linux (WSL)
 上流文書: `261125-docsfw-table-caption-backlog-overview.md` (全体管理文書)。削除されている場合があります。
 下流文書: `261125-docsfw-table-caption-backlog-lightadr.md` (簡易 ADR)、`261125-docsfw-table-caption-backlog-design.md` (最終仕様)、`261125-docsfw-table-caption-backlog-backlog.md` (残課題一覧)。未作成の場合や、削除されている場合があります。
@@ -32,7 +32,7 @@ Table: 残課題ごとの調査結果と、対策の規模の見込み
 
 | 課題 ID | 調査で確認した事実 | 変更の対象 | 規模の見込み |
 | --- | --- | --- | --- |
-| BL-001 | 手元で再現。原因は辞書の設定の干渉ではなく、SudachiPy が `カスタムマッチャ` を未知語として 1 語に扱い分割しないこと ([Q-002](#q-002-自己テストカスタムマッチャの失敗の直し方)) | 辞書 JSON、または自己テスト | 小 |
+| BL-001 | 手元で再現。原因は辞書の設定の干渉ではなく、SudachiPy が `カスタムマッチャ` を未知語として 1 語に扱い分割しないこと ([Q-002](#q-002-自己テストカスタム-マッチャーの失敗の直し方)) | 辞書 JSON、または自己テスト | 小 |
 | BL-002 | 手元で再現。ブロック引用の中で、先頭の表にキャプションがなく 2 つ目の表の前に `Table:` を書くと、Pandoc は 1 つ目の表へ付ける | `table_caption_position.py`、`stage_livedocs.py` | 中 |
 | BL-003 | 手元で再現。表が `Table:` より深く字下げされた Doxygen コメントは検出されない。リポジトリ内の該当 1 か所は手作業で修正済み | `table_caption_position.py` | 小 |
 | BL-004 | 手元で再現。原因はテストの前提の不成立 ([Q-004](#q-004-test_livedocs_path_spaces-の失敗の直し方)) | 採用範囲のファイル、またはテスト | 小 |
@@ -69,9 +69,9 @@ Table: 残課題ごとの調査結果と、対策の規模の見込み
 
 **Related**
 
-[Q-002](#q-002-自己テストカスタムマッチャの失敗の直し方)、[Q-004](#q-004-test_livedocs_path_spaces-の失敗の直し方)、[Q-005](#q-005-url-の直後の閉じ括弧の前の空白の扱い)、[Q-006](#q-006-dry-run-の桁の定義)、[Q-008](#q-008-ブロック引用の中の-table-段落の扱い)、[Q-009](#q-009-doxygen-コメントで字下げが異なる-table-段落の扱い)
+[Q-002](#q-002-自己テストカスタム-マッチャーの失敗の直し方)、[Q-004](#q-004-test_livedocs_path_spaces-の失敗の直し方)、[Q-005](#q-005-url-の直後の閉じ括弧の前の空白の扱い)、[Q-006](#q-006-dry-run-の桁の定義)、[Q-008](#q-008-ブロック引用の中の-table-段落の扱い)、[Q-009](#q-009-doxygen-コメントで字下げが異なる-table-段落の扱い)
 
-### Q-002 自己テスト「カスタムマッチャ」の失敗の直し方
+### Q-002 自己テスト「カスタム マッチャー」の失敗の直し方
 
 **Status**
 
@@ -147,7 +147,7 @@ $ python3 bin/text_style_jp.py --dry-run m.md   (m.md は 1 行ずつ別の段�
 
 **Context**
 
-- **経緯と背景**: [Q-002](#q-002-自己テストカスタムマッチャの失敗の直し方) の調査で、`マッチャ` が `no_space` と `replace` の両方に登録されていることを確認しました。エンジンは、`replace` の見出し語を `no_space` の保護から外します (`text_style_jp_engine.py` の `load_dictionaries()`、494 行付近のコメント)。このため `no_space` の `マッチャ` は何も保護せず、効果がありません。
+- **経緯と背景**: [Q-002](#q-002-自己テストカスタム-マッチャーの失敗の直し方) の調査で、`マッチャ` が `no_space` と `replace` の両方に登録されていることを確認しました。エンジンは、`replace` の見出し語を `no_space` の保護から外します (`text_style_jp_engine.py` の `load_dictionaries()`、494 行付近のコメント)。このため `no_space` の `マッチャ` は何も保護せず、効果がありません。
 - **根拠資料**: `framework/docsfw/.text_style_jp/90_local-katakana.json` の 30 行目と 130 行目、`framework/docsfw/bin_internal/text_style_jp_engine.py` の 494 〜 505 行。
 
 ```text
@@ -184,7 +184,7 @@ $ python3 bin/text_style_jp.py --dry-run m.md   (m.md は 1 行ずつ別の段�
 
 **Related**
 
-[Q-002](#q-002-自己テストカスタムマッチャの失敗の直し方)
+[Q-002](#q-002-自己テストカスタム-マッチャーの失敗の直し方)
 
 ### Q-004 test_livedocs_path_spaces の失敗の直し方
 
@@ -584,7 +584,7 @@ Doxygen コメントで、`Table:` 段落より表が深く字下げされてい
 
 **Related**
 
-[Q-002](#q-002-自己テストカスタムマッチャの失敗の直し方)、[Q-004](#q-004-test_livedocs_path_spaces-の失敗の直し方)
+[Q-002](#q-002-自己テストカスタム-マッチャーの失敗の直し方)、[Q-004](#q-004-test_livedocs_path_spaces-の失敗の直し方)
 
 ### Q-011 桁の写像の変更範囲を踏まえた Q-006 の再確認
 
