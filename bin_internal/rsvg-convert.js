@@ -25,6 +25,7 @@ const dpiY = +argv['dpi-y'] || 96;
 /* 指定 DPI を 1.5 倍して描画 */
 const scale = Math.max(dpiX, dpiY) * 1.5 / 96;
 const RETRY_DELAY_MS = 3000;
+const LAYOUT_WAIT_TIMEOUT_MS = 200;
 
 /* ── 2. STDIN 取得 ────────────────────────────────────────────────── */
 const readStdin = () => new Promise(res => {
@@ -34,6 +35,35 @@ const readStdin = () => new Promise(res => {
 });
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function waitForLayout(page, timeoutMs = LAYOUT_WAIT_TIMEOUT_MS) {
+  // 共有ブラウザーで複数ページを並列に開くと、背面ページでは requestAnimationFrame が停止する。
+  // 並列処理中の他ページと前面を奪い合うのを避けるため page.bringToFront() は呼ばず、
+  // 同期リフローでレイアウトを確定させたうえで、前面時は rAF と短い期限の早い方で終了し、
+  // 背面時はタイマーへフォールバックする (page.screenshot() は背面ページでも動作する)。
+  // see: https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+  // see: https://pptr.dev/api/puppeteer.page.bringtofront
+  await page.evaluate((ms) => new Promise((resolve) => {
+    if (document.documentElement) {
+      void document.documentElement.getBoundingClientRect();
+    }
+    if (document.hidden) {
+      setTimeout(resolve, 0);
+      return;
+    }
+    let settled = false;
+    let rafId = 0;
+    const finish = () => {
+      if (settled) { return; }
+      settled = true;
+      clearTimeout(timerId);
+      if (rafId) { cancelAnimationFrame(rafId); }
+      resolve();
+    };
+    const timerId = setTimeout(finish, ms);
+    rafId = requestAnimationFrame(finish);
+  }), timeoutMs);
+}
 
 function summarizeSvg(svgText) {
   const sha1 = crypto.createHash('sha1').update(svgText).digest('hex');
@@ -129,18 +159,17 @@ async function getBrowser() {
 
     /* ── 5. 実 viewport へ張り直し & deviceScaleFactor 反映 ─────────── */
     await page.setViewport({width, height, deviceScaleFactor: scale});
-    /* レイアウト再計算を待つ */
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
 
     /* ── 6. PNG 出力 → STDOUT ──────────────────────────────────────── */
     let buf;
     try {
+      await waitForLayout(page);
       buf = await page.screenshot({type:'png', omitBackground:true});
     } catch (firstError) {
       // 一過性の CDP 失敗を想定し、ユーザーへ通知せず 1 回だけ再試行する。
       await sleep(RETRY_DELAY_MS);
-      await page.evaluate(() => new Promise(r => requestAnimationFrame(()=>r())));
       try {
+        await waitForLayout(page);
         buf = await page.screenshot({type:'png', omitBackground:true});
       } catch (retryError) {
         console.error(describeFailure({

@@ -141,6 +141,11 @@ puppeteer.launch(buildLaunchOptions())
 - **共有ブラウザー使用時**: `page.close()` でページのみ閉じ、`browser.disconnect()` で切断
 - **専用ブラウザー使用時**: `browser.close()` でブラウザーごと閉じる
 
+並列変換時のレイアウト待機:
+
+- 共有ブラウザーでは複数ページが同時に開かれ、一部ページが背面 (`document.hidden`) になります。
+- viewport 再設定後のレイアウト待機は、`page.bringToFront()` で前面を奪い合わず、同期リフローと 200ms 上限付き `requestAnimationFrame` (`document.hidden` 時はタイマーへ即時フォールバック) で完了させます。
+
 ### mmdc-reuse.js
 
 `@mermaid-js/mermaid-cli` の `mmdc` コマンドの代替として動作する Mermaid レンダラーです。

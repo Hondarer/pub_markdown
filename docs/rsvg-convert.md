@@ -123,7 +123,9 @@ echo "<svg>...</svg>" | node rsvg-convert.js --dpi-x 300 --dpi-y 300
 
 - `--no-sandbox` フラグでセキュリティ オーバーヘッドを削減
 - `waitUntil:'load'` で外部リソースの完全読み込みを保証
+- 実 viewport 再設定後のレイアウト待機では同期リフローを実行し、前面時は `requestAnimationFrame` と 200ms タイマーの早い方で完了、背面 (`document.hidden`) 時はタイマーへ即時にフォールバックして待機停止を防ぐ
 - `omitBackground:true` で透明背景を維持
+- レイアウト待機またはスクリーンショット取得の一過性失敗時は、3 秒待機後に 1 回だけ再試行する
 
 ## エラー処理
 
