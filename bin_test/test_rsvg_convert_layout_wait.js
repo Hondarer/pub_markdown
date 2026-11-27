@@ -5,7 +5,7 @@
 // ならびに build-browser-assets.js の Mermaid フレーム内 afterLayout() が
 // タイムアウト付きフォールバックを持つことを検証する。
 const assert = require('assert/strict');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -16,12 +16,33 @@ const BROWSER_SERVER = path.join(BIN_INTERNAL, 'browser-server.js');
 const SAMPLE_SVG = path.resolve(__dirname, '..', 'styles', 'html', 'docsfw-pandoc-icon.svg');
 const { writeMermaidFrame, MERMAID_FRAME } = require(path.join(BIN_INTERNAL, 'build-browser-assets'));
 
+// 文書の生成 (pub_markdown_core.sh の ensure_docsfw_node_components) と同じ方法で、
+// npm のコンポーネントの解決結果を子プロセスへ渡す。グローバルから採用したパッケージは、
+// NODE_OPTIONS の --require で docsfw-prefer-global-modules.js を読ませて解決させる。
+function buildNodeComponentEnv() {
+  const exported = execFileSync(process.execPath,
+    [path.join(BIN_INTERNAL, 'resolve-node-components.js'), '--export-env'], { encoding: 'utf8' });
+  const env = {};
+  for (const line of exported.split(/\r?\n/)) {
+    const m = line.match(/^([A-Z0-9_]+)='(.*)'$/);
+    if (m) { env[m[1]] = m[2].replace(/'\\''/g, "'"); }
+  }
+  if (env.DOCSFW_NODE_GLOBAL_PACKAGES && env.DOCSFW_PREFER_GLOBAL_MODULES) {
+    const requirePath = env.DOCSFW_PREFER_GLOBAL_MODULES.replace(/\\/g, '/');
+    const current = process.env.NODE_OPTIONS ? `${process.env.NODE_OPTIONS} ` : '';
+    env.NODE_OPTIONS = `${current}--require "${requirePath}"`;
+  }
+  return env;
+}
+
+const NODE_COMPONENT_ENV = buildNodeComponentEnv();
+
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function runRsvgConvert(svgBuffer, env = {}, args = ['-f', 'png', '--dpi-x', '96', '--dpi-y', '96']) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [RSVG_CONVERT, ...args], {
-      env: { ...process.env, ...env },
+      env: { ...process.env, ...NODE_COMPONENT_ENV, ...env },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const stdoutChunks = [];
@@ -85,6 +106,7 @@ async function testSharedBrowserParallelConversion(svgBuffer) {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'docsfw-rsvg-test-'));
   const wsFile = path.join(tmpDir, 'browser.ws');
   const server = spawn(process.execPath, [BROWSER_SERVER, wsFile], {
+    env: { ...process.env, ...NODE_COMPONENT_ENV },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   let serverErr = '';
