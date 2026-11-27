@@ -26,7 +26,7 @@
 **Context**
 
 - **経緯と背景**: 6 件はいずれも「未着手」で、優先度は低です。今回の案件は、消化できる残課題を `agree-before-implement` で進める依頼 (2026-11-25 の対話) に基づきます。調査で次を確認しました。
-- **根拠資料**: [対策元の残課題一覧](261124-table-caption-before-table-backlog.md)。
+- **根拠資料**: [対策元の残課題一覧](../past/261124-table-caption-before-table-backlog.md)。
 
 Table: 残課題ごとの調査結果と、対策の規模の見込み
 
